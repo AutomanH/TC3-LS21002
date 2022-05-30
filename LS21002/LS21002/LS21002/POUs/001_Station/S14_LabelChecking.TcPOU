@@ -1,0 +1,285 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="S14_LabelChecking" Id="{de280412-b784-48ff-b9e4-45ab603ab4a3}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM S14_LabelChecking
+VAR
+	//工站
+	station					: REFERENCE TO FB_Station:=fbstation[12];
+	
+	
+	
+	//延时
+	arTonDelay :ARRAY[1..20] OF TON;
+	//返回值
+	UdiReturnValue :ARRAY[1..20] OF UDINT;
+	
+	
+	
+	i: INT;
+
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Action Name="A_Input" Id="{56ab53d4-cea4-4110-a800-d493a02bd0e3}">
+      <Implementation>
+        <ST><![CDATA[//气缸
+
+
+
+
+
+  
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Alarm" Id="{fcf10fe8-b45b-4f97-aec1-69d4e3dfa417}">
+      <Implementation>
+        <ST><![CDATA[//
+station.adwAlarm[1].00:=station.xInitTimeout;	  			//S08Label 初始化超时
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Delay" Id="{7bc9ee60-9b9c-4a53-b951-82315c5dc169}">
+      <Implementation>
+        <ST><![CDATA[(*arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );*)//TipAuto使用
+arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );
+arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
+arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[05](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[06](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[07](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[08](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[09](IN:= , PT:=T#0.1S , Q=> , ET=> );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="FlowAuto" Id="{8d9b9938-1bf2-4828-8e60-c95a62abe4d7}">
+      <Implementation>
+        <ST><![CDATA[
+//-----------------------------------------初始化是否完成判断----------------------------------------------
+IF NOT station.xInitDone 
+THEN
+ 	station.iStepAuto:=0;
+ 	station.xDone:=FALSE;
+	station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
+ELSIF station.xRunning  OR   station.xRunningOffProhibit
+THEN
+//-----------------------------------------动作步骤--------------------------------------------------------
+CASE station.iStepAuto OF	  
+	0: //----Home Step，等待启动----
+		IF station.xDisabled 
+			AND station.xCanRun 
+			AND NOT fbMachine[1].xStopped 
+			AND NOT station.xSingleRunning 
+		THEN
+			station.xDone:=TRUE;
+		END_IF
+		
+		IF  station.xSingleRunning 
+			OR station.xCanRun 
+			AND NOT station.xDone 
+			AND NOT station.xDisabled 
+			AND NOT fbMachine[1].xStopped
+		THEN
+			station.xCycleEnable:=TRUE;
+			station.xDone:= FALSE;  
+			station.xRunningOffProhibit := TRUE ;//运行中信号Off禁止
+			station.iStepAuto:= 10;
+		END_IF
+    10: //复位数据 
+			station.iStepAuto:=20;
+
+	
+	999://----Single Run Finish----
+			
+		station.iStepAuto :=0;
+		IF NOT station.xSingleContinuousRun THEN
+			station.xSingleRunFlag:=FALSE;
+		END_IF
+		
+		station.xCycleEnable:=FALSE;	
+		station.xDone:=TRUE;
+		station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
+	ELSE
+		;	
+END_CASE
+
+
+
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="FlowInit" Id="{35086538-cb4c-4ee9-b035-5fd976ee42d9}">
+      <Implementation>
+        <ST><![CDATA[IF NOT station.xIniting THEN
+  station.iStepInit:=0;    
+ELSE
+//--------------------------------------------初始化步序----------------------------------
+CASE station.iStepInit OF	
+ 0://  
+  	IF station.xIniting THEN	
+  	  station.iStepInit:=10;	
+  	END_IF	
+10://复位数据
+
+100://	
+    station.iStepInit:=999;	
+999://初始化完成	
+	station.iStepInit:=0;
+	station.xInitDone:=TRUE;  
+END_CASE
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="General" Id="{4e5f5ae7-ceae-48cf-bdf4-41d615a5187b}">
+      <Implementation>
+        <ST><![CDATA[
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ILC" Id="{dd4987fb-dc61-471e-a124-46223fbf39d1}">
+      <Implementation>
+        <ST><![CDATA[
+//---------------------------------------------------工站可执行-------------------------------------------------------
+station.xCanRun :=TRUE ;
+
+//---------------------------------------------------气缸动作条件-------------------------------------------
+
+
+//---------------------------------------------------伺服动作条件-------------------------------------------
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="TipAuto" Id="{b36dece4-89a1-4636-a437-523951c4d470}">
+      <Implementation>
+        <ST><![CDATA[
+//------------------------------------------------AutoTip Cylinder--------------------------------
+	
+//------------------------------------------------AutoTip Servo--------------------------------
+//**************************************
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="TipManual" Id="{1ef57cb0-c9a2-486b-9130-6b768818a287}">
+      <Implementation>
+        <ST><![CDATA[//--------------------------------------------ManualTip------------------------------------------------------
+
+//-------------------------------------------气缸提示---------------------------------------------------------
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Z_Output" Id="{c52e7128-5f2e-405f-a9f7-d94ed1c780d1}">
+      <Implementation>
+        <ST><![CDATA[(**************************气缸输出********************************)
+]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="S14_LabelChecking">
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="S14_LabelChecking.A_Input">
+      <LineId Id="28" Count="0" />
+      <LineId Id="54" Count="0" />
+      <LineId Id="65" Count="0" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="40" Count="1" />
+      <LineId Id="10" Count="3" />
+      <LineId Id="8" Count="0" />
+    </LineIds>
+    <LineIds Name="S14_LabelChecking.Alarm">
+      <LineId Id="176" Count="1" />
+      <LineId Id="262" Count="0" />
+      <LineId Id="266" Count="0" />
+    </LineIds>
+    <LineIds Name="S14_LabelChecking.Delay">
+      <LineId Id="64" Count="10" />
+      <LineId Id="44" Count="13" />
+      <LineId Id="40" Count="0" />
+    </LineIds>
+    <LineIds Name="S14_LabelChecking.FlowAuto">
+      <LineId Id="1155" Count="5" />
+      <LineId Id="1253" Count="0" />
+      <LineId Id="1161" Count="4" />
+      <LineId Id="1167" Count="15" />
+      <LineId Id="1452" Count="0" />
+      <LineId Id="1183" Count="1" />
+      <LineId Id="1256" Count="0" />
+      <LineId Id="1259" Count="0" />
+      <LineId Id="1431" Count="0" />
+      <LineId Id="1210" Count="0" />
+      <LineId Id="1212" Count="2" />
+      <LineId Id="1453" Count="2" />
+      <LineId Id="1215" Count="2" />
+      <LineId Id="1451" Count="0" />
+      <LineId Id="1218" Count="6" />
+    </LineIds>
+    <LineIds Name="S14_LabelChecking.FlowInit">
+      <LineId Id="437" Count="9" />
+      <LineId Id="459" Count="7" />
+      <LineId Id="436" Count="0" />
+    </LineIds>
+    <LineIds Name="S14_LabelChecking.General">
+      <LineId Id="361" Count="0" />
+      <LineId Id="381" Count="0" />
+    </LineIds>
+    <LineIds Name="S14_LabelChecking.ILC">
+      <LineId Id="234" Count="4" />
+      <LineId Id="302" Count="0" />
+      <LineId Id="307" Count="0" />
+      <LineId Id="290" Count="0" />
+      <LineId Id="244" Count="0" />
+      <LineId Id="274" Count="0" />
+    </LineIds>
+    <LineIds Name="S14_LabelChecking.TipAuto">
+      <LineId Id="118" Count="0" />
+      <LineId Id="141" Count="0" />
+      <LineId Id="145" Count="0" />
+      <LineId Id="148" Count="1" />
+      <LineId Id="178" Count="0" />
+      <LineId Id="183" Count="0" />
+    </LineIds>
+    <LineIds Name="S14_LabelChecking.TipManual">
+      <LineId Id="137" Count="1" />
+      <LineId Id="176" Count="0" />
+      <LineId Id="262" Count="1" />
+      <LineId Id="246" Count="0" />
+      <LineId Id="156" Count="0" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="41" Count="0" />
+    </LineIds>
+    <LineIds Name="S14_LabelChecking.Z_Output">
+      <LineId Id="2" Count="0" />
+      <LineId Id="20" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

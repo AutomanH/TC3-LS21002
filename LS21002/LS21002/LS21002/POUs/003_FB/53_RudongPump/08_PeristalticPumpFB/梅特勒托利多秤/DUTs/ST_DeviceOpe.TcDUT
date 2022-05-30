@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_DeviceOpe" Id="{90fdfab1-837f-44f5-97d2-db4ec6d1bc5a}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE ST_DeviceOpe :
+STRUCT
+	xReadSerialNum_HMI,xReadSerialNum_Auto							:BOOL;//获取序列号,I4
+	xShelling_HMI,xShelling_Auto									:BOOL;//稳态去皮重,T
+	xShellingInstanly_HMI,xShellingInstanly_Auto					:BOOL;//立即去皮重,TI	
+	xSetTare_HMI,xSetTare_Auto										:BOOL;//预置皮重，TA
+	xlearTare_HMI,xlearTare_Auto									:BOOL;//清除皮重,TAC
+	xClearZero_HMI,xClearZero_Auto									:BOOL;//稳态清零,Z
+	xClearZeroInstanly_HMI,xClearZeroInstanly_Auto					:BOOL;//立即清零,ZI
+	xAcquireWeight_Steady_HMI,xAcquireWeight_Steady_Auto			:BOOL;//单次获取稳态重量,S
+	xAcquireWeight_RealTime_HMI,xAcquireWeight_RealTime_Auto		:BOOL;//连续获取重量,SI
+	xAcquireWeight_Continuous_HMI,xAcquireWeight_Continuous_Auto	:BOOL;//连续获取重量,SIR
+	xAcquireWeight_Stop_HMI,xAcquireWeight_Stop_Auto				:BOOL;//中断连续获取重量,SI
+	xRestart_HMI,xRestart_Auto										:BOOL;//重启秤体	
+
+
+
+
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

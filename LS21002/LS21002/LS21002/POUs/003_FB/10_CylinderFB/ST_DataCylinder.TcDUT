@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_DataCylinder" Id="{69a3a6a2-ba7d-446b-a904-bd8dcaad4f06}">
+    <Declaration><![CDATA[TYPE ST_DataCylinder :
+STRUCT
+	tHP_Delay					 : TIME ;					//原点延时
+	tWP_Delay					 : TIME ;					//动点延时
+	Alarm_Delay					: TIME := t#5s;					//报警延时
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

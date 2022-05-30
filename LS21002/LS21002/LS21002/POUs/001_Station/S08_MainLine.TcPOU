@@ -1,0 +1,686 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="S08_MainLine" Id="{8ee38042-6f58-4f94-a3ae-e7fd8646fc4f}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM S08_MainLine
+VAR
+	//工站
+	station					: REFERENCE TO FB_Station:=fbstation[8];
+	//伺服
+	fbMainLineAxis	 :REFERENCE TO FB_Axis:=fbAxis[15];	//	主流线伺服
+
+	
+	//延时
+	arTonDelay :ARRAY[1..20] OF TON;
+	//返回值
+	UdiReturnValue :ARRAY[1..20] OF UDINT;
+	//清除过程记录
+	xClearProcessStatus	:BOOL;
+
+	i: INT;
+	// 临时变量
+	_xFirstCycle: BOOL;
+	//过程记录
+	tsModuleProcess:ARRAY[1..gc_ModuleProNo] OF DUT_Process;
+	xClearModuleProcessDone:BOOL;
+	bClearProcessStep	:BYTE;
+	// //环形线尾端传感器
+	xMainLineEndCheckSensor: ARRAY[1..2] of bool;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Action Name="A_Input" Id="{2a912516-78df-4e77-81e9-cc324488ed21}">
+      <Implementation>
+        <ST><![CDATA[//传感器
+xMainLineEndCheckSensor[1] :=IxLineEndCheckSensor1;
+xMainLineEndCheckSensor[2] :=IxLineEndCheckSensor2;
+
+
+
+
+  
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Alarm" Id="{010567d9-9007-4f4f-95d0-910f71c1a017}">
+      <Implementation>
+        <ST><![CDATA[//
+station.adwAlarm[1].00:=station.xInitTimeout;	  			//S08Label 初始化超时
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Delay" Id="{ac664b08-062a-4507-a761-4db17fdfcccc}">
+      <Implementation>
+        <ST><![CDATA[(*arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );*)//TipAuto使用
+(*arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );*)//自动程序用
+arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
+arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[05](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[06](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[07](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[08](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[09](IN:= , PT:=T#0.1S , Q=> , ET=> );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="FlowAuto" Id="{24dc392c-9f23-4f4b-b799-63528ba27cc5}">
+      <Implementation>
+        <ST><![CDATA[
+//-----------------------------------------初始化是否完成判断----------------------------------------------
+IF NOT station.xInitDone 
+THEN
+ 	station.iStepAuto:=0;
+ 	station.xDone:=FALSE;
+	station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
+ELSIF station.xRunning  OR   tsModuleProcess[1].xProcessStarted
+THEN
+//-----------------------------------------动作步骤--------------------------------------------------------
+CASE station.iStepAuto OF	  
+	0: //----Home Step，等待启动----
+		IF station.xDisabled 
+			AND station.xCanRun 
+			AND NOT fbMachine[1].xStopped 
+			AND NOT station.xSingleRunning 
+		THEN
+			station.xDone:=TRUE;
+		END_IF
+		
+		IF  station.xSingleRunning 
+			OR station.xCanRun 
+			//AND NOT station.xDone 
+			AND NOT station.xDisabled 
+			AND NOT fbMachine[1].xStopped
+		THEN
+			station.xCycleEnable:=TRUE;
+			//station.xDone:= FALSE;  
+			station.iStepAuto:= 10;
+		END_IF
+    10: //复位数据 
+			station.iStepAuto:=50;
+			
+	50://等待各个工位完成信号
+		IF  S01_Loading.station.xDone  		AND 
+			S02_LidInjecting.station.xDone  AND 
+			S03_LidChecking.station.xDone 	AND 
+			S04_AluCovering.station.xDone  		AND 
+			S05_Adjusting.station.xDone  AND 
+			S06_Cutting.station.xDone 	AND 
+			xS07MainlineRunPermit 	THEN 
+			station.iStepAuto:=60;
+		END_IF
+	55://不允许各工位操作
+			Station.xDone:=FALSE;//不允许操作
+			 station.iStepAuto:=60;	
+	60://读取原点偏移量
+		 IF NOT _xFirstCycle THEN
+		   stData.Axis[15].rMovePosition[2] := stData.Axis[15].rMovePosition[1] ;
+		   _xFirstCycle := TRUE ;
+		 END_IF
+		   station.iStepAuto:=70;	
+		   
+	70:////Restore_after_Estop_Process1 皮带线移动流程
+			IF tsModuleProcess[1].xProcessNotStarted AND NOT  tsModuleProcess[1].xProcessStarted THEN
+					station.iStepAuto :=80; (*process not started*)
+			ELSIF  tsModuleProcess[1].xProcessStarted AND NOT  tsModuleProcess[1].xProcessCompleted THEN
+				 station.iStepAuto := 90;(*process started*)
+			ELSIF  tsModuleProcess[1].xProcessCompleted AND NOT tsModuleProcess[1].xQDataCompleted  THEN
+					station.iStepAuto := 150 ;(*process completed*)
+			ELSIF tsModuleProcess[1].xQDataCompleted THEN
+					station.iStepAuto :=160;(*Qdata completed *)
+			ELSE
+					station.iStepAuto :=80; 
+			END_IF		   
+	80://储存当前位置
+			tsModuleProcess[1].xProcessNotStarted:=TRUE;
+			stData.Axis[15].rMovePosition[3]:=fbMainLineAxis.rActPos;
+			station.iStepAuto:=100;
+	90://判断伺服位置是否合理
+			IF      ( ABS(stData.Axis[15].rMovePosition[3]+stData.Axis[15].rRelativeDistance))+0.1>=ABS(stData.Axis[15].rMovePosition[2]) AND 
+					  ( ABS(stData.Axis[15].rMovePosition[3]+stData.Axis[15].rRelativeDistance))-0.1<=ABS(stData.Axis[15].rMovePosition[2]) THEN
+					  station.iStepAuto:=110;(*伺服已经移动过了*)
+			ELSIF  ABS(stData.Axis[15].rMovePosition[3])+0.1>=ABS(stData.Axis[15].rMovePosition[2]) AND 
+				   ABS(stData.Axis[15].rMovePosition[3])-0.1<=ABS(stData.Axis[15].rMovePosition[2]) THEN
+				     station.iStepAuto:=100;(*伺服需要移动*)
+				
+			END_IF
+	100://数据更新 位置
+		tsModuleProcess[1].xProcessStarted:=TRUE;
+		stData.Axis[15].rMovePosition[2] := stData.Axis[15].rMovePosition[2] +stData.Axis[15].rRelativeDistance ;
+		arTonDelay[02](IN:= FALSE , PT:=T#50MS , Q=> , ET=> );
+	   	station.iStepAuto:= 110;
+	
+	110:
+	 	arTonDelay[02](IN:= TRUE , PT:=T#50MS , Q=> , ET=> );
+		   IF arTonDelay[02].Q THEN
+       		station.iStepAuto:=120;
+			arTonDelay[02](IN:=FALSE, PT:=T#50MS , Q=> , ET=> );
+       	   END_IF
+	120:  //启动伺服电机
+	 		 fbMainLineAxis.xMoveAuto[2] := TRUE ;
+			 	station.iStepAuto:=130;
+	130:
+			IF fbMainLineAxis.xMoveInPos[2]  THEN 	
+				 fbMainLineAxis.xMoveAuto[2] := FALSE ;
+				 tsModuleProcess[1].xProcessCompleted:=TRUE;
+				 station.iStepAuto:=150;
+			END_IF
+	150://数据传递
+			FOR  i:=1 TO (gc_MainLineFixtureNumber-3) BY 1 DO
+				MEMCPY(ADR(arMainlineFixtureData[i+2]),ADR(arMainlineFixtureData[i]),SIZEOF(arMainlineFixtureData[i]));
+				MEMCPY(ADR(arMainlineFixtureData[i+3]),ADR(arMainlineFixtureData[i+1]),SIZEOF(arMainlineFixtureData[i]));
+			END_FOR
+			tsModuleProcess[1].xQDataCompleted:=TRUE;
+			 station.iStepAuto:=160;
+	160://判断产品状态
+	  	 FOR i:= 1 TO gc_MainLineFixtureNumber BY 1 DO 
+				 IF 	arMainLineFixtureData[i].stProduct.xLoading_OK AND 
+					  arMainLineFixtureData[i].stProduct.xlidInjecting_OK AND
+					  arMainLineFixtureData[i].stProduct.xLidChecking_OK AND 
+					  arMainLineFixtureData[i].stProduct.xAluCovering_OK AND 
+					  arMainLineFixtureData[i].stProduct.xAdjusting_OK    AND
+					  arMainLineFixtureData[i].stProduct.xCutting_OK  THEN
+				   		arMainLineFixtureData[i].stProduct.xALL_OK := TRUE ;
+						arMainLineFixtureData[i].stProduct.xPart_Normal := FALSE ;
+						arMainLineFixtureData[i].stProduct.xPart_NG := FALSE ;
+				ELSIF	
+						arMainLineFixtureData[i].stProduct.xLoading_NOK OR 
+					  arMainLineFixtureData[i].stProduct.xlidInjecting_NOK OR
+					  arMainLineFixtureData[i].stProduct.xLidChecking_NOK OR 
+					  arMainLineFixtureData[i].stProduct.xAluCovering_NOK OR 
+					  arMainLineFixtureData[i].stProduct.xAdjusting_NOK    OR
+					  arMainLineFixtureData[i].stProduct.xCutting_NOK  THEN
+						arMainLineFixtureData[i].stProduct.xALL_OK := FALSE ;
+						arMainLineFixtureData[i].stProduct.xPart_Normal := FALSE ;
+						arMainLineFixtureData[i].stProduct.xPart_NG := TRUE ;
+				ELSE
+						arMainLineFixtureData[i].stProduct.xALL_OK := FALSE ;
+						arMainLineFixtureData[i].stProduct.xPart_Normal := TRUE ;
+						arMainLineFixtureData[i].stProduct.xPart_NG := FALSE ;
+				 END_IF
+        END_FOR	
+		 station.iStepAuto:=170;	
+			
+	170://清除各站的过程记录
+			xClearProcessStatus:=TRUE;
+			IF S02_LidInjecting.xClearModuleProcessDone 	 AND 
+				S03_LidChecking.xClearModuleProcessDone 	AND 
+				S04_AluCovering.xClearModuleProcessDone  	AND 
+				S05_Adjusting.xClearModuleProcessDone  		AND 
+				S06_Cutting.xClearModuleProcessDone 	    THEN 
+					station.iStepAuto:=180;
+			END_IF
+	180://过程记录清除完成
+			xClearProcessStatus:=FALSE;
+			IF 	NOT S02_LidInjecting.xClearModuleProcessDone 	 AND 
+				NOT S03_LidChecking.xClearModuleProcessDone 	AND 
+				NOT S04_AluCovering.xClearModuleProcessDone  	AND 
+				NOT S05_Adjusting.xClearModuleProcessDone  		AND 
+				NOT S06_Cutting.xClearModuleProcessDone 	THEN 
+						station.iStepAuto:=190;
+			END_IF
+	190://启动各个工位
+			FOR  i:= 1 TO 6 BY 1 DO 
+				fbStation[i].xDone:=FALSE;
+			END_FOR
+			xS07MainlineRunPermit:=FALSE;
+			station.iStepAuto:=500;	
+	500://清除本站过程记录
+			FOR i:=1 TO gc_ModuleProNo BY 1 DO
+				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+			END_FOR
+			 station.iStepAuto:=999;
+	999://----Single Run Finish----
+			
+		station.iStepAuto :=0;
+		IF NOT station.xSingleContinuousRun THEN
+			station.xSingleRunFlag:=FALSE;
+		END_IF
+		station.xCycleEnable:=FALSE;	
+		station.xDone:=TRUE;
+	ELSE
+		;	
+END_CASE
+
+
+
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="FlowInit" Id="{0319551f-8d07-4051-b26f-d6fd8276563b}">
+      <Implementation>
+        <ST><![CDATA[IF NOT station.xIniting THEN
+  station.iStepInit:=0;    
+ELSE
+//--------------------------------------------初始化步序----------------------------------
+CASE station.iStepInit OF	
+ 0://  
+  	IF station.xIniting THEN	
+  	  station.iStepInit:=10;	
+  	END_IF	
+10://复位数据
+		station.iStepInit:=20;
+20://伺服上电
+	fbMainLineAxis.xPowerInit:=TRUE;
+	IF  fbMainLineAxis.xPowerOn THEN
+			station.iStepInit:=30;
+	END_IF
+30://确定皮带线上是否有产品
+	FOR i:= 1 TO gc_MainLineFixtureNumber BY 1 DO
+		IF   arMainlineFixtureData[i].xMaterialOnOff  THEN
+			station.iStepInit:=100;	
+			EXIT;
+		ELSIF  i =  gc_MainLineFixtureNumber THEN
+			station.iStepInit:=35;
+		END_IF
+	END_FOR
+35://传感器检测
+		IF    IxS01Sensor1Reached  OR
+			  IxS01Sensor2Reached  OR
+			  IxS02Sensor1Reached  OR
+			  IxS02Sensor2Reached  OR  
+			  IxS04Sensor1Reached  OR
+			  IxS04Sensor2Reached  OR
+			  IxLineEndSensor1Reached OR
+			  IxLineEndSensor2Reached OR	
+              IxLineEndCheckSensor1	 OR
+              IxLineEndCheckSensor2	THEN
+			  	station.iStepInit:=100;	
+		END_IF
+40://皮带回原点
+		fbMainLineAxis.xReferenceAuto := TRUE ;
+	   	station.iStepInit:=50;
+50://回原点完成
+	IF  fbAxisHome[15].home_done THEN 
+		 fbMainLineAxis.xReferenceAuto  := FALSE ;
+		 station.iStepInit:=60;  
+	END_IF
+60://伺服到待机点
+     fbMainLineAxis.xMoveAuto[1] := TRUE ;
+	IF fbMainLineAxis.xMoveInPos[1] THEN 
+       station.iStepInit:=100;	
+	END_IF
+
+100://	
+    station.iStepInit:=999;	
+
+999://初始化完成	
+	station.iStepInit:=0;
+	station.xInitDone:=TRUE;  
+END_CASE
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="General" Id="{b98652e0-a279-416d-bff5-f370959787d5}">
+      <Implementation>
+        <ST><![CDATA[(************主流线上各个工位的位置************)
+//S01
+arCurFixtureNumStation[1]:=1;
+arCurFixtureNumStation[2]:=2;
+//S02
+arCurFixtureNumStation[3]:=9;
+arCurFixtureNumStation[4]:=10;
+//s03
+arCurFixtureNumStation[5]:=17;
+arCurFixtureNumStation[6]:=18;
+arCurFixtureNumStation[7]:=19;
+arCurFixtureNumStation[8]:=20;
+arCurFixtureNumStation[9]:=21;
+//s04
+arCurFixtureNumStation[10]:=27;
+arCurFixtureNumStation[11]:=28;
+//s05
+arCurFixtureNumStation[12]:=29;
+arCurFixtureNumStation[13]:=30;
+//S06
+arCurFixtureNumStation[14]:=31;
+arCurFixtureNumStation[15]:=32;
+arCurFixtureNumStation[16]:=33;
+//尾端
+arCurFixtureNumStation[17]:=39;
+arCurFixtureNumStation[18]:=40;
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ILC" Id="{352f208d-c404-4b71-879e-df1d2e26b914}">
+      <Implementation>
+        <ST><![CDATA[
+//---------------------------------------------------工站可执行-------------------------------------------------------
+station.xCanRun :=TRUE ;
+
+//---------------------------------------------------气缸动作条件-------------------------------------------
+
+
+//---------------------------------------------------伺服动作条件-------------------------------------------
+
+fbMainLineAxis.xRunILC := 
+fbMainLineAxis.xMoveILC[1] :=
+fbMainLineAxis.xMoveILC[2] :=
+fbMainLineAxis.xMoveILC[3] :=
+fbMainLineAxis.xMoveILC[4] :=
+fbMainLineAxis.xMoveILC[5] := 
+							S01_Loading.fbVTCCyl_1.xHP_Delay AND 
+							S01_Loading.fbVTCCyl_2.xHP_Delay AND 
+							S02_LidInjecting.fbHOZAdjustCyl_1.xHP_Delay AND
+							S02_LidInjecting.fbHOZAdjustCyl_2.xHP_Delay AND
+							S02_LidInjecting.fbHOZAdjustCyl_3.xHP_Delay AND
+							S02_LidInjecting.fbHOZAdjustCyl_4.xHP_Delay AND
+							S03_LidChecking.fbHOZAdjustCyl_1.xHP_Delay   AND
+							S03_LidChecking.fbHOZAdjustCyl_2.xHP_Delay   AND
+							S03_LidChecking.fbHOZAdjustCyl_3.xHP_Delay   AND
+							S03_LidChecking.fbHOZAdjustCyl_4.xHP_Delay   AND
+							S03_LidChecking.fbHOZAdjustCyl_5.xHP_Delay   AND
+							S03_LidChecking.fbHOZAdjustCyl_6.xHP_Delay   AND
+							S03_LidChecking.fbHOZAdjustCyl_7.xHP_Delay   AND
+							S03_LidChecking.fbHOZAdjustCyl_8.xHP_Delay   AND
+							S04_AluCovering.fbZAxisMove_1.xMoveInPos[1] AND 
+							S04_AluCovering.fbZAxisMove_2.xMoveInPos[1] AND
+							S04_AluCovering.fbHOZAdjustCyl_1.xHP_Delay AND
+							S04_AluCovering.fbHOZAdjustCyl_2.xHP_Delay AND
+							S04_AluCovering.fbHOZAdjustCyl_3.xHP_Delay AND
+							S04_AluCovering.fbHOZAdjustCyl_4.xHP_Delay AND
+							S05_Adjusting.fbZAxisMove_1.xMoveInPos[1] AND 
+							S05_Adjusting.fbZAxisMove_2.xMoveInPos[1] AND
+							S06_Cutting.fbVTCAdjustCyl.xHP_Delay AND
+							S06_Cutting.fbHOZCyl.xHP_Delay AND
+							S06_Cutting.fbHOZReachedCyl_1.xHP_Delay AND
+							S06_Cutting.fbHOZReachedCyl_2.xHP_Delay AND 
+							xMainLineEndCheckSensor[1]  AND 
+							xMainLineEndCheckSensor[2];]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="TipAuto" Id="{b716fa5e-5270-4e18-9bba-03813482cbca}">
+      <Implementation>
+        <ST><![CDATA[
+//------------------------------------------------AutoTip Cylinder--------------------------------
+	
+//------------------------------------------------AutoTip Servo--------------------------------
+//**************************************
+FOR i:= 1 TO 5 BY 1 DO 
+	IF fbMainLineAxis.xMoveAuto[i] THEN
+		fbMainLineAxis.iPosNumber := i ;
+	END_IF
+	
+END_FOR
+
+
+IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  THEN
+	  arTonDelay[01](IN:=True , PT:=T#1S , Q=> , ET=> );
+else
+	  arTonDelay[01](IN:=false);
+END_IF
+IF arTonDelay[1].Q  THEN 
+	IF	fbMainLineAxis.iPosNumber=1 	AND NOT fbMainLineAxis.xMoveInPos[1] THEN 	station.adwAutoTip[1].10:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
+	IF	fbMainLineAxis.iPosNumber=2	AND NOT fbMainLineAxis.xMoveInPos[2]	THEN 	station.adwAutoTip[1].11:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
+	IF	fbMainLineAxis.iPosNumber=3	AND NOT fbMainLineAxis.xMoveInPos[3]	THEN 	station.adwAutoTip[1].12:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
+	IF	fbMainLineAxis.iPosNumber=4	AND NOT fbMainLineAxis.xMoveInPos[4]	THEN 	station.adwAutoTip[1].13:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
+	IF	fbMainLineAxis.iPosNumber=5	AND NOT fbMainLineAxis.xMoveInPos[5]	THEN 	station.adwAutoTip[1].14:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="TipManual" Id="{906a5213-3ea5-48f9-bb5f-1f2c5af7125d}">
+      <Implementation>
+        <ST><![CDATA[//--------------------------------------------ManualTip------------------------------------------------------
+
+//-------------------------------------------气缸提示---------------------------------------------------------
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Z_Output" Id="{7664aa93-1d72-4e58-81c7-4f6af133034a}">
+      <Implementation>
+        <ST><![CDATA[(**************************气缸输出********************************)
+ ]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="S08_MainLine">
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="S08_MainLine.A_Input">
+      <LineId Id="28" Count="0" />
+      <LineId Id="57" Count="0" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="54" Count="1" />
+      <LineId Id="40" Count="1" />
+      <LineId Id="10" Count="3" />
+      <LineId Id="8" Count="0" />
+    </LineIds>
+    <LineIds Name="S08_MainLine.Alarm">
+      <LineId Id="176" Count="1" />
+      <LineId Id="262" Count="0" />
+      <LineId Id="266" Count="0" />
+    </LineIds>
+    <LineIds Name="S08_MainLine.Delay">
+      <LineId Id="64" Count="10" />
+      <LineId Id="44" Count="13" />
+      <LineId Id="40" Count="0" />
+    </LineIds>
+    <LineIds Name="S08_MainLine.FlowAuto">
+      <LineId Id="1155" Count="5" />
+      <LineId Id="1253" Count="0" />
+      <LineId Id="1161" Count="4" />
+      <LineId Id="1167" Count="17" />
+      <LineId Id="1256" Count="0" />
+      <LineId Id="1259" Count="0" />
+      <LineId Id="1456" Count="1" />
+      <LineId Id="1466" Count="0" />
+      <LineId Id="1469" Count="1" />
+      <LineId Id="1472" Count="1" />
+      <LineId Id="1471" Count="0" />
+      <LineId Id="1474" Count="0" />
+      <LineId Id="1467" Count="1" />
+      <LineId Id="1696" Count="2" />
+      <LineId Id="1485" Count="4" />
+      <LineId Id="1484" Count="0" />
+      <LineId Id="1500" Count="0" />
+      <LineId Id="1503" Count="5" />
+      <LineId Id="1593" Count="0" />
+      <LineId Id="1510" Count="3" />
+      <LineId Id="1501" Count="0" />
+      <LineId Id="1459" Count="0" />
+      <LineId Id="1515" Count="1" />
+      <LineId Id="1519" Count="0" />
+      <LineId Id="1535" Count="1" />
+      <LineId Id="1543" Count="0" />
+      <LineId Id="1545" Count="1" />
+      <LineId Id="1550" Count="1" />
+      <LineId Id="1549" Count="0" />
+      <LineId Id="1540" Count="0" />
+      <LineId Id="1492" Count="0" />
+      <LineId Id="1517" Count="0" />
+      <LineId Id="1493" Count="0" />
+      <LineId Id="1499" Count="0" />
+      <LineId Id="1460" Count="2" />
+      <LineId Id="1495" Count="3" />
+      <LineId Id="1494" Count="0" />
+      <LineId Id="1522" Count="4" />
+      <LineId Id="1528" Count="0" />
+      <LineId Id="1534" Count="0" />
+      <LineId Id="1533" Count="0" />
+      <LineId Id="1529" Count="0" />
+      <LineId Id="1584" Count="0" />
+      <LineId Id="1588" Count="0" />
+      <LineId Id="1587" Count="0" />
+      <LineId Id="1558" Count="0" />
+      <LineId Id="1589" Count="0" />
+      <LineId Id="1592" Count="0" />
+      <LineId Id="1590" Count="0" />
+      <LineId Id="1637" Count="0" />
+      <LineId Id="1639" Count="6" />
+      <LineId Id="1647" Count="0" />
+      <LineId Id="1661" Count="1" />
+      <LineId Id="1648" Count="0" />
+      <LineId Id="1653" Count="4" />
+      <LineId Id="1652" Count="0" />
+      <LineId Id="1663" Count="1" />
+      <LineId Id="1649" Count="0" />
+      <LineId Id="1658" Count="0" />
+      <LineId Id="1665" Count="1" />
+      <LineId Id="1659" Count="0" />
+      <LineId Id="1650" Count="0" />
+      <LineId Id="1638" Count="0" />
+      <LineId Id="1660" Count="0" />
+      <LineId Id="1559" Count="1" />
+      <LineId Id="1594" Count="0" />
+      <LineId Id="1605" Count="0" />
+      <LineId Id="1675" Count="3" />
+      <LineId Id="1612" Count="0" />
+      <LineId Id="1604" Count="0" />
+      <LineId Id="1603" Count="0" />
+      <LineId Id="1613" Count="0" />
+      <LineId Id="1681" Count="0" />
+      <LineId Id="1683" Count="3" />
+      <LineId Id="1688" Count="0" />
+      <LineId Id="1680" Count="0" />
+      <LineId Id="1561" Count="1" />
+      <LineId Id="1667" Count="0" />
+      <LineId Id="1623" Count="0" />
+      <LineId Id="1693" Count="0" />
+      <LineId Id="1563" Count="0" />
+      <LineId Id="1552" Count="0" />
+      <LineId Id="1690" Count="1" />
+      <LineId Id="1689" Count="0" />
+      <LineId Id="1553" Count="0" />
+      <LineId Id="1212" Count="2" />
+      <LineId Id="1453" Count="2" />
+      <LineId Id="1216" Count="8" />
+    </LineIds>
+    <LineIds Name="S08_MainLine.FlowInit">
+      <LineId Id="437" Count="9" />
+      <LineId Id="478" Count="0" />
+      <LineId Id="492" Count="0" />
+      <LineId Id="494" Count="4" />
+      <LineId Id="504" Count="0" />
+      <LineId Id="511" Count="0" />
+      <LineId Id="515" Count="0" />
+      <LineId Id="519" Count="0" />
+      <LineId Id="513" Count="0" />
+      <LineId Id="516" Count="0" />
+      <LineId Id="514" Count="0" />
+      <LineId Id="512" Count="0" />
+      <LineId Id="539" Count="1" />
+      <LineId Id="547" Count="0" />
+      <LineId Id="552" Count="1" />
+      <LineId Id="549" Count="0" />
+      <LineId Id="554" Count="0" />
+      <LineId Id="550" Count="0" />
+      <LineId Id="548" Count="0" />
+      <LineId Id="542" Count="1" />
+      <LineId Id="556" Count="1" />
+      <LineId Id="501" Count="0" />
+      <LineId Id="520" Count="1" />
+      <LineId Id="524" Count="0" />
+      <LineId Id="526" Count="1" />
+      <LineId Id="531" Count="3" />
+      <LineId Id="536" Count="0" />
+      <LineId Id="538" Count="0" />
+      <LineId Id="522" Count="0" />
+      <LineId Id="499" Count="0" />
+      <LineId Id="460" Count="1" />
+      <LineId Id="476" Count="0" />
+      <LineId Id="462" Count="4" />
+      <LineId Id="436" Count="0" />
+    </LineIds>
+    <LineIds Name="S08_MainLine.General">
+      <LineId Id="361" Count="0" />
+      <LineId Id="383" Count="0" />
+      <LineId Id="381" Count="1" />
+      <LineId Id="384" Count="0" />
+      <LineId Id="386" Count="0" />
+      <LineId Id="385" Count="0" />
+      <LineId Id="387" Count="0" />
+      <LineId Id="389" Count="0" />
+      <LineId Id="388" Count="0" />
+      <LineId Id="391" Count="0" />
+      <LineId Id="390" Count="0" />
+      <LineId Id="393" Count="1" />
+      <LineId Id="396" Count="0" />
+      <LineId Id="395" Count="0" />
+      <LineId Id="412" Count="0" />
+      <LineId Id="398" Count="0" />
+      <LineId Id="397" Count="0" />
+      <LineId Id="399" Count="0" />
+      <LineId Id="401" Count="0" />
+      <LineId Id="400" Count="0" />
+      <LineId Id="403" Count="1" />
+      <LineId Id="414" Count="0" />
+      <LineId Id="413" Count="0" />
+      <LineId Id="410" Count="0" />
+      <LineId Id="405" Count="0" />
+    </LineIds>
+    <LineIds Name="S08_MainLine.ILC">
+      <LineId Id="234" Count="4" />
+      <LineId Id="302" Count="0" />
+      <LineId Id="307" Count="0" />
+      <LineId Id="290" Count="0" />
+      <LineId Id="245" Count="1" />
+      <LineId Id="248" Count="4" />
+      <LineId Id="345" Count="0" />
+      <LineId Id="309" Count="4" />
+      <LineId Id="316" Count="2" />
+      <LineId Id="315" Count="0" />
+      <LineId Id="321" Count="2" />
+      <LineId Id="320" Count="0" />
+      <LineId Id="334" Count="1" />
+      <LineId Id="325" Count="2" />
+      <LineId Id="324" Count="0" />
+      <LineId Id="339" Count="1" />
+      <LineId Id="330" Count="0" />
+      <LineId Id="274" Count="0" />
+      <LineId Id="342" Count="1" />
+      <LineId Id="346" Count="1" />
+    </LineIds>
+    <LineIds Name="S08_MainLine.TipAuto">
+      <LineId Id="118" Count="0" />
+      <LineId Id="141" Count="0" />
+      <LineId Id="145" Count="0" />
+      <LineId Id="148" Count="4" />
+      <LineId Id="187" Count="0" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="157" Count="8" />
+      <LineId Id="205" Count="4" />
+      <LineId Id="178" Count="0" />
+      <LineId Id="183" Count="0" />
+    </LineIds>
+    <LineIds Name="S08_MainLine.TipManual">
+      <LineId Id="137" Count="1" />
+      <LineId Id="176" Count="0" />
+      <LineId Id="262" Count="1" />
+      <LineId Id="246" Count="0" />
+      <LineId Id="156" Count="0" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="41" Count="0" />
+    </LineIds>
+    <LineIds Name="S08_MainLine.Z_Output">
+      <LineId Id="2" Count="0" />
+      <LineId Id="20" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

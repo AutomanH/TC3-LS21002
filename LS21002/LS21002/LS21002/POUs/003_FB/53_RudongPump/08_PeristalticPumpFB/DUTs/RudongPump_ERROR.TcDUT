@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="RudongPump_ERROR" Id="{905599e9-fccf-4c1c-869b-a73a4b749639}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE RudongPump_ERROR :
+(
+ 	 No_ERROR := 0,	
+  	FLT_PARA             			  	:= 1, (* E-Gripper Parameter fault   程序配置参数有问题 *)
+  	FLT_CONNECT       		        := 2, (* E-Gripper not ready 旋转有通信报警*)  
+  	FLT_RDYCMD           			    := 3, (* E-Gripper read/write command while not ready 预留*)
+	FLT_CONFIGURE_PARA            := 4, (* 配置参数错误 *)
+	FLT_FLUVOLUM_TIME_PARA        := 5, (* 流量时间配置错误 *)
+  
+  FLT_PUSH_TIMEOUT   			     	:= 10, (* E-Gripper release  execute Timeout *)
+  FLT_PULL_TIMEOUT     					:= 11, (* E-Gripper org  execute Timeout *)  
+  
+  
+  FLT_STOP_TIMEOUT 						  := 12, (* E-Gripper org command execute Timeout *)  
+	FLT_FULLSPEEDSTOP_TIMEOUT 		:= 13, (* E-Gripper org command execute Timeout *)  
+	FLT_FULLSPEEDSTART_TIMEOUT 		:= 14, (* E-Gripper org command execute Timeout *)  
+	FLT_CMD_TIMEOUT    		 				:= 15, (* E-Gripper release command execute Timeout *) 
+	FLT_RUN_FALL    		 				  := 16, (* E-Gripper release command execute Timeout *) 
+  FLT_PumpCal_TIMEOUT     			:= 17, (* E-Gripper org  execute Timeout *)  
+  FLT_PumpCal_OverFlow     			:= 18 (* E-Gripper org  execute Timeout *)  	
+	
+)INT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

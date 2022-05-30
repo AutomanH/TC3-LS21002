@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_AutoCalOpe" Id="{f5279f0f-aa9a-4049-a9a8-72abe5b99343}">
+    <Declaration><![CDATA[TYPE ST_AutoCalOpe :
+STRUCT
+	x96PumpHeadCal_HMI,x96PumpHeadCal_Auto										:BOOL;//触发96泵头校准程序
+	xSpecificPumpHeadCal_HMI,xSpecificPumpHeadCal_Auto				:BOOL;//触发指定泵头校准程序	
+	
+	xContinuesInject_HMI:BOOL;//连续加液	
+	xInit_Hmi,xInit_Auto																			:BOOL;//初始化校准程序
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="RudongPump_IOData" Id="{dbac88b8-5e53-4bfc-aa43-c97e0b36dc75}">
+    <Declaration><![CDATA[TYPE RudongPump_IOData :
+STRUCT
+	//夹紧轴输出
+	O_PumpType           : INT;//泵头型号(0-8)
+	O_HosePipeType       : INT;//软管型号
+	O_ControlSet         : INT;//启停控制；1（启动）;0(停止)
+	O_DirectionSet       : INT;//方向控制：1（顺时针）;0（逆时针）
+	O_FullSpeedControl   : INT;//全速运行: 1：启动全速; 0：停止全速
+	O_FluVolumeSet       : REAL;//液量设定 0.0-99999.0 mL(0.1ml)
+	O_RuntimeSet         : REAL;//运行时间设定 0.1-9999s(0.1s)
+    O_RunModeSet         : INT := 2;//运行模式设定；0（传输）；1（定量计算）；2（定时定量，默认模式）；
+//	O_SpeedSet      	 : REAL;//速度设定 0.1-600.0 mL(rpm)	
+	O_CycleNumber		 : INT;//循环次数
+	O_ModuleAddress			: INT;//灌装单元地址
+	O_ModuleSpeed			: REAL;//灌装单元转速
+	O_ModuleStart			: INT;//灌装单元启停；1，启动；0，停止	
+	O_ModuleRealVolume		: REAL;//实际灌装量	(0.1-9999.99ml)	
+	O_ModuleMicroReg		: INT;//灌装量微调1,+;0-
+	O_ResetCalcoeff			: INT;//恢复校准系数	
+	I_RunSignal				:INT;//1,运行，0，停止
+	I_CalSignal				:INT;//1，校准中，0，停止
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

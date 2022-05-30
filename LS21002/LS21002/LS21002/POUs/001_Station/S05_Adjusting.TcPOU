@@ -1,0 +1,513 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="S05_Adjusting" Id="{a37d2ed0-8953-41d2-afea-641d8fda9e35}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM S05_Adjusting
+
+VAR
+	//工站
+	station					: REFERENCE TO FB_Station:=fbstation[5];
+	//气缸
+
+
+
+
+	//伺服
+	fbZAxisMove_1	 :REFERENCE TO FB_Axis:=fbAxis[10];	//	调整工位-Z轴伺服1
+	fbZAxisMove_2	 :REFERENCE TO FB_Axis:=fbAxis[11];	//	调整工位-Z轴伺服2
+
+
+
+	//延时
+	arTonDelay :ARRAY[1..20] OF TON;
+	//返回值
+	UdiReturnValue :ARRAY[1..20] OF UDINT;
+	//本地过程数据
+	arProcessDataStation : ARRAY [1..2] OF DUT_MainlineFixture;
+	i: INT;
+	//过程记录
+	tsModuleProcess:ARRAY[1..gc_ModuleProNo] OF DUT_Process;
+	xClearModuleProcessDone:BOOL;
+	bClearProcessStep	:BYTE;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Action Name="A_Input" Id="{d026f879-9ebf-471b-ac71-87e8725143ee}">
+      <Implementation>
+        <ST><![CDATA[//气缸
+
+
+
+
+
+  
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Alarm" Id="{04903be7-f3af-4c6c-90de-ca8e7e7d880a}">
+      <Implementation>
+        <ST><![CDATA[//
+station.adwAlarm[1].00:=station.xInitTimeout;	  			//S08Label 初始化超时
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Delay" Id="{c027b208-e27d-41c2-8aac-8b0446bb9692}">
+      <Implementation>
+        <ST><![CDATA[(*arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );*)//TipAuto使用
+arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );//伺服下压延时
+arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
+arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[05](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[06](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[07](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[08](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[09](IN:= , PT:=T#0.1S , Q=> , ET=> );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="FlowAuto" Id="{1cc20450-3776-4459-80d5-2b767a55b093}">
+      <Implementation>
+        <ST><![CDATA[
+//-----------------------------------------初始化是否完成判断----------------------------------------------
+IF NOT station.xInitDone 
+THEN
+ 	station.iStepAuto:=0;
+ 	station.xDone:=FALSE;
+ELSIF station.xRunning  
+THEN
+//-----------------------------------------动作步骤--------------------------------------------------------
+CASE station.iStepAuto OF	  
+	0: //----Home Step，等待启动----
+		IF station.xDisabled 
+			AND station.xCanRun 
+			AND NOT fbMachine[1].xStopped 
+			AND NOT station.xSingleRunning 
+		THEN
+			station.xDone:=TRUE;
+		END_IF
+		
+		IF  station.xSingleRunning 
+			OR station.xCanRun 
+			AND NOT station.xDone 
+			AND NOT station.xDisabled 
+			AND NOT fbMachine[1].xStopped
+		THEN
+			station.xCycleEnable:=TRUE;
+			station.xDone:= FALSE;  
+			station.iStepAuto:= 10;
+		END_IF
+    10: //复位数据 
+			arTonDelay[02](IN:= FALSE); 
+			station.iStepAuto:=20;
+			
+	20:////Restore_after_Estop_Process1 上载数据流程
+			IF tsModuleProcess[1].xProcessNotStarted AND NOT  tsModuleProcess[1].xProcessStarted THEN
+					station.iStepAuto :=21; (*process not started*)
+			ELSIF  tsModuleProcess[1].xProcessStarted AND NOT  tsModuleProcess[1].xProcessCompleted THEN
+				 station.iStepAuto := 21;(*process started*)
+			ELSIF  tsModuleProcess[1].xProcessCompleted AND NOT tsModuleProcess[1].xQDataCompleted  THEN
+					station.iStepAuto := 40 ;(*process completed*)
+			ELSIF tsModuleProcess[1].xQDataCompleted THEN
+					station.iStepAuto :=40;(*Qdata completed *)
+			ELSE
+					station.iStepAuto :=21; 
+			END_IF	
+	21://
+				tsModuleProcess[1].xProcessNotStarted:=TRUE;
+				
+				station.iStepAuto:= 30;
+				
+	30://数据load 
+		tsModuleProcess[1].xProcessStarted	:=TRUE;
+		MEMCPY(ADR(arProcessDataStation[1]),ADR(arMainlineFixtureData[arCurFixtureNumStation[12]]),SIZEOF(arMainlineFixtureData[arCurFixtureNumStation[12]]));
+		MEMCPY(ADR(arProcessDataStation[2]),ADR(arMainlineFixtureData[arCurFixtureNumStation[13]]),SIZEOF(arMainlineFixtureData[arCurFixtureNumStation[13]]));
+		tsModuleProcess[1].xProcessCompleted:=TRUE;
+		tsModuleProcess[1].xQDataCompleted:=TRUE;
+		station.iStepAuto:= 40;
+	40: //判断产品状态
+			IF fbMachine[1].xTryRun OR station.xSingleRunning THEN
+				station.iStepAuto:= 50; 
+			ELSE
+				IF  arProcessDataStation[1].xMaterialOnOff   AND
+					 arProcessDataStation[2].xMaterialOnOff  THEN
+					station.iStepAuto:= 50;
+				ELSE
+					station.iStepAuto:= 999;
+				END_IF
+			END_IF		
+
+	/////产品流程开始	
+	50:////Restore_after_Estop_Process2 调整流程
+			IF tsModuleProcess[2].xProcessNotStarted AND NOT  tsModuleProcess[2].xProcessStarted THEN
+					station.iStepAuto :=60; (*process not started*)
+			ELSIF  tsModuleProcess[2].xProcessStarted AND NOT  tsModuleProcess[2].xProcessCompleted THEN
+				 station.iStepAuto := 60;(*process started*)
+			ELSIF  tsModuleProcess[2].xProcessCompleted AND NOT tsModuleProcess[2].xQDataCompleted  THEN
+					station.iStepAuto :=110;(*process completed*)
+			ELSIF tsModuleProcess[2].xQDataCompleted THEN
+					station.iStepAuto :=200;(*Qdata completed *)
+			ELSE
+					station.iStepAuto :=60; 
+			END_IF	
+	60://
+				 tsModuleProcess[2].xProcessNotStarted:=TRUE;
+				 station.iStepAuto :=70; 
+	70://Z轴伺服下降
+			 tsModuleProcess[2].xProcessStarted:=TRUE;
+			fbZAxisMove_1.xMoveAuto[2]:=TRUE;
+		    fbZAxisMove_2.xMoveAuto[2]:=TRUE;
+		IF  fbZAxisMove_1.xMoveInPos[2] AND fbZAxisMove_2.xMoveInPos[2] THEN
+			station.iStepInit:=80;	
+		END_IF
+	80://复位延时
+				arTonDelay[02](IN:= FALSE); 
+					station.iStepInit:=90;
+	90://延时等待
+		arTonDelay[02](IN:= TRUE , PT:=T#2S , Q=> , ET=> );//伺服下压延时		
+		IF  arTonDelay[2].Q THEN
+			station.iStepInit:=100;
+		END_IF
+		
+	100://Z轴伺服上升
+			fbZAxisMove_1.xMoveAuto[1]:=TRUE;
+		    fbZAxisMove_2.xMoveAuto[1]:=TRUE;
+		IF  fbZAxisMove_1.xMoveInPos[1] AND fbZAxisMove_2.xMoveInPos[1] THEN
+			station.iStepInit:=110;	
+		END_IF	
+	110:
+		 tsModuleProcess[2].xProcessCompleted:=TRUE;
+		 station.iStepInit:=120;	
+	120://调整结果
+		arProcessDataStation[1].stProduct.xAdjusting_NOK:=FALSE;
+		arProcessDataStation[2].stProduct.xAdjusting_OK :=TRUE;
+		 tsModuleProcess[2].xQDataCompleted:=TRUE;
+		station.iStepInit:=200;
+	
+	////产品流程结束	
+	200:////Restore_after_Estop_Process3 数据传输流程
+			IF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
+					station.iStepAuto :=210; (*process not started*)
+			ELSIF  tsModuleProcess[3].xProcessStarted AND NOT  tsModuleProcess[3].xProcessCompleted THEN
+				 station.iStepAuto := 220;(*process started*)
+			ELSIF  tsModuleProcess[3].xProcessCompleted AND NOT tsModuleProcess[3].xQDataCompleted  THEN
+					station.iStepAuto :=230;(*process completed*)
+			ELSIF tsModuleProcess[3].xQDataCompleted THEN
+					station.iStepAuto :=999;(*Qdata completed *)
+			ELSE
+					station.iStepAuto :=210; 
+			END_IF		
+	210://		
+				tsModuleProcess[3].xProcessNotStarted:=TRUE;
+				station.iStepAuto :=220; 
+	220://数据unload
+		tsModuleProcess[3].xProcessStarted:=TRUE;
+		MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[12]]),ADR(arProcessDataStation[1]),SIZEOF(arProcessDataStation[1]));
+		MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[13]]),ADR(arProcessDataStation[2]),SIZEOF(arProcessDataStation[2]));
+		station.iStepAuto:= 230;
+	230://
+			tsModuleProcess[3].xProcessCompleted:=TRUE;
+			station.iStepAuto :=240; 
+ 	240://本地数据清除
+			MEMSET(ADR(arProcessDataStation[1]),0,SIZEOF(arProcessDataStation[1]));
+			MEMSET(ADR(arProcessDataStation[2]),0,SIZEOF(arProcessDataStation[2]));
+			tsModuleProcess[3].xQDataCompleted:=TRUE;
+			station.iStepAuto:= 999;
+	999://----Single Run Finish----
+			
+		station.iStepAuto :=0;
+		IF NOT station.xSingleContinuousRun THEN
+			station.xSingleRunFlag:=FALSE;
+		END_IF
+		station.xCycleEnable:=FALSE;	
+		station.xDone:=TRUE;
+	ELSE
+		;	
+END_CASE
+
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="FlowInit" Id="{88ead8ef-aa65-4fab-93d0-c75a67e57b1b}">
+      <Implementation>
+        <ST><![CDATA[IF NOT station.xIniting THEN
+  station.iStepInit:=0;    
+ELSE
+//--------------------------------------------初始化步序----------------------------------
+CASE station.iStepInit OF	
+ 0://  
+  	IF station.xIniting THEN	
+  	  station.iStepInit:=10;	
+  	END_IF	
+10://复位数据
+	station.iStepInit:=20;
+20://伺服上电
+	fbZAxisMove_1.xPowerInit:=TRUE;
+    fbZAxisMove_2.xPowerInit:=TRUE;
+	IF  fbZAxisMove_1.xPowerOn AND fbZAxisMove_2.xPowerOn THEN
+		station.iStepInit:=30;	
+	END_IF
+30://伺服去参考位位置
+	fbZAxisMove_1.xMoveAuto[1]:=TRUE;
+    fbZAxisMove_2.xMoveAuto[1]:=TRUE;
+	IF  fbZAxisMove_1.xMoveInPos[1] AND fbZAxisMove_2.xMoveInPos[1] THEN
+		station.iStepInit:=100;	
+	END_IF
+100://	
+    station.iStepInit:=999;	
+999://初始化完成	
+	station.iStepInit:=0;
+	station.xInitDone:=TRUE;  
+END_CASE
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="General" Id="{be784cbd-7cef-4c98-8307-bd0c2738f165}">
+      <Implementation>
+        <ST><![CDATA[(******************清除过程记录**********************)
+CASE bClearProcessStep OF
+	0:	
+		IF	 S08_MainLine.xClearProcessStatus THEN
+			FOR i:=1 TO gc_ModuleProNo BY 1 DO
+				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+			END_FOR
+			bClearProcessStep:=10;
+		END_IF
+	10:
+		xClearModuleProcessDone:=TRUE;
+		bClearProcessStep:=20;
+	20:
+		IF NOT S08_MainLine.xClearProcessStatus THEN
+			xClearModuleProcessDone:=FALSE;
+			bClearProcessStep:=30;
+		END_IF
+	30:  
+			bClearProcessStep:=0;
+	
+END_CASE
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ILC" Id="{16ea66f3-e6c8-4dcd-8fa1-eee8e39e7a81}">
+      <Implementation>
+        <ST><![CDATA[
+//---------------------------------------------------工站可执行-------------------------------------------------------
+station.xCanRun :=TRUE ;
+
+//---------------------------------------------------气缸动作条件-------------------------------------------
+
+
+//---------------------------------------------------伺服动作条件-------------------------------------------
+
+fbZAxisMove_1.xRunILC := 
+fbZAxisMove_1.xMoveILC[1] :=
+fbZAxisMove_1.xMoveILC[2] :=
+fbZAxisMove_1.xMoveILC[3] :=
+fbZAxisMove_1.xMoveILC[4] :=
+fbZAxisMove_1.xMoveILC[5] := TRUE ;
+
+fbZAxisMove_2.xRunILC := 
+fbZAxisMove_2.xMoveILC[1] :=
+fbZAxisMove_2.xMoveILC[2] :=
+fbZAxisMove_2.xMoveILC[3] :=
+fbZAxisMove_2.xMoveILC[4] :=
+fbZAxisMove_2.xMoveILC[5] := TRUE ;
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="TipAuto" Id="{eea03d5f-5c63-4195-a511-3f8d7973f551}">
+      <Implementation>
+        <ST><![CDATA[
+//------------------------------------------------AutoTip Cylinder--------------------------------
+
+//------------------------------------------------AutoTip Servo--------------------------------
+//**************************************
+FOR i:= 1 TO 5 BY 1 DO 
+	IF fbZAxisMove_1.xMoveAuto[i] THEN
+		fbZAxisMove_1.iPosNumber := i ;
+	END_IF
+	IF fbZAxisMove_2.xMoveAuto[i] THEN
+		fbZAxisMove_2.iPosNumber := i ;
+	END_IF
+	
+END_FOR
+
+IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  THEN
+	  arTonDelay[01](IN:=True , PT:=T#1S , Q=> , ET=> );
+else
+	  arTonDelay[01](IN:=false);
+END_IF
+IF arTonDelay[1].Q  THEN 
+	IF	fbZAxisMove_1.iPosNumber=1 	AND NOT fbZAxisMove_1.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].10:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
+	if	fbZAxisMove_1.iPosNumber=2	AND NOT fbZAxisMove_1.xMoveInPos[2]	THEN 	station.adwAutoTip[1].11:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
+	if	fbZAxisMove_1.iPosNumber=3	AND NOT fbZAxisMove_1.xMoveInPos[3]	THEN 	station.adwAutoTip[1].12:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
+	if	fbZAxisMove_1.iPosNumber=4	AND NOT fbZAxisMove_1.xMoveInPos[4]	THEN 	station.adwAutoTip[1].13:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
+	if	fbZAxisMove_1.iPosNumber=5	AND NOT fbZAxisMove_1.xMoveInPos[5]	THEN 	station.adwAutoTip[1].14:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
+	IF	fbZAxisMove_2.iPosNumber=1 	AND NOT fbZAxisMove_2.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].15:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
+	if	fbZAxisMove_2.iPosNumber=2	AND NOT fbZAxisMove_2.xMoveInPos[2]	THEN 	station.adwAutoTip[1].16:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
+	if	fbZAxisMove_2.iPosNumber=3	AND NOT fbZAxisMove_2.xMoveInPos[3]	THEN 	station.adwAutoTip[1].17:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
+	if	fbZAxisMove_2.iPosNumber=4	AND NOT fbZAxisMove_2.xMoveInPos[4]	THEN 	station.adwAutoTip[1].18:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
+	if	fbZAxisMove_2.iPosNumber=5	AND NOT fbZAxisMove_2.xMoveInPos[5]	THEN 	station.adwAutoTip[1].19:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
+	
+	
+		
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="TipManual" Id="{8861b2f5-8fc6-436a-8e36-6b701c070d54}">
+      <Implementation>
+        <ST><![CDATA[//--------------------------------------------ManualTip------------------------------------------------------
+
+//-------------------------------------------气缸提示---------------------------------------------------------
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Z_Output" Id="{e522a86c-4fde-4137-a319-db4a8fcf140c}">
+      <Implementation>
+        <ST><![CDATA[(**************************气缸输出********************************)
+
+  ]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="S05_Adjusting">
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="S05_Adjusting.A_Input">
+      <LineId Id="28" Count="0" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="65" Count="0" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="40" Count="1" />
+      <LineId Id="10" Count="3" />
+      <LineId Id="8" Count="0" />
+    </LineIds>
+    <LineIds Name="S05_Adjusting.Alarm">
+      <LineId Id="176" Count="1" />
+      <LineId Id="262" Count="0" />
+      <LineId Id="266" Count="0" />
+    </LineIds>
+    <LineIds Name="S05_Adjusting.Delay">
+      <LineId Id="64" Count="10" />
+      <LineId Id="44" Count="13" />
+      <LineId Id="40" Count="0" />
+    </LineIds>
+    <LineIds Name="S05_Adjusting.FlowAuto">
+      <LineId Id="1155" Count="10" />
+      <LineId Id="1167" Count="17" />
+      <LineId Id="1256" Count="0" />
+      <LineId Id="1638" Count="0" />
+      <LineId Id="1259" Count="0" />
+      <LineId Id="1659" Count="0" />
+      <LineId Id="1667" Count="17" />
+      <LineId Id="1815" Count="0" />
+      <LineId Id="1685" Count="0" />
+      <LineId Id="1700" Count="0" />
+      <LineId Id="1687" Count="12" />
+      <LineId Id="1660" Count="0" />
+      <LineId Id="1556" Count="1" />
+      <LineId Id="1709" Count="13" />
+      <LineId Id="1706" Count="0" />
+      <LineId Id="1629" Count="0" />
+      <LineId Id="1723" Count="0" />
+      <LineId Id="1631" Count="3" />
+      <LineId Id="1630" Count="0" />
+      <LineId Id="1636" Count="1" />
+      <LineId Id="1639" Count="0" />
+      <LineId Id="1561" Count="0" />
+      <LineId Id="1635" Count="0" />
+      <LineId Id="1640" Count="2" />
+      <LineId Id="1562" Count="1" />
+      <LineId Id="1646" Count="3" />
+      <LineId Id="1645" Count="0" />
+      <LineId Id="1730" Count="2" />
+      <LineId Id="1725" Count="2" />
+      <LineId Id="1733" Count="0" />
+      <LineId Id="1728" Count="0" />
+      <LineId Id="1581" Count="0" />
+      <LineId Id="1779" Count="35" />
+      <LineId Id="1735" Count="0" />
+      <LineId Id="1218" Count="2" />
+      <LineId Id="1223" Count="1" />
+    </LineIds>
+    <LineIds Name="S05_Adjusting.FlowInit">
+      <LineId Id="437" Count="9" />
+      <LineId Id="467" Count="1" />
+      <LineId Id="470" Count="3" />
+      <LineId Id="469" Count="0" />
+      <LineId Id="474" Count="0" />
+      <LineId Id="476" Count="3" />
+      <LineId Id="475" Count="0" />
+      <LineId Id="460" Count="6" />
+      <LineId Id="436" Count="0" />
+    </LineIds>
+    <LineIds Name="S05_Adjusting.General">
+      <LineId Id="382" Count="21" />
+      <LineId Id="361" Count="0" />
+      <LineId Id="381" Count="0" />
+    </LineIds>
+    <LineIds Name="S05_Adjusting.ILC">
+      <LineId Id="234" Count="4" />
+      <LineId Id="302" Count="0" />
+      <LineId Id="307" Count="0" />
+      <LineId Id="290" Count="0" />
+      <LineId Id="316" Count="14" />
+      <LineId Id="274" Count="0" />
+    </LineIds>
+    <LineIds Name="S05_Adjusting.TipAuto">
+      <LineId Id="118" Count="0" />
+      <LineId Id="141" Count="0" />
+      <LineId Id="145" Count="0" />
+      <LineId Id="209" Count="8" />
+      <LineId Id="223" Count="1" />
+      <LineId Id="226" Count="6" />
+      <LineId Id="259" Count="9" />
+      <LineId Id="278" Count="0" />
+      <LineId Id="256" Count="2" />
+      <LineId Id="178" Count="0" />
+      <LineId Id="183" Count="0" />
+    </LineIds>
+    <LineIds Name="S05_Adjusting.TipManual">
+      <LineId Id="137" Count="1" />
+      <LineId Id="176" Count="0" />
+      <LineId Id="262" Count="1" />
+      <LineId Id="246" Count="0" />
+      <LineId Id="156" Count="0" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="41" Count="0" />
+    </LineIds>
+    <LineIds Name="S05_Adjusting.Z_Output">
+      <LineId Id="2" Count="0" />
+      <LineId Id="19" Count="1" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

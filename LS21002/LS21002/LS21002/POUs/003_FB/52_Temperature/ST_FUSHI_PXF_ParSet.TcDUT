@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_FUSHI_PXF_ParSet" Id="{f71d4c51-ef1d-458f-9c1b-6682389c08ea}">
+    <Declaration><![CDATA[TYPE ST_FUSHI_PXF_ParSet :
+STRUCT
+	iSV				:INT;//温度设定值
+	iMaxTemperature	:INT;//最高温度
+	iMinTemperature	:INT;//最低温度	
+		
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

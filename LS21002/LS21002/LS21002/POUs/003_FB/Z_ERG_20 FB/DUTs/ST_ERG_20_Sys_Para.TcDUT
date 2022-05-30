@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_ERG_20_Sys_Para" Id="{78de8e3b-a971-4b83-9ed2-610706a65675}">
+    <Declaration><![CDATA[TYPE ST_ERG_20_Sys_Para :
+STRUCT	
+  //pOutputData       : POINTER TO INT;//0:回原点控制数据;1-2:夹持位置设置;3-4:夹持速度设置;5-6:夹持电流设置;7-8:夹持位置设置;11-12:夹持速度设置;13-14:夹持电流设置
+	//pInputData   		  : POINTER TO INT;//0:初始化状态反馈;1:夹持状态反馈;2-3:夹持位置反馈;4-5:夹持速度反馈;6-7:夹持电流反馈 8:旋转状态 10-11:旋转角度反馈:12-13:旋转速度反馈;14-15:旋转电流反馈 16-17:报警信息
+	///modbus子站IP地址
+	strSlaveIP: STRING(15) := '127.0.0.0';
+	///默认是502
+	iSlavePort: UINT := 502;
+	///modbus rtu子站地址	
+	bySlaveID: BYTE;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

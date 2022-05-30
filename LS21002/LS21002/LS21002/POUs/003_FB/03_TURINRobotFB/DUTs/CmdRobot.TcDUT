@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="CmdRobot" Id="{6912cb9a-b56c-431f-854a-86a6871ed767}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE CmdRobot :
+(
+	noCmd                :=0,
+	Cmd_GoHome           :=1,//1=回原点 
+	Cmd_GoAutoProcesses  :=2//到取料位
+)INT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="STAutoCal_ParOut" Id="{5c90d808-1042-4cd5-bb13-1f7699c534d6}">
+    <Declaration><![CDATA[TYPE STAutoCal_ParOut :
+STRUCT
+	iCalStep								:INT;//当前流程步
+	rVolume									:REAL;//体积输出
+	sErrorID								:STRING;//报错内容输出
+	iCurrentStep						:INT;//当前流程步
+	rSteadyWeight						:REAL;//稳定重量
+	rContinuesInjectWeight	:ARRAY [1..30] OF	REAL;//连续加液重量采集
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

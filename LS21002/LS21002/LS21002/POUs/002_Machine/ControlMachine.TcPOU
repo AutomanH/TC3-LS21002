@@ -1,0 +1,506 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="ControlMachine" Id="{c5f22d68-fa5f-404d-9f0e-4fab1cd07031}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM ControlMachine
+VAR_input
+	xAlarm                      	: BOOL;
+	tonEmptyDone	: TON;					//Empty Done Delay
+	bEmptyDone                  	: BOOL ;
+	
+	
+END_VAR
+VAR
+	i,j : INT ;
+	_xMaterialOnFlag : BOOL ;//环形线
+	
+	
+	tTimeoutAlarm: TON;
+	tCounterR_TRIG: R_TRIG;
+	tCounter1R_TRIG: R_TRIG;
+	tCounter2R_TRIG: R_TRIG;
+	tPCAlarmR_TRIG: R_TRIG;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[A_Input();
+Safety();
+Waiting();
+Timeout();
+Alarm();
+CycleTime();
+Tip();
+InitDone();
+EmptyDone();
+General();
+Z_Output();
+
+]]></ST>
+    </Implementation>
+    <Action Name="A_Input" Id="{0714662c-3b58-40cf-a1d8-1883f3374852}">
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Alarm" Id="{040003db-0126-4202-b8aa-167197bcc773}">
+      <Implementation>
+        <ST><![CDATA[//----机台状态提示---//
+fbMachine[1].dwMessage[1].00			:=	fbMachine[1].xRunning;			//设备自动中
+fbMachine[1].dwMessage[1].01		    :=	fbMachine[1].xStopped;			//设备停止状态
+fbMachine[1].dwMessage[1].02			:=	fbMachine[1].xPaused;			//设备暂停状态
+fbMachine[1].dwMessage[1].03			:=	fbMachine[1].xAlarm;			//设备报警中
+fbMachine[1].dwMessage[1].04			:=	fbMachine[1].xIniting;			//设备初始化中
+fbMachine[1].dwMessage[1].05			:=	fbMachine[1].xEmptying;			//设备清料中
+
+//----机台报警信息----
+IF NOT  fbMachine[1].xAirOn THEN
+	fbMachine[1].dwAlarm[1].00:=TRUE; //[M01.00] 设备气压报警
+	;
+END_IF
+(*
+//安全门被打开1
+IF fbMachine[1].xAutoMode AND NOT  strDoorBypassHmi  THEN
+	IF	 NOT  fb_doors[1].xIDoorClosed  THEN
+		fbMachine[1].dwAlarm[1].02:=TRUE; //[M01.02] 设备安全门1被打开
+	END_IF
+	IF	 NOT  fb_doors[2].xIDoorClosed  THEN
+		fbMachine[1].dwAlarm[1].05:=TRUE; //[M01.05] 设备安全门2被打开
+	END_IF
+	IF	 NOT  fb_doors[3].xIDoorClosed  THEN
+		fbMachine[1].dwAlarm[1].06:=TRUE; //[M01.06] 设备安全门13被打开
+	END_IF
+	IF	 NOT  fb_doors[4].xIDoorClosed  THEN
+		fbMachine[1].dwAlarm[1].07:=TRUE; //[M01.07] 设备安全门4被打开
+	END_IF
+	IF	 NOT  fb_doors[5].xIDoorClosed  THEN
+		fbMachine[1].dwAlarm[1].08:=TRUE; //[M01.08] 设备安全门5被打开
+	END_IF
+	IF	 NOT  fb_doors[6].xIDoorClosed  THEN
+		fbMachine[1].dwAlarm[1].09:=TRUE; //[M01.09] 设备安全门6被打开
+	END_IF
+	IF	 NOT  fb_doors[7].xIDoorClosed  THEN
+		fbMachine[1].dwAlarm[1].10:=TRUE; //[M01.10] 设备安全门7被打开
+	END_IF
+	IF	 NOT  fb_doors[8].xIDoorClosed  THEN
+		fbMachine[1].dwAlarm[1].11:=TRUE; //[M01.11] 设备安全门8被打开
+	END_IF
+	IF	 NOT  fb_doors[9].xIDoorClosed  THEN
+		fbMachine[1].dwAlarm[1].12:=TRUE; //[M01.12] 设备安全门9被打开
+	END_IF
+	IF	 NOT  fb_doors[10].xIDoorClosed  THEN
+		fbMachine[1].dwAlarm[1].13:=TRUE; //[M01.13] 设备安全门10被打开
+	END_IF
+	IF	 NOT  fb_doors[11].xIDoorClosed  THEN
+		fbMachine[1].dwAlarm[1].14:=TRUE; //[M01.14] 设备安全门11被打开
+	END_IF
+	IF	 NOT  fb_doors[12].xIDoorClosed  THEN
+		fbMachine[1].dwAlarm[1].15:=TRUE; //[M01.15] 设备安全门12被打开
+	END_IF
+END_IF
+
+*)
+
+
+//急停被按下
+IF NOT IxSafetyRelayOK THEN 
+	fbMachine[1].dwAlarm[1].03:=TRUE; //[M01.03] 设备急停被按下
+END_IF
+
+
+(*
+tTimeoutAlarm(IN:= sPC_To_PLC.xPCAlive=0 AND (S03_LidExtracting.station.xRunning OR S03_LidExtracting.station.xIniting OR 
+											 S05_Marking.station.xRunning OR   S05_Marking.station.xIniting   OR
+											S06_CameraTesting.station.xRunning OR S06_CameraTesting.station.xIniting    )	, PT:=T#5S, Q=> , ET=> );
+IF  tTimeoutAlarm.Q THEN
+	fbMachine[1].dwAlarm[1].04:=TRUE; //[M01.04] PC无心跳
+END_IF
+
+
+*)
+
+
+(*
+//将上位机的报警读取在PLC中报警
+sysMEMCPY(ADR(fbMachine[1].dwAlarm[2]),ADR(sPC_TO_PLC.ariPCAlarm[1]),4);
+*)
+(*EtherCAT总线报警*)	
+fbEthercatTerminalState(
+	xIActive:=TRUE ,
+	xIReset:=fbMachine[1].xReset,
+	axIState:= ,
+	xQError=> ,
+	iQErrorTerm=> );
+IF   fbEthercatTerminalState.xQError THEN
+ 	fbMachine[1].dwAlarm[1].17:=TRUE; //[M01.15] PLC EL模块通讯报错，请检查EtherCAT总线状态	
+END_IF
+	
+	
+//----工站报警汇总----
+
+xAlarm:= FALSE;							//先复位
+FOR i :=1 TO gc_uiStationNum DO 
+  IF fbStation[i].xAlarm  OR  fbEthercatTerminalState.xQError THEN		//整机故障单独 
+    xAlarm:=TRUE; 
+  END_IF
+END_FOR
+
+//----机台报警----
+fbMachine[1].xAlarm:=
+  fbMachine[1].dwAlarm[1]<>0
+	OR fbMachine[1].dwAlarm[2]<>0
+	OR fbMachine[1].dwAlarm[3]<>0
+	OR fbMachine[1].dwAlarm[4]<>0
+	OR fbMachine[1].dwAlarm[5]<>0
+	OR xAlarm;
+
+
+
+
+
+	
+	
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="CycleTime" Id="{f5fed5cc-8ba8-475b-ad40-4130d1b07351}">
+      <Implementation>
+        <ST><![CDATA[//**************************计算循环周期*******************************///
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="EmptyDone" Id="{2aec48a2-7e6f-44b6-b88a-567108dc02b2}">
+      <Implementation>
+        <ST><![CDATA[(*
+tonEmptyDone(
+	IN:=fbMachine[1].xEmptying AND ( abClearMaterialOver[gc_uiStationNum] OR NOT _xMaterialOnFlag ) AND fbMachine[1].xRunning,
+	PT:=T#2S,
+	Q=>, ET=>
+);
+
+IF tonEmptyDone.Q THEN
+   fbMachine[1].xEmptyDone:=TRUE;
+   FOR i :=1 TO gc_uiStationNum DO 
+	  abClearMaterialOver[i] :=FALSE;  
+   END_FOR
+   ////////////////工站间的交互信号处理或者其他信号///////////////////
+END_IF
+*)
+
+
+//**********************设备有料标志位*********
+_xMaterialOnFlag := FALSE ;
+FOR i:=1 TO 40 BY 1 DO 
+ IF arMainlineFixtureData[i].xMaterialOnOff  THEN 
+	  _xMaterialOnFlag := TRUE ;
+ END_IF
+END_FOR
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="General" Id="{59fdc1bd-eac6-41d6-8b9d-30b7eb5e0166}">
+      <Implementation>
+        <ST><![CDATA[
+//设备总产量
+  fbMachine[1].udiTotal := fbMachine[1].udiGoods + fbMachine[1].udiBads ;
+
+//产量清除
+  IF fbMachine[1].xClearCountData THEN 
+	  fbMachine[1].udiGoods := fbMachine[1].udiBads := 0 ;
+	  fbMachine[1].xClearCountData:=FALSE;
+  END_IF
+  
+//产品计数
+(*
+tCounterR_TRIG(CLK:=S07_Unloading.xBothPartGoodFlag, Q=> );
+tCounter1R_TRIG(CLK:=S07_Unloading.xOnePartGoodFlag , Q=> );
+tCounter2R_TRIG(CLK:=S07_Unloading.xOnePartBadFlag , Q=> );
+*)
+IF  tCounterR_TRIG.Q THEN
+	fbMachine[1].udiGoods := fbMachine[1].udiGoods + 2;	//设备OK产品计数
+ELSIF  tCounter1R_TRIG.Q  THEN
+	fbMachine[1].udiGoods := fbMachine[1].udiGoods + 1;	//设备OK产品计数
+ELSIF  tCounter2R_TRIG.Q THEN
+	fbMachine[1].udiBads := fbMachine[1].udiBads + 1;	//设备OK产品计数	
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="InitDone" Id="{4d14d86d-8273-43c8-916f-3a4bda99cb3c}">
+      <Implementation>
+        <ST><![CDATA[
+//------------------------------------------------初始化完成汇总-------------------------------------
+
+fbMachine[1].xInitDone:=TRUE;//先置位
+FOR j :=1 TO gc_uiStationNum DO 
+  IF NOT fbStation[j].xInitDone
+  THEN 
+    fbMachine[1].xInitDone:=FALSE; 
+  END_IF
+END_FOR
+								
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Safety" Id="{7756a730-2991-421a-83ea-4ae6ba5ac083}">
+      <Implementation>
+        <ST><![CDATA[//-------------------------------------------------安全信号------------------------------------------------------
+
+//fbMachine[1].xDoorClosed:= fbSafetyDoor[1].xLocked ;
+						
+//fbSafetyDoor[1].xUnlock:= FALSE;
+fbMachine[1].xDoorClosed := TRUE ;
+
+fbMachine[1].xEStop :=IxSafetyRelayOK ;					   
+
+fbMachine[1].xKey := TRUE;
+
+fbMachine[1].xAirOn :=  IxAirPressure ;
+
+fbMachine[1].xSafety:=fbMachine[1].xDoorClosed 
+						AND fbMachine[1].xEStop 
+						AND fbMachine[1].xAirOn 
+						AND fbMachine[1].xKey ;
+	]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Timeout" Id="{21e89cc2-bcd2-45fb-a2b6-ed65b1837306}">
+      <Implementation>
+        <ST><![CDATA[
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Tip" Id="{25a2cd35-9d8c-457b-9db7-ff9dd12f040c}">
+      <Implementation>
+        <ST><![CDATA[//------------------------------------------------提示汇总-----------------------------------------------
+//----手动提示----
+fbMachine[1].xManualTip                :=FALSE;//先复位
+FOR j:=1 TO gc_uiStationNum DO 
+  IF fbStation[j].xManualTip THEN 
+   fbMachine[1].xManualTip            :=TRUE; 
+  END_IF
+END_FOR
+
+//----自动提示----
+fbMachine[1].xAutoTip                  :=FALSE;//先复位
+FOR j :=1 TO gc_uiStationNum DO 
+  IF fbStation[j].xAutoTip
+  THEN 
+   fbMachine[1].xAutoTip              :=TRUE; 
+  END_IF
+END_FOR
+
+fbMachine[1].xTip                      :=(fbMachine[1].xManualTip OR fbMachine[1].xAutoTip);
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Waiting" Id="{ba3e6eab-3f00-42c5-91c9-b2be4453d15d}">
+      <Implementation>
+        <ST><![CDATA[
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Z_Output" Id="{99e18fa8-8f26-440f-bf00-acd6707ee93a}">
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="ControlMachine">
+      <LineId Id="89" Count="0" />
+      <LineId Id="66" Count="3" />
+      <LineId Id="105" Count="0" />
+      <LineId Id="70" Count="2" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="90" Count="0" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="51" Count="0" />
+    </LineIds>
+    <LineIds Name="ControlMachine.A_Input">
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="ControlMachine.Alarm">
+      <LineId Id="2" Count="0" />
+      <LineId Id="4" Count="4" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="85" Count="3" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="246" Count="0" />
+      <LineId Id="93" Count="1" />
+      <LineId Id="184" Count="0" />
+      <LineId Id="193" Count="0" />
+      <LineId Id="192" Count="0" />
+      <LineId Id="195" Count="1" />
+      <LineId Id="194" Count="0" />
+      <LineId Id="198" Count="1" />
+      <LineId Id="197" Count="0" />
+      <LineId Id="201" Count="1" />
+      <LineId Id="200" Count="0" />
+      <LineId Id="204" Count="1" />
+      <LineId Id="203" Count="0" />
+      <LineId Id="207" Count="1" />
+      <LineId Id="206" Count="0" />
+      <LineId Id="210" Count="1" />
+      <LineId Id="209" Count="0" />
+      <LineId Id="213" Count="1" />
+      <LineId Id="212" Count="0" />
+      <LineId Id="216" Count="1" />
+      <LineId Id="215" Count="0" />
+      <LineId Id="219" Count="1" />
+      <LineId Id="218" Count="0" />
+      <LineId Id="222" Count="1" />
+      <LineId Id="221" Count="0" />
+      <LineId Id="225" Count="1" />
+      <LineId Id="224" Count="0" />
+      <LineId Id="169" Count="0" />
+      <LineId Id="229" Count="2" />
+      <LineId Id="228" Count="0" />
+      <LineId Id="171" Count="7" />
+      <LineId Id="237" Count="1" />
+      <LineId Id="179" Count="2" />
+      <LineId Id="291" Count="1" />
+      <LineId Id="290" Count="0" />
+      <LineId Id="241" Count="0" />
+      <LineId Id="147" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="17" Count="1" />
+      <LineId Id="267" Count="5" />
+      <LineId Id="264" Count="0" />
+      <LineId Id="285" Count="0" />
+      <LineId Id="289" Count="0" />
+      <LineId Id="288" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="286" Count="0" />
+      <LineId Id="115" Count="12" />
+      <LineId Id="131" Count="2" />
+      <LineId Id="20" Count="1" />
+      <LineId Id="252" Count="0" />
+      <LineId Id="254" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="135" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="145" Count="0" />
+      <LineId Id="136" Count="0" />
+      <LineId Id="25" Count="59" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+    <LineIds Name="ControlMachine.CycleTime">
+      <LineId Id="1" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="ControlMachine.EmptyDone">
+      <LineId Id="299" Count="2" />
+      <LineId Id="303" Count="22" />
+      <LineId Id="298" Count="0" />
+    </LineIds>
+    <LineIds Name="ControlMachine.General">
+      <LineId Id="13" Count="6" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="36" Count="0" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="29" Count="1" />
+      <LineId Id="37" Count="1" />
+      <LineId Id="27" Count="1" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="ControlMachine.InitDone">
+      <LineId Id="146" Count="10" />
+      <LineId Id="145" Count="0" />
+    </LineIds>
+    <LineIds Name="ControlMachine.Safety">
+      <LineId Id="44" Count="16" />
+      <LineId Id="43" Count="0" />
+    </LineIds>
+    <LineIds Name="ControlMachine.Timeout">
+      <LineId Id="53" Count="0" />
+      <LineId Id="77" Count="1" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="ControlMachine.Tip">
+      <LineId Id="147" Count="19" />
+      <LineId Id="146" Count="0" />
+    </LineIds>
+    <LineIds Name="ControlMachine.Waiting">
+      <LineId Id="26" Count="0" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="49" Count="0" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="ControlMachine.Z_Output">
+      <LineId Id="1" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

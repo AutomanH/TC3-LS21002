@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_ERG_20_IOData" Id="{164337a2-3486-4e32-a5a3-36aa8dd7ab6f}">
+    <Declaration><![CDATA[TYPE ST_ERG_20_IOData ://IO数据
+STRUCT
+	//夹持输入数据映射
+	I_ClampInit        : INT;//夹持初始化状态：0：夹持未初始化；5：夹持初始化成功  其它：初始化中
+	I_ClampState       : INT;//0：运动到位，1：到达中；2：夹住物体；3：物体掉落
+	I_ClampCurrentPos       : REAL;//反馈当前夹爪实时位置  0-30mm(目标位置偏差0.02)
+	I_ClampCurrentSpeed     : REAL;//反馈当前夹爪实时速度  (1-200mm)	
+	I_ClampCurrentForce     : REAL;//反馈当前夹爪实时力值b ( 0.2 - 0.5A ) 
+	//旋转输入数据映射
+	I_RotateState       : INT;//0：到位，1，运动中，2：堵转
+	I_RotateCurrentPos       : REAL;//单位 mm
+	I_RotateCurrentSpeed     : REAL;//单位 mm/s
+	I_RotateCurrentForce     : REAL;//单位 A
+	I_DeviceERRORState : INT;//保留中（供应商暂时没有提供功能）
+	//输出数据映射
+	O_Init : INT;//写入 1：回零位（找单向位置） 
+  //夹持数据设置 
+	O_ClampForceSet : REAL;//设置力值( 0.1 - 0.5A ) 走位置时将扭矩设置最小设置成0.3
+	O_ClampPosSet : REAL;//设定夹爪位置( 0-20mm)
+	O_ClampSpeedSet : REAL;//以设定速度运行(1-400mm)	
+	//旋转数据设置
+	O_RotateForceSet : REAL;//设置力值( 0.2~1A )    最小值设置成0.3
+	O_RotatePosSet : REAL;//设定夹爪旋转角度( -3600000~360000 度)
+	O_RotateSpeedSet : REAL;//以设定速度运行(取值范围：1~1440度/秒)	
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="E_DataExchaSteps" Id="{84f185dc-9bef-465d-95db-807aba4db46a}">
+    <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+TYPE E_DataExchaSteps :
+(
+	DATAEXCHA_STATE_IDLE,//空闲状态
+	DATAEXCHA_STATE_SEND_START,//触发发送
+	DATAEXCHA_STATE_SEND_WAIT,//等待发送完成
+	DATAEXCHA_STATE_RECEIVE_START,//触发接收
+	DATAEXCHA_STATE_RECEIVE_WAIT//等待接收完成
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

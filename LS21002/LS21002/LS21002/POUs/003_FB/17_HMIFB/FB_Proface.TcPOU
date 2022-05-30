@@ -1,0 +1,291 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_Proface" Id="{09977cfc-cc8c-41c9-b954-7977c8443c7a}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Proface
+VAR_INPUT
+	xEStop								: BOOL;					//急停
+	xSafety								: BOOL;					//安全防护
+	xManualMode							: BOOL;					//手动模式
+	xAutoMode							: BOOL;					//自动模式
+	xAlarm								: BOOL;					//报警中
+	xTip								: BOOL;					//提示中
+	xInit								: BOOL;					//初始化
+	xIniting							: BOOL;					//初始化中
+	xInitDone							: BOOL;					//初始化完成
+	xDummyChecking						: BOOL;					//点检中
+	xDummyCheckDone						: BOOL;					//点检完成
+	xEmptying							: BOOL;					//清料中
+	xEmptyDone							: BOOL;					//清料完成
+	xStartHmi							: BOOL;					//启动HMI
+	xStopHmi							: BOOL;					//停止HMI
+	xResetHmi							: BOOL;					//复位HMI
+	xPauseHmi							: BOOL;					//暂停HMI
+	xInitHmi							: BOOL;					//初始化HMI
+	xInitConfirmHmi						:BOOL;					//测试使用
+	xManualModeHmi						: BOOL;					//手动HMI
+	xAutoModeHmi						: BOOL;					//自动HMI
+	xUnlockHmi							: BOOL;					//解锁HMI
+	xDummyCheckHmi						: BOOL;					//点检HMI
+	xEmptyHmi							: BOOL;					//清料HMI
+	xWindowColseHmi						: BOOL;					//窗口关闭HMI
+	                      		
+	nCurrentPageIndex					: UINT:=0;				//当前画面索引
+	nJumpToPageIndex					: UINT:=1;				//跳转到画面索引
+	                      		
+	nWindowControlIndex					: UINT:=0;				//窗口控制索引
+	nWindowNumberIndex					: UINT:=1;				//窗口编号索引
+	nWindowLocationIndexX				: UINT:=2;				//窗口位置索引X坐标
+	nWindowLocationIndexY				: UINT:=3;				//窗口位置索引Y坐标
+	                      		
+	nWindowLocationX					: UINT:=300;			//窗口位置X坐标
+	nWindowLocationY					: UINT:=80;		    //窗口位置Y坐标
+	                      		
+	nInitConfirmWindow					: UINT:=1;				//初始化确认窗口编号
+	nInitAlarmWindow					: UINT:=2;				//初始化有报警窗口编号
+	nInitingAlarmWindow					: UINT:=3;				//初始化中有报警窗口编号
+	nInitingWindow						: UINT:=4;				//初始化中窗口编号
+	nInitDoneWindow						: UINT:=5;				//初始化完成窗口编号
+	nInitFailWindow						: UINT:=6;				//初始化失败窗口编号
+	
+	nDummyCheckConfirmWindow			: UINT:=5;				//点检确认窗口编号
+	nDummyCheckDoneWindow				: UINT:=6;				//点检完成窗口编号
+	nDummyCheckFailWindow				: UINT:=7;				//点检失败窗口编号
+	
+	nEmptyConfirmWindow					: UINT:=10;				//清料确认窗口编号
+	nEmptyDoneWindow					: UINT:=11;				//清料完成窗口编号
+	
+	nTipWindow							: UINT:=31;				//提示窗口编号
+	nButtonWindow						: UINT:=121;			//调试窗口编号
+END_VAR
+
+VAR_OUTPUT
+END_VAR
+
+VAR
+	
+	xStartLight							: BOOL;					//启动灯
+	xStopLight							: BOOL;					//停止灯
+	xResetLight							: BOOL;					//复位灯
+	xPauseLight							: BOOL;					//暂停灯
+	xInitLight							: BOOL;					//初始化灯
+	
+END_VAR
+
+VAR
+	
+	wSystem								: ARRAY[0..20] OF WORD;	//系统区
+	wWindow								: ARRAY[0..20] OF WORD;	//窗口控制区
+	                  				
+	ftTip								: F_TRIG;				//提示中下降沿
+	rtInit								: R_TRIG;				//初始化上升沿
+	ftIniting							: F_TRIG;				//初始化中下降沿
+	rtDummyCheck						: R_TRIG;				//点检上升沿
+	ftDummyChecking						: F_TRIG;				//点检中下降沿
+	rtEmptyConfirm						: R_TRIG;				//清料确认上升沿
+	rtEmptyDone							: R_TRIG;				//清料完成上升沿
+	
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ACT_Init();
+ACT_DummyCheck();
+ACT_Empty();
+ACT_Control();
+]]></ST>
+    </Implementation>
+    <Action Name="ACT_Control" Id="{065de483-a2e2-41f0-aad3-fd9cb40b9517}">
+      <Implementation>
+        <ST><![CDATA[ftTip(CLK:=xTip, Q=>);
+IF xWindowColseHMI		//窗口关闭
+	OR ftTip.Q			//提示下降沿自动关闭窗口
+THEN
+	wWindow[nWindowNumberIndex]:=0;
+END_IF
+
+//IF xTip THEN
+//	wWindow[nWindowNumberIndex]:=nTipWindow;
+//END_IF
+
+wWindow[nWindowControlIndex].0:=wWindow[nWindowNumberIndex]<>0;
+
+wWindow[nWindowLocationIndexX]:=nWindowLocationX;
+wWindow[nWindowLocationIndexY]:=nWindowLocationY;
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_DummyCheck" Id="{307c2426-2e51-4fb4-b4db-7347d9c4a206}">
+      <Implementation>
+        <ST><![CDATA[rtDummyCheck(CLK:=xDummyCheckHmi, Q=>);
+ftDummyChecking(CLK:=xDummyChecking, Q=>);
+IF rtDummyCheck.Q	//点检确认窗口显示
+	AND xEStop
+	AND xSafety
+	AND xManualMode
+	AND xInitDone
+	AND NOT xAlarm
+THEN
+	wWindow[nWindowNumberIndex]:=nDummyCheckConfirmWindow;
+END_IF
+IF ftDummyChecking.Q THEN
+	IF xDummyCheckDone THEN		//点检完成窗口显示
+		wWindow[nWindowNumberIndex]:=nDummyCheckDoneWindow;
+	ELSE	//点检失败窗口显示
+		wWindow[nWindowNumberIndex]:=nDummyCheckFailWindow;
+	END_IF
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Empty" Id="{14f17481-cb8a-435c-ae06-f1287e09bf8c}">
+      <Implementation>
+        <ST><![CDATA[rtEmptyConfirm(CLK:=xEmptyHmi, Q=>);
+rtEmptyDone(CLK:=xEmptyDone, Q=>);
+IF rtEmptyConfirm.Q		//清料确认窗口显示
+	AND fbMachine[1].xEStop
+	AND fbMachine[1].xSafety
+	AND fbMachine[1].xAutoMode
+	AND fbMachine[1].xInitDone
+	AND NOT fbMachine[1].xAlarm
+THEN
+	wWindow[nWindowNumberIndex]:=nEmptyConfirmWindow;
+END_IF
+
+IF rtEmptyDone.Q THEN	//清料完成窗口显示
+	wWindow[nWindowNumberIndex]:=nEmptyDoneWindow;
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Init" Id="{f070ceeb-e502-4bf7-a4c5-a09a6228e334}">
+      <Implementation>
+        <ST><![CDATA[rtInit(CLK:=xInit, Q=>);
+ftIniting(CLK:=xIniting, Q=>);
+
+IF rtInit.Q
+THEN
+	wSystem[0]:=10;
+END_IF
+
+IF rtInit.Q					//初始化确认窗口显示
+	AND xEStop
+	AND xSafety
+	AND xManualMode
+	AND NOT xAlarm
+	AND NOT xIniting
+THEN
+	wWindow[nWindowNumberIndex]:=nInitConfirmWindow;
+END_IF
+
+IF rtInit.Q					//初始化有报警
+	AND xAlarm
+THEN
+	wWindow[nWindowNumberIndex]:=nInitAlarmWindow;
+END_IF
+
+IF xIniting					//初始化中有报警
+	AND xAlarm
+THEN
+	wWindow[nWindowNumberIndex]:=nInitingAlarmWindow;
+END_IF
+
+IF xIniting THEN			//初始化中窗口显示
+	wWindow[nWindowNumberIndex]:=nInitingWindow;
+END_IF
+
+IF ftIniting.Q THEN		
+	IF xInitDone THEN		//初始化完成窗口显示
+		wWindow[nWindowNumberIndex]:=nInitDoneWindow;
+	ELSE					//初始化失败窗口显示
+		wWindow[nWindowNumberIndex]:=nInitFailWindow;
+	END_IF
+END_IF
+
+IF xWindowColseHMI
+THEN
+	wWindow[nWindowNumberIndex]:=0;
+	wWindow[nWindowControlIndex]:=0;
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="FB_Proface">
+      <LineId Id="68" Count="2" />
+      <LineId Id="149" Count="0" />
+      <LineId Id="67" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Proface.ACT_Control">
+      <LineId Id="17" Count="0" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="3" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="19" Count="1" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="4" Count="0" />
+      <LineId Id="24" Count="1" />
+    </LineIds>
+    <LineIds Name="FB_Proface.ACT_DummyCheck">
+      <LineId Id="25" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="2" Count="7" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="34" Count="1" />
+      <LineId Id="37" Count="1" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="19" Count="1" />
+    </LineIds>
+    <LineIds Name="FB_Proface.ACT_Empty">
+      <LineId Id="17" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="2" Count="7" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="12" Count="1" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="15" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Proface.ACT_Init">
+      <LineId Id="36" Count="0" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="78" Count="0" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="79" Count="0" />
+      <LineId Id="12" Count="7" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="49" Count="0" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="54" Count="0" />
+      <LineId Id="53" Count="0" />
+      <LineId Id="58" Count="0" />
+      <LineId Id="57" Count="0" />
+      <LineId Id="62" Count="0" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="60" Count="0" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="22" Count="1" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="41" Count="1" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="35" Count="0" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="66" Count="2" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

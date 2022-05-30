@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_SysToRobot1" Id="{9eef9fe1-41f1-40e2-ade7-bbbe14aa0036}">
+    <Declaration><![CDATA[TYPE DUT_SysToRobot1 :
+STRUCT
+//PLC-Robot	
+xStepRunPermit      		:BOOL;//流程允许运行
+xTakePartPermit 			:BOOL;//主流线取料允许
+xPutPartPremit  			:BOOL;//允许去放料位
+xClampBoxDone				:BOOL;//夹取孔板完成	
+xReleaseBoxDone   			:BOOL;//释放孔板完成
+
+iMoveMode           :WORD;//1=回原点   2=振动盘到环形线  
+iTakePartPosChoose	:WORD;//1=第一块板取料，2=第二块板取料  3=buffer位置取料 
+iPutPartPosChoose	:WORD;//1=卡片1位置放料 2=卡片2位置放料   3=NG位置放料   4=buffer位置放料
+iRatio              :WORD;//机器人速率
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

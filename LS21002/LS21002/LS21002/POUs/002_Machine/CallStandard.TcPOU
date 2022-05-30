@@ -1,0 +1,1369 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="CallStandard" Id="{fe482292-8fbd-48df-8762-3e3cba95d89f}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM CallStandard
+VAR_INPUT
+	{attribute 'hide'}
+	fb_Blinker					: ARRAY[1..10] OF FB_Blinker;//自定义脉冲发生功能块
+	bWindowColseHmi             : ARRAY[1..5]OF BOOL ; //窗口关闭
+END_VAR
+
+VAR
+	xCylinder_First  	: BOOL ;
+	xAxis_First 		: BOOL ;
+	xAxisHome_First 	: BOOL ;
+	xMachine_First 		: BOOL ;
+ 	xStation_First 		: BOOL ;
+    xRGI4_First 		: BOOL ;
+	xEPSRobot_First 	: BOOL ;
+	xRefrigerator_first : BOOL ;
+	_firstFuShiPXF		: BOOL ;
+	_firstTURINRobot     :BOOL;
+	_xCalFirstCycle		 :BOOL;
+	
+	
+	i,j,k,eps,rgi,l,m,n,iIndex,t,mac,infor,iRec,q : INT ;
+	arrayMoveFalse : ARRAY[1..gc_uiAxisMoveNum] OF BOOL ;
+    st_RGI_IOData : ST_RGI_14_IOData;
+	
+	sModeOperation	AT %Q*: ARRAY[1..gc_uiAxisNum] OF SINT;			//操作模式
+	controlword AT %Q* : ARRAY[1..gc_uiAxisNum] OF UINT;
+	nctrl1 		AT %I* : ARRAY[1..gc_uiAxisNum] OF USINT;
+	nctrl2		AT %I*  : ARRAY[1..gc_uiAxisNum] OF USINT;	
+	
+    
+	fbWritePersistentData		: FB_WritePersistentData;//系统自带保存Persistent数据功能块
+	
+	strDateTime: STRING(10);
+	
+	stDateTime: DUT_TIMESET;
+	
+	xRecipeAxisParSetButton : BOOL ;
+	xRecipeRGI14ParSetButton : BOOL ;
+	StepHistoryR_TRIG	:R_TRIG;
+	SFCTrans: BOOL;
+	iInfo: INT;
+	arRefSwitchCheckSensor:ARRAY[1..gc_uiAxisNum] OF BOOL;
+	
+	
+	
+	StepAutoTransR_TRIG: ARRAY[1..gc_uiStationNum] OF R_TRIG;
+	stepInitTransR_TRIG:ARRAY[1..gc_uiStationNum] OF R_TRIG;
+	tTonoff1s: TON;
+	tTonOn1s: TON;
+	rstStartCoordinate: INT;
+	bMachine_First: BOOL;
+	_FirstCycle: BOOL;
+	bAxisHome_First: BOOL;
+	A: INT;
+	tLamp2R_TRIG: R_TRIG;
+	tLamp3R_TRIG: R_TRIG;
+	tLampR_TRIG: R_TRIG;
+	tLamp1R_TRIG: R_TRIG;
+	
+	iSlavePort: INT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[A_Input();
+ACT_Axis();
+ACT_Cylinder();
+ACT_Machine();
+ACT_Proface();
+ACT_RGI_14();
+ACT_Station();
+ACT_System();
+ACT_WritePersistentData();
+ACT_GetTime();
+ACT_Comm();
+ACT_UPS();
+ACT_Recipe();
+ACT_AxisHome();
+ACT_Z_ERG_20();
+]]></ST>
+    </Implementation>
+    <Action Name="A_Input" Id="{423c098f-672e-4e09-b9e7-666319181834}">
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Axis" Id="{bbaeb5df-675a-4409-9a50-2a8bdac269a5}">
+      <Implementation>
+        <ST><![CDATA[//上电复位
+IF NOT xAxis_First THEN
+  FOR i :=1 TO (gc_uiAxisNum) DO 
+      	fbAxis[i].xAlarmResetHmi                   :=     			//HMI_故障复位
+	    fbAxis[i].xPowerHmi                        :=     			//HMI_使能
+	    fbAxis[i].xJogForwardHmi                   :=     			//HMI_正点
+	    fbAxis[i].xJogBackwardsHmi                 :=     			//HMI_反点
+	    fbAxis[i].xHomeHmi                         :=     			//HMI_回零
+	    fbAxis[i].xStopHmi                         :=FALSE;			//HMI_停止
+	    fbAxis[i].xMoveHmi                         :=arrayMoveFalse;			//HMI_P点
+  END_FOR                                       			
+      xAxis_First                           :=TRUE;
+END_IF
+
+FOR j:=1 TO gc_uiAxisNum DO
+    fbAxis[j](
+	Axis := Axis[j], 
+	xEStop:= fbMachine[1].xEStop , 
+	xKey:=fbMachine[1].xKey  , 
+	xSafety:=fbMachine[1].xSafety   , 
+	xManualMode:=fbMachine[1].xManualMode  , 
+	xAutoMode:=fbMachine[1].xAutoMode , 
+	xAlarmReset:=fbMachine[1].xReset  , 
+	rJogAcceleration:=stData.Axis[j].rAcceleration , 
+	rJogDeceleration:=stData.Axis[j].rDeceleration , 
+	rMoveAcceleration:=stData.Axis[j].rAcceleration , 
+	rMoveDeceleration:=stData.Axis[j].rDeceleration , 
+	rJogVelocity:=stData.Axis[j].rJogVelocity , 
+	rManualVelocity:=stData.Axis[j].rManualVelocity , 
+	rAutoVelocity:=stData.Axis[j].rAutoVelocity , 
+	rMovePosition:=stData.Axis[j].rMovePosition , 
+	rMoveVelocity:=stData.Axis[j].rMoveVelocity , 
+	rRelativeDistance:=stData.Axis[j].rRelativeDistance , 
+	rRelativeVelocity:=stData.Axis[j].rRelativeVelocity , 
+	rVelocityVel:=stData.Axis[j].rVelocityVel , 
+	rVelocityAcc:=stData.Axis[j].rAcceleration , 
+	rVelocityDec:=stData.Axis[j].rDeceleration , 
+	xIRefSwitch:= arRefSwitchCheckSensor[j], 
+	xIResetRefPosCheck:= , 
+	xPowerOn=> , 
+	xReady=> , 
+	xRelativeDone1=> , 
+	xError=> , 
+	nErrorID=> , 
+	rActTorque=> , 
+	rActPos=> , 
+	rActVelo=> , 
+  );
+
+  END_FOR	
+ 
+  
+IF  xRecipeAxisParSetButton THEN 
+	FOR i:= 1 TO gc_uiAxisNum BY 1 DO
+			stData.Axis[i].rAcceleration := 2000 ;
+			stData.Axis[i].rDeceleration := 2000 ;
+			stData.Axis[i].rJogVelocity := 10 ;
+			stData.Axis[i].rManualVelocity := 20 ;
+	    	stData.Axis[i].rAutoVelocity := 30;
+	END_FOR
+	xRecipeAxisParSetButton := FALSE ;
+END_IF
+
+
+
+//设定轴是直线定位还是模值定位
+FOR i:= 1 TO 10 BY 1 DO 
+	IF  i=9 OR i=14 THEN 
+	fbAxis[i].xIsLinearMode := FALSE ;
+	ELSE
+	fbAxis[i].xIsLinearMode := TRUE ;
+	END_IF
+END_FOR
+//设定模值模式时轴的路径(
+(*fbAxis[5].nModuloDirection :=*)
+fbAxis[9].nModuloDirection := 
+fbAxis[14].nModuloDirection := MC_Direction.MC_Positive_Direction ;
+
+
+//步进电机
+fbAxis[17].xIRelative_Encoder:=TRUE;
+fbAxis[18].xIRelative_Encoder:=TRUE;
+fbAxis[19].xIRelative_Encoder:=TRUE;
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_AxisHome" Id="{f0326e53-8f63-4198-852d-14619dde76e1}">
+      <Implementation>
+        <ST><![CDATA[sEctNetId := '192.168.1.1.6.1' ;//填写NETID
+//回原点方式设定
+home_method[1] :=23;
+home_method[2] := 23 ;//35=机械回原点 23=正方向找原点 27=反方向找原点 7 11\
+home_method[3] :=23;
+home_method[4] := 23;
+home_method[5] :=23;
+home_method[6] := 23 ;
+home_method[7] :=23;
+home_method[8] := 23;
+home_method[9] :=23;
+home_method[10] := 23 ;
+home_method[11] :=23;
+home_method[12] := 23;
+home_method[13] :=23;
+home_method[14] := 23 ;
+home_method[15] :=23;
+home_method[16] := 23;
+
+
+
+home_method[17] :=23;
+fbAxisHome[17].iMode :=3;//雷赛伺服
+home_method[18] :=23;
+fbAxisHome[18].iMode :=3;
+home_method[19] :=23;
+fbAxisHome[19].iMode :=3;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//从站地址
+cnSlaveAddr[01] := 1001 ;
+cnSlaveAddr[02] := 1002 ;
+cnSlaveAddr[03] := 1003 ;
+cnSlaveAddr[04] := 1004 ;
+cnSlaveAddr[05] := 1005 ;
+cnSlaveAddr[06] := 1006 ;
+cnSlaveAddr[07] := 1007 ;
+cnSlaveAddr[08] := 1008 ;
+cnSlaveAddr[09] := 1009 ;
+cnSlaveAddr[10] := 1010 ;
+cnSlaveAddr[11] := 1011 ;
+
+cnSlaveAddr[12] := 1012 ;
+cnSlaveAddr[13] := 1013 ;
+cnSlaveAddr[14] := 1014 ;
+cnSlaveAddr[15] := 1015 ;
+cnSlaveAddr[16] := 1016 ;
+cnSlaveAddr[17] := 1017 ;
+cnSlaveAddr[18] := 1018 ;
+cnSlaveAddr[19] := 1019 ;
+
+
+
+
+FOR  i:=1 TO gc_uiAxisNum BY 1 DO
+	if i<=16 then
+	fbAxisHome[1].home_highspeed_set:= 150; //
+	fbAxisHome[1].home_lowspeed_set:= 5;
+
+	else
+		fbAxisHome[17].home_highspeed_set:= 100; //雷赛
+		fbAxisHome[17].home_lowspeed_set:= 10;
+	END_IF
+		fbAxisHome[i].tTimeOutSet := T#60S;//超时时间设定
+END_FOR
+
+
+
+
+
+
+FOR  i:=1  TO gc_uiAxisNum BY 1 DO
+		fbAxisHome[i](
+	    axis_name :=Axis[i], 
+		home_exe:=fbAxis[i].xReferenceHmi OR  fbAxis[i].xReferenceAuto, 
+		fb_netid:=sEctNetId , 
+		fb_nslaveaddr:= cnSlaveAddr[i] , 
+	    nctrl1:= nctrl1[i], 
+	    nctrl2:= nctrl2[i], 		
+	    mode:= sModeOperation[i],
+        home_method := home_method[i],	
+	    home_highspeed_set:= , 
+	    home_lowspeed_set:= , 
+	    home_offset_set:= 0,
+	    numerator:= 60, 
+	    denominator:= 4194304, 
+		home_done=> , 
+		home_error=> , 
+ 	    controlword=> controlword[i], 
+	    error_id=> );
+
+END_FOR
+
+
+ 
+IF NOT bAxisHome_First THEN	
+	FOR i:=1 TO  gc_uiAxisNum BY 1 DO	
+	  sModeOperation[i] := 8;
+	END_FOR
+	bAxisHome_First := TRUE;
+END_IF
+//超时时间设定
+
+	]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Comm" Id="{b17cb29c-5b77-4461-9112-d1cc0492c03a}">
+      <Implementation>
+        <ST><![CDATA[(*************************** Clock 1 Second Clock***********************************)
+tTonoff1s(IN:=NOT tTonOn1s.Q,PT:=T#1S);
+
+tTonOn1s(IN:= tTonOff1s.Q,PT:=T#1S);
+
+(****************************Alive bit************************************)
+IF  tTonoff1s.Q THEN
+	 sPLC_TO_PC.xPLCALive:=1 ;
+	
+ELSE
+	 sPLC_TO_PC.xPLCALive:=0;
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Cylinder" Id="{47c4f121-b56e-4fba-8775-97e3960514e4}">
+      <Implementation>
+        <ST><![CDATA[//上电复位
+IF NOT xCylinder_First THEN
+  FOR i :=1 TO gc_uiCylinderNum DO 
+    fbCylinder[i].xHmi               :=FALSE;	 
+  END_FOR
+ 	 xCylinder_First                :=TRUE;
+END_IF
+
+
+FOR i:= 1 TO gc_uiCylinderNum BY 1 DO 
+fbCylinder[i](
+	xEStop:=fbMachine[1].xEStop,  
+	xSafety:=fbMachine[1].xSafety , 
+	xManualMode:=fbMachine[1].xManualMode , 
+	xAutoMode:=fbMachine[1].xAutoMode , 
+	xAirOn:=fbMachine[1].xAirOn , 
+	tAlarm:=stData.Cylinder[i].Alarm_Delay , 
+	xReset:=fbMachine[1].xReset , 
+	xTryRun:= fbmachine[1].xTryRun, 
+	xAlarmDisable:= , 
+	xHmi:= , 
+	tHP_Delay:=stData.Cylinder[i].tHP_Delay , 
+	tWP_Delay:=stData.Cylinder[i].tWP_Delay ,  
+	xHP_Valve=> , 
+	xWP_Valve=> , 
+	xHP_Delay=> , 
+	xWP_Delay=> );
+END_FOR]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_FuShiPXF" Id="{b09a59ac-3cd6-459f-8f83-2c1f45c9ed70}">
+      <Implementation>
+        <ST><![CDATA[IF ( NOT _firstFuShiPXF) THEN
+fbTempretureControl[1].stSysPar.strSlaveIP:='192.168.1.90';
+fbTempretureControl[1].stSysPar.bySlaveID:=1;
+fbTempretureControl[1].stSysPar.iSlavePort:=1031;
+fbTempretureControl[2].stSysPar.strSlaveIP:='192.168.1.91';
+fbTempretureControl[2].stSysPar.bySlaveID:=1;
+fbTempretureControl[2].stSysPar.iSlavePort:=1031;
+ _firstFuShiPXF := TRUE;
+ELSE
+FOR i:=1 TO gc_uiPXF5Num DO
+fbTempretureControl[i](
+	xEstop:= fbMachine[1].xEStop , 
+	xStart:=TRUE , 
+	xSvSet:= , 
+	stSysPar:= , 
+	stPar:= , 
+	stParRead=> , 
+	xRdy=> , 
+	xPowerOut=> , 
+	xError=> , 
+	sError=> );
+END_FOR
+
+END_IF
+//温控器控制加热棒使能
+//QxEnableHeatingRod:=fbTempretureControl[1].xPowerOut AND fbTempretureControl[2].xPowerOut;
+//S04_FilmCovering.xHeatingDeviceReady:=fbTempretureControl[1].xRdy AND fbTempretureControl[2].xRdy;
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_GetTime" Id="{af91cf98-44db-4c9e-a3bb-6bfde1fc30e5}">
+      <Implementation>
+        <ST><![CDATA[PRG_GetSystemTime();
+
+strLocalDateTime := SYSTEMTIME_TO_STRING(PRG_GetSystemTime.sQTime);
+strDateTime := MID( strLocalDateTime,8,12 ) ;
+
+stDateTime.sTempTimeYYMMDD:= MID (strLocalDateTime, 11, 1 );
+stDateTime.sTempTimeHO:= MID (strLocalDateTime, 2, 12 );
+stDateTime.sTempTimeMI:= MID (strLocalDateTime, 2, 15 );
+stDateTime.sTempTimeSe:= MID (strLocalDateTime, 2, 18 );
+
+
+FBGetTime(
+	i_b_start:= , 
+	i_b_withoutHs:= , 
+	o_b_ok=> , 
+	o_b_err=> , 
+	o_udi_ErrId=> , 
+	o_DateAndTime=> );]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Machine" Id="{bab62686-8cb4-497f-97e7-e00927dbc989}">
+      <Implementation>
+        <ST><![CDATA[
+
+FOR i:=1 TO gc_uiMachineNum DO
+fbMachine[i](
+	xEmptyHmi:= , 
+	xTryRun:= , 
+	xEmptyConfirmHmi:= , 
+	xInitConfirm:= ,
+  xStart:= IxStartButton OR fbProface[1].xStartHmi ,
+  xStop:= IxStopButton OR fbProface[1].xStopHmi ,
+  xReset:= IxResetButton OR fbProface[1].xResetHmi ,
+  xPause:= IxStopButton OR fbProface[1].xPauseHmi ,
+  xInit:=IxInitButton OR fbProface[1].xInitHmi ,
+  xManualMode:= IxManualMode, 
+  xAutoMode:= IxAutoMode ,	 
+	xRunning=>  , 
+	xEmptying=> ,
+	xEStopped=> , 
+	xIniting=>  , 
+	diCycleTime => ,
+	xStopped=> , 
+	xPaused=> , 	
+   );
+	 
+	END_FOR
+QxRedLamp:=
+QxRedLamp_1	 :=fbMachine[1].xLampRed;	
+QxYellowLamp:=
+QxYellowLamp_1 :=fbMachine[1].xLampYellow 	;///初始化完成后也需要将黄灯常亮
+QxGreenLamp:=
+QxGreenLamp_1 :=fbMachine[1].xLampGreen;	
+(*
+IF  NOT   _BuzzerBypassButton  THEN
+	QxBuzzer:=fbMachine[1].xLampBuzzer;
+ELSE
+	QxBuzzer:=FALSE;
+END_IF
+IF  _BuzzerBypassButton THEN
+	_BuzzerBypassLamp:=TRUE;
+ELSE
+	_BuzzerBypassLamp:=FALSE;
+END_IF
+*)
+QxStartButtonLamp	:=fbMachine[1].xStartLight	;
+QxStopButtonLamp	:=fbMachine[1].xStopLight;	
+QxResetButtonLamp	:=fbMachine[1].xResetLight;	
+QxInitButtonLamp	:=fbMachine[1].xInitLight;	
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_MT_MCK" Id="{b40e9d7a-e717-425f-8a9e-241bc2a7f0f5}">
+      <Implementation>
+        <ST><![CDATA[fbMCK204W.stSysPar.sRemoteHost:='192.168.1.72';
+fbMCK204W.stSysPar.nRemotePort:=1030;
+fbMCK204W.stSysPar.bySlaveID:=1;
+fbMCK204W.xDeviceRunning:=fbAutoCal.xRunning;
+fbMCK204W(
+	xExecute:= , 
+	xAbort:= , 
+	xEstop:=  fbMachine[1].xEStop, 
+	xDeviceRunning:= , 
+	xResetRequest:= , 
+	stDeviceOpe:= , 
+	stpar:= , 
+	stSysPar:= , 
+	dwTimeOut:= , 
+	xManualHMIControl:= , 
+	xAutoMode:= , 
+	xIniting:= , 
+	xDone=> , 
+	xBusy=> , 
+	xError=> , 
+	eErrorID=> , 
+	eTCPErrorID=> , 
+	xRdyCmd=> , 
+	xRefOk=> , 
+	stParOut=> );
+	
+	
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_PeristalticPump" Id="{118cab21-fbc1-437a-8471-f769fdf59f60}">
+      <Implementation>
+        <ST><![CDATA[fbRudongPump[1].stPara.strSlaveIP:='192.168.1.60';
+fbRudongPump[1].stPara.iSlavePort:=1031;
+fbRudongPump[1].stPara.bySlaveID:=1;
+
+fbRudongPump[2].stPara.strSlaveIP:='192.168.1.61';
+fbRudongPump[2].stPara.iSlavePort:=1031;
+fbRudongPump[2].stPara.bySlaveID:=1;
+
+fbRudongPump[3].stPara.strSlaveIP:='192.168.1.62';
+fbRudongPump[3].stPara.iSlavePort:=1031;
+fbRudongPump[3].stPara.bySlaveID:=1;
+
+
+fbRudongPump[4].stPara.strSlaveIP:='192.168.1.63';
+fbRudongPump[4].stPara.iSlavePort:=1031;
+fbRudongPump[4].stPara.bySlaveID:=1;
+
+
+fbRudongPump[5].stPara.strSlaveIP:='192.168.1.64';
+fbRudongPump[5].stPara.iSlavePort:=1031;
+fbRudongPump[5].stPara.bySlaveID:=1;
+
+
+fbRudongPump[6].stPara.strSlaveIP:='192.168.1.65';
+fbRudongPump[6].stPara.iSlavePort:=1031;
+fbRudongPump[6].stPara.bySlaveID:=1;
+
+fbRudongPump[7].stPara.strSlaveIP:='192.168.1.66';
+fbRudongPump[7].stPara.iSlavePort:=1031;
+fbRudongPump[7].stPara.bySlaveID:=1;
+
+fbRudongPump[8].stPara.strSlaveIP:='192.168.1.67';
+fbRudongPump[8].stPara.iSlavePort:=1031;
+fbRudongPump[8].stPara.bySlaveID:=1;
+
+fbRudongPump[9].stPara.strSlaveIP:='192.168.1.68';
+fbRudongPump[9].stPara.iSlavePort:=1031;
+fbRudongPump[9].stPara.bySlaveID:=1;
+
+fbRudongPump[10].stPara.strSlaveIP:='192.168.1.69';
+fbRudongPump[10].stPara.iSlavePort:=1031;
+fbRudongPump[10].stPara.bySlaveID:=1;
+
+fbRudongPump[11].stPara.strSlaveIP:='192.168.1.70';
+fbRudongPump[11].stPara.iSlavePort:=1031;
+fbRudongPump[11].stPara.bySlaveID:=1;
+
+fbRudongPump[12].stPara.strSlaveIP:='192.168.1.71';
+fbRudongPump[12].stPara.iSlavePort:=1031;
+fbRudongPump[12].stPara.bySlaveID:=1;
+
+
+
+FOR i :=1 TO gc_uiRudongPump BY 1 DO
+	fbRudongPump[i].xDeviceRunning:=fbAutoCal.xRunning;
+	fbRudongPump[i](
+	xExecute:= , 
+	xAbort:= , 
+	xResetRequest:=, 
+	xRunILC:= , 
+	dwTimeLimit:= , 
+	dwTimeOut:= , 
+	stPara:= , 
+	xNeedConfigurePara:= , 
+	stRunPara:=stData.RudongPump[i] , 
+	xAutoMode:= , 
+	xIniting:= , 
+	xDeviceRunning:= , 
+	rSpeedRatio:= , 
+	sHmiError:= , 
+	xEStop:= fbMachine[1].xEStop, 
+	stDeviceOpe:= , 
+	xDone=> , 
+	xBusy=> , 
+	xError=> , 
+	xAborted=> , 
+	xRunning=> , 
+	xRudongPump_ERROR=> , 
+	eERRORID=> , 
+	xRdyCmd=> );
+END_FOR
+
+
+	
+IF NOT _xCalFirstCycle THEN
+	fbAutoCal.stSysPar.fbMTMCK204C:=ADR	(fbMCK204W);
+	fbAutoCal.stSysPar.fbRuDongPump:=ADR(fbRudongPump);
+	fbAutoCal.stparIn.iContinuesInjectNum:=5;//连续加液20次
+	fbAutoCal.stparIn.rDensity:=1;//密度为1
+	fbAutoCal.stparIn.tSteadyTime:=5;//稳定5秒
+	fbAutoCal.stparIn.iPumpController:=12;//控制器个数
+	_xCalFirstCycle:=TRUE;
+ELSE
+	fbAutoCal(
+		xExecute:= , 
+		xAbort:= , 
+		xEstop:= fbMachine[1].xEStop , 
+		xDeviceRunning:= , 
+		xResetRequest:= , 
+		stDeviceOpe:= , 
+		stparIn:= , 
+		stSysPar:= , 
+		xAutoMode:= , 
+		xIniting:= , 
+		xDone=> , 
+		xBusy=> , 
+		xError=> , 
+		eERRORID=> , 
+		xRdyCmd=> , 
+		xRdy=> , 
+		stParOut=> );	
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Proface" Id="{c00a8f00-9a31-4dcc-a3b6-8c5d4688684b}">
+      <Implementation>
+        <ST><![CDATA[
+fbProface[1](
+	xEStop									:=fbMachine[1].xEStop,
+	xSafety									:=fbMachine[1].xSafety,
+	xManualMode							:=fbMachine[1].xManualMode,
+	xAutoMode								:=fbMachine[1].xAutoMode,
+	xAlarm									:=fbMachine[1].xAlarm,
+	xTip										:=fbMachine[1].xTip,
+	xInit										:=fbMachine[1].xInit,
+	xIniting								:=fbMachine[1].xIniting,
+	xInitDone								:=fbMachine[1].xInitDone,
+	xDummyCheckDone					:=fbMachine[1].xDummyDone,
+	xEmptyDone							:=fbMachine[1].xEmptyDone,
+);
+(*fbProface[1].strSystemTime[1]:=stDateTime.sTempTimeYYMMDD;
+fbProface[1].strSystemTime[2]:=CONCAT(CONCAT( CONCAT(CONCAT(stDateTime.sTempTimeHO,':'),stDateTime.sTempTimeMI ),':'),stDateTime.sTempTimeSe);
+*)]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Recipe" Id="{23a5f722-6788-455f-95d2-eafe4c09c1e7}">
+      <Implementation>
+        <ST><![CDATA[(*FOR  iRec:=1 TO gc_RecipeNum BY 1 DO
+	fb_Recipes[iRec](
+	xICreateRecipe:= , 
+	xILoadRecipe:= , 
+	xIDeleteRecipe:= , 
+	strRecipeDefinitionName:= , 
+	RecipeName:= , 
+	FileName:= , 
+	xQBusy=> , 
+	xQErrorID=> );
+END_FOR
+(************************Axis Recipe*************************)
+fb_Recipes[1].strRecipeDefinitionName:='Recipe_Axis';
+fb_Recipes[1].RecipeName:='Axis_1';
+fb_Recipes[1].FileName:='\Hard Disk1\Recipefiles';
+(************************Cylinder Recipe*************************)
+fb_Recipes[2].strRecipeDefinitionName:='Recipe_Cylinder';
+fb_Recipes[2].RecipeName:='Cylinder_1';
+fb_Recipes[2].FileName:='\Hard Disk1\Recipefiles';
+(************************RGI Recipe*************************)
+fb_Recipes[3].strRecipeDefinitionName:='Recipe_RGI';
+fb_Recipes[3].RecipeName:='RGI_1';
+fb_Recipes[3].FileName:='\Hard Disk1\Recipefiles';
+(************************Robot Recipe*************************)
+fb_Recipes[4].strRecipeDefinitionName:='Recipe_Robot';
+fb_Recipes[4].RecipeName:='Robot_1';
+fb_Recipes[4].FileName:='\Hard Disk1\Recipefiles';
+(************************Tray Recipe*************************)
+fb_Recipes[5].strRecipeDefinitionName:='Recipe_Tray';
+fb_Recipes[5].RecipeName:='Tray_1';
+fb_Recipes[5].FileName:='\Hard Disk1\Recipefiles';
+*)]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_RGI_14" Id="{420d82d1-f1aa-4e7a-824e-853aa18d7fe0}">
+      <Implementation>
+        <ST><![CDATA[
+	
+IF NOT xRGI4_First THEN
+	fbRGI_14_Modbus[1].stPara.bySlaveID := 1;
+	fbRGI_14_Modbus[1].stPara.strSlaveIP := '192.168.1.22';//从站IP地址
+	fbRGI_14_Modbus[1].stPara.iSlavePort := 1031;	
+	xRGI4_First := TRUE;
+ELSE
+	//进行函数调用
+	FOR i:=1 TO gc_uiRGI_14_Number BY 1 DO 
+		fbRGI_14_Modbus[i](
+		xExecute:= , 
+		xAbort:=FALSE , 
+		xPowerHmi:= TRUE, 
+		xResetRequest:=fbMachine[1].xReset , 
+		dwTimeLimit:= , 
+		dwTimeOut:= , 
+		stPara:= , 
+		xAutoMode:=fbMachine[1].xAutoMode, 
+		xIniting:= , 
+		stPosPara:= stData.RGI14[i], 
+		xDeviceRunning:= , 
+		stOper:= , 
+		xDone=> , 
+		xBusy=> , 
+		xAborted=> , 
+		xError=> , 
+		eErrorID=> , 
+		xRdyCmd=> , 
+		xRefOk=> , 
+		eClampActCmd=> , 
+		iClampStatus=> , 
+		xGripClampEmpty=> , 
+		xDropOccur=> , 
+		xClosecoverFailure=> , 
+		xOpencoverFailure=> , 
+		sHmiError=> , 
+		stRGIStates=> , 
+		eCommErrorID=> , 
+		eOperErrorID=> , 
+		st_IOData:= st_RGI_IOData);
+	END_FOR
+END_IF
+
+
+//手动输入初始值
+IF xRecipeRGI14ParSetButton THEN 
+	FOR i:=1 TO gc_uiRGI_14_Number BY 1 DO 
+		FOR j:= 1 TO 5 BY 1 DO
+			stData.RGI14[i].aHMIClampiPosAngleSet[j] := 
+			stData.RGI14[i].aHMIClampiSpeedSet[j] := 
+			stData.RGI14[i].aHMIClampiTorqueSet[j] := 
+			stData.RGI14[i].aHMIReleasepiPosAngleSet[j] :=
+			stData.RGI14[i].aHMIReleasepiSpeedSet[j]:= 
+			stData.RGI14[i].aHMIReleasepiTorqueSet[j]:= 
+			stData.RGI14[i].aHMIRotateClampiPosAngleSet[j] :=
+			stData.RGI14[i].aHMIRotateClampiSpeedSet[j] :=
+			stData.RGI14[i].aHMIRotateiTorqueSet[j] :=
+			stData.RGI14[i].aHMIRotateReleaseiPosAngleSet[j] :=
+			stData.RGI14[i].aHMIRotateReleaseiSpeedSet[j] :=
+			stData.RGI14[i].aHMIRotateReleaseiTorqueSet[j]:= 100 ; 
+	   END_FOR
+	END_FOR
+		xRecipeRGI14ParSetButton := FALSE ;
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Station" Id="{3999f035-149a-4ac3-bc26-3846c7e0b5a6}">
+      <Implementation>
+        <ST><![CDATA[//上电复位
+IF NOT xStation_First THEN
+  FOR i:=1 TO gc_uiStationNum DO 
+    fbStation[i].xCycleRunHmi:=FALSE;
+    fbStation[i].xInitHmi:=FALSE;
+    fbStation[i].xJogRunHmi:=FALSE;
+    fbStation[i].xPauseHmi:=FALSE;
+  END_FOR
+  	xStation_First:=TRUE;
+END_IF
+
+FOR i:=1 TO gc_uiStationNum DO
+	fbStation[i](
+		xEStop:=fbMachine[1].xEStop , 
+		xKey:=fbMachine[1].xKey , 
+		xSafety:=fbMachine[1].xSafety , 
+		xManualMode:=fbMachine[1].xManualMode , 
+		xReset:=fbMachine[1].xReset , 
+		xMachinePause:=fbMachine[1].xPause , 
+		xMachineReInit:=fbMachine[1].xReInit , 
+		xMachineIniting:=fbMachine[1].xIniting , 
+		xMachineRunning:=fbMachine[1].xRunning , 
+		tInitTimeout:= , 
+		xInitHmi:= , 
+		xInitDone:= , 
+		xDisabled:= , 
+		xCycleRunHmi:= , 
+		xJogRunHmi:= , 
+		xPauseHmi:= , 
+		xCycleRunning=> , 
+		xJogRunning=> , 
+		xSingleRunning=> , 
+		xRunning=> , 
+		uiState=> , 
+		diCycleTime =>   
+	);
+	StepAutoTransR_TRIG[i](CLK:=fbstation[i].xQStepAutoTrans , Q=> );
+	IF StepAutoTransR_TRIG[i].Q  THEN
+		FOR infor := 1 TO gc_StepHistory DO
+			MEMCPY ( ADR(arStepAuto.Staion[i].History[infor-1]), ADR(arStepAuto.Staion[i].History[infor]), SIZEOF(arStepAuto.Staion[i].History[infor]));(* length      *)
+		END_FOR		
+		StepAutoTransR_TRIG[i](CLK:=FALSE );						
+	END_IF
+	
+	 arStepAuto.Staion[i].History[gc_StepHistory]:=CONCAT(CONCAT(CONCAT('AutoStep:=' ,INT_TO_STRING(fbstation[k].iStepAuto)),'\\'),strLocalDateTime);
+	 
+	 
+	 
+	 StepInitTransR_TRIG[i](CLK:=fbstation[i].xQStepInitTrans , Q=> );
+	IF  StepInitTransR_TRIG[i].Q  THEN
+		FOR infor := 1 TO gc_StepHistory DO
+			MEMCPY ( ADR(arStepinit.Staion[i].History[infor-1]), ADR(arStepinit.Staion[i].History[infor]), SIZEOF(arStepinit.Staion[i].History[infor]));(* length      *)
+		END_FOR	
+		StepInitTransR_TRIG[i](CLK:=FALSE );										
+	END_IF
+	 	 arStepinit.Staion[i].History[gc_StepHistory]:=CONCAT(CONCAT(CONCAT('InitStep:=' ,INT_TO_STRING(fbstation[i].iStepInit)),'\\'),strLocalDateTime);;
+END_FOR
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_System" Id="{b0ec95fc-9334-4ecc-ab3a-bfc54000fc34}">
+      <Implementation>
+        <ST><![CDATA[
+//	生成特定周期的振荡矩形波，可用于指示灯的闪烁，不可用于精确计时
+fb_Blinker[1](
+	tBlink:=T#10MS,
+	bBlink=>stSysPulse.xP10ms,
+	brBlink=>stSysPulse.xR10ms,
+	bfBlink=>stSysPulse.xF10ms
+);
+fb_Blinker[2](
+	tBlink:=T#20MS,
+	bBlink=>stSysPulse.xP20ms,
+	brBlink=>stSysPulse.xR20ms,
+	bfBlink=>stSysPulse.xF20ms
+);
+fb_Blinker[3](
+	tBlink:=T#50MS,
+	bBlink=>stSysPulse.xP50ms,
+	brBlink=>stSysPulse.xR50ms,
+	bfBlink=>stSysPulse.xF50ms
+);
+fb_Blinker[4](
+	tBlink:=T#100MS,
+	bBlink=>stSysPulse.xP100ms,
+	brBlink=>stSysPulse.xR100ms,
+	bfBlink=>stSysPulse.xF100ms
+);
+fb_Blinker[5](
+	tBlink:=T#200MS,
+	bBlink=>stSysPulse.xP200ms,
+	brBlink=>stSysPulse.xR200ms,
+	bfBlink=>stSysPulse.xF200ms
+);
+fb_Blinker[6](
+	tBlink:=T#500MS,
+	bBlink=>stSysPulse.xP500ms,
+	brBlink=>stSysPulse.xR500ms,
+	bfBlink=>stSysPulse.xF500ms
+);
+fb_Blinker[7](
+	tBlink:=T#1S,
+	bBlink=>stSysPulse.xP1s,
+	brBlink=>stSysPulse.xR1s,
+	bfBlink=>stSysPulse.xF1s
+);
+fb_Blinker[8](
+	tBlink:=T#2S,
+	bBlink=>stSysPulse.xP2s,
+	brBlink=>stSysPulse.xR2s,
+	bfBlink=>stSysPulse.xF2s
+);
+fb_Blinker[9](
+	tBlink:=T#5S,
+	bBlink=>stSysPulse.xP5s,
+	brBlink=>stSysPulse.xR5s,
+	bfBlink=>stSysPulse.xF5s
+);
+fb_Blinker[10](
+	tBlink:=T#10S,
+	bBlink=>stSysPulse.xP10s,
+	brBlink=>stSysPulse.xR10s,
+	bfBlink=>stSysPulse.xF10s
+);
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_TURINRobot" Id="{760a16bc-7812-4f75-942c-9b9b07f2cf6e}">
+      <Implementation>
+        <ST><![CDATA[IF NOT _firstTURINRobot
+THEN
+	fbTURINContorl[1].stPara.strSlaveIP := '192.168.1.111';
+	fbTURINContorl[1].stPara.bySlaveID := 1;
+	fbTURINContorl[1].stPara.iSlavePort :=502;
+	_firstTURINRobot := TRUE;
+ELSE
+	//控制功能块实例化
+	FOR i:=1 TO gc_uiTURINRobot_Num DO
+		fbTURINContorl[i](
+			xManuMode:= TRUE , 
+			xAutoRunning:= fbMachine[1].xRunning , 
+			xEStop:= fbMachine[1].xEStop ,  
+			xReset:= fbMachine[1].xReset , 
+			xStart:= fbMachine[1].xStart , 
+			xStop:= fbMachine[1].xStop , 
+			xPause:= fbMachine[1].xPause , 
+			xMovePermit:=fbMachine[1].xAlarm AND stFromRobot.xLocal_Remote ,
+			xContinue:= , 
+			//xInitExte:= S03_Robot.xInit, 
+			xInitExte:=,
+			xClearInitedFlag:= , 
+			xInitedFlag=> , 
+			xInitFinish=> , 
+			iCurrentStatus=> , 
+			eErrID=> ,
+      stData:=stData.TURIN[i]);	
+
+    END_FOR	
+
+
+END_IF
+//TO ROBOT
+fbTURINContorl[1].pSysToRobot[1]    := stToRobot.iMoveMode; 
+fbTURINContorl[1].pSysToRobot[2]    := stToRobot.iRatio;
+fbTURINContorl[1].pSysToRobot[3].0  := stToRobot.xStepRunPermit;
+fbTURINContorl[1].pSysToRobot[3].1  := stToRobot.xGo_PickPoint;
+fbTURINContorl[1].pSysToRobot[3].2  := stToRobot.xGo_PickPointUp;
+fbTURINContorl[1].pSysToRobot[3].3  := stToRobot.xGo_PutPoint1;
+fbTURINContorl[1].pSysToRobot[3].4  := stToRobot.xGo_PutPoint2;	
+fbTURINContorl[1].pSysToRobot[3].5  := stToRobot.xGo_PutPoint3;	
+fbTURINContorl[1].pSysToRobot[3].6  := stToRobot.xGo_StandByPos;
+fbTURINContorl[1].pSysToRobot[3].7  := stToRobot.xResetWorkDone;	
+fbTURINContorl[1].pSysToRobot[3].8  := stToRobot.xGo_PutPoint11;
+fbTURINContorl[1].pSysToRobot[3].9  := stToRobot.xGo_PutPoint12;	
+fbTURINContorl[1].pSysToRobot[3].10 := stToRobot.xGo_PutPoint13;	
+
+	
+//FROM ROBOT
+stFromRobot.xEstop					  	    := fbTURINContorl[1].pSysFromRobot[0].00;
+stFromRobot.xLocal_Remote				    := fbTURINContorl[1].pSysFromRobot[0].02;
+stFromRobot.xEnable				          := fbTURINContorl[1].pSysFromRobot[0].03;
+stFromRobot.xRuntip				          := fbTURINContorl[1].pSysFromRobot[1].08;
+stFromRobot.xStopTip				        := fbTURINContorl[1].pSysFromRobot[1].09;
+                                    
+stFromRobot.xAt_HomePosition		    := fbTURINContorl[1].pSysFromRobot[3].00;
+stFromRobot.xAt_PickPoint           := fbTURINContorl[1].pSysFromRobot[3].01;
+stFromRobot.xAt_PickPointUp         := fbTURINContorl[1].pSysFromRobot[3].02;
+stFromRobot.xAt_PutPoint1           := fbTURINContorl[1].pSysFromRobot[3].03;
+stFromRobot.xAt_PutPoint2           := fbTURINContorl[1].pSysFromRobot[3].04;
+stFromRobot.xAt_PutPoint3      	    := fbTURINContorl[1].pSysFromRobot[3].05;
+stFromRobot.xStepRuning     	      := fbTURINContorl[1].pSysFromRobot[3].06;
+stFromRobot.xInitOK         		    := fbTURINContorl[1].pSysFromRobot[3].07;
+stFromRobot.xGoHomeDone        	    := fbTURINContorl[1].pSysFromRobot[3].08;
+stFromRobot.xCycleDone              := fbTURINContorl[1].pSysFromRobot[3].09;
+stFromRobot.xOutofseg1              := fbTURINContorl[1].pSysFromRobot[3].10;
+stFromRobot.xOutofseg2              := fbTURINContorl[1].pSysFromRobot[3].11;
+stFromRobot.xOutofseg3              := fbTURINContorl[1].pSysFromRobot[3].14;
+stFromRobot.xSeg1Complete           := fbTURINContorl[1].pSysFromRobot[3].12;
+stFromRobot.xSeg2Complete           := fbTURINContorl[1].pSysFromRobot[3].13;
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_UPS" Id="{e4391efc-d1f1-46b0-8a19-32f7ecb84c12}">
+      <Implementation>
+        <ST><![CDATA[GVL_UPS.fb_1sUPS(
+	sNetID:= , 
+	iPLCPort:=851 , 
+	iUPSPort:=16#588 , 
+	tTimeout:= , 
+	eUpsMode:=eSUPS_WrPersistData_Shutdown , 
+	ePersistentMode:=SPDM_2PASS , 
+	tRecoverTime:=T#20S , 
+	bPowerFailDetect=> , 
+	eState=> );
+	
+IF  eGlobalSUpsState =eSUPS_PowerOK    THEN  ///外部供电正常  
+	///写程序
+ELSIF   eGlobalSUpsState = eSUPS_PowerFailure THEN//外部断电（这种状态只会持续1个PLC周期）
+	
+	///写程序
+ELSIF   eGlobalSUpsState  =   eSUPS_WritePersistentData THEN  //在写掉电保持参数，（详见第八章讲叙的UPS断电和启动过程）
+	
+	///写程序
+ELSIF       eGlobalSUpsState  =   eSUPS_QuickShutdown   THEN  //系统开始快速关机
+	///写程序
+	
+ELSIF    eGlobalSUpsState  =   eSUPS_WaitForRecover     THEN//等待外部供电恢复
+	///写程序
+
+ELSIF    eGlobalSUpsState  =  eSUPS_WaitForPowerOFF     THEN//等待UPS电量耗尽关机
+	///写程序
+
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_WritePersistentData" Id="{b8ef7e20-30c6-4486-ad1c-c1b11e2817d8}">
+      <Implementation>
+        <ST><![CDATA[//写入保持性存储区
+
+fbWritePersistentData(
+	NETID:= '', 
+	PORT:= 851, 
+	START:= stSysPulse.xP5s , 
+	TMOUT:= , 
+	MODE:= , 
+	BUSY=> , 
+	ERR=> , 
+	ERRID=> );
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Z_ERG_20" Id="{b54159db-070b-4919-957f-fa12672a6b22}">
+      <Implementation>
+        <ST><![CDATA[
+	fbERG_20_Modbus[1].stPara.bySlaveID := 1;
+	fbERG_20_Modbus[1].stPara.strSlaveIP := '192.168.1.20';//从站IP地址
+	fbERG_20_Modbus[1].stPara.iSlavePort := 1031;	
+	
+	fbERG_20_Modbus[2].stPara.bySlaveID := 1;
+	fbERG_20_Modbus[2].stPara.strSlaveIP := '192.168.1.21';//从站IP地址
+	fbERG_20_Modbus[2].stPara.iSlavePort := 1031;
+	//进行函数调用
+FOR i := 1 TO gc_uiHITBOT_Number BY 1 DO
+fbERG_20_Modbus[i](
+	xExecute:= , 
+	xAbort:= , 
+	xResetRequest:= , 
+	xPowerHmi:= , 
+	dwTimeLimit:= , 
+	dwTimeOut:= , 
+	stPara:= , 
+	xHMInitButton:= , 
+	xInitControl:= , 
+	aHMIClampButton:= , 
+	aHMIReleaseButton:= , 
+	aClampControl:= , 
+	aReleaseControl:= , 
+	aHMIRotateClampButton:= , 
+	aHMIRotateReleaseButton:= , 
+	aRotateClampControl:= , 
+	aRotateReleaseControl:= , 
+	aHMIRotateClampRelButton:= , 
+	aHMIRotateReleaseRelButton:= , 
+	aRotateClampRelControl:= , 
+	aRotateReleaseRelControl:= , 
+	aHMIClampPara:=stData.ERG20[i].aHMIClampPara , 
+	aHMIReleasePara:=stData.ERG20[i].aHMIReleasePara , 
+	aHMIRotateClampPara:=stData.ERG20[i].aHMIRotateClampPara , 
+	aHMIRotateReleasePara:=stData.ERG20[i].aHMIRotateReleasePara , 
+	aHMIRotateClampRelPara:=stData.ERG20[i].aHMIRotateRelClampPara , 
+	aHMIRotateReleaseRelPara:=stData.ERG20[i].aHMIRotateRelReleasePara , 
+	xAutoMode:= fbMachine[1].xAutoMode, 
+	xDeviceRunning:= , 
+	xDone=> , 
+	xBusy=> , 
+	xAborted=> , 
+	xError=> , 
+	eErrorID=> , 
+	xRdyCmd=> , 
+	xRefOk=> , 
+	xGripClampEmpty=> , 
+	xDropOccur=> , 
+	sHmiError=> , 
+	eCommErrorID=> , 
+	eOperErrorID=> , 
+	st_IOData:= stZ_ERG_20_IOData[i] );
+END_FOR]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="CallStandard">
+      <LineId Id="273" Count="1" />
+      <LineId Id="277" Count="0" />
+      <LineId Id="280" Count="4" />
+      <LineId Id="286" Count="1" />
+      <LineId Id="341" Count="0" />
+      <LineId Id="86" Count="0" />
+      <LineId Id="400" Count="0" />
+      <LineId Id="459" Count="0" />
+      <LineId Id="592" Count="0" />
+      <LineId Id="528" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.A_Input">
+      <LineId Id="12" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_Axis">
+      <LineId Id="13" Count="0" />
+      <LineId Id="2" Count="10" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="24" Count="1" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="27" Count="5" />
+      <LineId Id="42" Count="13" />
+      <LineId Id="356" Count="1" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="58" Count="0" />
+      <LineId Id="61" Count="6" />
+      <LineId Id="362" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="412" Count="0" />
+      <LineId Id="452" Count="0" />
+      <LineId Id="454" Count="1" />
+      <LineId Id="464" Count="1" />
+      <LineId Id="456" Count="4" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="461" Count="0" />
+      <LineId Id="443" Count="0" />
+      <LineId Id="434" Count="0" />
+      <LineId Id="373" Count="10" />
+      <LineId Id="466" Count="0" />
+      <LineId Id="385" Count="0" />
+      <LineId Id="366" Count="1" />
+      <LineId Id="386" Count="1" />
+      <LineId Id="368" Count="0" />
+      <LineId Id="389" Count="0" />
+      <LineId Id="388" Count="0" />
+      <LineId Id="370" Count="1" />
+      <LineId Id="14" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_AxisHome">
+      <LineId Id="829" Count="7" />
+      <LineId Id="961" Count="9" />
+      <LineId Id="976" Count="0" />
+      <LineId Id="960" Count="0" />
+      <LineId Id="950" Count="0" />
+      <LineId Id="838" Count="5" />
+      <LineId Id="938" Count="11" />
+      <LineId Id="937" Count="0" />
+      <LineId Id="846" Count="12" />
+      <LineId Id="978" Count="0" />
+      <LineId Id="985" Count="7" />
+      <LineId Id="980" Count="0" />
+      <LineId Id="859" Count="0" />
+      <LineId Id="861" Count="1" />
+      <LineId Id="1049" Count="0" />
+      <LineId Id="1053" Count="0" />
+      <LineId Id="1051" Count="1" />
+      <LineId Id="1050" Count="0" />
+      <LineId Id="1054" Count="1" />
+      <LineId Id="1057" Count="0" />
+      <LineId Id="1056" Count="0" />
+      <LineId Id="1058" Count="0" />
+      <LineId Id="998" Count="2" />
+      <LineId Id="881" Count="0" />
+      <LineId Id="889" Count="0" />
+      <LineId Id="893" Count="2" />
+      <LineId Id="897" Count="29" />
+      <LineId Id="1048" Count="0" />
+      <LineId Id="927" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_Comm">
+      <LineId Id="2" Count="1" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="4" Count="4" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="9" Count="1" />
+      <LineId Id="14" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_Cylinder">
+      <LineId Id="2" Count="17" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="20" Count="7" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_FuShiPXF">
+      <LineId Id="75" Count="0" />
+      <LineId Id="270" Count="0" />
+      <LineId Id="274" Count="0" />
+      <LineId Id="288" Count="2" />
+      <LineId Id="278" Count="0" />
+      <LineId Id="276" Count="0" />
+      <LineId Id="275" Count="0" />
+      <LineId Id="76" Count="0" />
+      <LineId Id="260" Count="9" />
+      <LineId Id="77" Count="3" />
+      <LineId Id="277" Count="0" />
+      <LineId Id="81" Count="2" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_GetTime">
+      <LineId Id="1" Count="0" />
+      <LineId Id="3" Count="6" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="12" Count="5" />
+      <LineId Id="10" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_Machine">
+      <LineId Id="2" Count="24" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="118" Count="0" />
+      <LineId Id="120" Count="1" />
+      <LineId Id="124" Count="0" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="126" Count="0" />
+      <LineId Id="76" Count="0" />
+      <LineId Id="79" Count="1" />
+      <LineId Id="77" Count="0" />
+      <LineId Id="65" Count="0" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="73" Count="1" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="54" Count="4" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="49" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_MT_MCK">
+      <LineId Id="45" Count="0" />
+      <LineId Id="48" Count="1" />
+      <LineId Id="60" Count="0" />
+      <LineId Id="2" Count="19" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="59" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_PeristalticPump">
+      <LineId Id="20" Count="0" />
+      <LineId Id="61" Count="1" />
+      <LineId Id="137" Count="0" />
+      <LineId Id="144" Count="1" />
+      <LineId Id="138" Count="0" />
+      <LineId Id="140" Count="0" />
+      <LineId Id="146" Count="1" />
+      <LineId Id="141" Count="0" />
+      <LineId Id="149" Count="1" />
+      <LineId Id="153" Count="1" />
+      <LineId Id="151" Count="0" />
+      <LineId Id="156" Count="3" />
+      <LineId Id="155" Count="0" />
+      <LineId Id="161" Count="3" />
+      <LineId Id="160" Count="0" />
+      <LineId Id="166" Count="2" />
+      <LineId Id="165" Count="0" />
+      <LineId Id="170" Count="2" />
+      <LineId Id="169" Count="0" />
+      <LineId Id="174" Count="2" />
+      <LineId Id="173" Count="0" />
+      <LineId Id="178" Count="2" />
+      <LineId Id="177" Count="0" />
+      <LineId Id="182" Count="2" />
+      <LineId Id="181" Count="0" />
+      <LineId Id="186" Count="2" />
+      <LineId Id="185" Count="0" />
+      <LineId Id="152" Count="0" />
+      <LineId Id="148" Count="0" />
+      <LineId Id="136" Count="0" />
+      <LineId Id="132" Count="1" />
+      <LineId Id="71" Count="23" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="70" Count="0" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="101" Count="0" />
+      <LineId Id="104" Count="27" />
+      <LineId Id="65" Count="1" />
+      <LineId Id="19" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_Proface">
+      <LineId Id="2" Count="12" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="19" Count="1" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_Recipe">
+      <LineId Id="1" Count="0" />
+      <LineId Id="5" Count="7" />
+      <LineId Id="4" Count="0" />
+      <LineId Id="3" Count="0" />
+      <LineId Id="13" Count="1" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="19" Count="2" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="22" Count="2" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="25" Count="2" />
+      <LineId Id="31" Count="5" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_RGI_14">
+      <LineId Id="2" Count="2" />
+      <LineId Id="6" Count="2" />
+      <LineId Id="23" Count="3" />
+      <LineId Id="116" Count="1" />
+      <LineId Id="146" Count="0" />
+      <LineId Id="119" Count="26" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="47" Count="1" />
+      <LineId Id="108" Count="0" />
+      <LineId Id="86" Count="0" />
+      <LineId Id="50" Count="15" />
+      <LineId Id="67" Count="2" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_Station">
+      <LineId Id="2" Count="35" />
+      <LineId Id="47" Count="1" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="57" Count="0" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="78" Count="0" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="75" Count="2" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="68" Count="3" />
+      <LineId Id="79" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_System">
+      <LineId Id="2" Count="61" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_TURINRobot">
+      <LineId Id="199" Count="4" />
+      <LineId Id="205" Count="0" />
+      <LineId Id="135" Count="6" />
+      <LineId Id="143" Count="3" />
+      <LineId Id="231" Count="0" />
+      <LineId Id="147" Count="1" />
+      <LineId Id="233" Count="0" />
+      <LineId Id="149" Count="4" />
+      <LineId Id="238" Count="0" />
+      <LineId Id="155" Count="4" />
+      <LineId Id="165" Count="7" />
+      <LineId Id="177" Count="0" />
+      <LineId Id="211" Count="0" />
+      <LineId Id="214" Count="0" />
+      <LineId Id="236" Count="1" />
+      <LineId Id="216" Count="1" />
+      <LineId Id="215" Count="0" />
+      <LineId Id="178" Count="2" />
+      <LineId Id="207" Count="3" />
+      <LineId Id="181" Count="5" />
+      <LineId Id="197" Count="1" />
+      <LineId Id="187" Count="0" />
+      <LineId Id="213" Count="0" />
+      <LineId Id="218" Count="1" />
+      <LineId Id="235" Count="0" />
+      <LineId Id="221" Count="0" />
+      <LineId Id="220" Count="0" />
+      <LineId Id="188" Count="0" />
+      <LineId Id="190" Count="0" />
+      <LineId Id="193" Count="0" />
+      <LineId Id="32" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_UPS">
+      <LineId Id="2" Count="8" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="29" Count="1" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="36" Count="1" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="47" Count="2" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="38" Count="0" />
+      <LineId Id="15" Count="1" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_WritePersistentData">
+      <LineId Id="2" Count="12" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_Z_ERG_20">
+      <LineId Id="5" Count="0" />
+      <LineId Id="7" Count="2" />
+      <LineId Id="151" Count="0" />
+      <LineId Id="153" Count="1" />
+      <LineId Id="152" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="108" Count="41" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="150" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

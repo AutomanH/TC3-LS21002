@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="PRG_GetSystemTime" Id="{560fbe79-d00e-4e7a-9889-60fb936bcbb6}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM PRG_GetSystemTime
+VAR_OUTPUT
+	sQTime:	TIMESTRUCT;	(* Output: Timeinformation *)
+END_VAR
+VAR
+	fbNTGetTime:	NT_GetTime;
+	fbTONGetTime:	TON;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+(* Receive the NT-Time every second *)
+fbTONGetTime( IN := TRUE, PT := T#1s );
+IF fbTONGetTime.Q THEN
+	fbNTGetTime( START := FALSE );
+	fbTONGetTime( IN := FALSE );
+END_IF
+fbNTGetTime
+	(	START := TRUE,
+		TMOUT := DEFAULT_ADS_TIMEOUT
+	);
+
+(* Setting the result *)
+sQTime	:= fbNTGetTime.TIMESTR;
+]]></ST>
+    </Implementation>
+    <LineIds Name="PRG_GetSystemTime">
+      <LineId Id="13" Count="13" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

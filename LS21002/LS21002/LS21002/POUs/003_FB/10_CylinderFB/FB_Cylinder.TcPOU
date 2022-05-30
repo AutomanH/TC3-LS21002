@@ -1,0 +1,302 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_Cylinder" Id="{b830cacf-db66-40d4-8ca1-47cd084cd8ca}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Cylinder
+VAR_INPUT
+	xEStop						: BOOL;					//急停
+	xSafety						: BOOL;					//安全防护
+	xManualMode					: BOOL;					//手动模式
+	xAutoMode					: BOOL;					//自动模式
+	xAirOn						: BOOL;					//气压正常
+	tAlarm						: TIME:=T#5S;			//报警延时
+	xReset					: BOOL;					//报警复位,提示复位
+	xAlarmDisable               : BOOL;                 //报警屏蔽
+	
+	xHmi						: BOOL;					//手动HMI
+	xManual						: BOOL;					//手动执行
+	xAuto						: BOOL;					//自动执行
+	xInit						: BOOL;					//初始化执行
+	xRelease					: BOOL;					//输出释放，气缸泄气
+	xOnILC						: BOOL;			        //动作条件
+	xOffILC						: BOOL;			        //复位条件
+	xHP_Sensor					: BOOL;					//原点感应器
+	xWP_Sensor					: BOOL;					//动点感应器
+	tHP_Delay					: TIME;					//原点延时
+	tWP_Delay					: TIME;					//动点延时
+	byManualTip					: BYTE;					//手动提示字节，多个提示，用于外部触发
+	xManualTip					: BOOL;					//手动提示，单个提示，用于外部触发
+	xTryRun						:BOOL;					//空运行
+END_VAR
+
+VAR_OUTPUT
+	xHP_Valve					: BOOL;					//原点阀
+	xWP_Valve					: BOOL;					//动点阀
+	xHP_Delay					: BOOL;					//原点状态
+	xWP_Delay					: BOOL;					//动点状态
+	xHP_Off						: BOOL;					//原点无信号
+	xWP_Off						: BOOL;					//动点无信号
+	xHP_On						: BOOL;					//原点应为Off
+	xWP_On						: BOOL;					//动点应为Off
+	xAutoTip					: BOOL;					//自动提示，用于外部触发
+	xAlarming					: BOOL;					//报警中
+	xBusy						: BOOL;					//运动中
+END_VAR
+
+VAR
+	{attribute 'hide'}
+	ftHmi						: F_TRIG;				//手动HMI下降沿
+	{attribute 'hide'}
+	rtManual					: R_TRIG;				//手动执行上升沿
+//	{attribute 'hide'}
+	xEnable						: BOOL;					//使能
+	{attribute 'hide'}
+	tonHP_Delay					: TON;					//原点延时计时
+	{attribute 'hide'}
+	tonWP_Delay					: TON;					//动点延时计时
+	{attribute 'hide'}
+	tAlarmTime					: TIME;					//报警延时
+	{attribute 'hide'}
+	tonHP						: TON;					//原点输出计时
+	{attribute 'hide'}
+	tonWP						: TON;					//动点输出计时
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ACT_Manual();
+ACT_Output();
+ACT_Delay();
+ACT_Alarm();
+ACT_Tip();
+
+]]></ST>
+    </Implementation>
+    <Action Name="ACT_Alarm" Id="{cb716596-3e22-41e2-b6aa-2a1eeb23b22c}">
+      <Implementation>
+        <ST><![CDATA[//	延时设置，防止报警延时小于到位延时误报警
+IF tAlarm > MAX(tHP_Delay, tWP_Delay) THEN
+	tAlarmTime:=tAlarm;
+ELSE
+	tAlarmTime:=tAlarm + MAX(tHP_Delay, tWP_Delay);
+END_IF
+
+//	报警延时
+tonHP(IN:=xAirOn AND xHP_Valve, PT:=tAlarmTime, Q=>, ET=>);
+tonWP(IN:=xAirOn AND xWP_Valve, PT:=tAlarmTime, Q=>, ET=>);
+
+//	先报警复位
+IF xReset THEN
+	 xHP_Off:=FALSE;
+	 xWP_Off:=FALSE;
+	 xHP_On:=FALSE;
+	 xWP_On:=FALSE;
+END_IF
+
+//	报警输出，Off报警用延时，On报警用感应器，防止感应器抖动时无到位无报警
+IF tonHP.Q AND NOT xAlarmDisable THEN
+	IF NOT xHP_Delay THEN
+		xHP_Off:=TRUE;
+	END_IF
+	IF xWP_Sensor THEN
+		xWP_On:=TRUE;
+	END_IF
+END_IF
+IF tonWP.Q AND NOT xAlarmDisable THEN
+	IF NOT xWP_Delay THEN
+		xWP_Off:=TRUE;
+	END_IF
+	IF xHP_Sensor THEN
+		xHP_On:=TRUE;
+	END_IF
+END_IF
+
+xAlarming:=(xHP_Off OR xWP_Off OR xHP_On OR xWP_On) AND NOT xAlarmDisable;
+
+xBusy:=NOT xAlarming
+	AND (xHP_Valve AND NOT xHP_Delay
+		OR xWP_Valve AND NOT xWP_Delay);
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Delay" Id="{620213bb-fa26-45b9-91f8-19f1835d05be}">
+      <Implementation>
+        <ST><![CDATA[//	原点延时
+tonHP_Delay(
+	IN:=xHP_Valve
+		AND NOT xWP_Valve
+		AND xHP_Sensor 
+		AND NOT xWP_Sensor,
+	PT:=tHP_Delay,
+	Q=>xHP_Delay,
+	ET=>);
+
+//	动点延时
+tonWP_Delay(
+	IN:=NOT xHP_Valve
+		AND xWP_Valve
+		AND NOT xHP_Sensor
+		AND (xWP_Sensor OR xTryRun),
+	PT:=tWP_Delay,
+	Q=>xWP_Delay,
+	ET=>);
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Manual" Id="{c41ef179-ae01-4000-8680-8e6e443c7e1e}">
+      <Implementation>
+        <ST><![CDATA[//	手动操作
+ftHmi(CLK:=xHmi, Q=>);
+IF ftHmi.Q
+	AND xEStop
+	AND xSafety
+	AND xManualMode
+	AND xAirOn
+	AND ((
+			xManual = xAuto
+			AND xOnILC
+		)
+		OR (
+			(xManual XOR xAuto)
+			AND xOffILC
+		)
+	)
+THEN
+	xManual:=NOT xManual;
+END_IF
+
+//	初始化时复位手动执行//复位自动执行
+IF xInit THEN
+	xManual:=FALSE;
+	xAuto  :=FALSE;
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Output" Id="{9b8ba854-c6fa-4c8c-adcc-5d2760ab6316}">
+      <Implementation>
+        <ST><![CDATA[//	使能
+rtManual(CLK:=xManual, Q=> );
+IF xEStop THEN
+	IF rtManual.Q
+		OR xInit
+	THEN
+		xEnable:=TRUE;
+	END_IF
+ELSE
+	;//xEnable:=FALSE;
+END_IF
+
+//	原点阀输出
+xHP_Valve:=xEnable
+	AND NOT xRelease
+	AND (xManual = xAuto);
+
+//	动点阀输出
+xWP_Valve:=xEnable
+	AND NOT xRelease
+	AND (xManual XOR xAuto);
+	
+//	自动复位
+xInit:=FALSE;
+//xHmi:=FALSE;
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Tip" Id="{b0944e81-24de-4eb9-99cd-9dea38132f49}">
+      <Implementation>
+        <ST><![CDATA[IF xReset THEN
+	xManualTip:=FALSE;
+	byManualTip:=0;
+END_IF
+
+xAutoTip:=xAutoMode AND xManual;
+]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="FB_Cylinder">
+      <LineId Id="363" Count="0" />
+      <LineId Id="511" Count="3" />
+      <LineId Id="569" Count="0" />
+      <LineId Id="568" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Cylinder.ACT_Alarm">
+      <LineId Id="67" Count="0" />
+      <LineId Id="69" Count="1" />
+      <LineId Id="72" Count="1" />
+      <LineId Id="71" Count="0" />
+      <LineId Id="104" Count="3" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="44" Count="1" />
+      <LineId Id="56" Count="1" />
+      <LineId Id="59" Count="1" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="41" Count="1" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="17" Count="1" />
+      <LineId Id="25" Count="3" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="88" Count="5" />
+      <LineId Id="97" Count="1" />
+      <LineId Id="111" Count="0" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="112" Count="0" />
+      <LineId Id="110" Count="0" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="113" Count="0" />
+      <LineId Id="109" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Cylinder.ACT_Delay">
+      <LineId Id="22" Count="0" />
+      <LineId Id="2" Count="7" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="11" Count="6" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="19" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Cylinder.ACT_Manual">
+      <LineId Id="29" Count="0" />
+      <LineId Id="3" Count="2" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="6" Count="2" />
+      <LineId Id="21" Count="2" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="24" Count="2" />
+      <LineId Id="11" Count="3" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="15" Count="1" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="39" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Cylinder.ACT_Output">
+      <LineId Id="31" Count="0" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="23" Count="4" />
+      <LineId Id="29" Count="1" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="36" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="34" Count="1" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="46" Count="1" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Cylinder.ACT_Tip">
+      <LineId Id="11" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="4" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="6" Count="1" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

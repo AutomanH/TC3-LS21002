@@ -1,0 +1,807 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_Axis_old" Id="{ea92cb81-2d15-4175-ba3e-9490db13b420}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Axis_old
+VAR_INPUT
+	xEStop								: BOOL;					//急停
+	xKey									: BOOL;					//钥匙开关
+	xSafety								: BOOL;					//安全防护
+	xManualMode						: BOOL;					//手动模式
+	xAutoMode							: BOOL;					//自动模式
+	xAlarmReset						: BOOL;					//报警复位
+	                  		
+	xStop									: BOOL;					//轴停止
+	xHalt									: BOOL;					//轴暂停
+	xSv_not_power					: BOOL;					//轴断使能
+	xNotPower       			: BOOL;					//轴断使能
+	                  		
+	xEnablePositive 			: BOOL:=TRUE;			//允许正转
+	xEnableNegative				: BOOL:=TRUE;			//允许反转
+	xRunILC								: BOOL:=TRUE;			//运行条件
+	
+	xPowerHmi							: BOOL;					//使能手动HMI
+	xSetPosHmi						: BOOL;					//设置零点手动HMI
+	xHomeHmi							: BOOL;					//原点搜索HMI
+	xAlarmResetHmi				: BOOL;					//报警复位HMI
+	xJogForwardHmi				: BOOL;					//Jog+HMI
+	xJogBackwardsHmi			: BOOL;					//Jog-HMI
+	xStopHmi					: BOOL;
+	xJogForwardLimit  		: BOOL ;//JOG+极限
+	xJogBackwardsLimit		: BOOL ;//JOG-极限
+	
+	xITarMoveHmi				:INT;//触摸屏选择 MMove Position
+	xITarMoveButtonHmi			:BOOL;//触摸屏中目标位置按钮
+	
+	xPowerInit						: BOOL;					//使能初始化执行
+	xHomeAuto							: BOOL;					//原点搜索自动执行
+	xCalibrationCam				: BOOL;					//原点校准
+	xJogForwardAuto				: BOOL;					//Jog+自动执行
+	xJogBackwardsAuto			: BOOL;					//Jog-自动执行
+	
+	nMoveNum							: USINT:=6;				//轴绝对定位数量
+	xMoveILC							: ARRAY[1..gc_uiAxisMoveNum] OF BOOL:=[gc_uiAxisMoveNum(TRUE)];//绝对定位动作条件
+	xMoveHmi							: ARRAY[1..gc_uiAxisMoveNum] OF BOOL;//绝对定位手动Hmi
+	xMoveAuto							: ARRAY[1..gc_uiAxisMoveNum] OF BOOL;//绝对定位自动执行
+	
+	rJogVelocity					: REAL;					//轴Jog速度
+	rManualVelocity				: REAL;				//轴手动速度
+	rAutoVelocity					: REAL;					//轴自动速度
+	rMovePosition					: ARRAY[1..gc_uiAxisMoveNum] OF REAL;//绝对定位位置
+	rMoveVelocity					: ARRAY[1..gc_uiAxisMoveNum] OF REAL;//绝对定位速度
+	tInPosition						: ARRAY[1..gc_uiAxisMoveNum] OF TIME;//绝对到位延时
+	rJogAcceleration      : REAL;                 //轴Jog加速度
+	rJogDeceleration      : REAL;                 //轴Jog减速度
+	rMoveAcceleration     : REAL;            //轴定位加速度                   	
+	rMoveDeceleration     : REAL;           //轴定位减速度 
+	rRelativeDistance			: REAL;					//相对定位位置
+	rRelativeVelocity			: REAL;					//相对定位速度	
+	rVelocityVel			    : REAL;					//连续运行速度
+	rVelocityAcc			    : REAL;					//连续运行加速度
+	rVelocityDec			    : REAL;					//连续运行减速度	
+	
+	iPosNumber						: INT;					//位置保存编号
+
+	xRelativeILC        	: BOOL;                 //Relative条件
+	xRelativeHmi			    : BOOL;					//相对定位手动Hmi
+	xRelativeAuto			    : BOOL;					//相对定位自动执行
+	
+	xVelocityILC       		: BOOL;                 //Velocity条件
+	xVelocityAuto			    : BOOL;					//连续运行启动
+	xVelocityDirection		: BOOL;                 //连续运行方向  
+
+	
+	xModulo								: BOOL;					//模长内定位启动
+	rModuloPosition				: REAL;					//模长内定位位置
+	rModuloVelocity				: REAL;					//模长内定位速度
+	nModuloDirection			: INT := (MC_Direction.MC_Positive_Direction);//模长定位方向
+	tMoveTimeout					: TIME:=T#10S;			//定位超时
+	wManualTip						: BYTE;					//手动提示字节,用于外部触发
+	{attribute 'hide'}
+	iHomingMode     : INT ; //回原模式输入
+	{attribute 'hide'}
+	xIsLinearMode : BOOL := TRUE;//默认都是线性模式	
+END_VAR
+
+VAR_OUTPUT
+	xPowerOn							: BOOL;					//使能On
+	xSetPosFinish					: BOOL;					//设置零点完成
+	xReady								: BOOL;					//准备好
+	xMoveDone							: ARRAY[1..gc_uiAxisMoveNum] OF BOOL;//绝对定位完成
+	xMoveInPos						: ARRAY[1..gc_uiAxisMoveNum] OF BOOL;//绝对定位到位
+	xMoveTimeout					: BOOL;					//定位超时报警
+	xNotPowerOn						: BOOL;					//使能未On提示
+	
+	xError								: BOOL;					//错误
+	xbusy									: BOOL;
+	nErrorID							: UDINT;				//错误ID
+	nErrorCode						: UDINT;				//错误代码
+	
+	rSetTorque						: REAL;					//设定转矩
+	rSetPos								: REAL;					//设定位置
+	rModuloSetPos					: REAL;					//模长内定位设定位置
+	rModuloSetTurns				: REAL;					//模长内定位设定匝数
+	rTargetPos						: REAL;					//目标位置
+	
+	rActTorque						: REAL;					//当前转矩
+	rActPos								: REAL;					//当前位置
+	rActVelo							: REAL;					//当前速度
+	rModuloActPos					: REAL;					//模长内定位当前位置
+	rModuloActTurns				: REAL;					//模长内定位当前匝数
+	rPosDiff							: REAL;					//跟随误差
+
+	xRelativeDone1				: BOOL;					//相对定位完成标志	
+	xRelativeDone					: BOOL;					//相对定位完成
+	xRelativeBusy					: BOOL;					//相对定位Busy
+	xRelativeError				: BOOL;					//相对定位错误
+	udiRelativeErrorID		: UDINT;				//相对定位错误ID
+	
+	xVelocityInVel				: BOOL;					//连续运行速度到达
+	xVelocityBusy					: BOOL;					//连续运行Busy
+	xVelocityError				: BOOL;					//连续运行错误
+	udiVelocityErrorID		: UDINT;				//连续运行错误ID	
+	
+	
+	xQTarPosition			:REAL;//触摸屏中显示在目标位置中
+	xQTarVelocity			:REAL;//触摸屏中显示在目标速度中
+	{attribute 'hide'}
+	NcToPlc								: NCTOPLC_AXIS_REF;		//轴NcToPlc结构体
+	{attribute 'hide'}
+	Status								: ST_AxisStatus;		//轴状态结构体
+END_VAR
+
+VAR_IN_OUT
+	{attribute 'hide'}
+	Axis									: AXIS_REF;				//轴
+END_VAR
+
+VAR
+	{attribute 'hide'}
+	rtPowerHmi						: R_TRIG;				//使能手动HMI上升沿
+	{attribute 'hide'}
+	rtSetPosHmi						: R_TRIG;				//设置零点手动HMI上升沿
+	{attribute 'hide'}
+	xPowerManual					: BOOL;					//使能手动执行
+	{attribute 'hide'}
+	xPowerAuto						: BOOL;					//使能自动执行
+	{attribute 'hide'}
+	xPowerEnable					: BOOL;					//使能Enable
+	{attribute 'hide'}
+	rtPowerOn							: R_TRIG;				//使能上升沿
+	{attribute 'hide'}
+	rtPowerOff						: R_TRIG;				//使能下降沿
+	{attribute 'hide'}
+	xRunable							: BOOL;					//可运行
+	{attribute 'hide'}
+	xHomeManual						: BOOL;					//回原点手动执行
+	{attribute 'hide'}
+	xHomeExecute					: BOOL;					//回原点触发
+	{attribute 'hide'}
+	xSetPosExecute				: BOOL;					//设置零点触发
+	{attribute 'hide'}
+	xResetExecute					: BOOL;					//复位
+	{attribute 'hide'}
+	xJogForwardManual			: BOOL;					//Jog+手动执行
+	{attribute 'hide'}
+	xJogBackwardsManual		: BOOL;					//Jog-自动执行
+	{attribute 'hide'}
+	xJogForward						: BOOL;					//Jog+
+	{attribute 'hide'}
+	xJogBackwards					: BOOL;					//Jog-
+	{attribute 'hide'}
+	xMoveManual						: ARRAY[1..gc_uiAxisMoveNum] OF BOOL;//绝对定位手动执行
+	{attribute 'hide'}
+	xMoveExecute					: ARRAY[1..gc_uiAxisMoveNum] OF BOOL;//绝对定位启动使能
+	{attribute 'hide'}
+	xRelativeExecute			: BOOL;					//相对定位启动
+	{attribute 'hide'}
+	xModuloExecute				: BOOL;					//模长内定位启动
+	{attribute 'hide'}
+	xVelocityExecute			: BOOL;					//相对定位启动
+	{attribute 'hide'}
+	xVelocityAble			    : BOOL;					//相对定位使能
+	{attribute 'hide'}
+	rVelocity							:	REAL;					//定位速度
+	{attribute 'hide'}
+	nIndex 								:	INT;//索引
+	{attribute 'hide'}
+	tonInPosition					: ARRAY[1..gc_uiAxisMoveNum] OF TON;//绝对定位到位计时
+	{attribute 'hide'}
+	tonMoveTimeout				: ARRAY[1..gc_uiAxisMoveNum] OF TON;//绝对定位超时
+	{attribute 'hide'}
+	nIndexMove						: UINT;					//绝对定位索引
+	{attribute 'hide'}
+	xHaltExecute					: BOOL;					//轴暂停
+	{attribute 'hide'}
+	xStopExecute					: BOOL;					//轴停止
+	{attribute 'hide'}
+	fbReadStatus					: MC_ReadStatus;		//读取状态功能块
+	{attribute 'hide'}
+	fbPower								: MC_Power;				//使能功能块
+	{attribute 'hide'}
+	fbJog									: MC_Jog;				//Jog功能块
+	{attribute 'hide'}
+	fbHome								: MC_Home;				//原点搜索功能块
+	{attribute 'hide'}
+	fbMove								: ARRAY[1..gc_uiAxisMoveNum] OF MC_MoveAbsolute;//绝对定位功能块
+	{attribute 'hide'}
+	fbRelative					: MC_MoveRelative;		//相对定位功能块
+	{attribute 'hide'}
+	fbVelocity						: MC_MoveVelocity;	    //轴速度运行功能块
+	{attribute 'hide'}
+	fbModulo							: MC_MoveModulo;		//模长内定位
+	{attribute 'hide'}
+	fbReset								: MC_Reset;				//错误复位功能块
+	{attribute 'hide'}
+	fbHalt								: MC_Halt;				//轴暂停功能块
+	{attribute 'hide'}
+	fbStop								: MC_Stop;				//轴停止功能块
+	{attribute 'hide'}
+	fbSetPos							: MC_SetPosition;		//设置原点位置
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ACT_ReadStatus();
+ACT_Power();
+ACT_Jog();
+ACT_Home();
+IF xIsLinearMode//判断是是否是线性模式
+THEN
+	ACT_Move();//线性模式运动调用
+ELSE
+	ACT_Modulo();//模值模式调用
+END_IF
+
+ACT_Relative();
+ACT_InPos();
+ACT_Timeout();
+ACT_Tip();
+ACT_Reset();
+ACT_Halt();
+ACT_Stop();
+ACT_Velocity();
+
+xPowerHmi:=FALSE;
+xHomeHmi:=FALSE;
+xAlarmResetHmi:=FALSE;
+xPowerInit:=FALSE;
+xHomeAuto:=FALSE;
+//xJogForwardAuto:=FALSE;
+//xJogBackwardsAuto:=FALSE;
+xModulo:=FALSE;
+xRelativeAuto:=FALSE;
+
+FOR nIndex:=1 TO gc_uiAxisMoveNum DO
+	//xMoveHmi[nIndex]:=FALSE;
+	xMoveAuto[nIndex]:=FALSE;
+END_FOR
+]]></ST>
+    </Implementation>
+    <Action Name="ACT_Halt" Id="{3989b112-f552-4604-8cfb-44ad12d06392}">
+      <Implementation>
+        <ST><![CDATA[
+xHaltExecute:=xHalt;
+fbHalt(
+	Axis:=Axis,
+	Execute:=xHaltExecute,
+	Deceleration:=,
+	Jerk:=,
+	BufferMode:=,
+	Options:=,
+	Done=>,
+	Busy=>,
+	Active=>,
+	CommandAborted=>,
+	Error=>,
+	ErrorID=>
+);
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Home" Id="{67572264-d3eb-4324-9a85-951b4f0636c6}">
+      <Implementation>
+        <ST><![CDATA[
+xHomeManual:=xHomeHmi
+	AND xManualMode;
+xHomeExecute:=xRunable
+	AND (xHomeManual
+		OR xHomeAuto
+	);
+fbHome(
+	Axis:=Axis,
+	Execute:=xHomeExecute,
+	Position:=0,
+	HomingMode:=iHomingMode,
+	BufferMode:=,
+	Options:=,
+	bCalibrationCam:=xCalibrationCam,
+	Done=>,
+	Busy=>,
+	Active=>,
+	CommandAborted=>,
+	Error=>,
+	ErrorID=>
+);
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_InPos" Id="{e72e1c04-0521-41a6-9947-c37c7eebc57f}">
+      <Implementation>
+        <ST><![CDATA[
+(*FOR nIndexMove:=1 TO nMoveActualNum DO
+	tonInPosition[nIndexMove](
+		IN:=bReady
+			AND NOT Axis.Status.Moving
+			AND Axis.Status.NotMoving
+			AND Axis.Status.InPositionArea
+			AND Axis.Status.InTargetPosition
+			AND Axis.NcToPlc.SetPos=REAL_TO_LREAL(rMovePosition[nIndexMove])
+			AND Axis.NcToPlc.TargetPos=REAL_TO_LREAL(rMovePosition[nIndexMove]),
+		PT:=tInPosition[nIndexMove],
+		Q=>bInPosition[nIndexMove],
+		ET=>
+	);
+END_FOR*)
+//检测运行是否到位
+IF xIsLinearMode THEN //线性定位
+	FOR nIndexMove:=1 TO gc_uiAxisMoveNum DO
+		tonInPosition[nIndexMove](
+			IN:=xReady
+			 AND NOT Axis.Status.Moving
+			 AND Axis.Status.NotMoving
+			//   AND Axis.Status.InPositionArea
+			//   AND Axis.Status.InTargetPosition
+			//   AND Axis.NcToPlc.SetPos=REAL_TO_LREAL(rMovePosition[nIndexMove])
+			//   AND Axis.NcToPlc.TargetPos=REAL_TO_LREAL(rMovePosition[nIndexMove]),
+			 AND Axis.NcToPlc.ActPos >= REAL_TO_LREAL(rMovePosition[nIndexMove] - 0.2)
+			 AND Axis.NcToPlc.ActPos <= REAL_TO_LREAL(rMovePosition[nIndexMove] + 0.2),
+			PT:=tInPosition[nIndexMove],
+			Q=>xMoveInPos[nIndexMove],
+			ET=>);
+	END_FOR
+ELSE//模值定位
+		FOR nIndexMove:=1 TO gc_uiAxisMoveNum DO
+		tonInPosition[nIndexMove](
+			IN:=xReady
+			 AND NOT Axis.Status.Moving
+			 AND Axis.Status.NotMoving
+			//   AND Axis.Status.InPositionArea
+			//   AND Axis.Status.InTargetPosition
+			//   AND Axis.NcToPlc.SetPos=REAL_TO_LREAL(rMovePosition[nIndexMove])
+			//   AND Axis.NcToPlc.TargetPos=REAL_TO_LREAL(rMovePosition[nIndexMove]),
+			 AND Axis.NcToPlc.ModuloActPos >= REAL_TO_LREAL(rMovePosition[nIndexMove] - 0.2)
+			 AND Axis.NcToPlc.ModuloActPos <= REAL_TO_LREAL(rMovePosition[nIndexMove] + 0.2),
+			PT:=tInPosition[nIndexMove],
+			Q=>xMoveInPos[nIndexMove],
+			ET=>);
+	END_FOR
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Jog" Id="{9ac02fd7-de7f-4df3-873f-43f9d97ca54c}">
+      <Implementation>
+        <ST><![CDATA[
+xJogForwardManual:=xJogForwardHmi
+	AND xManualMode;
+xJogBackwardsManual:=xJogBackwardsHmi
+	AND xManualMode;
+xJogForward:=xRunable
+	AND NOT xJogBackwards
+	AND NOT xJogForwardLimit
+	AND (xJogForwardManual
+		OR xJogForwardAuto
+	);
+xJogBackwards:=xRunable
+	AND NOT xJogForward
+	AND NOT xJogBackwardsLimit
+	AND (xJogBackwardsManual
+		OR xJogBackwardsAuto
+	);
+fbJog(
+	Axis:=Axis,
+	JogForward:=xJogForward,
+	JogBackwards:=xJogBackwards,
+	Mode:=MC_JOGMODE_CONTINOUS,
+	Position:=0,
+	Velocity:=REAL_TO_LREAL(rJogVelocity),
+	Acceleration:=(*REAL_TO_LREAL(rJogAcceleration)*),
+	Deceleration:=(*REAL_TO_LREAL(rJogDeceleration)*),
+	Jerk:=,
+	Done=>,
+	Busy=>,
+	Active=>,
+	CommandAborted=>,
+	Error=>,
+	ErrorID=>
+);
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Modulo" Id="{8a800a3b-749b-4c5a-b54f-13c85e0e3672}">
+      <Implementation>
+        <ST><![CDATA[FOR nIndexMove:=1 TO gc_uiAxisMoveNum DO
+	IF xAutoMode THEN
+		IF rMoveVelocity[nIndexMove]>0 
+		THEN
+			rVelocity:=rMoveVelocity[nIndexMove];
+		ELSE
+			rVelocity:=rAutoVelocity;
+		END_IF
+	ELSE
+		rVelocity:=rManualVelocity;
+	END_IF	
+	
+	xMoveManual[nIndexMove]:=xMoveHmi[nIndexMove] AND xMoveILC[nIndexMove]
+													AND xManualMode;
+	xMoveExecute[nIndexMove]:=xRunable
+														AND xMoveILC[nIndexMove]
+														AND (xMoveManual[nIndexMove]
+														OR xMoveAuto[nIndexMove]);
+	fbModulo(
+		Axis:=Axis,
+		Execute:=xMoveExecute[nIndexMove],
+		Position:=REAL_TO_LREAL(rMovePosition[nIndexMove]),
+		Velocity:=REAL_TO_LREAL(rVelocity),
+		Acceleration:=REAL_TO_LREAL(rMoveAcceleration),
+		Deceleration:=REAL_TO_LREAL(rMoveDeceleration),
+		Direction:=nModuloDirection,
+		BufferMode:=,
+		Options:=,
+		Done=>,
+		Busy=>,
+		Active=>,
+		CommandAborted=>,
+		Error=>,
+		ErrorID=>
+	);
+END_FOR
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Move" Id="{16b6d122-50e3-4873-9656-e4ee691456db}">
+      <Implementation>
+        <ST><![CDATA[
+FOR nIndexMove:=1 TO gc_uiAxisMoveNum DO
+	IF xAutoMode THEN
+		IF rMoveVelocity[nIndexMove]>0 
+		THEN
+			rVelocity:=rMoveVelocity[nIndexMove];
+		ELSE
+			rVelocity:=rAutoVelocity;
+		END_IF
+	ELSE
+		rVelocity:=rManualVelocity;
+	END_IF	
+	
+	xMoveManual[nIndexMove]:=xMoveHmi[nIndexMove] AND xMoveILC[nIndexMove]
+													AND xManualMode;
+	xMoveExecute[nIndexMove]:=xRunable AND xMoveILC[nIndexMove]
+										AND (xMoveManual[nIndexMove]
+										OR xMoveAuto[nIndexMove]);
+	fbMove[nIndexMove](
+		Axis:=Axis,
+		Execute:=xMoveExecute[nIndexMove],
+		Position:=REAL_TO_LREAL(rMovePosition[nIndexMove]),
+		Velocity:=REAL_TO_LREAL(rVelocity),
+		Acceleration:=REAL_TO_LREAL(rMoveAcceleration),
+		Deceleration:=REAL_TO_LREAL(rMoveDeceleration),
+		Jerk:=,
+		BufferMode:=MC_Aborting,
+		Options:=,
+		Done=>xMoveDone[nIndexMove],
+		Busy=>,
+		Active=>,
+		CommandAborted=>,
+		Error=>,
+		ErrorID=>
+	);
+END_FOR
+(**********************************触摸屏中选择伺服参数************************************)
+xMoveExecute[xITarMoveHmi]:=xITarMoveButtonHmi;
+xQTarPosition			:=rMovePosition[xITarMoveHmi];
+xQTarVelocity			:=rManualVelocity;
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Power" Id="{cf6c7865-0215-4f9c-abf3-b09f0633a753}">
+      <Implementation>
+        <ST><![CDATA[
+rtPowerHmi(
+	CLK:=xPowerHmi,
+	Q=>
+);
+IF xEStop AND xSafety THEN
+	IF rtPowerHmi.Q
+		AND xKey
+		AND xSafety
+		AND xManualMode
+	THEN
+		xPowerManual:=NOT xPowerManual;
+	END_IF
+	IF xPowerInit THEN
+		xNotPower:=FALSE;
+		xPowerManual:=FALSE;
+		xPowerAuto:=TRUE;
+	END_IF
+ELSE
+	xPowerManual:=FALSE;
+	xPowerAuto:=FALSE;
+END_IF
+xPowerEnable:=NOT Axis.Status.Error
+						AND (xPowerManual XOR xPowerAuto);
+fbPower(
+	Axis:=Axis,
+	Enable:=xPowerEnable AND NOT xSv_not_power AND NOT xNotPower,
+	Enable_Positive:=xEnablePositive,
+	Enable_Negative:=xEnableNegative,
+	Override:=100,
+	BufferMode:=,
+	Options:=,
+	Status=>xPowerOn,
+	Busy=>,
+	Active=>,
+	Error=>,
+	ErrorID=>
+);
+//xPowerOn := Axis.NcToPlc.StateDWord.1;
+//Axis.Status;
+//AXIS.NcToPlc.StateDWord;
+//AXIS.NcToPlc.StateDWord2;
+//AXIS.NcToPlc.StateDWord3;
+uiStatusCopy[2].1;
+uiStatusCopy[2];
+xReady:=xPowerOn
+	AND NOT Axis.Status.Error
+	AND Axis.Status.Operational;
+xRunable:=xEStop
+	AND xKey
+	AND xSafety
+	AND xReady
+	AND xRunILC;
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_ReadStatus" Id="{fe15abb1-f518-46df-a601-a7d61441772d}">
+      <Implementation>
+        <ST><![CDATA[
+fbReadStatus(
+	Axis:=Axis,
+	Enable:=TRUE,
+	Valid=>,
+	Busy=>,
+	Error=>,
+	ErrorID=>,
+	ErrorStop=>,
+	Disabled=>,
+	Stopping=>,
+	StandStill=>,
+	DiscreteMotion=>,
+	ContinuousMotion=>,
+	SynchronizedMotion=>,
+	Homing=>,
+	ConstantVelocity=>,
+	Accelerating=>,
+	Decelerating=>,
+	Status=>
+);
+
+xError					:=Axis.Status.Error;
+nErrorID				:=Axis.Status.ErrorID;
+xbusy					:=Axis.Status.Moving;
+nErrorCode				:=Axis.NcToPlc.ErrorCode;
+
+
+rSetTorque				:=LREAL_TO_REAL(Axis.NcToPlc.SetTorque);
+rSetPos					:=LREAL_TO_REAL(Axis.NcToPlc.SetPos);
+rModuloSetPos			:=LREAL_TO_REAL(Axis.NcToPlc.ModuloSetPos);
+rModuloSetTurns			:=LREAL_TO_REAL(Axis.NcToPlc.ModuloSetTurns);
+rTargetPos				:=LREAL_TO_REAL(Axis.NcToPlc.TargetPos);
+
+rActTorque				:=LREAL_TO_REAL(Axis.NcToPlc.ActTorque);
+IF xIsLinearMode//判断是是否是线性模式(不同模式读取的数据源不同)
+THEN
+	rActPos					:=LREAL_TO_REAL(Axis.NcToPlc.ActPos);
+ELSE
+	rActPos			    :=LREAL_TO_REAL(Axis.NcToPlc.ModuloActPos);
+END_IF
+rActVelo				:=LREAL_TO_REAL(Axis.NcToPlc.ActVelo);
+
+rPosDiff				:=LREAL_TO_REAL(Axis.NcToPlc.PosDiff);
+
+NcToPlc					:=Axis.NcToPlc;
+Status					:=Axis.Status;
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Relative" Id="{e30ea486-59fd-4c76-84db-fabd64f638fa}">
+      <Implementation>
+        <ST><![CDATA[IF xAutoMode THEN
+	IF rRelativeVelocity>0 THEN
+		rVelocity:=rRelativeVelocity;
+	ELSE
+		rVelocity:=rAutoVelocity;
+	END_IF
+ELSE
+	rVelocity:=rManualVelocity;
+END_IF
+xRelativeExecute:=xRunable
+		AND ((xRelativeHmi AND xManualMode) OR xRelativeAuto (*AND xAutoMode*)) AND xRelativeILC;
+
+fbRelative(
+	Axis:=Axis,  
+	Execute:= xRelativeExecute, 
+	Distance:= REAL_TO_LREAL(rRelativeDistance), 
+	Velocity:= REAL_TO_LREAL(rVelocity), 
+	Acceleration:= rMoveAcceleration, 
+	Deceleration:= rMoveDeceleration, 
+	Jerk:= , 
+	Done=> xRelativeDone, 
+	Busy=> xRelativeBusy, 
+	CommandAborted=> , 
+	Error=> xRelativeError, 
+	ErrorID=> udiRelativeErrorID);
+	
+IF xRelativeDone=TRUE THEN
+	xRelativeDone1:=TRUE;
+ELSIF xRelativeBusy=TRUE THEN
+	xRelativeDone1:=FALSE;	
+END_IF//]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Reset" Id="{1af633f3-01f3-4d82-a792-3e58c8e26bce}">
+      <Implementation>
+        <ST><![CDATA[xResetExecute:=xAlarmReset
+	OR xAlarmResetHmi;
+	
+fbReset(
+	Axis:=Axis,
+	Execute:=xResetExecute AND ( Axis.Status.Error OR NOT xPowerOn) ,
+	Done=>,
+	Busy=>,
+	Error=>,
+	ErrorID=>
+);
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Stop" Id="{8f48e177-9aae-420d-8d92-cd54b35ab78f}">
+      <Implementation>
+        <ST><![CDATA[
+xStopExecute:=xStop OR (xStopHmi AND xManualMode);
+fbStop(
+	Axis:=Axis,
+	Execute:=xStopExecute,
+	Deceleration:=,
+	Jerk:=,
+	Options:=,
+	Done=>,
+	Busy=>,
+	Active=>,
+	CommandAborted=>,
+	Error=>,
+	ErrorID=>
+);
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Timeout" Id="{a62eca3d-139b-4126-a0c7-dd6c73bc990f}">
+      <Implementation>
+        <ST><![CDATA[
+IF xResetExecute THEN
+	xMoveTimeout:=FALSE;
+END_IF
+
+IF NOT xMoveTimeout THEN
+	FOR nIndexMove:=1 TO gc_uiAxisMoveNum DO
+		tonMoveTimeout[nIndexMove](
+			IN:=xMoveAuto[nIndexMove],
+			PT:=tMoveTimeout,
+			Q=>, ET=>
+		);
+		IF tonMoveTimeout[nIndexMove].Q THEN
+			xMoveTimeout:=TRUE;
+			EXIT;
+		END_IF
+	END_FOR
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Tip" Id="{150ed230-b6b5-4066-a913-23bf1d4351b1}">
+      <Implementation>
+        <ST><![CDATA[
+IF xResetExecute THEN
+	wManualTip:=0;
+	xNotPowerOn:=FALSE;
+END_IF
+
+IF NOT (xPowerManual XOR xPowerAuto) 
+	AND xAutoMode
+	AND NOT Axis.Status.Error
+THEN
+	xNotPowerOn:=TRUE;
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Velocity" Id="{e75746b7-bfd3-4b43-b534-c7876cd0aadd}">
+      <Implementation>
+        <ST><![CDATA[IF xAutoMode THEN
+	IF rVelocityVel>0 THEN
+		fbVelocity.Velocity:=rVelocityVel;
+	ELSE
+		fbVelocity.Velocity:=rAutoVelocity;
+	END_IF
+ELSE
+	fbVelocity.Velocity:=rManualVelocity;
+END_IF
+xVelocityExecute:=xRunable AND xVelocityAuto AND xVelocityILC;
+
+fbVelocity(
+	Axis:=Axis , 
+	Execute:=xVelocityExecute AND xVelocityAble , 
+	Velocity:= , 
+	Acceleration:=rVelocityAcc , 
+	Deceleration:=rVelocityDec , 
+	Jerk:= , 
+	Direction:= , 
+	InVelocity=>xVelocityInVel , 
+	Busy=>xVelocityBusy , 
+	CommandAborted=> , 
+	Error=>xVelocityError , 
+	ErrorID=>udiVelocityErrorID );
+	
+xVelocityAble:= NOT xVelocityAble;]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="FB_Axis_old">
+      <LineId Id="3" Count="33" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Axis_old.ACT_Halt">
+      <LineId Id="2" Count="15" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Axis_old.ACT_Home">
+      <LineId Id="2" Count="21" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Axis_old.ACT_InPos">
+      <LineId Id="2" Count="15" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="18" Count="13" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="36" Count="13" />
+      <LineId Id="35" Count="0" />
+      <LineId Id="33" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Axis_old.ACT_Jog">
+      <LineId Id="2" Count="33" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Axis_old.ACT_Modulo">
+      <LineId Id="2" Count="35" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Axis_old.ACT_Move">
+      <LineId Id="2" Count="15" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="20" Count="18" />
+      <LineId Id="72" Count="3" />
+      <LineId Id="45" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Axis_old.ACT_Power">
+      <LineId Id="2" Count="52" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Axis_old.ACT_ReadStatus">
+      <LineId Id="2" Count="46" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Axis_old.ACT_Relative">
+      <LineId Id="2" Count="29" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Axis_old.ACT_Reset">
+      <LineId Id="2" Count="10" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Axis_old.ACT_Stop">
+      <LineId Id="2" Count="14" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Axis_old.ACT_Timeout">
+      <LineId Id="2" Count="17" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Axis_old.ACT_Tip">
+      <LineId Id="2" Count="11" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Axis_old.ACT_Velocity">
+      <LineId Id="2" Count="24" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

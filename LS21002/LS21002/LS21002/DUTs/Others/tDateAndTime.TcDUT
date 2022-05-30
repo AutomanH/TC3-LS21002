@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="tDateAndTime" Id="{57bf4504-3975-4004-8f1b-e927a17aba36}">
+    <Declaration><![CDATA[TYPE tDateAndTime :
+STRUCT
+
+     wYear				: WORD;
+     wMonth				: WORD;
+     wDayOfWeek	    	: WORD;
+     wDay				: WORD;
+     wHour				: WORD;
+     wMinute			: WORD;
+     wSecond			: WORD;
+     wMilliseconds 	: WORD;
+
+END_STRUCT
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>

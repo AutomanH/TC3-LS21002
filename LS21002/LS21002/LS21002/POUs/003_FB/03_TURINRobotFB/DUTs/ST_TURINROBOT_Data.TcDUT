@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_TURINROBOT_Data" Id="{e68ec828-3261-4ae7-9a53-a559a63dc1df}">
+    <Declaration><![CDATA[TYPE ST_TURINROBOT_Data :
+STRUCT		
+	i_Ready:               BOOL;				
+	i_Running:             BOOL;				
+	i_Paused:              BOOL;				
+	i_Error:               BOOL;				
+	i_EStopOn:             BOOL;							
+	i_SError:              BOOL;				
+	i_Waning:              BOOL;			
+	i_MotorsOn:            BOOL;												
+	i_AutoMode:            BOOL;				
+  i_TeachMode:           BOOL;
+	i_CmdError:            BOOL;					
+				
+  o_Start:               BOOL;	
+  o_Init:                BOOL;							
+	o_Stop:                BOOL;			
+	o_Pause:               BOOL;				
+	o_Continue:            BOOL;				
+	o_Reset:               BOOL;				
+	o_SetMotorsOn:         BOOL;			
+	o_SetMotorsOff:        BOOL;	
+	o_RunCondition:        BOOL;				
+
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

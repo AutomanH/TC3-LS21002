@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_SysFromRobot1" Id="{dac06886-0596-4575-920b-6e119ea1d499}">
+    <Declaration><![CDATA[TYPE DUT_SysFromRobot1 :
+STRUCT
+//Robot-PLC
+xSafety_1					:BOOL;//安全位1
+xSafety_2					:BOOL;//安全位2
+xSafety_3					:BOOL;//安全位3
+xHomeReached	    		:BOOL;//回原点完成
+xTakePartPosReached     	:BOOL;//到达取料位
+xPutPartPosReached			:BOOL;//到达放料位
+xRefPosReached				:BOOL;//到达参考位
+xStepRunDone        		:BOOL;//流程已运行
+xInitOK            			 :BOOL;//初始化完成
+xHomPosition				:BOOL;//原点位置
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,540 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_ClientDataExcha" Id="{0e2a7d35-2b8a-47f0-8bf3-3aeafb69127f}" SpecialFunc="None">
+    <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+FUNCTION_BLOCK FB_ClientDataExcha
+VAR_INPUT
+	hSocket				: T_HSOCKET;
+	aToServer			: ARRAY[1..MAX_PLCPRJ_RXBUFFER_SIZE] OF BYTE;//发送数据缓存区
+	udiSendNumber : UDINT;
+	xEnable: BOOL;//使能失效标志位
+	xResetRequest: BOOL;   
+	dwTimeOut: DWORD;//[ms],0 => no executing time limit
+	xNeedReceive : BOOL;//检测是否需要接收标志位
+	xReceiveAlways : BOOL ;//检测是否需要一直进行读取
+END_VAR
+VAR_OUTPUT
+	xRdyCmd : BOOL;(*是否满足接收指令*)
+	xDone: BOOL;(*完成条件满足*)
+	xBusy: BOOL;(*动作正在执行*)
+	xError: BOOL;(*错误条件满足*)
+	udiErrorID: UDINT;(*错误码*)
+	sFromServer		: T_MaxString;//实际接收数据(字符串)
+	rxBuffer				: ARRAY[1..MAX_PLCPRJ_RXBUFFER_SIZE] OF BYTE;//接收缓存区域(byte数组)
+END_VAR
+VAR
+{attribute 'tc_no_symbol'}
+	eState: STATE;//当前状态
+{attribute 'tc_no_symbol'}
+	eClientState : E_ClientSteps;
+{attribute 'tc_no_symbol'}
+	xFirstInvocation: BOOL := TRUE;
+{attribute 'tc_no_symbol'}	 
+	xTimeOut: BOOL;
+{attribute 'tc_no_symbol'}
+	tOperationTimer : TON;
+{attribute 'tc_no_symbol'}	
+	fbSocketSend		: FB_SocketSend := ( tTimeout := PLCPRJ_RECEIVE_TIMEOUT );
+{attribute 'tc_no_symbol'}
+	fbSocketReceive		: FB_SocketReceive := ( tTimeout := PLCPRJ_RECEIVE_TIMEOUT );
+{attribute 'tc_no_symbol'}
+	fbReceiveTON		: TON;
+{attribute 'tc_no_symbol'}	
+	fbDisconnectTON		: TON;
+{attribute 'tc_no_symbol'}
+	RisingEdge			: R_TRIG;
+{attribute 'tc_no_symbol'}	
+	eDataExchaStep	: E_DataExchaSteps;
+{attribute 'tc_no_symbol'}	
+	cbReceived , idx	: UDINT;	
+{attribute 'tc_no_symbol'}	
+	_rxBufferTemp				: ARRAY[1..MAX_PLCPRJ_RXBUFFER_SIZE] OF BYTE;//接收缓存区域
+{attribute 'tc_no_symbol'}	
+_ton : TON;
+END_VAR
+VAR_TEMP
+{attribute 'tc_no_symbol'}
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[xAgain:=0;
+
+REPEAT
+	CASE eState OF
+		STATE.DORMANT:
+				HandleDormantState(xAgain=> xAgain);
+		STATE.EXECUTING:
+				HandleExecutingState(xAgain=> xAgain);
+		STATE.DONE:
+				HandleDoneState(xAgain=> xAgain);
+		STATE.INERROR:
+				HandleErrorState(xAgain=> xAgain);
+		STATE.ABORTING:
+				HandleAbortingState(xAgain=> xAgain);
+		STATE.RESETING:
+				HandleResettingState(xAgain=> xAgain);
+    END_CASE
+UNTIL (xAgain=0)
+END_REPEAT
+
+xRdyCmd := 	eState = STATE.DORMANT;//输出是否已经准备好响应指令]]></ST>
+    </Implementation>
+    <Method Name="AbortAction" Id="{16d50905-e8e6-4033-82bd-2d43d0f885af}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PROTECTED AbortAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+  udiErrorID: UDINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+* Cleaning
+* => abort all running operation
+* => if an UDINT codition is reached, set udiErrorID to a Value rather then 0 
+*)
+xComplete:=1;
+udiErrorID:=0;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CyclicAction" Id="{fc8f39d9-2081-4e25-b3ae-b7fda8c58ea0}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'} 
+METHOD PROTECTED CyclicAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+	udiErrorID: UDINT;
+END_VAR
+VAR	
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[{attribute 'tc_no_symbol'}
+IF xFirstInvocation THEN
+(*
+* Staring
+* for then first (!) invocaion,
+* sample then input variables
+*)		
+	eDataExchaStep := DATAEXCHA_STATE_IDLE;
+	xFirstInvocation:=0;			
+END_IF    
+REPEAT 	 
+	CASE eDataExchaStep OF		
+		DATAEXCHA_STATE_IDLE:						
+			cbReceived := 0; // TODO. Leslie
+			fbReceiveTON( IN := FALSE, PT := T#0s ); (* don't wait, read the first answer data immediately *)
+			fbDisconnectTON( IN := FALSE, PT := T#0s );(* disable timeout check first *)
+			eDataExchaStep := DATAEXCHA_STATE_SEND_START;
+	   
+		DATAEXCHA_STATE_SEND_START:
+			fbSocketSend( bExecute := FALSE );
+			fbSocketSend( 	hSocket	:= hSocket,
+						cbLen	:= udiSendNumber,(* string length inclusive zero delimiter *)				
+						pSrc	:= ADR( aToServer ),
+						bExecute:= TRUE );//启动发送			
+			eDataExchaStep := DATAEXCHA_STATE_SEND_WAIT;
+	
+		DATAEXCHA_STATE_SEND_WAIT:
+			fbSocketSend( bExecute := FALSE );
+			IF NOT fbSocketSend.bBusy THEN//检测发送是否完成
+				IF NOT fbSocketSend.bError THEN	
+					IF xNeedReceive
+					THEN
+						fbDisconnectTON(IN := FALSE);
+						eDataExchaStep := DATAEXCHA_STATE_RECEIVE_START;							
+					ELSE
+						SysMemSet( ADR(sFromServer), 0, SIZEOF(sFromServer));		
+						eDataExchaStep := DATAEXCHA_STATE_IDLE;		
+						xComplete := 1;	
+					END_IF	
+				ELSE		
+					udiErrorID := fbSocketSend.nErrId;								
+				END_IF						
+			END_IF		
+	
+		DATAEXCHA_STATE_RECEIVE_START:
+			fbDisconnectTON(IN := TRUE,PT:=T#10MS);
+			fbSocketReceive(bExecute := FALSE);		
+			 
+			fbSocketReceive(  hSocket:= hSocket,
+											cbLen:= SIZEOF( _rxBufferTemp ),
+											pDest:= ADR( _rxBufferTemp),
+											bExecute:= TRUE ,
+											nRecBytes=>cbReceived); 
+      IF fbDisconnectTON.Q
+			THEN
+				eDataExchaStep := DATAEXCHA_STATE_RECEIVE_WAIT;
+				fbDisconnectTON(IN:=FALSE);       
+			END_IF
+		DATAEXCHA_STATE_RECEIVE_WAIT:	
+			_ton(IN:= NOT _ton.Q, PT:= T#20MS, Q=> , ET=> );
+			fbSocketReceive(bExecute := _ton.Q,
+                      nRecBytes=>cbReceived);	
+      fbSocketReceive(bExecute := FALSE);				
+			IF NOT fbSocketReceive.bBusy THEN
+				IF NOT fbSocketReceive.bError THEN 						
+					IF cbReceived < 255 AND cbReceived > 0 THEN(* no overflow *)
+						fbReceiveTON( PT := T#0s ); (* bytes received => increase the read (polling) speed *)
+						fbDisconnectTON( IN := FALSE );(* bytes received => disable timeout check *)		
+						SysMemSet( ADR(sFromServer), 0, SIZEOF(sFromServer));		
+						SysMemSet( ADR(rxBuffer), 0, SIZEOF(rxBuffer));	
+						SysMemCpy( ADR( rxBuffer ), ADR( _rxBufferTemp ), cbReceived );//进行数据迁移
+						SysMemCpy( ADR( sFromServer ), ADR( _rxBufferTemp ), cbReceived );(* copy the received string to the output variable (inclusive the end delimiter) *)								
+						eDataExchaStep := DATAEXCHA_STATE_IDLE;		
+						xComplete := 1;
+					END_IF
+					IF cbReceived >= 255(* there is no more free read buffer space => the answer string should be terminated *)	
+          THEN
+						udiErrorID :=100;(* buffer overflow !*)				
+					END_IF			
+				ELSE(* receive UDINT *)
+					udiErrorID := fbSocketReceive.nErrId;	
+				END_IF
+			END_IF
+			fbDisconnectTON( IN := TRUE, PT := PLCPRJ_RECEIVE_TIMEOUT );(* no bytes received => enable timeout check*)
+			IF fbDisconnectTON.Q THEN (* timeout UDINT*)
+				fbDisconnectTON( IN := FALSE );
+				udiErrorID := 101;//接收超时报错			
+			END_IF
+		ELSE
+			;
+	END_CASE	       
+UNTIL (TRUE)//让程序一直处于刷新状态
+END_REPEAT
+
+IF NOT xEnable OR xComplete OR udiErrorID<>0 THEN    
+    (*
+    * Cleaning
+    * => free as much allocated resources as possible
+    *)    
+    tOperationTimer(IN:=0);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleAbortingState" Id="{47b554fe-a5f2-448a-94d5-7d76d92ac5e7}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleAbortingState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+{attribute 'tc_no_symbol'}	
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[AbortAction(xComplete=> xComplete, udiErrorID=> udiErrorID);
+
+IF udiErrorID<>0 THEN
+    eState:=STATE.INERROR;
+    xAgain:=1;
+ELSIF xComplete THEN
+    eState:=STATE.INERROR;
+    xAgain:=1;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleDoneState" Id="{d72cccda-2d23-42ca-8362-5b60ad8fa845}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleDoneState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xDone AND (xEnable=0) THEN
+	eState:=STATE.RESETING;
+	xAgain:=1;
+ELSE
+	xBusy:=0;
+	xDone:=1;
+	//xResetRequest:=(xExecute=0);
+	xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleDormantState" Id="{5128ac62-123d-4a36-bcd3-1f1e494b7c86}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleDormantState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xEnable THEN
+    xBusy:=1;
+    eState:=STATE.EXECUTING;
+    xAgain:=1;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleErrorState" Id="{12f672bd-2ef8-418b-9c73-7a7685022dfe}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL  HandleErrorState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xError AND (xResetRequest OR NOT xEnable ) THEN
+    eState:=STATE.RESETING;
+    xAgain:=1;
+ELSE
+    xBusy:=0;
+    xError:=1;    
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleExecutingState" Id="{227577b8-e051-4fa2-9619-44166c8f0a11}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleExecutingState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+{attribute 'tc_no_symbol'}	
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ 
+CyclicAction(xComplete=> xComplete, udiErrorID=> udiErrorID);
+
+
+IF udiErrorID<>0 THEN//检测是否有错误发生
+    eState:=STATE.INERROR;
+    xAgain:=1;
+ELSIF NOT xEnable THEN//检测使能条件
+    eState:=STATE.ABORTING;
+    xAgain:=1;
+ELSIF xComplete THEN//检测是否正常处理完成
+    eState:=STATE.DONE;
+    xAgain:=1;
+END_IF ]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleResettingState" Id="{42ac0aa6-2380-423d-b54f-b9e577c1c3d2}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleResettingState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+{attribute 'tc_no_symbol'}
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ResetAction(xComplete=> xComplete);
+
+IF xComplete THEN
+		xEnable:=0;//清除输入指令 
+    xBusy:=0;
+    xDone:=0;
+    xError:=0;
+
+    udiErrorID:=0;
+    eState:=STATE.DORMANT;
+    xFirstInvocation:=1;
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ResetAction" Id="{2eaba959-7737-4f6f-a06e-db29edecb0c1}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PROTECTED ResetAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+* Cleaning
+* => free all allocated resources
+* => reinitialize instance variables
+*)
+tOperationTimer(IN:=0);
+
+fbSocketSend( bExecute := FALSE );
+fbSocketReceive(bExecute := FALSE);		
+
+eDataExchaStep := DATAEXCHA_STATE_IDLE;		
+
+xComplete := 1;]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_ClientDataExcha">
+      <LineId Id="33" Count="0" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="34" Count="8" />
+      <LineId Id="105" Count="2" />
+      <LineId Id="44" Count="1" />
+      <LineId Id="119" Count="0" />
+      <LineId Id="47" Count="1" />
+      <LineId Id="269" Count="0" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ClientDataExcha.AbortAction">
+      <LineId Id="10" Count="2" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="19" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ClientDataExcha.CyclicAction">
+      <LineId Id="22" Count="0" />
+      <LineId Id="45" Count="4" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="277" Count="0" />
+      <LineId Id="177" Count="0" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="438" Count="0" />
+      <LineId Id="278" Count="0" />
+      <LineId Id="280" Count="0" />
+      <LineId Id="285" Count="3" />
+      <LineId Id="361" Count="0" />
+      <LineId Id="488" Count="0" />
+      <LineId Id="292" Count="0" />
+      <LineId Id="381" Count="0" />
+      <LineId Id="418" Count="0" />
+      <LineId Id="382" Count="0" />
+      <LineId Id="380" Count="0" />
+      <LineId Id="297" Count="2" />
+      <LineId Id="384" Count="0" />
+      <LineId Id="302" Count="0" />
+      <LineId Id="385" Count="0" />
+      <LineId Id="364" Count="1" />
+      <LineId Id="454" Count="0" />
+      <LineId Id="368" Count="0" />
+      <LineId Id="366" Count="0" />
+      <LineId Id="370" Count="0" />
+      <LineId Id="372" Count="0" />
+      <LineId Id="371" Count="0" />
+      <LineId Id="367" Count="0" />
+      <LineId Id="406" Count="1" />
+      <LineId Id="305" Count="0" />
+      <LineId Id="310" Count="0" />
+      <LineId Id="312" Count="2" />
+      <LineId Id="377" Count="0" />
+      <LineId Id="452" Count="0" />
+      <LineId Id="447" Count="3" />
+      <LineId Id="417" Count="0" />
+      <LineId Id="453" Count="0" />
+      <LineId Id="455" Count="0" />
+      <LineId Id="457" Count="1" />
+      <LineId Id="319" Count="0" />
+      <LineId Id="322" Count="0" />
+      <LineId Id="469" Count="0" />
+      <LineId Id="446" Count="0" />
+      <LineId Id="451" Count="0" />
+      <LineId Id="470" Count="0" />
+      <LineId Id="421" Count="0" />
+      <LineId Id="391" Count="0" />
+      <LineId Id="331" Count="3" />
+      <LineId Id="373" Count="1" />
+      <LineId Id="335" Count="0" />
+      <LineId Id="338" Count="0" />
+      <LineId Id="362" Count="0" />
+      <LineId Id="471" Count="0" />
+      <LineId Id="339" Count="0" />
+      <LineId Id="472" Count="0" />
+      <LineId Id="340" Count="0" />
+      <LineId Id="342" Count="0" />
+      <LineId Id="404" Count="1" />
+      <LineId Id="392" Count="0" />
+      <LineId Id="473" Count="0" />
+      <LineId Id="475" Count="3" />
+      <LineId Id="474" Count="0" />
+      <LineId Id="359" Count="1" />
+      <LineId Id="160" Count="0" />
+      <LineId Id="82" Count="0" />
+      <LineId Id="363" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="87" Count="2" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="150" Count="0" />
+      <LineId Id="85" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ClientDataExcha.HandleAbortingState">
+      <LineId Id="15" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="28" Count="1" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="27" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ClientDataExcha.HandleDoneState">
+      <LineId Id="5" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="12" Count="5" />
+      <LineId Id="11" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ClientDataExcha.HandleDormantState">
+      <LineId Id="5" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="12" Count="1" />
+      <LineId Id="10" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ClientDataExcha.HandleErrorState">
+      <LineId Id="10" Count="5" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ClientDataExcha.HandleExecutingState">
+      <LineId Id="29" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="20" Count="1" />
+      <LineId Id="38" Count="2" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="19" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ClientDataExcha.HandleResettingState">
+      <LineId Id="5" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="16" Count="1" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="18" Count="3" />
+      <LineId Id="15" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ClientDataExcha.ResetAction">
+      <LineId Id="10" Count="2" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="18" Count="1" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="13" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

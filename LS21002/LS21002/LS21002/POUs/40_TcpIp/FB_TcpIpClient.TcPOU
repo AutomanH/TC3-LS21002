@@ -1,0 +1,560 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_TcpIpClient" Id="{a0cd97c5-b5d3-40aa-9e53-fd3c1f89e1ba}" SpecialFunc="None">
+    <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+FUNCTION_BLOCK FB_TcpIpClient
+VAR_INPUT
+	/// IP adress of remote server
+	sRemoteHost			: T_IPv4Addr ;
+  /// Port number of remote server
+	nRemotePort			: UINT := 0;  
+  /// string sent to server
+	aToServer				: ARRAY[1..MAX_PLCPRJ_RXBUFFER_SIZE] OF BYTE;//发送数据缓存区
+	udiSendNumber     : UDINT;
+  /// Enable TcpIp connection and data exchange
+  /// Enable TcpIp connection and data exchange
+	xEnable: BOOL;
+	xResetRequest: BOOL; 
+	dwTimeOut: DWORD;//[ms],0 => no executing time limit
+	//默认是一问一答的模式
+	xNeedReceive : BOOL := TRUE;//检测是否需要接收标志位
+	xReceiveAlways : BOOL := FALSE;//检测是否需要一直进行读取(默认是一发一收模式)
+	xNeedDisConnect : BOOL := TRUE ;//检测是否需要解除连接(需要关闭连接),默认都是需要执行完成之后，断开连接
+END_VAR
+VAR_OUTPUT
+	xDone: BOOL;(*完成条件满足*)
+	xBusy: BOOL;(*动作正在执行*)
+	xError: BOOL;(*错误条件满足*)
+	udiErrorID: UDINT;(*错误码*)
+	xRdyCmd : BOOL;//代表指令准备完成
+{attribute 'tc_no_symbol'}
+	hSocket				: T_HSOCKET;//
+	sFromServer			: T_MaxString := '';//(*string from server*)
+	rxBuffer				: ARRAY[1..MAX_PLCPRJ_RXBUFFER_SIZE] OF BYTE;//接收缓存区域(byte数组)
+END_VAR
+VAR
+{attribute 'tc_no_symbol'}	
+	eState: STATE;
+{attribute 'tc_no_symbol'}
+	eClientState : E_ClientSteps;
+{attribute 'tc_no_symbol'}
+	xFirstInvocation: BOOL := TRUE;	 
+{attribute 'tc_no_symbol'}
+	xTimeOut: BOOL;
+{attribute 'tc_no_symbol'}
+	tOperationTimer : TON;
+{attribute 'tc_no_symbol'}
+	_fbConnect 			    : FB_SocketConnect := (tTimeout :=T#8S);//建立连接功能块
+{attribute 'tc_no_symbol'}
+	_fbClose				    : FB_SocketClose := (tTimeout :=T#8S);//取消连接功能块
+{attribute 'tc_no_symbol'}
+	_fbClientDataExcha	: FB_ClientDataExcha;
+{attribute 'tc_no_symbol'}
+	_tonConnect		    : TON := ( PT := PLCPRJ_RECONNECT_TIME );
+{attribute 'tc_no_symbol'}
+	_tonDataExchange  : TON := ( PT := PLCPRJ_SEND_CYCLE_TIME ); 
+{attribute 'tc_no_symbol'}
+	_xConnected       : BOOL := FALSE;//以太网是否连接到位
+END_VAR
+VAR_TEMP
+{attribute 'tc_no_symbol'}	
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[xAgain:=0;
+
+
+_fbClientDataExcha();
+xRdyCmd := eState = STATE.DORMANT AND _fbClientDataExcha.xRdyCmd ;
+_fbClientDataExcha.xNeedReceive := xNeedReceive;//设置发送之后是否需要反馈信息
+REPEAT
+	CASE eState OF
+        STATE.DORMANT:
+            HandleDormantState(xAgain=> xAgain);
+        STATE.EXECUTING:
+            HandleExecutingState(xAgain=> xAgain);
+        STATE.DONE:
+            HandleDoneState(xAgain=> xAgain);
+        STATE.INERROR:
+            HandleErrorState(xAgain=> xAgain);
+        STATE.ABORTING:
+            HandleAbortingState(xAgain=> xAgain);
+        STATE.RESETING:
+            HandleResettingState(xAgain=> xAgain);
+    END_CASE
+UNTIL (xAgain=0)
+END_REPEAT
+	]]></ST>
+    </Implementation>
+    <Method Name="AbortAction" Id="{a4ed2e44-8797-43e8-815c-a35b87edc743}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PROTECTED AbortAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+  udiErrorID: UDINT;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+* Cleaning
+* => abort all running operation
+* => if an UDINT codition is reached, set udiErrorID to a Value rather then 0 
+*)
+xComplete:=1;
+udiErrorID:=0;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CyclicAction" Id="{bdd13e68-a55b-48dc-b4a5-5362ff4ddb88}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PROTECTED CyclicAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+	udiErrorID: UDINT;
+END_VAR
+VAR	
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xFirstInvocation THEN//执行初始化
+(*
+* Staring
+* for then first (!) invocaion,
+* sample then input variables
+*)
+	_fbConnect.sRemoteHost := sRemoteHost;//传送IP地址
+	_fbConnect.nRemotePort := nRemotePort;//传送
+	eClientState := CLIENT_STATE_IDLE;
+	xFirstInvocation:=0;			
+END_IF    
+REPEAT 	
+	CASE eClientState OF
+		CLIENT_STATE_IDLE://空闲状态				
+			sFromServer := '';
+			_tonConnect( IN := FALSE );
+			IF NOT _xConnected//检测是否已经建立连接
+			THEN
+				eClientState := CLIENT_STATE_CONNECT_START;
+			ELSE//已经建立连接
+				hSocket 	:= _fbConnect.hSocket;//传送连接编号		
+				eClientState 	:= CLIENT_STATE_DATAEXCHA_START;
+			END_IF			
+		CLIENT_STATE_CONNECT_START://建立连接
+			_fbConnect(bExecute:=FALSE);
+			_tonConnect( IN := TRUE, PT := PLCPRJ_RECONNECT_TIME );
+			IF _tonConnect.Q THEN
+				_fbConnect(bExecute:=TRUE);//建立以太网连接
+				eClientState := CLIENT_STATE_CONNECT_WAIT;
+			END_IF
+		CLIENT_STATE_CONNECT_WAIT://进行连接等待
+			_fbConnect(bExecute:=FALSE);		
+			IF NOT _fbConnect.bBusy THEN//
+				IF NOT _fbConnect.bError//已经同对应server建立连接s
+				THEN						
+					hSocket 	:= _fbConnect.hSocket;//传送连接编号
+					_xConnected := TRUE;
+					IF hSocket.handle <> 0
+					THEN
+					  _tonDataExchange(IN:=FALSE);
+						eClientState 		:= CLIENT_STATE_DATAEXCHA_START;
+					END_IF					
+				ELSE//连接有报错发生
+					udiErrorID := _fbConnect.nErrId;//传递错误ID
+				END_IF			
+			END_IF
+		CLIENT_STATE_DATAEXCHA_START://进行数据收发
+			_tonDataExchange( IN := TRUE, PT := PLCPRJ_RECONNECT_TIME );
+			IF _tonDataExchange.Q THEN
+				_tonDataExchange( IN := FALSE );				
+				_fbClientDataExcha( hSocket 	:= hSocket,
+													  aToServer 	:= aToServer,
+													  udiSendNumber := udiSendNumber,
+													  xEnable 	:= TRUE );														
+				eClientState := CLIENT_STATE_DATAEXCHA_WAIT;
+			END_IF
+ 
+		CLIENT_STATE_DATAEXCHA_WAIT://等待数据收发完成
+			IF _fbClientDataExcha.xDone THEN					
+				sFromServer := _fbClientDataExcha.sFromServer;//获取接收数据
+				rxBuffer := _fbClientDataExcha.rxBuffer;
+				_fbClientDataExcha.xEnable := FALSE;				
+				IF xNeedDisConnect//需要断开连接
+				THEN
+					eClientState 		:= CLIENT_STATE_CLOSE_START;
+				ELSE//不需要断开连接
+					xComplete := 1;
+					eClientState 		:= CLIENT_STATE_IDLE;
+				END_IF				
+			END_IF
+			IF _fbClientDataExcha.xError THEN			
+					(* possible UDINTs are logged inside of fbClientDataExcha function block *)
+					_fbClientDataExcha.xEnable := FALSE;
+					udiErrorID := _fbClientDataExcha.udiErrorID;		
+			END_IF
+		CLIENT_STATE_CLOSE_START://关闭连接
+			_fbClose( bExecute := FALSE );
+			_fbClose(	hSocket:= hSocket,
+								bExecute:= TRUE );
+			eClientState := CLIENT_STATE_CLOSE_WAIT;
+		CLIENT_STATE_CLOSE_WAIT://等待管理结束
+			_fbClose( bExecute := FALSE );
+			IF NOT _fbClose.bBusy
+			THEN
+				IF NOT _fbClose.bError
+				THEN	
+					xComplete := 1;
+					_xConnected := FALSE;
+					SysMemSet( ADR(hSocket), 0, SIZEOF(hSocket));//清除连接句柄	
+					eClientState 		:= CLIENT_STATE_IDLE;
+				ELSE
+					_xConnected := FALSE;
+					udiErrorID := _fbClose.nErrId;//传递错误代码		
+				END_IF	
+			END_IF	
+		ELSE
+		;		
+	END_CASE       
+UNTIL (TRUE)//让程序一直处于刷新状态
+END_REPEAT
+
+IF NOT xEnable OR xComplete OR udiErrorID<>0 THEN    
+    (*
+    * Cleaning
+    * => free as much allocated resources as possible
+    *)    
+    tOperationTimer(IN:=0);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleAbortingState" Id="{c344479b-f820-4d68-b832-89aa85025ade}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleAbortingState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+{attribute 'tc_no_symbol'}	
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[AbortAction(xComplete=> xComplete, udiErrorID=> udiErrorID);
+
+IF udiErrorID<>0 THEN
+    eState:=STATE.INERROR;
+    xAgain:=1;
+ELSIF xComplete THEN
+    eState:=STATE.INERROR;
+    xAgain:=1;
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleDoneState" Id="{a2de66bd-5f8b-43c9-9817-bd94910b6186}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleDoneState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xDone AND (xEnable=0) THEN
+	eState:=STATE.RESETING;	
+	xAgain:=1;
+ELSE
+	xBusy:=0;
+	xDone:=1;
+	//xResetRequest:=(xExecute=0);
+	xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleDormantState" Id="{8f3e9a68-5131-4603-8472-81d41b8ca76a}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleDormantState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xEnable THEN
+    xBusy:=1;
+    eState:=STATE.EXECUTING;
+    xAgain:=1;
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleErrorState" Id="{5cab4579-1e38-43a9-897c-d180781493e7}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL  HandleErrorState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xError AND  (xResetRequest OR NOT xEnable) THEN
+    eState:=STATE.RESETING;
+    _fbConnect(bExecute := FALSE);
+    _fbClose(bExecute := FALSE);		
+		_xConnected := FALSE;//报警之后需要清除已经连接标志位	
+    xAgain:=1;
+ELSE
+    xBusy:=0;
+    xError:=1;    
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleExecutingState" Id="{dc8d3550-9124-47bc-b1e6-ef69d738c104}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleExecutingState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+{attribute 'tc_no_symbol'}
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+CyclicAction(xComplete=> xComplete, udiErrorID=> udiErrorID);
+
+
+IF udiErrorID<>0 THEN
+    eState:=STATE.INERROR;
+    xAgain:=1;
+ELSIF NOT xEnable THEN//检测使能条件
+    eState:=STATE.ABORTING;
+    xAgain:=1;
+ELSIF xComplete THEN//检测是否正常处理完成
+    eState:=STATE.DONE;
+    xAgain:=1;
+END_IF ]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleResettingState" Id="{ed40a6f8-1c0c-403f-8576-89f2ce300e38}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleResettingState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+{attribute 'tc_no_symbol'}
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ResetAction(xComplete=> xComplete);
+
+IF xComplete THEN
+		xEnable:=0;//清除输入指令 
+    xBusy:=0;
+    xDone:=0;
+    xError:=0;
+
+    udiErrorID:=0;
+    eState:=STATE.DORMANT;
+    xFirstInvocation:=1;
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ResetAction" Id="{5a888556-bc32-4b9b-88eb-ca8de33cf36c}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PROTECTED ResetAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+* Cleaning
+* => free all allocated resources
+* => reinitialize instance variables
+*)
+tOperationTimer(IN:=0);
+_fbConnect(bExecute := FALSE);
+_fbClose(bExecute := FALSE);		
+
+_fbClientDataExcha(xEnable:=FALSE);
+eClientState := CLIENT_STATE_IDLE;	
+xComplete:=1;	
+]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_TcpIpClient">
+      <LineId Id="33" Count="0" />
+      <LineId Id="270" Count="0" />
+      <LineId Id="272" Count="0" />
+      <LineId Id="218" Count="0" />
+      <LineId Id="220" Count="0" />
+      <LineId Id="223" Count="0" />
+      <LineId Id="34" Count="8" />
+      <LineId Id="105" Count="2" />
+      <LineId Id="44" Count="1" />
+      <LineId Id="119" Count="0" />
+      <LineId Id="47" Count="1" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TcpIpClient.AbortAction">
+      <LineId Id="10" Count="2" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="19" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TcpIpClient.CyclicAction">
+      <LineId Id="45" Count="4" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="220" Count="1" />
+      <LineId Id="277" Count="0" />
+      <LineId Id="177" Count="0" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="231" Count="0" />
+      <LineId Id="230" Count="0" />
+      <LineId Id="225" Count="0" />
+      <LineId Id="229" Count="0" />
+      <LineId Id="292" Count="1" />
+      <LineId Id="295" Count="0" />
+      <LineId Id="297" Count="0" />
+      <LineId Id="299" Count="0" />
+      <LineId Id="298" Count="0" />
+      <LineId Id="294" Count="0" />
+      <LineId Id="236" Count="5" />
+      <LineId Id="235" Count="0" />
+      <LineId Id="243" Count="0" />
+      <LineId Id="303" Count="0" />
+      <LineId Id="244" Count="2" />
+      <LineId Id="248" Count="0" />
+      <LineId Id="296" Count="0" />
+      <LineId Id="369" Count="1" />
+      <LineId Id="373" Count="0" />
+      <LineId Id="372" Count="0" />
+      <LineId Id="371" Count="0" />
+      <LineId Id="343" Count="1" />
+      <LineId Id="250" Count="0" />
+      <LineId Id="242" Count="0" />
+      <LineId Id="254" Count="3" />
+      <LineId Id="259" Count="1" />
+      <LineId Id="300" Count="0" />
+      <LineId Id="261" Count="4" />
+      <LineId Id="267" Count="0" />
+      <LineId Id="270" Count="0" />
+      <LineId Id="291" Count="0" />
+      <LineId Id="306" Count="0" />
+      <LineId Id="309" Count="2" />
+      <LineId Id="313" Count="2" />
+      <LineId Id="308" Count="0" />
+      <LineId Id="284" Count="0" />
+      <LineId Id="272" Count="1" />
+      <LineId Id="279" Count="0" />
+      <LineId Id="274" Count="0" />
+      <LineId Id="276" Count="0" />
+      <LineId Id="316" Count="0" />
+      <LineId Id="318" Count="2" />
+      <LineId Id="322" Count="0" />
+      <LineId Id="324" Count="1" />
+      <LineId Id="323" Count="0" />
+      <LineId Id="348" Count="0" />
+      <LineId Id="345" Count="0" />
+      <LineId Id="326" Count="0" />
+      <LineId Id="330" Count="0" />
+      <LineId Id="332" Count="1" />
+      <LineId Id="331" Count="0" />
+      <LineId Id="328" Count="0" />
+      <LineId Id="383" Count="0" />
+      <LineId Id="329" Count="0" />
+      <LineId Id="327" Count="0" />
+      <LineId Id="347" Count="0" />
+      <LineId Id="281" Count="1" />
+      <LineId Id="280" Count="0" />
+      <LineId Id="82" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="285" Count="5" />
+      <LineId Id="85" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TcpIpClient.HandleAbortingState">
+      <LineId Id="15" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="28" Count="1" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="32" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TcpIpClient.HandleDoneState">
+      <LineId Id="5" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="12" Count="5" />
+      <LineId Id="11" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TcpIpClient.HandleDormantState">
+      <LineId Id="5" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="12" Count="1" />
+      <LineId Id="10" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TcpIpClient.HandleErrorState">
+      <LineId Id="10" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="12" Count="3" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TcpIpClient.HandleExecutingState">
+      <LineId Id="29" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="20" Count="1" />
+      <LineId Id="42" Count="5" />
+      <LineId Id="19" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TcpIpClient.HandleResettingState">
+      <LineId Id="5" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="16" Count="1" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="18" Count="3" />
+      <LineId Id="15" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TcpIpClient.ResetAction">
+      <LineId Id="10" Count="2" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="18" Count="1" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="44" Count="1" />
+      <LineId Id="13" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

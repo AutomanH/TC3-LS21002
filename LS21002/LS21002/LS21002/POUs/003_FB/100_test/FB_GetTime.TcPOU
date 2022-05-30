@@ -1,0 +1,81 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_GetTime" Id="{3678a222-a011-46f1-8ea6-b6535da26e0d}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_GetTime
+VAR_INPUT
+	i_b_start:			BOOL;
+	i_b_withoutHs:		BOOL;
+END_VAR
+VAR_OUTPUT
+	o_b_ok:				BOOL;
+	o_b_err:				BOOL;
+	o_udi_ErrId:		UDINT;
+	o_DateAndTime:		tDateAndTime;
+END_VAR
+VAR
+	l_b_repeat:			BOOL;
+	l_b_repeatOk:		BOOL;
+	l_i_step:			INT := 100;
+	l_fb_read:			ADSREAD;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+(* @END_DECLARATION := '0' *)
+REPEAT
+	l_b_repeat := FALSE;
+	CASE l_i_step OF
+
+		100: (* initial step *)
+			IF i_b_start THEN
+				l_i_step := 200;
+				l_b_repeat := TRUE;
+				l_b_repeatOk := FALSE;
+			END_IF;
+
+		200:	(* read *)
+			l_fb_read(	NETID := '',
+							PORT := 10000,
+							IDXGRP := 400,
+							IDXOFFS := 1,
+							LEN := 16,
+							DESTADDR := ADR(o_DateAndTime),
+							READ := TRUE,
+							TMOUT := t#2s);
+			IF l_fb_read.busy THEN
+				l_b_repeatOk := TRUE;
+			END_IF
+			IF NOT l_fb_read.busy AND NOT l_fb_read.err THEN
+				(* fertig und "no error" *)
+				o_b_ok := TRUE;
+				o_udi_ErrId := l_fb_read.ErrId;
+				l_fb_read(read := FALSE);
+				l_i_step := 500;
+				l_b_repeat := l_b_repeatOk;
+			END_IF;
+			IF l_fb_read.err THEN
+				(* "error" *)
+				o_b_err:=TRUE;
+				o_udi_ErrId := l_fb_read.ErrId;
+				l_fb_read(read := FALSE);
+				l_i_step := 500;
+			END_IF;
+
+		500:	(* back *)
+			IF NOT i_b_start OR i_b_withoutHs THEN
+				l_i_step := 100;
+				o_b_ok := FALSE;
+				o_b_err := FALSE;
+				l_b_repeat := TRUE;
+			END_IF;
+	END_CASE;
+UNTIL l_b_repeat = FALSE
+END_REPEAT;
+]]></ST>
+    </Implementation>
+    <LineIds Name="FB_GetTime">
+      <LineId Id="26" Count="22" />
+      <LineId Id="50" Count="27" />
+      <LineId Id="94" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

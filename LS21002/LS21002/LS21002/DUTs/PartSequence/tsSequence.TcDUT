@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="tsSequence" Id="{46ef4810-798f-4861-a7bf-596b7bbec96a}">
+    <Declaration><![CDATA[TYPE tsSequence :
+STRUCT
+	iSequenceID:INT;(*sequence ID*)
+	xRunning:BOOL;(*sequence running*)
+	xFinished:BOOL;(*sequence finished*)
+	iRequestID:INT;(*request sequence ID initialization value=-1 the program not active *)
+	xRequestSucceed:BOOL;(*request sequence succeed*)
+	xComplete:BOOL;(*xFinished: true->ack>false*)
+	iJobNum:INT; (*program job num*)
+	iNumOfParID:INT;(*number of parallel*)
+	aiParIDCreated:ARRAY[0..gc_uiStationNum] OF INT;  (*Parallel sequence ID*)
+END_STRUCT
+END_TYPE
+
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="RudongPump_Ope" Id="{95037d9e-54b4-48b4-9f0b-9be4eaf6b9b7}">
+    <Declaration><![CDATA[TYPE RudongPump_Ope :
+STRUCT
+	xConfigure_Hmi,xConfigure_Auto 					: BOOL;
+	xPush_Hmi,xPush_Auto 										: ARRAY[1..5] OF BOOL;
+	xPull_Hmi,xPull_Auto 										: ARRAY[1..5] OF BOOL;	
+	xStop_Hmi,xStop_Auto 										: BOOL;
+	xFullSpeedPush_Hmi,xFullSpeedPush_Auto 	: BOOL;
+	xFullSpeedPull_Hmi,xFullSpeedPull_Auto 	: BOOL;
+	xFullSpeedStop_Hmi,xFullSpeedStop_Auto 	: BOOL;
+	xPumpCal_Hmi,xPumpCal_Auto 							: BOOL;	
+	xCalParWrite_Hmi,xCalParWrite_Auto 			: BOOL;
+	xResetCalcoeffCal_Hmi										: BOOL;	
+	
+END_STRUCT
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>

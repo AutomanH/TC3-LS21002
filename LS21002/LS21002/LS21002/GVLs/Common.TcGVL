@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <GVL Name="Common" Id="{9ea546d1-089f-4508-ba68-9e3111b9474b}">
+    <Declaration><![CDATA[VAR_GLOBAL 
+	
+   //工站清料完成信号
+    abClearMaterialOver  : ARRAY [1..16] OF BOOL;//
+   //工站产品状态
+	arMainlineFixtureData :  ARRAY [1..gc_MainLineFixtureNumber] OF DUT_MainlineFixture;
+	
+	arRobot2ProductStatus :  DUT_Robot2;
+ 	arMainLineFixturePos 	 		: ARRAY [0..50] OF REAL;
+	
+	_MainlineFristRun: BOOL;
+	_wRefCounter: WORD;
+	_FirstSetValue: BOOL;
+	
+END_VAR
+VAR_GLOBAL CONSTANT
+
+END_VAR
+
+
+VAR_GLOBAL PERSISTENT
+		arCurFixtureNumStation		 	 : ARRAY[1..20] OF  DINT;
+END_VAR
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

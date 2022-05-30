@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_PartFlag" Id="{fc2382ef-252f-4afd-916d-bd21fd67e85d}">
+    <Declaration><![CDATA[TYPE DUT_PartFlag :
+STRUCT
+	xLoading_Bypass :BOOL ;
+	xLabeling_Bypass: BOOL ;
+	xLidExtracting_Bypass : BOOL ;
+	xCoverTightening_Bypass : BOOL ;
+	xMarking_Bypass: BOOL ;
+	xLabelCheck_Bypass: BOOL ;
+	xCoverChcek_Bypass:BOOL;
+	
+	xNeedChangePallet:BOOL;
+	xNeedLabelRepeat :BOOL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_Sys_Para" Id="{23a63479-06a7-427a-9342-b2ec39bf7cf7}">
+    <Declaration><![CDATA[TYPE ST_Sys_Para :
+STRUCT
+	strSlaveIP				: STRING(15) := '127.0.0.0';	//modbus子站IP地址
+	iSlavePort				: UINT := 502;					//默认是502
+	bySlaveID 				: BYTE;							//modbus rtu子站地址
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

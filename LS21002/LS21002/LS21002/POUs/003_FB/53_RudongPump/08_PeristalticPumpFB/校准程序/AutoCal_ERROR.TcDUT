@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="AutoCal_ERROR" Id="{6419f9b1-a07e-43b0-b91b-cd66bd96119e}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE AutoCal_ERROR :
+(
+ 	No_ERROR := 0,	
+  	FLT_PARA             			  	:= 1, (* 参数错误 *)
+  	FLT_RudongPump             			:= 2, (* 蠕动泵出错 *) 	
+  	FLT_MT_MCK204C             			:= 3, (* 秤体出错 *)
+  	FLT_CmdTimeOut             			:= 4, (* 指令超时 *)			
+	  FLT_AutoMode	             			:= 5 (* 不在自动模式错误 *)
+							
+)INT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

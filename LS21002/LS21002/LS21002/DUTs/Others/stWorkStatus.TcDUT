@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="stWorkStatus" Id="{8fc868b1-c9ac-4df7-ada5-ef7f80145016}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE stWorkStatus :
+(
+	None := 0,
+	Started:=1,
+	Completed:=2
+)BYTE;
+END_TYPE]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,385 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_AxisHome" Id="{0b0f9beb-d180-433d-9a4a-d901eac60791}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_AxisHome
+VAR_IN_OUT
+	{attribute 'hide'}
+	axis_name: Tc2_MC2.AXIS_REF;	
+END_VAR
+
+
+VAR_INPUT
+  iMode : INT := 1;//驱动器模式选择；1：三菱伺服 ，2：高创伺服；3雷赛驱动
+	home_exe:BOOL;
+	{attribute 'hide'}
+	fb_netid :Tc2_System.T_AmsNetID;
+	fb_nslaveaddr  :UINT;
+	nctrl1 :USINT;
+	nctrl2 :USINT;
+
+	home_method:SINT;//6098
+	home_highspeed_set:REAL;//6099_01，单位rpm
+	home_lowspeed_set:REAL;//6099_02，单位rpm
+	home_offset_set:REAL;//607C
+	numerator:REAL;//电子齿轮比分母
+	denominator:REAL;//电子齿轮比分子
+	//home_actpos_cal_method:UINT;//60E6
+	tTimeOutSet : TIME := T#20S ;
+END_VAR
+VAR_OUTPUT
+	home_done:BOOL;
+	home_error:BOOL;
+	controlword :UINT;//6040
+	error_id:INT;
+END_VAR
+VAR_IN_OUT
+	mode:SINT;//6060
+END_VAR
+VAR
+	{attribute 'hide'}
+	mc_reset:Tc2_MC2.MC_Reset;
+	//fb_sdoread_6040:Tc2_EtherCAT.FB_EcCoESdoRead;
+	//fb_sdowrite_6040:Tc2_EtherCAT.FB_EcCoESdoWrite;
+	{attribute 'hide'}
+	fb_sdoread_6041:Tc2_EtherCAT.FB_EcCoESdoRead;
+	{attribute 'hide'}
+	fb_sdoread_6060:Tc2_EtherCAT.FB_EcCoESdoRead;
+	{attribute 'hide'}
+	fb_sdowrite_6060:Tc2_EtherCAT.FB_EcCoESdoWrite;
+	{attribute 'hide'}
+	fb_sdoread_6098:Tc2_EtherCAT.FB_EcCoESdoRead;
+	{attribute 'hide'}
+	fb_sdowrite_6098:Tc2_EtherCAT.FB_EcCoESdoWrite;
+	{attribute 'hide'}
+	fb_sdoread_6099_01:Tc2_EtherCAT.FB_EcCoESdoRead;
+	{attribute 'hide'}
+	fb_sdowrite_6099_01:Tc2_EtherCAT.FB_EcCoESdoWrite;
+	{attribute 'hide'}
+	fb_sdoread_6099_02:Tc2_EtherCAT.FB_EcCoESdoRead;
+	{attribute 'hide'}
+	fb_sdowrite_6099_02:Tc2_EtherCAT.FB_EcCoESdoWrite;
+	{attribute 'hide'}
+	fb_sdoread_607C:Tc2_EtherCAT.FB_EcCoESdoRead;
+	{attribute 'hide'}
+	fb_sdowrite_607C:Tc2_EtherCAT.FB_EcCoESdoWrite;
+	{attribute 'hide'}
+	fb_sdoread_6091_01:Tc2_EtherCAT.FB_EcCoESdoRead;
+	{attribute 'hide'}
+	fb_sdoread_6091_02:Tc2_EtherCAT.FB_EcCoESdoRead;
+	//fb_sdoread_60E6:Tc2_EtherCAT.FB_EcCoESdoRead;
+	//fb_sdowrite_60E6:Tc2_EtherCAT.FB_EcCoESdoWrite;
+	{attribute 'hide'}
+	mcsetposition:MC_SetPosition;
+	{attribute 'hide'}
+	ton1:Tc2_Standard.TON;
+	{attribute 'hide'}
+	ton2:Tc2_Standard.TON;
+	{attribute 'hide'}
+	_tonDelay , _tonDelay1 , _tonDelay2 : Tc2_Standard.TON;
+	
+	increments:REAL:=8388608.0;
+	exe_reset:BOOL;
+	reset_done:BOOL;
+	sdo_read:BOOL;
+	home_start:BOOL:=FALSE;
+	home_step:INT:=0;
+	
+	statusword :UINT;//_6041
+
+	mode_display:SINT;//_6060
+	home_method_display:SINT;//_6098
+	home_highspeed:UDINT;//6099_01
+	home_lowspeed:UDINT;//6099_02
+	home_highspeed_display:UDINT;//_6099_01
+	home_lowspeed_display:UDINT;//_6099_02
+	home_offset_display:DINT;//_607C
+	home_offset:DINT;//607C
+	motor:UDINT:=1;//6091_01
+	shaft:UDINT:=1;//6091_02
+	//home_actpos_cal_method_display:UINT;//_60E6
+	_iCount : int ;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+home_highspeed:=REAL_TO_UDINT((((home_highspeed_set/numerator)*denominator)*UDINT_TO_REAL(motor))/UDINT_TO_REAL(shaft));
+home_lowspeed:=REAL_TO_UDINT((((home_lowspeed_set/numerator)*denominator)*UDINT_TO_REAL(motor))/UDINT_TO_REAL(shaft));
+home_offset:=REAL_TO_DINT(((((home_offset_set/numerator)*denominator)*UDINT_TO_REAL(motor))/UDINT_TO_REAL(shaft)));
+mc_reset(Axis:=axis_name , Execute:=exe_reset , Done=>reset_done , Busy=> , Error=> , ErrorID=> );
+ton1(IN:=NOT(ton1.Q) , PT:= T#20MS, Q=> , ET=> );
+ton2(IN:= , PT:=T#500MS , Q=> , ET=> );
+IF ton1.Q THEN sdo_read:=TRUE; ELSE sdo_read:=FALSE; END_IF
+
+IF home_start=FALSE THEN 
+	controlword.0:=nctrl1.0;controlword.1:=nctrl1.1;controlword.2:=nctrl1.2;controlword.3:=nctrl1.3;controlword.4:=nctrl1.4;controlword.5:=nctrl1.5;controlword.6:=nctrl1.6;controlword.7:=nctrl1.7;
+    controlword.8:=nctrl2.0;controlword.9:=nctrl2.1;controlword.10:=nctrl2.2;controlword.11:=nctrl2.3;controlword.12:=nctrl2.4;controlword.13:=nctrl2.5;controlword.14:=nctrl2.6;controlword.15:=nctrl2.7;
+END_IF
+
+
+fb_sdoread_6041(sNetId:= fb_netid, nSlaveAddr:=fb_nslaveaddr , nSubIndex:=0 , nIndex:=16#6041 , pDstBuf:=ADR(statusword) , cbBufLen:=2 , bExecute:=sdo_read , tTimeout:= , bBusy=> , bError=> , nErrId=> );
+fb_sdoread_6060(sNetId:= fb_netid, nSlaveAddr:= fb_nslaveaddr, nSubIndex:=0 , nIndex:=16#6060 , pDstBuf:=ADR(mode_display) , cbBufLen:=1 , bExecute:=sdo_read , tTimeout:= , bBusy=> , bError=> , nErrId=> );
+//fb_sdowrite_6060(sNetId:= fb_netid, nSlaveAddr:=fb_nslaveaddr , nSubIndex:=0 , nIndex:= 16#6060, pSrcBuf:=ADR(mode) , cbBufLen:=1 , bExecute:= mode<>mode_display AND sdo_read, tTimeout:= , bBusy=> , bError=> , nErrId=> );
+fb_sdoread_607C(sNetId:= fb_netid, nSlaveAddr:=fb_nslaveaddr , nSubIndex:=0 , nIndex:=16#607C , pDstBuf:= ADR(home_offset_display), cbBufLen:=4 , bExecute:=sdo_read , tTimeout:= , bBusy=> , bError=> , nErrId=> );
+fb_sdowrite_607C(sNetId:=fb_netid , nSlaveAddr:=fb_nslaveaddr , nSubIndex:=0 , nIndex:=16#607C , pSrcBuf:=ADR(home_offset) , cbBufLen:=4 ,	bExecute:=home_offset<>home_offset_display AND sdo_read , tTimeout:= , bBusy=> , bError=> , nErrId=> );
+fb_sdoread_6098(sNetId:=fb_netid , nSlaveAddr:=fb_nslaveaddr , nSubIndex:=0 , nIndex:=16#6098 , pDstBuf:=ADR(home_method_display) , cbBufLen:=1 , bExecute:=sdo_read , tTimeout:= , bBusy=> , bError=> , nErrId=> );
+fb_sdowrite_6098(sNetId:=fb_netid , nSlaveAddr:=fb_nslaveaddr , nSubIndex:=0 , nIndex:=16#6098 , pSrcBuf:=ADR(home_method) , cbBufLen:=1 , bExecute:=home_method<>home_method_display AND sdo_read , tTimeout:= , bBusy=> , bError=> , nErrId=> );
+fb_sdoread_6099_01(sNetId:=fb_netid , nSlaveAddr:=fb_nslaveaddr , nSubIndex:=1 , nIndex:=16#6099, pDstBuf:=ADR(home_highspeed_display) , cbBufLen:=4 , bExecute:=sdo_read , tTimeout:= , bBusy=> , bError=> , nErrId=> );
+fb_sdowrite_6099_01(sNetId:=fb_netid , nSlaveAddr:=fb_nslaveaddr , nSubIndex:=1 , nIndex:=16#6099 , pSrcBuf:=ADR(home_highspeed) , cbBufLen:=4 , bExecute:=home_highspeed<>home_highspeed_display AND sdo_read , tTimeout:= , bBusy=> , bError=> , nErrId=> );
+fb_sdoread_6099_02(sNetId:=fb_netid , nSlaveAddr:=fb_nslaveaddr , nSubIndex:=2 , nIndex:=16#6099, pDstBuf:= ADR(home_lowspeed_display), cbBufLen:= 4, bExecute:=sdo_read , tTimeout:= , bBusy=> , bError=> , nErrId=> );
+fb_sdowrite_6099_02(sNetId:=fb_netid , nSlaveAddr:=fb_nslaveaddr , nSubIndex:=2 , nIndex:=16#6099 , pSrcBuf:=ADR(home_lowspeed) , cbBufLen:=4 , bExecute:=home_lowspeed<>home_lowspeed_display AND sdo_read , tTimeout:= , bBusy=> , bError=> , nErrId=> );
+fb_sdoread_6091_01(sNetId:=fb_netid , nSlaveAddr:=fb_nslaveaddr , nSubIndex:=1 , nIndex:=16#6091 , pDstBuf:= ADR(motor), cbBufLen:= 4, bExecute:=sdo_read , tTimeout:= , bBusy=> , bError=> , nErrId=> );
+fb_sdoread_6091_02(sNetId:=fb_netid , nSlaveAddr:=fb_nslaveaddr , nSubIndex:=2 , nIndex:=16#6091 , pDstBuf:=ADR(shaft), cbBufLen:=4 , bExecute:=sdo_read , tTimeout:= , bBusy=> , bError=> , nErrId=> );
+//fb_sdoread_6064(sNetId:=fb_netid , nSlaveAddr:=fb_nslaveaddr , nSubIndex:=2 , nIndex:=16#6099 , pSrcBuf:=ADR(home_lowspeed) , cbBufLen:=4 , bExecute:=home_lowspeed<>home_lowspeed_display AND sdo_read , tTimeout:= , bBusy=> , bError=> , nErrId=> );
+
+IF iMode = 3 OR iMode =1 //雷赛伺服
+THEN 
+	mcsetposition(
+		Axis:= axis_name, 
+		Execute:= (statusword.10=TRUE AND  statusword.12=TRUE AND statusword.13=FALSE AND home_start), 
+		Position:= 0, 
+		Mode:= , 
+		Options:= , 
+		Done=> , 
+		Busy=> , 
+		Error=> , 
+		ErrorID=> );
+END_IF
+
+IF home_exe THEN
+home_start:=TRUE;
+home_done := FALSE;//增加
+//ELSE home_error:=TRUE; error_id:=8001; home_start:=FALSE;
+END_IF
+
+IF home_start (*AND FALSE*) THEN
+	CASE home_step OF
+		0://复位关闭
+		exe_reset:=FALSE;	
+		IF NOT(home_error) THEN
+			home_step:=3;
+			mcsetposition(
+				Axis:= axis_name, 
+				Execute:= FALSE);
+		END_IF
+		1://检测是否是三菱驱动器
+		IF 	iMode = 1
+		THEN 
+			mcsetposition(
+			Axis:= axis_name, 
+			Execute:= TRUE, 
+			Position:= 0, 
+			Mode:= , 
+			Options:= , 
+			Done=> , 
+			Busy=> , 
+			Error=> , 
+			ErrorID=> ); 
+			IF mcsetposition.Done
+			THEN
+				mcsetposition(
+					Axis:= axis_name, 
+					Execute:= FALSE);
+				home_step := 3;
+			END_IF			
+		ELSE
+			home_step := 3; 
+		END_IF
+		
+		3://将模式切为回原点模式6
+		mode:=6;
+		home_done := FALSE;
+		ton2.IN:=TRUE;
+		IF ton2.Q THEN
+			ton2.IN:=FALSE;
+			home_step:=5;
+		END_IF
+		5://将控制字改为F，上使能
+        IF NOT home_error THEN
+			controlword:=15;
+			home_step:=10;
+			ton2.IN:=FALSE;
+		ELSE
+			home_error:=TRUE;
+			error_id:=8002;
+			home_step:=0;
+		END_IF
+		10://复位
+		exe_reset:=TRUE;
+		ton2.IN:=TRUE;
+		IF ton2.Q THEN 
+			ton2.IN:=FALSE;
+			home_step:=15;
+		END_IF
+		15://复位完成，控制字改为F
+		IF reset_done AND statusword.1 THEN
+			exe_reset:=FALSE;
+			home_step:=25;
+		ELSE
+			home_error:=TRUE;
+			error_id:=8003;
+			home_step:=0;
+		END_IF
+		
+		25://确认模式切换为6,与设定值相同
+		IF mode=mode_display AND home_offset=home_offset_display AND home_method=home_method_display AND home_highspeed=home_highspeed_display AND home_lowspeed=home_lowspeed_display 
+        AND (mode_display<>0) AND (home_method_display<>0) AND (home_highspeed_display<>0) AND (home_lowspeed_display<>0) AND (numerator<>0) AND (denominator<>0) THEN 
+			home_step:=26;
+			_tonDelay1(in:=FALSE);
+			_tonDelay2(in:=FALSE);
+		ELSE
+			home_error:=TRUE;
+			error_id:=8004;
+			home_step:=0;
+		END_IF
+		
+		26:
+			controlword:=31;
+			_tonDelay1(in:=TRUE,PT:=T#2S);
+			IF _tonDelay1.Q THEN
+				_tonDelay1(in:=FALSE);
+				home_step:=30;
+			END_IF		
+		30://将控制字切为1F，启动回原点功能
+		IF statusword.10 AND  statusword.12 AND NOT statusword.13 THEN
+			home_step:=40;
+		(*ELSIF statusword.13 THEN
+			home_error:=TRUE;
+			error_id:=8005;
+			home_step:=0;	*)		
+		ELSE
+			_tonDelay2(IN:=TRUE,pt:=tTimeOutSet);
+		END_IF
+		
+		(*_tonDelay1(in:=(statusword.10=TRUE) AND  statusword.12=TRUE AND statusword.13=FALSE,pt:=T#200MS);//回原点已经完成
+		_tonDelay2(in:=( statusword.10=FALSE AND  statusword.12=FALSE AND statusword.13=TRUE ) OR ( statusword.10=FALSE AND  statusword.12=TRUE AND statusword.13=FALSE ) OR 
+                       ( statusword.10=TRUE AND  statusword.12=FALSE AND statusword.13=FALSE ) OR ( statusword.10=TRUE AND  statusword.12=FALSE AND statusword.13=TRUE ) OR 
+					   ( statusword.12=TRUE AND statusword.13=TRUE )	,pt:=T#10S);//会员店内失败
+		IF _tonDelay1.Q  THEN//检测状态字回原点完成
+			_tonDelay1(IN:=FALSE);
+			home_step:=40;
+		END_IF*)
+		IF _tonDelay2.Q THEN
+			_tonDelay2(IN:=FALSE);
+			home_error:=TRUE;
+			error_id:=8005;
+			home_step:=0;
+		END_IF
+		40://复位
+		//exe_reset:=TRUE;
+		_tonDelay2(IN:=FALSE);
+		ton2.IN:=(TRUE);
+		IF ton2.Q THEN
+			ton2.IN:=(FALSE);
+			_tonDelay(IN:=FALSE);
+			home_step:=41;
+		END_IF
+		41://增加断使能功能
+		controlword:=0;
+		_tonDelay(IN:=NOT statusword.1 , PT:=T#100MS , Q=> , ET=> );
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:=FALSE);
+			home_step:=45;
+		END_IF
+
+		45://将模式切换为位置模式8
+//		IF reset_done THEN			
+//			exe_reset:=FALSE;
+//			_tonDelay(IN:=FALSE);
+			home_step:=46;
+//		ELSE
+//			home_error:=TRUE;
+//			error_id:=8006;
+//			home_step:=0;
+//		END_IF
+		46://增加上使能功能
+		//controlword:=15;
+		_tonDelay(IN:=TRUE , PT:=T#1S , Q=> , ET=> );
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:=FALSE);
+			home_step:=50;
+		END_IF		
+		50:
+		_iCount := _iCount + 1 ;
+		mode:=8;
+		home_done:=TRUE;
+		exe_reset:=FALSE;
+		home_start:=FALSE;
+		home_step:=0;
+	END_CASE
+END_IF
+
+
+(*IF NOT(home_exe)THEN
+	home_step:=0;
+	home_error:=FALSE;
+	home_done:=FALSE;
+	home_start:=FALSE;
+	error_id:=0;
+END_IF*)
+
+IF home_error THEN
+	home_step:=0;
+	//
+	home_done:=FALSE;
+	home_start:=FALSE;
+	exe_reset:=TRUE;
+	IF reset_done THEN
+		error_id:=0;
+		mode:=8;
+		home_error:=FALSE;
+		exe_reset:=FALSE;
+	END_IF
+END_IF
+]]></ST>
+    </Implementation>
+    <LineIds Name="FB_AxisHome">
+      <LineId Id="3" Count="12" />
+      <LineId Id="502" Count="0" />
+      <LineId Id="16" Count="31" />
+      <LineId Id="280" Count="0" />
+      <LineId Id="48" Count="8" />
+      <LineId Id="617" Count="1" />
+      <LineId Id="616" Count="0" />
+      <LineId Id="57" Count="0" />
+      <LineId Id="601" Count="0" />
+      <LineId Id="603" Count="1" />
+      <LineId Id="607" Count="8" />
+      <LineId Id="606" Count="0" />
+      <LineId Id="623" Count="1" />
+      <LineId Id="628" Count="1" />
+      <LineId Id="627" Count="0" />
+      <LineId Id="626" Count="0" />
+      <LineId Id="625" Count="0" />
+      <LineId Id="620" Count="1" />
+      <LineId Id="605" Count="0" />
+      <LineId Id="602" Count="0" />
+      <LineId Id="58" Count="45" />
+      <LineId Id="394" Count="1" />
+      <LineId Id="404" Count="0" />
+      <LineId Id="398" Count="0" />
+      <LineId Id="400" Count="1" />
+      <LineId Id="403" Count="0" />
+      <LineId Id="402" Count="0" />
+      <LineId Id="104" Count="0" />
+      <LineId Id="380" Count="0" />
+      <LineId Id="384" Count="0" />
+      <LineId Id="389" Count="0" />
+      <LineId Id="391" Count="1" />
+      <LineId Id="390" Count="0" />
+      <LineId Id="385" Count="0" />
+      <LineId Id="382" Count="1" />
+      <LineId Id="381" Count="0" />
+      <LineId Id="106" Count="4" />
+      <LineId Id="378" Count="0" />
+      <LineId Id="111" Count="2" />
+      <LineId Id="379" Count="0" />
+      <LineId Id="114" Count="5" />
+      <LineId Id="388" Count="0" />
+      <LineId Id="120" Count="54" />
+      <LineId Id="176" Count="1" />
+      <LineId Id="393" Count="0" />
+      <LineId Id="178" Count="4" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

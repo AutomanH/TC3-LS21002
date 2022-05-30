@@ -1,0 +1,1998 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_ERG_20_Modbus" Id="{b6a0f98b-1141-40af-9e91-8b097a87c94c}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ERG_20_Modbus//慧琳夹爪旋转模块程序
+VAR_INPUT
+	xExecute: BOOL;
+	xAbort: BOOL;
+	xResetRequest: BOOL;//匹配复位按钮 
+	xPowerHmi: BOOL:=true;////上电信号，反转型
+	dwTimeLimit: DWORD:=1;//[ms],1 => no invocation time limit
+	dwTimeOut: DWORD;//[ms],0 => no executing time limit
+	stPara       : ST_ERG_20_Sys_Para;//系统参数	
+	//手动执行部分
+	xHMInitButton , xInitControl : BOOL;
+	aHMIClampButton , aHMIReleaseButton , aClampControl , aReleaseControl : ARRAY[1..5] OF BOOL;//手动和自动部分控制
+	aHMIRotateClampButton , aHMIRotateReleaseButton , aRotateClampControl , aRotateReleaseControl : ARRAY[1..5] OF BOOL;//手动和自动部分控制
+	aHMIRotateClampRelButton , aHMIRotateReleaseRelButton , aRotateClampRelControl , aRotateReleaseRelControl : ARRAY[1..5] OF BOOL;//手动和自动部分控制
+	aHMIClampPara , aHMIReleasePara : ARRAY[1..5] OF ST_Huiling_PosPara;//夹紧轴点位信息
+	aHMIRotateClampPara , aHMIRotateReleasePara : ARRAY[1..5] OF ST_Huiling_PosPara;//旋转轴点位信息
+	aHMIRotateClampRelPara , aHMIRotateReleaseRelPara : ARRAY[1..5] OF ST_Huiling_PosPara;//旋转轴点位信息
+	xAutoMode    : BOOL;//0:mannal 1:auto
+	xDeviceRunning     : BOOL;//流程运行过程中
+	xIniting : BOOL;
+END_VAR
+VAR_OUTPUT
+	xDone: BOOL;(*完成条件满足*)
+	xBusy: BOOL;(*动作正在执行*)
+	xAborted: BOOL;(*指令被打断*)
+	xError: BOOL;(*错误条件满足*)
+	eErrorID: ERG_20_ERROR;(*错误码*)
+	xRdyCmd : BOOL;
+	xRefOk    : BOOL;    
+	xGripClampEmpty : BOOL;//夹爪夹空
+	xClosecoverFailure : BOOL;
+	xOpencoverFailure : BOOL;
+	xDropOccur : BOOL;//掉落发生
+	sHmiError	: STRING;
+ 	eCommErrorID: BYTE;
+	eOperErrorID: DWORD;
+END_VAR
+VAR_IN_OUT
+	st_IOData : ST_ERG_20_IOData;
+END_VAR
+VAR
+	//指令触发
+	_xDone: BOOL;
+	_rIniting : Tc2_Standard.R_TRIG;
+	eCmd         : ERG_20_CMD;
+	eClampActCmd : ERG_20_CMD;	
+	rTorqueSet   : REAL;//目标力值设置
+	rSpeedSet    : REAL;;//运行速度设置
+	rPosAngleSet : REAL;//位置和速度设置值	
+	eState: STATE;//device当前状态	
+	xFirstInvocation: BOOL := TRUE;	 
+	xTimeOut: BOOL;
+	tOperationTimer : TON;
+	_tonTimeout , _tonCmdTimeout ,_tonPulse , _tonDelay , _tonDelay1 , _tonDelay2 , _tonDelay3: TON;	
+  /// detect rising edge of command execution 
+	_diCmdState 	: DINT;  
+	i, ii , _idx : INT;
+	_xConnectError : BOOL;
+	_iComNGCount : INT;
+	_fResetCheck : F_TRIG;
+	_fManual : F_TRIG;
+	_rManual : R_TRIG;	
+	_fPowerOn : F_TRIG;
+	_rHMIInit , _rInit: R_TRIG;//初始化指令触发
+	_rHMIClamp , _rHMIRelease , _rClamp , _rRelease : ARRAY[1..5] OF R_TRIG;//夹紧轴指令触发
+	_rHMIRotateClamp , _rHMIRotateRelease , _rRotateClamp , _rRotateRelease : ARRAY[1..5] OF R_TRIG;//旋转轴指令触发
+	_rHMIRotateRelClamp , _rHMIRotateRelRelease , _rRotateRelClamp , _rRotateRelRelease : ARRAY[1..5] OF R_TRIG;//旋转轴指令触发
+	_iConnectState : INT := 0;//
+	_connectTon : TON;
+
+	_aRead_VAR: FB_MBReadRegs;;			//0:状态反馈数据(16#40)
+	_aWtirt_VAR: ARRAY[0..3] OF FB_MBWriteRegs;	    //0:初始化控制(16#0);1:夹紧控制(16#2);2:旋转绝对定位控制(16#A);3:相对旋转
+	_iSendReceiveState : INT := 0;//发送状态标志位
+	_aEnableSignal : ARRAY[0..4] OF BOOL;//0:初始化控制；1:夹紧控制；2:旋转绝对定位控制;3:相对旋转; 4:状态反馈	
+	_iChannelIndex:INT;
+	_wPosSetTemp , _wSpeedSetTemp , _wForseSetTemp : WORD;
+	_wPosSetTemp1 , _wSpeedSetTemp1 , _wForseSetTemp1 : WORD;
+	_wPosSetTemp2 , _wSpeedSetTemp2 , _wForseSetTemp2 : WORD;
+		
+	_aReadDataTemp , _aReadDataTemp1 : ARRAY[0..5] OF INT;//夹持和旋转数据缓存
+	_aFeedbackData: ARRAY[0..17] OF INT;
+	_aControlData: ARRAY[0..3, 0..7] OF INT;
+	_xConnect_ERROR : BOOL;
+	_xModeChange : BOOL;
+	_xReadStatus : BOOL := TRUE;//上电是默认读取模式的
+	_iCount : INT := 0;	
+	_iNGCount : INT;	
+	_xBusy : BOOL;
+	_xHMIOpe,_xAutoOpe : BOOL;
+	_rAcceleration : REAL:=5000;
+	_rTempAcceleration : REAL;
+	_rLastRotatePos : REAL;
+END_VAR
+VAR_TEMP
+	xAgain: BOOL;
+END_VAR
+
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[xAgain:=0;
+ConnectAction();//触发通信连接功能连接
+ACTMap();//数据映射
+IF eState<>STATE.DORMANT
+THEN
+	_rHMIInit(CLK:=FALSE) ;
+	_rInit(CLK:=FALSE) ;
+	FOR ii :=1 TO 5 DO
+		 _rHMIClamp[ii](CLK:=FALSE);
+		 _rHMIRelease[ii](CLK:=FALSE);
+		 _rClamp[ii](CLK:=FALSE);
+		 _rRelease[ii](CLK:=FALSE);
+		 _rHMIRotateClamp[ii](CLK:=FALSE);
+		 _rHMIRotateRelease[ii](CLK:=FALSE);
+		 _rRotateClamp[ii](CLK:=FALSE);
+		 _rRotateRelease[ii](CLK:=FALSE);
+		 _rHMIRotateRelClamp[ii](CLK:=FALSE);
+		 _rHMIRotateRelRelease[ii](CLK:=FALSE);
+		 _rRotateRelClamp[ii](CLK:=FALSE);
+		 _rRotateRelRelease[ii](CLK:=FALSE);
+	END_FOR
+END_IF
+
+REPEAT
+	CASE eState OF
+		STATE.DORMANT:
+			HandleDormantState(xAgain=> xAgain);
+		STATE.EXECUTING:
+			HandleExecutingState(xAgain=> xAgain);
+		STATE.DONE:
+			HandleDoneState(xAgain=> xAgain);
+		STATE.INERROR:
+			HandleErrorState(xAgain=> xAgain);
+		STATE.ABORTING:
+			HandleAbortingState(xAgain=> xAgain);
+		STATE.ABORTED:
+			HandleAbortedState(xAgain=> xAgain);
+		STATE.RESETING:
+			HandleResettingState(xAgain=> xAgain);
+	END_CASE
+UNTIL (xAgain=0)
+END_REPEAT
+	
+CASE eErrorID OF
+	ERG_20_ERROR.NO_ERROR:
+		sHmiError:='NO_ERROR';	
+  ERG_20_ERROR.FLT_PARA:
+		sHmiError:='FLT_PARA';	
+  ERG_20_ERROR.FLT_CONNECT:
+		sHmiError:='FLT_CONNECT';	
+  ERG_20_ERROR.FLT_RDYCMD:
+		sHmiError:='FLT_RDYCMD';	
+	ERG_20_ERROR.FLT_DEVICE_ERROR:
+		sHmiError:='FLT_DEVICE_ERROR';	
+	ERG_20_ERROR.FLT_POWERON:
+		sHmiError:='FLT_POWERON';
+  ERG_20_ERROR.FLT_CLAMP_TIMEOUT:
+		sHmiError:='FLT_CLAMP_TIMEOUT';
+  ERG_20_ERROR.FLT_ROTATE_TIMEOUT:
+		sHmiError:='FLT_ROTATE_TIMEOUT';
+  ERG_20_ERROR.FLT_ORG_TIMEOUT:
+		sHmiError:='FLT_ORG_TIMEOUT';
+	ERG_20_ERROR.FLT_CLAMPCMD_TIMEOUT:
+		sHmiError:='FLT_CLAMPCMD_TIMEOUT';
+  ERG_20_ERROR.FLT_ROTATECMD_TIMEOUT:
+		sHmiError:='FLT_ROTATECMD_TIMEOUT';
+  ERG_20_ERROR.FLT_ORGCMD_TIMEOUT:
+		sHmiError:='FLT_ORGCMD_TIMEOUT';
+	ERG_20_ERROR.FLT_CLAMP_DROP:
+		sHmiError:='FLT_CLAMP_DROP';  
+  ERG_20_ERROR.FLT_xRefOk:
+		sHmiError:='FLT_xRefOk';  
+	ERG_20_ERROR.FLT_CLAMP_PARA:
+		sHmiError:='FLT_CLAMP_PARA'; 		
+	ERG_20_ERROR.FLT_ClAMP_RELEASEFAIL:
+		sHmiError:='FLT_ClAMP_RELEASEFAIL';	
+  ERG_20_ERROR.FLT_ClAMP_CLAMPFAIL:
+		sHmiError:='FLT_ClAMP_CLAMPFAIL';	
+	ERG_20_ERROR.FLT_ROTATE_CLAMPFAIL:
+		sHmiError:='FLT_ROTATE_CLAMPFAIL';	
+	ERG_20_ERROR.FLT_ROTATE_RELEASEFAIL:
+		sHmiError:='FLT_ROTATE_RELEASEFAIL';	
+END_CASE
+
+//检测是否有手动操作
+_xHMIOpe := xHMInitButton;
+FOR i := 1 TO 5 BY 1
+DO
+	_xHMIOpe := _xHMIOpe OR aHMIClampButton[i] OR aHMIReleaseButton[i] OR aHMIRotateClampButton[i] OR aHMIRotateClampRelButton[i] 
+							OR aHMIRotateReleaseButton[i] OR aHMIRotateReleaseReLButton[i];
+END_FOR
+
+//检测是否有自动操作指令
+_xAutoOpe := xInitControl;
+FOR i := 1 TO 5 BY 1
+DO
+	_xAutoOpe := _xAutoOpe OR aClampControl[i] OR aReleaseControl[i] OR aRotateClampControl[i] OR aRotateClampRelControl[i] 
+							OR aRotateReleaseControl[i] OR aRotateReleaseRelControl[i];
+END_FOR
+]]></ST>
+    </Implementation>
+    <Folder Name="Control" Id="{c15353d7-0d77-4efb-a93d-48bb9cb327d8}" />
+    <Method Name="AbortAction" Id="{4edef783-1259-4f15-82b2-b53e66c4dec2}">
+      <Declaration><![CDATA[{attribute 'hide'}
+METHOD AbortAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+  eErrorID: ERG_20_ERROR;
+END_VAR
+
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+* Cleaning
+* => abort all running operation
+* => if an NBS.ERROR codition is reached, set eErrorID to a Value rather then NBS.ERG_20_ERROR.NO_ERROR 
+*)
+(*
+* Cleaning
+* => abort all running operation
+* => if an NBS.JD_EPG30_050_ERROR codition is reached, set eERRORID to a Value rather then NBS.JD_EPG30_050_ERROR.NO_ERROR 
+*)
+xComplete:=1;
+eERRORID:=ERG_20_ERROR.NO_ERROR;
+
+
+	
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Action Name="ACTMap" Id="{155f1871-99ca-4b98-b323-8f248c5c6f7e}" FolderPath="Control\">
+      <Implementation>
+        <ST><![CDATA[//进行数据映射的前提条件是外部所配置的参数是没有问题的
+IF TRUE
+THEN
+	//进行输入数据刷新
+	st_IOData.I_ClampInit := _aFeedbackData[0];
+	st_IOData.I_ClampState := _aFeedbackData[1];
+	//夹持信息
+	_aReadDataTemp[0] := _aFeedbackData[3];
+	_aReadDataTemp[1] := _aFeedbackData[2];
+	_aReadDataTemp[2] := _aFeedbackData[5];
+	_aReadDataTemp[3] := _aFeedbackData[4];
+	_aReadDataTemp[4] := _aFeedbackData[7];
+	_aReadDataTemp[5] := _aFeedbackData[6];
+	
+	SysMemCpy(ADR(st_IOData.I_ClampCurrentPos),ADR(_aReadDataTemp[0]),4);
+	SysMemCpy(ADR(st_IOData.I_ClampCurrentSpeed),ADR(_aReadDataTemp[2]),4);
+	SysMemCpy(ADR(st_IOData.I_ClampCurrentForce),ADR(_aReadDataTemp[4]),4);	
+	//旋转信息
+	st_IOData.I_RotateState := _aFeedbackData[8];
+	
+	_aReadDataTemp1[0] := _aFeedbackData[11];
+	_aReadDataTemp1[1] := _aFeedbackData[10];
+	_aReadDataTemp1[2] := _aFeedbackData[13];
+	_aReadDataTemp1[3] := _aFeedbackData[12];
+	_aReadDataTemp1[4] := _aFeedbackData[15];
+	_aReadDataTemp1[5] := _aFeedbackData[14];
+	
+	SysMemCpy(ADR(st_IOData.I_RotateCurrentPos),ADR(_aReadDataTemp1[0]),4);
+	SysMemCpy(ADR(st_IOData.I_RotateCurrentSpeed),ADR(_aReadDataTemp1[2]),4);
+	SysMemCpy(ADR(st_IOData.I_RotateCurrentForce),ADR(_aReadDataTemp1[4]),4);	
+
+	//进行输出数据刷新(外面一定要用保持性的数据来定义)	
+	_aControlData[0,0] := st_IOData.O_Init;
+	
+	SysMemCpy(ADR(_aControlData[1,0]),ADR(st_IOData.O_ClampPosSet),4);//夹持位置设定	
+	//进行高低位的互换
+	_wPosSetTemp := TO_WORD(_aControlData[1,0]);
+	_aControlData[1,0] := _aControlData[1,1];
+	_aControlData[1,1] := TO_INT(_wPosSetTemp);
+	
+	SysMemCpy(ADR(_aControlData[1,2]),ADR(st_IOData.O_ClampSpeedSet),4);//夹持速度设定
+	//进行高低位的互换
+	_wSpeedSetTemp := TO_WORD(_aControlData[1,2]);
+	_aControlData[1,2] := _aControlData[1,3];
+	_aControlData[1,3] := TO_INT(_wSpeedSetTemp);
+	//晶晶
+	SysMemCpy(ADR(_aControlData[1,4]),ADR(st_IOData.O_ClampForceSet),4);//夹持力矩设定	
+	//进行高低位的互换
+	_wForseSetTemp := TO_WORD(_aControlData[1,4]);
+	_aControlData[1,4] := _aControlData[1,5];
+	_aControlData[1,5] := TO_INT(_wForseSetTemp);	
+	(************************************旋转输出控制**********************************)
+		//旋转绝对定位
+	IF eCmd = ERG_20_CMD.Cmd_RotateAbsClamp OR eCmd = ERG_20_CMD.Cmd_RotateAbsRelease
+	THEN
+		SysMemCpy(ADR(_aControlData[2,0]),ADR(st_IOData.O_RotatePosSet),4);//旋转角度设定	
+		//进行高低位的互换
+		_wPosSetTemp1 := TO_WORD(_aControlData[2,0]);
+		_aControlData[2,0] := _aControlData[2,1];
+		_aControlData[2,1] := TO_INT(_wPosSetTemp1);
+		
+		SysMemCpy(ADR(_aControlData[2,4]),ADR(st_IOData.O_RotateSpeedSet),4);//旋转速度设定
+		//进行高低位的互换
+		_wSpeedSetTemp1 := TO_WORD(_aControlData[2,4]);
+		_aControlData[2,4] := _aControlData[2,5];
+		_aControlData[2,5] := TO_INT(_wSpeedSetTemp1);
+		
+		//晶晶
+		SysMemCpy(ADR(_aControlData[2,6]),ADR(st_IOData.O_RotateForceSet),4);//旋转电流设定
+		//进行高低位的互换
+		_wForseSetTemp1 := TO_WORD(_aControlData[2,6]);
+		_aControlData[2,6] := _aControlData[2,7];
+		_aControlData[2,7] := TO_INT(_wForseSetTemp1);
+	END_IF
+	//旋转相对定位
+	IF eCmd = ERG_20_CMD.Cmd_RotateRelClamp OR eCmd = ERG_20_CMD.Cmd_RotateRelRelease
+	THEN		
+		SysMemCpy(ADR(_aControlData[3,0]),ADR(st_IOData.O_RotateSpeedSet),4);//旋转速度设定
+		//进行高低位的互换
+		_wSpeedSetTemp2 := TO_WORD(_aControlData[3,0]);
+		_aControlData[3,0] := _aControlData[3,1];
+		_aControlData[3,1] := TO_INT(_wSpeedSetTemp2);
+		//晶晶
+		SysMemCpy(ADR(_aControlData[3,2]),ADR(st_IOData.O_RotateForceSet),4);//旋转电流设定
+		//进行高低位的互换
+		_wForseSetTemp2 := TO_WORD(_aControlData[3,2]);
+		_aControlData[3,2] := _aControlData[3,3];
+		_aControlData[3,3] := TO_INT(_wForseSetTemp2);		
+
+		_rAcceleration:= 5000;
+		SysMemCpy(ADR(_aControlData[3,4]),ADR(_rAcceleration),4);//加速度
+		//进行高低位的互换
+		_rTempAcceleration := TO_WORD(_aControlData[3,4]);
+		_aControlData[3,4] := _aControlData[3,5];
+		_aControlData[3,5] := TO_INT(_rTempAcceleration);		
+		
+		SysMemCpy(ADR(_aControlData[3,6]),ADR(st_IOData.O_RotatePosSet),4);//旋转角度设定	
+		//进行高低位的互换
+		_wPosSetTemp2 := TO_WORD(_aControlData[3,6]);
+		_aControlData[3,6] := _aControlData[3,7];
+		_aControlData[3,7] := TO_INT(_wPosSetTemp2);		
+		
+	END_IF	
+	
+END_IF
+_rIniting(CLK:= xIniting);//检测是否是初始化中，如果是的去切换模式
+IF _rIniting.Q
+THEN
+	eState := STATE.RESETING;
+END_IF
+_fResetCheck(CLK:=xResetRequest);
+xRdyCmd := xPowerHmi AND(( eState = STATE.DORMANT ) OR (NOT xAutoMode AND _xAutoOpe AND eState = STATE.DONE ));//检测是否允许指令控制
+//检测是否有模式变化
+_fManual(CLK:=xAutoMode);
+_rManual(CLK:=xAutoMode);
+IF eState <> STATE.DORMANT//只有在运行的时候，才会检测是否有模式切换发生
+THEN
+	IF _fManual.Q OR _rManual.Q
+	THEN
+		_xModeChange := TRUE;
+	END_IF
+END_IF
+
+_tonPulse(IN:=NOT _tonPulse.Q , PT:=T#100MS);//产生100ms的脉冲信号
+IF _xReadStatus AND ( _iSendReceiveState <> 999 ) AND TRUE//一定要处于通信正常状态
+THEN
+		_aRead_VAR.bExecute := _tonPulse.Q;
+END_IF
+
+(****************************电源控制********************************************)
+
+_fPowerOn(CLK:= xPowerHmi);//驱动器断电的时候需要将初始化完成信号给清除掉
+IF _fPowerOn.Q
+THEN
+	xRefOk := FALSE;//断电再上电之后需要重新初始化
+END_IF
+
+(*****************************夹爪状态显示*****************************)
+xDone := _xDone AND xExecute;//判断是否处于当前流程的Done状态
+xDropOccur :=( eClampActCmd = ERG_20_CMD.Cmd_Clamp ) AND ( st_IOData.I_ClampState = 3 );
+xGripClampEmpty := xError AND eErrorID = ERG_20_ERROR.FLT_ClAMP_CLAMPFAIL AND xExecute;//关盖失败判定
+xClosecoverFailure := xError AND eErrorID = ERG_20_ERROR.FLT_ROTATE_CLAMPFAIL AND xExecute;//关盖失败判定
+xOpencoverFailure := xError AND eErrorID = ERG_20_ERROR.FLT_ROTATE_RELEASEFAIL AND xExecute;//开盖失败评定]]></ST>
+      </Implementation>
+    </Action>
+    <Method Name="CmdClampAction" Id="{33a47247-6e90-4365-83ee-b50d1de8dfe5}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD CmdClampAction
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eErrorID <> ERG_20_ERROR.NO_ERROR
+THEN
+  RETURN;  
+END_IF
+  
+IF NOT xRefOk THEN
+	eErrorID := ERG_20_ERROR.FLT_xRefOk;
+	RETURN;
+END_IF
+
+IF rTorqueSet>0.5 OR rTorqueSet<0.1
+	OR rSpeedSet>400 OR rSpeedSet<1
+	OR rPosAngleSet>20 OR rPosAngleSet<0
+THEN
+	eErrorID := ERG_20_ERROR.FLT_PARA;	
+END_IF
+
+CASE _diCmdState OF
+	0://判断对应指令，是否已经处于完成状态，防止出现重复触发情况	
+		_diCmdState := _diCmdState + 1;	
+	1://传送力值和速度参数
+		IF NOT _aRead_VAR.bExecute//等待最后接收结束
+		THEN
+			_tonDelay(IN:= TRUE,pt:=T#20MS);
+			st_IOData.O_ClampForceSet := rTorqueSet;
+			st_IOData.O_ClampSpeedSet := rSpeedSet;	
+			st_IOData.O_ClampPosSet := rPosAngleSet;	
+			IF _tonDelay.Q
+			THEN	
+				_aEnableSignal[1] := TRUE;//启动参数数据发送	
+				_tonDelay(IN:= FALSE);
+				_tonCmdTimeout(in:=FALSE);
+				_tonTimeout(in:=FALSE);
+				_diCmdState := _diCmdState+1; 
+			END_IF
+		END_IF		
+	2://设置读取参数	
+		_tonDelay(IN:= NOT _aEnableSignal[1],PT:=T#200MS);
+		_tonCmdTimeout(IN:= _aEnableSignal[1],pt:=T#2S);
+		IF _tonDelay.Q
+		THEN
+			_tonCmdTimeout(in:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonDelay(in:=FALSE);
+			_diCmdState := 4; 
+		END_IF	
+		IF _iSendReceiveState = 999
+		THEN
+			eErrorID := ERG_20_ERROR.FLT_CLAMPCMD_TIMEOUT;		
+			_diCmdState := 100;
+		END_IF		
+	4://设置读取反馈数据
+		_tonCmdTimeout(in:=FALSE);
+		_tonDelay(IN:= FALSE);	
+		_aEnableSignal[4] := TRUE;//读取状态反馈信息 
+		_diCmdState := _diCmdState +1;//转到等待夹取完成 	
+	5://等到操作完成
+		_tonTimeout(in:=TRUE,pt:=T#10S); 
+		_tonCmdTimeout(IN:= TRUE,pt:=T#2S);		
+		IF NOT _aEnableSignal[4] //等待读取数据完成
+		THEN
+			_tonDelay(IN:= TRUE,pt:=T#40MS);
+			IF st_IOData.I_ClampState = 0 AND ABS(st_IOData.O_ClampPosSet - st_IOData.I_ClampCurrentPos) <= 0.03 AND //松开位置成功
+			   eCmd = ERG_20_CMD.Cmd_Release	//松开指令
+			THEN			
+				_tonCmdTimeout(in:=FALSE);
+				_tonTimeout(in:=FALSE);  
+				_diCmdState := 100;
+				xComplete := TRUE;
+			END_IF		
+			IF st_IOData.I_ClampState = 2 AND//夹住物体
+				 eCmd = ERG_20_CMD.Cmd_Clamp	//夹紧指令
+			THEN			
+				_tonCmdTimeout(in:=FALSE);
+				_tonTimeout(in:=FALSE);  
+				_diCmdState := 100;
+				xComplete := TRUE;
+			END_IF				
+			IF st_IOData.I_ClampState = 2 AND //松开位置的时候，检测是否堵转
+       	 eCmd = ERG_20_CMD.Cmd_Release	//松开指令
+			THEN	
+  			_iNGCount := _iNGCount + 1;		
+				IF _iNGCount <= 3
+				THEN
+				  _tonDelay(IN:=FALSE);
+					_diCmdState := _diCmdState + 1;
+				ELSE
+					_tonCmdTimeout(in:=FALSE);
+					_tonTimeout(in:=FALSE);  
+					eErrorID := ERG_20_ERROR.FLT_ClAMP_RELEASEFAIL;		
+					_diCmdState := 999;
+				END_IF				
+			END_IF		
+			IF st_IOData.I_ClampState = 0 AND ABS(st_IOData.O_ClampPosSet - st_IOData.I_ClampCurrentPos) <= 0.03 AND//没有夹住物体，到位置，判定夹持失败(放个误差数值)
+				 eCmd = ERG_20_CMD.Cmd_Clamp	//夹紧指令
+			THEN
+				_iNGCount := _iNGCount + 1;		
+				IF _iNGCount <= 3
+				THEN
+				  _tonDelay(IN:=FALSE);
+					_diCmdState := _diCmdState + 1;
+				ELSE
+					_tonCmdTimeout(in:=FALSE);
+					_tonTimeout(in:=FALSE);  			
+					eErrorID := ERG_20_ERROR.FLT_ClAMP_CLAMPFAIL;		
+					_diCmdState := 999;
+				END_IF
+			END_IF	
+			IF _tonDelay.Q//做延时刷新
+			THEN
+				_diCmdState := 4;
+			END_IF			
+		END_IF
+		IF _iSendReceiveState = 999//回原点指令响应超时
+		THEN
+			eErrorID := ERG_20_ERROR.FLT_CLAMPCMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF
+		IF _tonTimeout.Q//回原点动作超时
+		THEN
+			eErrorID := ERG_20_ERROR.FLT_CLAMP_TIMEOUT;
+			_diCmdState := 999;
+		END_IF
+	6:
+		_tonDelay(IN:= TRUE,pt:=T#40MS);
+		IF _tonDelay.Q//做延时刷新
+		THEN			
+			_diCmdState := 0;
+		END_IF	
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdRotateAction" Id="{e6fad32f-4d4c-446d-9c98-276be42ea762}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD CmdRotateAction
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eErrorID <> ERG_20_ERROR.NO_ERROR
+THEN
+  RETURN;  
+END_IF
+  
+IF NOT xRefOk THEN//设备没有原点报警
+	eErrorID := ERG_20_ERROR.FLT_xRefOk;
+	RETURN;
+END_IF
+
+IF rTorqueSet>1 OR rTorqueSet<0.2
+	OR rSpeedSet>1440 OR rSpeedSet<1
+	OR rPosAngleSet>360000 OR rPosAngleSet<-360000
+THEN
+	eErrorID := ERG_20_ERROR.FLT_PARA;	
+END_IF
+
+
+CASE _diCmdState OF
+	0://判断是否已经处于目标位置或者夹取完成状态，防止出现重复触发情况
+		_diCmdState := _diCmdState + 1;
+		_tonDelay(IN:= FALSE);
+		IF eCmd = ERG_20_CMD.Cmd_RotateAbsRelease//只有绝对松瓶盖定位是有可能处于目标完成状态的，判断是否已经到目标位置
+		THEN
+			//检测是否已经处于目标位置
+			IF ABS(rPosAngleSet - st_IOData.I_RotateCurrentPos) <= 0.03
+			THEN
+				_tonTimeout(in:=FALSE);  
+				_diCmdState := 100;
+				xComplete := TRUE;
+			END_IF			
+		END_IF
+		IF eCmd = ERG_20_CMD.Cmd_RotateAbsClamp//只有绝对定位是有可能处于目标完成状态的，增量的是一定要动作的
+		THEN
+			//检测是否已经处于目标位置，要是到位置，代表夹紧失败，此时需要报警
+			IF ABS(rPosAngleSet - st_IOData.I_RotateCurrentPos) <= 0.03
+			THEN
+				eErrorID := ERG_20_ERROR.FLT_ROTATE_CLAMPFAIL;
+				_diCmdState := 999;
+			END_IF
+		END_IF
+	1://传送参数
+		IF NOT _aRead_VAR.bExecute//等待最后接收结束
+		THEN
+	    _tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的都是当次任务 			
+			st_IOData.O_RotateForceSet := rTorqueSet;
+			st_IOData.O_RotateSpeedSet := rSpeedSet;	
+			st_IOData.O_RotatePosSet := rPosAngleSet;				
+			IF _tonDelay.Q
+			THEN				
+				_aEnableSignal[2] := TRUE;//启动旋转绝对定位参数数据发送		    					
+				_tonCmdTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_diCmdState := _diCmdState+1; 	
+			END_IF			
+		END_IF	
+	2://设置读取参数
+		_tonDelay(IN:= NOT _aEnableSignal[2],PT:=T#200MS);//等待设备运行起来
+		_tonCmdTimeout(IN:= _aEnableSignal[2],pt:=T#2S);
+		IF _tonDelay.Q//等待电动夹爪开始响应
+		THEN
+			_tonTimeout(in:=FALSE);		
+			_diCmdState := _diCmdState +1; 
+		END_IF	
+		IF _iSendReceiveState = 999//指令执行超时
+		THEN
+			eErrorID := ERG_20_ERROR.FLT_ROTATECMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF	
+	3://设置读取参数反馈
+		_tonCmdTimeout(in:=FALSE);
+		_tonDelay(IN:= FALSE);
+	  _aEnableSignal[4] := TRUE;   
+		_diCmdState := _diCmdState +1;//
+	4:
+		_tonTimeout(in:=TRUE,pt:=T#20S); 
+		_tonCmdTimeout(IN:= TRUE,pt:=T#2S);
+		//进行数据刷新		
+		IF NOT _aEnableSignal[4] //等待读取数据完成
+		THEN
+			_tonDelay(IN:= TRUE,pt:=T#50MS);
+			IF ( st_IOData.I_RotateState = 0 ) AND ABS(st_IOData.O_RotatePosSet - st_IOData.I_RotateCurrentPos) <= 0.03 AND //旋转是否到位置,只有在松开瓶盖的时候会有这种操作
+				 ( eCmd = ERG_20_CMD.Cmd_RotateAbsRelease )
+			THEN			
+				_tonTimeout(in:=FALSE);  
+				_diCmdState := 100;
+				xComplete := TRUE;
+			END_IF		 
+			IF ( st_IOData.I_RotateState = 2 OR st_IOData.I_RotateState = 4 ) AND //旋转夹瓶盖处理，只有出现堵转（达到设置力反馈）
+				 ( eCmd = ERG_20_CMD.Cmd_RotateAbsClamp )
+			THEN			
+				_tonTimeout(in:=FALSE);  
+				_diCmdState := 100;
+				xComplete := TRUE;
+			END_IF			
+			IF _tonDelay.Q//做刷新处理
+			THEN
+				_diCmdState := _diCmdState - 1;
+			END_IF
+		END_IF
+		IF ( st_IOData.I_RotateState = 0 ) AND ABS(st_IOData.O_RotatePosSet - st_IOData.I_RotateCurrentPos) <= 0.03 AND //关盖打滑,直接到设置位置了
+			 ( eCmd = ERG_20_CMD.Cmd_RotateAbsClamp )
+		THEN	
+			_tonDelay(IN:=FALSE);
+			eErrorID := ERG_20_ERROR.FLT_ROTATE_CLAMPFAIL;
+			_diCmdState := 999;
+		END_IF
+		IF ( st_IOData.I_RotateState = 2 OR st_IOData.I_RotateState = 4) AND //开盖失败，直接堵转，开不开瓶盖
+			 ( eCmd = ERG_20_CMD.Cmd_RotateAbsRelease )
+		THEN	
+			_iNGCount := _iNGCount + 1;		
+			IF _iNGCount <= 3//检测是否有正时报警发生
+			THEN
+				_tonDelay(IN:=FALSE);
+				_diCmdState := _diCmdState + 1;
+			ELSE
+				eErrorID := ERG_20_ERROR.FLT_ROTATE_RELEASEFAIL;
+				_diCmdState := 999;
+			END_IF
+		END_IF
+		IF _iSendReceiveState = 999//回原点指令响应超时
+		THEN
+			eErrorID := ERG_20_ERROR.FLT_ROTATECMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF
+		IF _tonTimeout.Q//回原点动作超时
+		THEN
+			eErrorID := ERG_20_ERROR.FLT_ROTATE_TIMEOUT;
+			_diCmdState := 999;
+		END_IF
+	5://报警再次确定
+		_tonDelay(IN:= TRUE,pt:=T#40MS);
+		IF _tonDelay.Q//做延时刷新
+		THEN			
+			_diCmdState := 0;
+		END_IF		
+	ELSE
+		;	
+END_CASE
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdRotateAction_Rel" Id="{0ee69f98-4f17-406f-ab9a-5815ceb37f83}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD CmdRotateAction_Rel
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eErrorID <> ERG_20_ERROR.NO_ERROR
+THEN
+  RETURN;  
+END_IF
+  
+IF NOT xRefOk THEN//设备没有原点报警
+	eErrorID := ERG_20_ERROR.FLT_xRefOk;
+	RETURN;
+END_IF
+
+IF rTorqueSet>1 OR rTorqueSet<0.2
+	OR rSpeedSet>1440 OR rSpeedSet<1
+	OR rPosAngleSet>36000 OR rPosAngleSet<-36000
+THEN
+	eErrorID := ERG_20_ERROR.FLT_PARA;	
+END_IF
+
+CASE _diCmdState OF
+	0://判断是否已经处于目标位置或者夹取完成状态，防止出现重复触发情况
+		_tonDelay(IN:= FALSE);
+		IF NOT _aRead_VAR.bExecute THEN		
+			_diCmdState := _diCmdState + 1;
+			_rLastRotatePos:= st_IOData.I_RotateCurrentPos;
+		END_IF	
+	1://传送参数
+		_tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的都是当次任务 			
+		st_IOData.O_RotateForceSet := rTorqueSet;
+		st_IOData.O_RotateSpeedSet := rSpeedSet;	
+		st_IOData.O_RotatePosSet := rPosAngleSet;				
+		IF _tonDelay.Q
+		THEN				
+			_aEnableSignal[3] := TRUE;//启动旋转绝对定位参数数据发送		    					
+			_tonCmdTimeout(in:=FALSE);
+			_tonDelay(IN:=FALSE);
+			_diCmdState := _diCmdState+1; 	
+		END_IF			
+	2://设置读取参数
+		_tonDelay(IN:= NOT _aEnableSignal[3],PT:=T#200MS);//等待设备运行起来
+		_tonCmdTimeout(IN:= _aEnableSignal[3],pt:=T#2S);
+		IF _tonDelay.Q//等待电动夹爪开始响应
+		THEN
+			_tonTimeout(in:=FALSE);		
+			_diCmdState := _diCmdState +1; 
+		END_IF	
+		IF _iSendReceiveState = 999//指令执行超时
+		THEN
+			eErrorID := ERG_20_ERROR.FLT_ROTATECMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF	
+	3://设置读取参数反馈
+		_tonCmdTimeout(in:=FALSE);
+		_tonDelay(IN:= FALSE);
+	  _aEnableSignal[4] := TRUE;   
+		_diCmdState := _diCmdState +1;//
+	4:
+		_tonTimeout(in:=TRUE,pt:=T#20S); 
+		_tonCmdTimeout(IN:= TRUE,pt:=T#2S);
+		//进行数据刷新		
+		IF NOT _aEnableSignal[4] //等待读取数据完成
+		THEN
+			_tonDelay(IN:= TRUE,pt:=T#50MS);
+			IF ( st_IOData.I_RotateState = 0 ) 
+					AND (st_IOData.I_RotateCurrentPos - _rLastRotatePos) <= rPosAngleSet+0.03 
+					AND (st_IOData.I_RotateCurrentPos - _rLastRotatePos) >= rPosAngleSet-0.03 //旋转是否到位置,只有在松开瓶盖的时候会有这种操作
+				 AND ( eCmd = ERG_20_CMD.Cmd_RotateRelRelease )
+			THEN			
+				_tonTimeout(in:=FALSE);  
+				_diCmdState := 100;
+				xComplete := TRUE;
+			END_IF		 
+			IF ( st_IOData.I_RotateState = 2 OR st_IOData.I_RotateState = 4 ) AND //旋转夹瓶盖处理，只有出现堵转（达到设置力反馈）
+				 ( eCmd = ERG_20_CMD.Cmd_RotateRelClamp )
+			THEN			
+				_tonTimeout(in:=FALSE);  
+				_diCmdState := 100;
+				xComplete := TRUE;
+			END_IF			
+			IF _tonDelay.Q//做刷新处理
+			THEN
+				_diCmdState := _diCmdState - 1;
+			END_IF
+		END_IF
+		
+		IF ( st_IOData.I_RotateState = 0 )  
+ 				AND (st_IOData.I_RotateCurrentPos - _rLastRotatePos) <= rPosAngleSet+0.03 
+				AND (st_IOData.I_RotateCurrentPos - _rLastRotatePos) >= rPosAngleSet-0.03  //关盖打滑,直接到设置位置了
+			  AND( eCmd = ERG_20_CMD.Cmd_RotateRelClamp )
+		THEN	
+			_tonDelay(IN:=FALSE);
+			eErrorID := ERG_20_ERROR.FLT_ROTATE_CLAMPFAIL;
+			_diCmdState := 999;
+		END_IF
+		IF ( st_IOData.I_RotateState = 2 OR st_IOData.I_RotateState = 4) AND //开盖失败，直接堵转，开不开瓶盖
+			 ( eCmd = ERG_20_CMD.Cmd_RotateRelRelease )
+		THEN	
+			_iNGCount := _iNGCount + 1;		
+			IF _iNGCount <= 3//检测是否有正时报警发生
+			THEN
+				_tonDelay(IN:=FALSE);
+				_diCmdState := _diCmdState + 1;
+			ELSE
+				eErrorID := ERG_20_ERROR.FLT_ROTATE_RELEASEFAIL;
+				_diCmdState := 999;
+			END_IF
+		END_IF
+		IF _iSendReceiveState = 999//回原点指令响应超时
+		THEN
+			eErrorID := ERG_20_ERROR.FLT_ROTATECMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF
+		IF _tonTimeout.Q//回原点动作超时
+		THEN
+			eErrorID := ERG_20_ERROR.FLT_ROTATE_TIMEOUT;
+			_diCmdState := 999;
+		END_IF
+	5://报警再次确定
+		_tonDelay(IN:= TRUE,pt:=T#40MS);
+		IF _tonDelay.Q//做延时刷新
+		THEN			
+			_diCmdState := 3;
+		END_IF		
+	ELSE
+		;	
+END_CASE
+]]></ST>
+      </Implementation>
+    </Method>
+    <Action Name="ConnectAction" Id="{c3ba2245-7919-49b3-abb3-0e319c2a2fec}" FolderPath="Control\">
+      <Implementation>
+        <ST><![CDATA[(**********************************调用收发功能块**********************************)
+//状态反馈功能调用
+_aRead_VAR(
+	sIPAddr:= stPara.strSlaveIP, 
+	nTCPPort:=stPara.iSlavePort , 
+	nUnitID:= stPara.bySlaveID, 
+	nQuantity:= 18, 
+	nMBAddr:= 16#0040, 
+	cbLength:= 36, 
+	pDestAddr:= ADR(_aFeedbackData), 
+	bExecute:= , 
+	tTimeout:= T#1S, 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> , 
+	cbRead=> );		
+	
+//指令控制部分	
+_aWtirt_VAR[0](
+	sIPAddr:= stPara.strSlaveIP,
+	nTCPPort:= stPara.iSlavePort, 
+	nUnitID:= stPara.bySlaveID, 
+	nQuantity:= 1, 
+	nMBAddr:= 16#0000, 
+	cbLength:= 2, 
+	pSrcAddr:= ADR(_aControlData[0,0]), 
+	bExecute:= , 
+	tTimeout:= T#1S, 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> );	
+		
+_aWtirt_VAR[1](
+	sIPAddr:= stPara.strSlaveIP,
+	nTCPPort:= stPara.iSlavePort, 
+	nUnitID:= stPara.bySlaveID, 
+	nQuantity:= 6, 
+	nMBAddr:= 16#0002, 
+	cbLength:= 12, 
+	pSrcAddr:= ADR(_aControlData[1,0]), 
+	bExecute:= , 
+	tTimeout:= T#1S, 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> );		
+	
+_aWtirt_VAR[2](
+	sIPAddr:= stPara.strSlaveIP,
+	nTCPPort:= stPara.iSlavePort, 
+	nUnitID:= stPara.bySlaveID, 
+	nQuantity:= 8, 
+	nMBAddr:= 16#000A, 
+	cbLength:= 16, 
+	pSrcAddr:= ADR(_aControlData[2,0]), 
+	bExecute:= , 
+	tTimeout:= T#1S, 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> );		
+	
+_aWtirt_VAR[3](
+	sIPAddr:= stPara.strSlaveIP,
+	nTCPPort:= stPara.iSlavePort, 
+	nUnitID:= stPara.bySlaveID, 
+	nQuantity:= 8, 
+	nMBAddr:= 16#000E, 
+	cbLength:= 16, 
+	pSrcAddr:= ADR(_aControlData[3,0]), 
+	bExecute:= , 
+	tTimeout:= T#1S, 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> );	
+	
+//收发流程管控
+CASE _iSendReceiveState OF 
+	0:
+		_tonDelay2(IN:= FALSE);
+		_iChannelIndex:= -1;
+		FOR i := 0 TO 5 BY 1//进行读取指令的轮训
+		DO
+		 IF _aEnableSignal[i]//检测有控制指令发生
+		 THEN
+			 _iChannelIndex:=i;    
+			END_IF 
+		END_FOR
+		IF _iChannelIndex>=4//有读取反馈指令
+		THEN								
+			IF NOT _aRead_VAR.bBusy AND NOT _aRead_VAR.bError
+			THEN
+				_aRead_VAR(bExecute := _aEnableSignal[_iChannelIndex]);
+				_iSendReceiveState := 10;	
+			ELSIF 
+				_aRead_VAR.bError
+				THEN
+				_iSendReceiveState := 999;												
+			END_IF													
+		END_IF			
+		IF _iChannelIndex>=0 AND _iChannelIndex<=3//有控制触发指令
+		THEN		
+			IF  NOT _aWtirt_VAR[_iChannelIndex].bBusy AND NOT _aWtirt_VAR[_iChannelIndex].bError 
+			THEN
+				_aWtirt_VAR[_iChannelIndex](bExecute := _aEnableSignal[_iChannelIndex]);
+				_iSendReceiveState := 10;							
+			END_IF
+		END_IF
+		
+	10://等待读取响应	
+		_tonDelay2(IN:= TRUE,PT:=T#3S);
+		IF _tonDelay2.Q//超时
+		THEN
+			_iSendReceiveState:= 999;					
+		END_IF				
+		IF _iChannelIndex>=4
+		THEN					
+			IF NOT _aRead_VAR.bBusy AND NOT _aRead_VAR.bError
+			THEN
+				_iComNGCount := 0;
+				_aEnableSignal[_iChannelIndex] := FALSE;
+				_aRead_VAR.bExecute := FALSE;
+				_iSendReceiveState := 0;//等待下次触发
+			END_IF
+			IF _aRead_VAR.bError
+			THEN
+				_iComNGCount := _iComNGCount + 1;//错误次数加一
+				IF _iComNGCount >= 3//重发多次失败
+				THEN
+					eOperErrorID := _aRead_VAR.nErrId;
+					_aRead_VAR.bExecute := FALSE;
+					_iSendReceiveState := 999;//进入错误发生状态
+				ELSE
+					_tonDelay1(in:=FALSE);
+					_aRead_VAR.bExecute:= FALSE;
+					_iSendReceiveState := _iSendReceiveState + 1;
+				END_IF						
+			END_IF			
+		END_IF				
+		IF _iChannelIndex>=0 AND _iChannelIndex<=3		
+		THEN	
+			IF NOT _aWtirt_VAR[_iChannelIndex].bBusy AND NOT _aWtirt_VAR[_iChannelIndex].bError
+			THEN
+				_iComNGCount := 0;
+				_aEnableSignal[_iChannelIndex] := FALSE;
+				_aWtirt_VAR[_iChannelIndex].bExecute := FALSE;
+				_iSendReceiveState := 0;//等待下次触发
+			END_IF
+			IF _aWtirt_VAR[_iChannelIndex].bError
+			THEN
+				_iComNGCount := _iComNGCount + 1;//错误次数加一
+				IF _iComNGCount >= 3//重发多次失败
+				THEN
+					eOperErrorID := _aWtirt_VAR[_iChannelIndex].nErrId;
+					_aWtirt_VAR[_iChannelIndex].bExecute := FALSE;
+					_iSendReceiveState := 999;//进入错误发生状态
+				ELSE
+					_tonDelay1(in:=FALSE);
+					_aWtirt_VAR[_iChannelIndex].bExecute:= FALSE;
+					_iSendReceiveState := _iSendReceiveState + 1;
+				END_IF					
+			END_IF				
+		END_IF
+	11://延时，进行补发操作
+		_tonDelay1(in:=TRUE,pt:=T#300MS);				
+		IF _tonDelay1.Q
+		THEN		 
+			_iSendReceiveState := 0;
+		END_IF	
+	999://错误状态，等待复位发生
+		_xConnect_ERROR := TRUE;
+		_tonDelay1(in:=NOT _tonDelay1.Q,pt:=T#20MS);
+		_aRead_VAR(bExecute := _tonDelay1.Q);	
+		_tonDelay3(pt:=T#100MS);	
+		IF _tonDelay3.Q
+		THEN			
+			_xConnect_ERROR := FALSE;
+			_iComNGCount := 0;			
+			_iSendReceiveState := 0;//重新开始
+			_aRead_VAR(bExecute := FALSE);	
+			_tonDelay1(IN:=FALSE);
+			_tonDelay3(IN:=FALSE);
+		END_IF
+		IF _fResetCheck.Q
+		THEN
+			_aWtirt_VAR[0](bExecute := FALSE);
+			_aWtirt_VAR[1](bExecute := FALSE);
+			_aWtirt_VAR[2](bExecute := FALSE);
+			_aWtirt_VAR[3](bExecute := FALSE);			
+			_aRead_VAR(bExecute := FALSE);	
+			_tonDelay3.IN := TRUE;
+		END_IF
+	ELSE
+		;
+END_CASE				
+]]></ST>
+      </Implementation>
+    </Action>
+    <Method Name="CyclicAction" Id="{d440af62-aeef-49fe-8700-91b342378cd6}">
+      <Declaration><![CDATA[METHOD CyclicAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xAbort=0 THEN
+    IF xFirstInvocation THEN
+    (*
+    * Staring
+    * for then first (!) invocaion,
+    * sample then input variables
+    *)
+			_xReadStatus := FALSE;
+			_iCount := 0;
+			_diCmdState := 0;
+			_iNGCount := 0;
+			xFirstInvocation:=0;	
+			_aRead_VAR.bExecute:= false;		
+    END_IF    
+    REPEAT 				
+		  (**************************检查是否有硬件报错(检测总线是否报错)**********************************) 			
+			//下面几个报警需要断驱动器的电才能消除报警
+			IF st_IOData.I_DeviceERRORState <> 0 
+			THEN
+				eErrorID := ERG_20_ERROR.FLT_DEVICE_ERROR;//过热报警
+			END_IF	
+
+			IF NOT xPowerHmi//驱动器没有上电
+			THEN
+				eERRORID := ERG_20_ERROR.FLT_POWERON;//需要检查硬件，硬件有问题
+			END_IF
+		
+			//判断指令类型
+			CASE eCmd OF
+					ERG_20_CMD.Cmd_Clamp,ERG_20_CMD.Cmd_Release://执行夹爪指令	
+            eClampActCmd := eCmd ;				
+						CmdClampAction(xComplete=> xComplete);				
+					ERG_20_CMD.Cmd_Org://执行回原点指令
+						mCmdOrgAction(xComplete=> xComplete);
+					ERG_20_CMD.Cmd_RotateAbsClamp,ERG_20_CMD.Cmd_RotateAbsRelease:
+						CmdRotateAction(xComplete=> xComplete);
+					ERG_20_CMD.Cmd_RotateRelClamp,ERG_20_CMD.Cmd_RotateRelRelease:
+						CmdRotateAction_Rel(xComplete=> xComplete);												
+					ELSE
+						;	
+				END_CASE  
+      UNTIL (TRUE)
+	END_REPEAT
+END_IF
+
+
+IF xAbort OR xComplete OR eErrorID<>ERG_20_ERROR.NO_ERROR THEN    
+    (*
+    * Cleaning
+    * => free as much allocated resources as possible
+    *)    
+    tOperationTimer(IN:=0);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleAbortedState" Id="{236208fd-3c79-4a0a-a3a7-3652bb41d5eb}">
+      <Declaration><![CDATA[{attribute 'hide'}
+METHOD PRIVATE FINAL HandleAbortedState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xAborted AND xResetRequest THEN
+    eState:=STATE.RESETING;
+    xAgain:=1;
+ELSE
+    xBusy:=0;
+    xAborted:=1;
+    //xResetRequest:=(xExecute=0);
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleAbortingState" Id="{6d5175e8-e996-469a-8cb7-d2f20e370888}">
+      <Declaration><![CDATA[{attribute 'hide'}
+METHOD PRIVATE FINAL HandleAbortingState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[AbortAction(xComplete=> xComplete, eErrorID=> eErrorID);
+
+IF eErrorID<>ERG_20_ERROR.NO_ERROR THEN
+    eState:=STATE.INERROR;
+    xAgain:=1;
+ELSIF xComplete THEN
+    eState:=STATE.ABORTED;
+    xAgain:=1;
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleDoneState" Id="{fb0b91c0-a336-4a78-9e2d-2b0ec5ff9b38}">
+      <Declaration><![CDATA[{attribute 'hide'}
+METHOD PRIVATE FINAL HandleDoneState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//在运行过程中要是切换模式，再运行完成之后，检测到模式的切换，就需要回到初始位置，进行下一次执行准备
+IF _xDone AND ((xExecute=0) OR ( _xModeChange AND NOT _xAutoOpe ) OR ( NOT xAutoMode AND NOT xDeviceRunning AND ( NOT _xAutoOpe OR _xHMIOpe))) THEN
+	eState:=STATE.RESETING;
+	xAgain:=1;
+ELSE
+	xBusy:=0;
+	_xDone:=1;
+	//xResetRequest:=(xExecute=0);
+	xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleDormantState" Id="{81667616-a2a1-493f-8ad3-952a0dd97aec}">
+      <Declaration><![CDATA[{attribute 'hide'}
+METHOD PRIVATE FINAL HandleDormantState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+IF xExecute THEN
+    xBusy:=1;
+    eState:=STATE.EXECUTING;
+    xAgain:=1;
+END_IF
+
+
+IF st_IOData.I_DeviceERRORState <> 0//检测硬件是否报错
+THEN
+	eERRORID := ERG_20_ERROR.FLT_DEVICE_ERROR;//需要检查硬件，硬件有问题
+END_IF
+IF NOT xPowerHmi//驱动器没有上电
+THEN
+	eERRORID := ERG_20_ERROR.FLT_POWERON;//需要检查硬件，硬件有问题
+END_IF
+	
+IF _fResetCheck.Q//清空报警
+THEN
+	eERRORID := ERG_20_ERROR.No_ERROR;
+END_IF
+(********************************等待手动操作******************************)
+//初始化指令
+_rHMIInit(CLK:= xHMInitButton AND eErrorID = ERG_20_ERROR.NO_ERROR AND NOT xAutoMode AND NOT xDeviceRunning );
+_rInit(CLK:= xInitControl AND eErrorID = ERG_20_ERROR.NO_ERROR AND ( xAutoMode OR  xDeviceRunning ));
+IF _rHMIInit.Q OR _rInit.Q
+THEN
+	eCmd := ERG_20_CMD.Cmd_Org;
+	xExecute := TRUE;
+END_IF
+//轮询
+FOR ii := 1 TO 5 BY 1
+DO 
+	//夹紧轴夹紧控制
+	_rHMIClamp[ii](CLK:= aHMIClampButton[ii] AND eErrorID = ERG_20_ERROR.NO_ERROR AND NOT xAutoMode AND NOT xDeviceRunning );
+	_rClamp[ii](CLK:= aClampControl[ii] AND eErrorID = ERG_20_ERROR.NO_ERROR AND ( xAutoMode OR xDeviceRunning ) );
+	IF _rHMIClamp[ii].Q OR _rClamp[ii].Q
+	THEN
+		rTorqueSet := aHMIClampPara[ii].rTorqueSet;
+		rSpeedSet := aHMIClampPara[ii].rSpeedSet;
+		rPosAngleSet := aHMIClampPara[ii].rPosAngleSet;
+		eCmd := ERG_20_CMD.Cmd_Clamp;
+		xExecute := TRUE;
+	END_IF	
+	//夹紧轴松开指令
+	_rHMIRelease[ii](CLK:= aHMIReleaseButton[ii] AND eErrorID = ERG_20_ERROR.NO_ERROR AND NOT xAutoMode AND NOT xDeviceRunning );
+	_rRelease[ii](CLK:= aReleaseControl[ii] AND eErrorID = ERG_20_ERROR.NO_ERROR AND ( xAutoMode OR  xDeviceRunning ));
+	IF _rHMIRelease[ii].Q OR _rRelease[ii].Q
+	THEN
+		rTorqueSet := aHMIReleasePara[ii].rTorqueSet;
+		rSpeedSet := aHMIReleasePara[ii].rSpeedSet;
+		rPosAngleSet := aHMIReleasePara[ii].rPosAngleSet;
+		eCmd := ERG_20_CMD.Cmd_Release;
+		xExecute := TRUE;
+	END_IF		
+  //旋转轴关盖控制
+	_rHMIRotateClamp[ii](CLK:= aHMIRotateClampButton[ii] AND eErrorID = ERG_20_ERROR.NO_ERROR AND NOT xAutoMode AND NOT xDeviceRunning );
+	_rRotateClamp[ii](CLK:= aRotateClampControl[ii] AND eErrorID = ERG_20_ERROR.NO_ERROR AND ( xAutoMode OR xDeviceRunning ) );
+	IF _rHMIRotateClamp[ii].Q OR _rRotateClamp[ii].Q
+	THEN
+		rTorqueSet := aHMIRotateClampPara[ii].rTorqueSet;
+		rSpeedSet := aHMIRotateClampPara[ii].rSpeedSet;
+		rPosAngleSet := aHMIRotateClampPara[ii].rPosAngleSet;
+		eCmd := ERG_20_CMD.Cmd_RotateAbsClamp;
+		xExecute := TRUE;
+	END_IF	
+	//旋转轴松盖指令
+	_rHMIRotateRelease[ii](CLK:= aHMIRotateReleaseButton[ii] AND eErrorID = ERG_20_ERROR.NO_ERROR AND NOT xAutoMode AND NOT xDeviceRunning );
+	_rRotateRelease[ii](CLK:= aRotateReleaseControl[ii] AND eErrorID = ERG_20_ERROR.NO_ERROR AND ( xAutoMode OR  xDeviceRunning ));
+	IF _rHMIRotateRelease[ii].Q OR _rRotateRelease[ii].Q
+	THEN
+		rTorqueSet := aHMIRotateReleasePara[ii].rTorqueSet;
+		rSpeedSet := aHMIRotateReleasePara[ii].rSpeedSet;
+		rPosAngleSet := aHMIRotateReleasePara[ii].rPosAngleSet;
+		eCmd := ERG_20_CMD.Cmd_RotateAbsRelease;
+		xExecute := TRUE;
+	END_IF		
+  //旋转轴关盖控制
+	_rHMIRotateRelClamp[ii](CLK:= aHMIRotateClampRelButton[ii] AND eErrorID = ERG_20_ERROR.NO_ERROR AND NOT xAutoMode AND NOT xDeviceRunning );
+	_rRotateRelClamp[ii](CLK:= aRotateClampRelControl[ii] AND eErrorID = ERG_20_ERROR.NO_ERROR AND ( xAutoMode OR xDeviceRunning ) );
+	IF _rHMIRotateRelClamp[ii].Q OR _rRotateRelClamp[ii].Q
+	THEN
+		rTorqueSet := aHMIRotateClampRelPara[ii].rTorqueSet;
+		rSpeedSet := aHMIRotateClampRelPara[ii].rSpeedSet;
+		rPosAngleSet := aHMIRotateClampRelPara[ii].rPosAngleSet;
+		eCmd := ERG_20_CMD.Cmd_RotateRelClamp;
+		xExecute := TRUE;
+	END_IF	
+	//旋转轴松盖指令
+	_rHMIRotateRelRelease[ii](CLK:= aHMIRotateReleaseRelButton[ii] AND eErrorID = ERG_20_ERROR.NO_ERROR AND NOT xAutoMode AND NOT xDeviceRunning );
+	_rRotateRelRelease[ii](CLK:= aRotateReleaseRelControl[ii] AND eErrorID = ERG_20_ERROR.NO_ERROR AND ( xAutoMode OR  xDeviceRunning ));
+	IF _rHMIRotateRelRelease[ii].Q OR _rRotateRelRelease[ii].Q
+	THEN
+		rTorqueSet := aHMIRotateReleaseRelPara[ii].rTorqueSet;
+		rSpeedSet := aHMIRotateReleaseRelPara[ii].rSpeedSet;
+		rPosAngleSet := aHMIRotateReleaseRelPara[ii].rPosAngleSet;
+		eCmd := ERG_20_CMD.Cmd_RotateRelRelease;
+		xExecute := TRUE;
+	END_IF
+END_FOR
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleErrorState" Id="{8e7adb4f-cd0f-4135-8782-1021f4cd3ea8}">
+      <Declaration><![CDATA[{attribute 'hide'}
+METHOD PRIVATE FINAL  HandleErrorState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xError THEN
+	IF eErrorID < ERG_20_ERROR.FLT_ClAMP_CLAMPFAIL//正常执行报警
+	THEN
+		IF xResetRequest OR NOT xExecute//按照正常逻辑进行处理复位处理就可以
+		THEN
+				eState:=STATE.RESETING;
+				xAgain:=1;
+		END_IF
+	ELSE//操作失败报警（有可能需要进行程序跳步处理，此时，在自动模式下不允许被复位掉，防止，程序异常死机）
+		IF ( NOT xAutoMode AND xDeviceRunning ) OR xAutoMode
+		THEN 
+			IF NOT xExecute//按照正常逻辑进行处理复位处理就可以
+			THEN 
+				eState:=STATE.RESETING;
+				xAgain:=1;
+			END_IF
+		ELSE
+			IF xResetRequest OR NOT xExecute//按照正常逻辑进行处理复位处理就可以
+			THEN
+				eState:=STATE.RESETING;
+				xAgain:=1;
+			END_IF
+		END_IF
+	END_IF
+ELSE
+	xBusy:=0;
+	xError:=1;    
+	xAgain:=0;(* !!! *)
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleExecutingState" Id="{4e022e67-de45-40fb-9124-dc7a0fc66851}">
+      <Declaration><![CDATA[{attribute 'hide'}
+METHOD PRIVATE FINAL HandleExecutingState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xAbort=0 THEN   
+    CyclicAction(xComplete=> xComplete);
+END_IF
+
+IF eErrorID<>ERG_20_ERROR.NO_ERROR THEN
+    eState:=STATE.INERROR;
+    xAgain:=1;
+ELSIF xAbort THEN
+    eState:=STATE.ABORTING;
+    xAgain:=1;
+ELSIF xComplete THEN
+    eState:=STATE.DONE;
+    xAgain:=1;
+END_IF ]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleResettingState" Id="{a819d9c5-045f-4f33-a166-98b795f1a6b4}">
+      <Declaration><![CDATA[{attribute 'hide'}
+METHOD PRIVATE FINAL HandleResettingState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ResetAction(xComplete=> xComplete);
+
+IF xComplete THEN
+		xExecute:=0;//清除输入指令 
+    xBusy:=0;
+    _xDone:=0;
+    xError:=0;
+    xAborted:=0;
+    eErrorID:=ERG_20_ERROR.NO_ERROR;
+    eState:=STATE.DORMANT;
+    xFirstInvocation:=1;
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="mCmdOrgAction" Id="{2ad45477-4b20-4f3b-8a41-ede65ae7f05d}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD mCmdOrgAction
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eErrorID <> ERG_20_ERROR.NO_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF
+	0://a相关数据初始化
+		IF NOT _aRead_VAR.bExecute//等待接收结束
+		THEN			
+			xRefOk := FALSE;//因为需要重新初始化，所以需要清除回原点完成标志位	
+			_aFeedbackData[0]:=0;    
+			_diCmdState := _diCmdState+1;						
+		END_IF
+	1://首次初始化写入参数
+			_tonDelay(in:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_diCmdState:= 2;		
+	2://a相关数据初始化
+		IF NOT _aRead_VAR.bExecute//等待接收结束
+		THEN
+			_tonDelay(IN:= TRUE,pt:=T#20MS);
+			st_IOData.O_Init := 1;//触发回原点指令
+			IF _tonDelay.Q//错开刷新时序
+			THEN
+				_aEnableSignal[0] := TRUE;//启动数据发送	  
+				_tonTimeout(in:=FALSE);    
+				_diCmdState := _diCmdState+1;
+			END_IF			
+		END_IF	
+	3://检测指令是否超时
+		_tonDelay(IN:= NOT _aEnableSignal[0],PT:=T#200MS);
+		_tonCmdTimeout(IN:= _aEnableSignal[0],pt:=T#2S);
+		IF _tonDelay.Q
+		THEN
+			_tonCmdTimeout(in:=FALSE);
+			_tonDelay(in:=FALSE);
+			_diCmdState := _diCmdState+1; 
+		END_IF	
+		IF _iSendReceiveState = 999
+		THEN
+			eErrorID := ERG_20_ERROR.FLT_ORGCMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF		
+	4://设置读取数据反馈	 
+		_tonCmdTimeout(in:=FALSE);
+		_tonTimeout(in:=TRUE,pt:=T#10S); 
+		_tonDelay(IN:= FALSE);
+		_aEnableSignal[4]:= TRUE;//读取状态信息
+		_diCmdState := _diCmdState +1; 
+	5://等待数据接收完成		
+		_tonTimeout(in:=TRUE,pt:=T#10S); 
+		_tonCmdTimeout(IN:= TRUE,pt:=T#2S);
+		IF NOT _aEnableSignal[4]//等待电动夹爪响应 
+		THEN
+			_tonDelay(IN:= TRUE,pt:=T#40MS);
+			IF st_IOData.I_ClampInit = 5  //判断是否初始化成功
+			THEN
+				_tonCmdTimeout(in:=FALSE);
+				_tonDelay(IN:= FALSE);
+				_tonTimeout(in:=FALSE);  
+				_diCmdState := 100;
+				xRefOk := TRUE;//标记回原点成功
+				xComplete := 1;
+			END_IF
+			IF _tonDelay.Q
+			THEN
+				_diCmdState := 4;
+			END_IF
+		END_IF
+		IF _iSendReceiveState = 999//回原点指令响应超时
+		THEN
+			eErrorID := ERG_20_ERROR.FLT_ORGCMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF
+		IF _tonTimeout.Q//回原点动作超时
+		THEN
+			eErrorID := ERG_20_ERROR.FLT_ORG_TIMEOUT;
+			_diCmdState := 999;
+		END_IF			
+	ELSE
+		;
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ResetAction" Id="{dbdb8b3a-17a8-4ec7-870d-979473ec82d3}">
+      <Declaration><![CDATA[{attribute 'hide'}
+METHOD ResetAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+* Cleaning
+* => free all allocated resources
+* => reinitialize instance variables
+*)
+tOperationTimer(IN:=0);
+
+// init command state
+_diCmdState := 0;
+_tonCmdTimeout(in:=FALSE);
+_tonTimeout(in:=FALSE);
+_tonDelay(IN:=FALSE);
+_xModeChange := FALSE;
+_iNGCount := 0;
+_xReadStatus := TRUE;//操作完成之后，默认开始群进行读取操作
+
+//清除触发标志位
+FOR i:= 0 TO 4 BY 1
+DO
+	_aEnableSignal[i] := FALSE;
+END_FOR
+
+xHMInitButton:=FALSE;	
+xInitControl:=FALSE;
+FOR i:=1 TO 5 BY 1
+DO
+	aHMIClampButton[i]:=FALSE;
+	aHMIReleaseButton[i]:=FALSE;
+	aClampControl[i]:=FALSE;
+	aReleaseControl[i]:=FALSE;
+	aHMIRotateClampButton[i]:=FALSE;
+	aHMIRotateReleaseButton[i]:=FALSE;
+	aRotateClampControl[i]:=FALSE;
+	aRotateReleaseControl[i]:=FALSE;
+	
+	aHMIRotateClampRelButton[i]:=FALSE;
+	aHMIRotateReleaseRelButton[i]:=FALSE;
+	aRotateClampRelControl[i]:=FALSE;
+	aRotateReleaseRelControl[i]:=FALSE;
+END_FOR
+
+xComplete:=1;	
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_ERG_20_Modbus">
+      <LineId Id="1191" Count="0" />
+      <LineId Id="1193" Count="0" />
+      <LineId Id="2017" Count="0" />
+      <LineId Id="1194" Count="4" />
+      <LineId Id="1846" Count="6" />
+      <LineId Id="1202" Count="0" />
+      <LineId Id="1886" Count="2" />
+      <LineId Id="1885" Count="0" />
+      <LineId Id="1207" Count="35" />
+      <LineId Id="1900" Count="0" />
+      <LineId Id="1909" Count="0" />
+      <LineId Id="1901" Count="0" />
+      <LineId Id="1910" Count="0" />
+      <LineId Id="1902" Count="0" />
+      <LineId Id="1911" Count="0" />
+      <LineId Id="1903" Count="0" />
+      <LineId Id="1912" Count="0" />
+      <LineId Id="1904" Count="0" />
+      <LineId Id="1913" Count="0" />
+      <LineId Id="1905" Count="0" />
+      <LineId Id="1914" Count="0" />
+      <LineId Id="1906" Count="0" />
+      <LineId Id="1915" Count="0" />
+      <LineId Id="1908" Count="0" />
+      <LineId Id="1916" Count="0" />
+      <LineId Id="1897" Count="0" />
+      <LineId Id="1917" Count="0" />
+      <LineId Id="1261" Count="3" />
+      <LineId Id="1891" Count="1" />
+      <LineId Id="1268" Count="0" />
+      <LineId Id="1893" Count="0" />
+      <LineId Id="1269" Count="0" />
+      <LineId Id="1869" Count="14" />
+      <LineId Id="1270" Count="0" />
+      <LineId Id="819" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20_Modbus.AbortAction">
+      <LineId Id="10" Count="2" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="78" Count="5" />
+      <LineId Id="35" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="19" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20_Modbus.ACTMap">
+      <LineId Id="104" Count="0" />
+      <LineId Id="146" Count="0" />
+      <LineId Id="151" Count="0" />
+      <LineId Id="165" Count="0" />
+      <LineId Id="109" Count="1" />
+      <LineId Id="222" Count="6" />
+      <LineId Id="184" Count="0" />
+      <LineId Id="162" Count="2" />
+      <LineId Id="191" Count="0" />
+      <LineId Id="202" Count="0" />
+      <LineId Id="298" Count="0" />
+      <LineId Id="193" Count="8" />
+      <LineId Id="192" Count="0" />
+      <LineId Id="116" Count="0" />
+      <LineId Id="119" Count="0" />
+      <LineId Id="183" Count="0" />
+      <LineId Id="230" Count="0" />
+      <LineId Id="157" Count="3" />
+      <LineId Id="156" Count="0" />
+      <LineId Id="147" Count="0" />
+      <LineId Id="167" Count="3" />
+      <LineId Id="166" Count="0" />
+      <LineId Id="177" Count="0" />
+      <LineId Id="179" Count="3" />
+      <LineId Id="178" Count="0" />
+      <LineId Id="203" Count="0" />
+      <LineId Id="252" Count="1" />
+      <LineId Id="251" Count="0" />
+      <LineId Id="206" Count="10" />
+      <LineId Id="285" Count="0" />
+      <LineId Id="217" Count="4" />
+      <LineId Id="204" Count="0" />
+      <LineId Id="248" Count="0" />
+      <LineId Id="254" Count="2" />
+      <LineId Id="270" Count="9" />
+      <LineId Id="262" Count="0" />
+      <LineId Id="292" Count="0" />
+      <LineId Id="286" Count="4" />
+      <LineId Id="263" Count="0" />
+      <LineId Id="291" Count="0" />
+      <LineId Id="281" Count="3" />
+      <LineId Id="260" Count="1" />
+      <LineId Id="249" Count="1" />
+      <LineId Id="205" Count="0" />
+      <LineId Id="294" Count="3" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="30" Count="1" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="35" Count="1" />
+      <LineId Id="38" Count="0" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="154" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="91" Count="1" />
+      <LineId Id="94" Count="5" />
+      <LineId Id="140" Count="4" />
+      <LineId Id="293" Count="0" />
+      <LineId Id="90" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20_Modbus.CmdClampAction">
+      <LineId Id="7" Count="9" />
+      <LineId Id="585" Count="0" />
+      <LineId Id="584" Count="0" />
+      <LineId Id="586" Count="0" />
+      <LineId Id="591" Count="1" />
+      <LineId Id="588" Count="0" />
+      <LineId Id="587" Count="0" />
+      <LineId Id="22" Count="2" />
+      <LineId Id="486" Count="0" />
+      <LineId Id="343" Count="0" />
+      <LineId Id="345" Count="1" />
+      <LineId Id="487" Count="0" />
+      <LineId Id="347" Count="1" />
+      <LineId Id="446" Count="0" />
+      <LineId Id="488" Count="1" />
+      <LineId Id="349" Count="0" />
+      <LineId Id="593" Count="0" />
+      <LineId Id="350" Count="2" />
+      <LineId Id="490" Count="0" />
+      <LineId Id="344" Count="0" />
+      <LineId Id="491" Count="5" />
+      <LineId Id="533" Count="1" />
+      <LineId Id="498" Count="5" />
+      <LineId Id="371" Count="0" />
+      <LineId Id="396" Count="7" />
+      <LineId Id="405" Count="2" />
+      <LineId Id="447" Count="15" />
+      <LineId Id="512" Count="2" />
+      <LineId Id="535" Count="2" />
+      <LineId Id="567" Count="0" />
+      <LineId Id="539" Count="0" />
+      <LineId Id="552" Count="0" />
+      <LineId Id="564" Count="2" />
+      <LineId Id="563" Count="0" />
+      <LineId Id="538" Count="0" />
+      <LineId Id="519" Count="3" />
+      <LineId Id="575" Count="4" />
+      <LineId Id="568" Count="0" />
+      <LineId Id="531" Count="1" />
+      <LineId Id="526" Count="1" />
+      <LineId Id="574" Count="0" />
+      <LineId Id="511" Count="0" />
+      <LineId Id="432" Count="13" />
+      <LineId Id="353" Count="0" />
+      <LineId Id="540" Count="0" />
+      <LineId Id="545" Count="0" />
+      <LineId Id="542" Count="2" />
+      <LineId Id="541" Count="0" />
+      <LineId Id="116" Count="0" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20_Modbus.CmdRotateAction">
+      <LineId Id="7" Count="9" />
+      <LineId Id="602" Count="5" />
+      <LineId Id="601" Count="0" />
+      <LineId Id="608" Count="0" />
+      <LineId Id="22" Count="1" />
+      <LineId Id="350" Count="0" />
+      <LineId Id="367" Count="0" />
+      <LineId Id="489" Count="0" />
+      <LineId Id="352" Count="7" />
+      <LineId Id="366" Count="0" />
+      <LineId Id="351" Count="0" />
+      <LineId Id="553" Count="1" />
+      <LineId Id="557" Count="1" />
+      <LineId Id="556" Count="0" />
+      <LineId Id="560" Count="1" />
+      <LineId Id="559" Count="0" />
+      <LineId Id="555" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="368" Count="1" />
+      <LineId Id="488" Count="0" />
+      <LineId Id="595" Count="1" />
+      <LineId Id="302" Count="0" />
+      <LineId Id="490" Count="0" />
+      <LineId Id="496" Count="0" />
+      <LineId Id="548" Count="0" />
+      <LineId Id="495" Count="0" />
+      <LineId Id="562" Count="0" />
+      <LineId Id="493" Count="0" />
+      <LineId Id="492" Count="0" />
+      <LineId Id="370" Count="0" />
+      <LineId Id="377" Count="5" />
+      <LineId Id="384" Count="6" />
+      <LineId Id="415" Count="0" />
+      <LineId Id="475" Count="0" />
+      <LineId Id="417" Count="6" />
+      <LineId Id="425" Count="1" />
+      <LineId Id="505" Count="22" />
+      <LineId Id="613" Count="0" />
+      <LineId Id="528" Count="5" />
+      <LineId Id="571" Count="4" />
+      <LineId Id="570" Count="0" />
+      <LineId Id="534" Count="1" />
+      <LineId Id="576" Count="0" />
+      <LineId Id="536" Count="9" />
+      <LineId Id="375" Count="0" />
+      <LineId Id="578" Count="4" />
+      <LineId Id="577" Count="0" />
+      <LineId Id="116" Count="0" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="340" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20_Modbus.CmdRotateAction_Rel">
+      <LineId Id="7" Count="9" />
+      <LineId Id="615" Count="5" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="621" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="601" Count="3" />
+      <LineId Id="606" Count="0" />
+      <LineId Id="605" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="488" Count="0" />
+      <LineId Id="595" Count="1" />
+      <LineId Id="302" Count="0" />
+      <LineId Id="490" Count="0" />
+      <LineId Id="496" Count="0" />
+      <LineId Id="548" Count="0" />
+      <LineId Id="495" Count="0" />
+      <LineId Id="562" Count="0" />
+      <LineId Id="493" Count="0" />
+      <LineId Id="492" Count="0" />
+      <LineId Id="377" Count="5" />
+      <LineId Id="384" Count="6" />
+      <LineId Id="415" Count="0" />
+      <LineId Id="475" Count="0" />
+      <LineId Id="417" Count="6" />
+      <LineId Id="425" Count="1" />
+      <LineId Id="505" Count="1" />
+      <LineId Id="607" Count="1" />
+      <LineId Id="507" Count="17" />
+      <LineId Id="626" Count="0" />
+      <LineId Id="525" Count="0" />
+      <LineId Id="610" Count="0" />
+      <LineId Id="609" Count="0" />
+      <LineId Id="526" Count="1" />
+      <LineId Id="567" Count="0" />
+      <LineId Id="528" Count="5" />
+      <LineId Id="571" Count="4" />
+      <LineId Id="570" Count="0" />
+      <LineId Id="534" Count="1" />
+      <LineId Id="576" Count="0" />
+      <LineId Id="536" Count="9" />
+      <LineId Id="375" Count="0" />
+      <LineId Id="578" Count="4" />
+      <LineId Id="577" Count="0" />
+      <LineId Id="116" Count="0" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="340" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20_Modbus.ConnectAction">
+      <LineId Id="683" Count="0" />
+      <LineId Id="957" Count="56" />
+      <LineId Id="708" Count="0" />
+      <LineId Id="1014" Count="0" />
+      <LineId Id="1118" Count="11" />
+      <LineId Id="1117" Count="0" />
+      <LineId Id="1130" Count="0" />
+      <LineId Id="709" Count="2" />
+      <LineId Id="1015" Count="27" />
+      <LineId Id="732" Count="0" />
+      <LineId Id="1115" Count="0" />
+      <LineId Id="1043" Count="0" />
+      <LineId Id="1116" Count="0" />
+      <LineId Id="1044" Count="5" />
+      <LineId Id="1182" Count="0" />
+      <LineId Id="1181" Count="0" />
+      <LineId Id="1052" Count="3" />
+      <LineId Id="1183" Count="0" />
+      <LineId Id="1056" Count="22" />
+      <LineId Id="1184" Count="0" />
+      <LineId Id="1079" Count="22" />
+      <LineId Id="1163" Count="1" />
+      <LineId Id="1132" Count="2" />
+      <LineId Id="1150" Count="1" />
+      <LineId Id="1136" Count="0" />
+      <LineId Id="1165" Count="1" />
+      <LineId Id="1152" Count="0" />
+      <LineId Id="1135" Count="0" />
+      <LineId Id="1102" Count="1" />
+      <LineId Id="1159" Count="3" />
+      <LineId Id="1158" Count="0" />
+      <LineId Id="1111" Count="3" />
+      <LineId Id="814" Count="0" />
+      <LineId Id="4" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20_Modbus.CyclicAction">
+      <LineId Id="22" Count="0" />
+      <LineId Id="45" Count="4" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="347" Count="1" />
+      <LineId Id="313" Count="0" />
+      <LineId Id="365" Count="0" />
+      <LineId Id="177" Count="0" />
+      <LineId Id="379" Count="0" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="301" Count="0" />
+      <LineId Id="335" Count="0" />
+      <LineId Id="322" Count="1" />
+      <LineId Id="325" Count="0" />
+      <LineId Id="324" Count="0" />
+      <LineId Id="358" Count="5" />
+      <LineId Id="303" Count="0" />
+      <LineId Id="231" Count="0" />
+      <LineId Id="351" Count="0" />
+      <LineId Id="364" Count="0" />
+      <LineId Id="352" Count="0" />
+      <LineId Id="355" Count="0" />
+      <LineId Id="276" Count="0" />
+      <LineId Id="372" Count="1" />
+      <LineId Id="382" Count="0" />
+      <LineId Id="380" Count="0" />
+      <LineId Id="281" Count="1" />
+      <LineId Id="280" Count="0" />
+      <LineId Id="82" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="154" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="87" Count="2" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="150" Count="0" />
+      <LineId Id="85" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20_Modbus.HandleAbortedState">
+      <LineId Id="15" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="26" Count="1" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="29" Count="1" />
+      <LineId Id="25" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20_Modbus.HandleAbortingState">
+      <LineId Id="15" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="28" Count="1" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="32" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20_Modbus.HandleDoneState">
+      <LineId Id="19" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="12" Count="5" />
+      <LineId Id="11" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20_Modbus.HandleDormantState">
+      <LineId Id="19" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="12" Count="1" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="31" Count="4" />
+      <LineId Id="38" Count="4" />
+      <LineId Id="44" Count="2" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="55" Count="2" />
+      <LineId Id="212" Count="0" />
+      <LineId Id="58" Count="4" />
+      <LineId Id="70" Count="4" />
+      <LineId Id="186" Count="0" />
+      <LineId Id="75" Count="9" />
+      <LineId Id="198" Count="0" />
+      <LineId Id="85" Count="6" />
+      <LineId Id="134" Count="0" />
+      <LineId Id="223" Count="20" />
+      <LineId Id="222" Count="0" />
+      <LineId Id="245" Count="20" />
+      <LineId Id="244" Count="0" />
+      <LineId Id="113" Count="0" />
+      <LineId Id="47" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20_Modbus.HandleErrorState">
+      <LineId Id="19" Count="29" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20_Modbus.HandleExecutingState">
+      <LineId Id="29" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="20" Count="1" />
+      <LineId Id="38" Count="2" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="19" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20_Modbus.HandleResettingState">
+      <LineId Id="5" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="16" Count="1" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="18" Count="3" />
+      <LineId Id="15" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20_Modbus.mCmdOrgAction">
+      <LineId Id="9" Count="4" />
+      <LineId Id="19" Count="1" />
+      <LineId Id="230" Count="2" />
+      <LineId Id="234" Count="1" />
+      <LineId Id="241" Count="0" />
+      <LineId Id="223" Count="0" />
+      <LineId Id="226" Count="0" />
+      <LineId Id="273" Count="1" />
+      <LineId Id="270" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="177" Count="1" />
+      <LineId Id="185" Count="0" />
+      <LineId Id="180" Count="0" />
+      <LineId Id="184" Count="0" />
+      <LineId Id="186" Count="0" />
+      <LineId Id="189" Count="1" />
+      <LineId Id="188" Count="0" />
+      <LineId Id="187" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="211" Count="0" />
+      <LineId Id="198" Count="0" />
+      <LineId Id="271" Count="0" />
+      <LineId Id="200" Count="2" />
+      <LineId Id="204" Count="6" />
+      <LineId Id="197" Count="0" />
+      <LineId Id="141" Count="6" />
+      <LineId Id="149" Count="27" />
+      <LineId Id="137" Count="0" />
+      <LineId Id="108" Count="0" />
+      <LineId Id="112" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20_Modbus.ResetAction">
+      <LineId Id="10" Count="2" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="18" Count="1" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="49" Count="1" />
+      <LineId Id="54" Count="0" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="65" Count="0" />
+      <LineId Id="76" Count="0" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="102" Count="0" />
+      <LineId Id="101" Count="0" />
+      <LineId Id="72" Count="2" />
+      <LineId Id="70" Count="0" />
+      <LineId Id="57" Count="0" />
+      <LineId Id="106" Count="0" />
+      <LineId Id="93" Count="2" />
+      <LineId Id="118" Count="6" />
+      <LineId Id="97" Count="0" />
+      <LineId Id="129" Count="0" />
+      <LineId Id="126" Count="2" />
+      <LineId Id="125" Count="0" />
+      <LineId Id="92" Count="0" />
+      <LineId Id="100" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="13" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

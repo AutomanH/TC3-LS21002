@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="TURIN_ERROR" Id="{fb63e111-628d-48b0-a441-6353b56865bb}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE TURIN_ERROR :
+(
+	NO_ERROR 								:= 0,	
+  FLT_SYSREADY             := 1000, (*系统没有准备好*)
+  FLT_AUTOMODE             := 1001, (* 机器人没有处于自动状态*)
+  FLT_PROMERROR            := 1002, (* 启动主程序错误*)
+	FLT_PARA                 := 1003, (* 启动主程序错误*)
+	
+  FLT_CMDERROR             := 1010, (*指令你执行错误*)
+  FLT_SERROR               := 1011, (* 系统错误发生 *)
+  FLT_ESTOPON              := 1012, (*急停触发*)
+	FLT_ERROR                := 1013, (*有错误发生*)  
+	FLT_CONNECTERROR         := 1014, (*有错误发生*)  
+  FLT_NO_INIT              := 1015,(* 没有初始化完成 *)   
+	FLT_INIT_TIMEOUT         := 1016,(* 没有初始化完成 *)   
+	FLT_Warning       			 := 1017,(* 机械手警告 *)  
+	FLT_No_Runing             :=1018(*机器人没有运行*)
+)INT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

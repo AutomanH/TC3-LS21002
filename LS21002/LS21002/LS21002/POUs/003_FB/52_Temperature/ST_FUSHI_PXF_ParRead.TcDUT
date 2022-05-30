@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_FUSHI_PXF_ParRead" Id="{c868cb54-6149-464c-b560-fd7165985936}">
+    <Declaration><![CDATA[TYPE ST_FUSHI_PXF_ParRead :
+STRUCT
+	iPV				:INT;//温度当前值
+	iSV				:INT;//温度设定值
+	iDV				:INT;//温度偏差值	
+	iMV1			:INT;//控制输出1
+	iMV2			:INT;//控制输出2	
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

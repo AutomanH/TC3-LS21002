@@ -1,0 +1,279 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="S13_Labeling" Id="{e6e1a2a9-780c-4003-bca7-0316b25c817d}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM S13_Labeling
+VAR
+	//工站
+	station					: REFERENCE TO FB_Station:=fbstation[11];
+	
+	//延时
+	arTonDelay :ARRAY[1..20] OF TON;
+	//返回值
+	UdiReturnValue :ARRAY[1..20] OF UDINT;
+	
+	
+	
+	i: INT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <Action Name="A_Input" Id="{08bf5b2d-c23a-4b9f-bc0b-d78d0ef357a0}">
+      <Implementation>
+        <ST><![CDATA[//气缸
+
+
+  
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Alarm" Id="{a33f9682-7f1b-43f4-848a-88bf388c8dd9}">
+      <Implementation>
+        <ST><![CDATA[//
+station.adwAlarm[1].00:=station.xInitTimeout;	  			//S08Label 初始化超时
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Delay" Id="{640cd6ea-e634-4695-b63f-ca35a17c42ab}">
+      <Implementation>
+        <ST><![CDATA[(*arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );*)//TipAuto使用
+arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );
+arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
+arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[05](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[06](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[07](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[08](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[09](IN:= , PT:=T#0.1S , Q=> , ET=> );
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="FlowAuto" Id="{9d4d8677-e15d-419a-b731-9583a551307c}">
+      <Implementation>
+        <ST><![CDATA[
+//-----------------------------------------初始化是否完成判断----------------------------------------------
+IF NOT station.xInitDone 
+THEN
+ 	station.iStepAuto:=0;
+ 	station.xDone:=FALSE;
+	station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
+ELSIF station.xRunning  OR   station.xRunningOffProhibit
+THEN
+//-----------------------------------------动作步骤--------------------------------------------------------
+CASE station.iStepAuto OF	  
+	0: //----Home Step，等待启动----
+		IF station.xDisabled 
+			AND station.xCanRun 
+			AND NOT fbMachine[1].xStopped 
+			AND NOT station.xSingleRunning 
+		THEN
+			station.xDone:=TRUE;
+		END_IF
+		
+		IF  station.xSingleRunning 
+			OR station.xCanRun 
+			AND NOT station.xDone 
+			AND NOT station.xDisabled 
+			AND NOT fbMachine[1].xStopped
+		THEN
+			station.xCycleEnable:=TRUE;
+			station.xDone:= FALSE;  
+			station.xRunningOffProhibit := TRUE ;//运行中信号Off禁止
+			station.iStepAuto:= 10;
+		END_IF
+    10: //复位数据 
+			station.iStepAuto:=20;
+	
+		
+
+			
+	
+	999://----Single Run Finish----
+			
+		station.iStepAuto :=0;
+		IF NOT station.xSingleContinuousRun THEN
+			station.xSingleRunFlag:=FALSE;
+		END_IF
+		
+		station.xCycleEnable:=FALSE;	
+		station.xDone:=TRUE;
+		station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
+	ELSE
+		;	
+END_CASE
+
+
+
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="FlowInit" Id="{40d5274c-5ab2-4ba2-a9ce-2aa53d171fca}">
+      <Implementation>
+        <ST><![CDATA[IF NOT station.xIniting THEN
+  station.iStepInit:=0;    
+ELSE
+//--------------------------------------------初始化步序----------------------------------
+CASE station.iStepInit OF	
+ 0://  
+  	IF station.xIniting THEN	
+  	  station.iStepInit:=10;	
+  	END_IF	
+10://复位数据
+
+100://	
+    station.iStepInit:=999;	
+999://初始化完成	
+	station.iStepInit:=0;
+	station.xInitDone:=TRUE;  
+END_CASE
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="General" Id="{7e130351-797e-4ca7-9bb7-b3cd5e7898e1}">
+      <Implementation>
+        <ST><![CDATA[
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ILC" Id="{a47065cb-3ca4-400c-a537-51952fd23503}">
+      <Implementation>
+        <ST><![CDATA[
+//---------------------------------------------------工站可执行-------------------------------------------------------
+station.xCanRun :=TRUE ;
+
+//---------------------------------------------------气缸动作条件-------------------------------------------
+
+
+//---------------------------------------------------伺服动作条件-------------------------------------------
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="TipAuto" Id="{e4cfd73c-4866-4896-867d-52e2f450d72f}">
+      <Implementation>
+        <ST><![CDATA[
+//------------------------------------------------AutoTip Cylinder--------------------------------
+
+//------------------------------------------------AutoTip Servo--------------------------------
+//**************************************
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="TipManual" Id="{096ba1af-e1e4-4b9f-9361-432b4bd5211e}">
+      <Implementation>
+        <ST><![CDATA[//--------------------------------------------ManualTip------------------------------------------------------
+
+//-------------------------------------------气缸提示---------------------------------------------------------
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Z_Output" Id="{58bab82e-5ef1-477c-83be-2769659c9d33}">
+      <Implementation>
+        <ST><![CDATA[(**************************气缸输出********************************)
+]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="S13_Labeling">
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="S13_Labeling.A_Input">
+      <LineId Id="28" Count="0" />
+      <LineId Id="40" Count="1" />
+      <LineId Id="10" Count="3" />
+      <LineId Id="8" Count="0" />
+    </LineIds>
+    <LineIds Name="S13_Labeling.Alarm">
+      <LineId Id="176" Count="1" />
+      <LineId Id="262" Count="0" />
+      <LineId Id="266" Count="0" />
+    </LineIds>
+    <LineIds Name="S13_Labeling.Delay">
+      <LineId Id="64" Count="10" />
+      <LineId Id="44" Count="13" />
+      <LineId Id="40" Count="0" />
+    </LineIds>
+    <LineIds Name="S13_Labeling.FlowAuto">
+      <LineId Id="1155" Count="5" />
+      <LineId Id="1253" Count="0" />
+      <LineId Id="1161" Count="4" />
+      <LineId Id="1167" Count="15" />
+      <LineId Id="1452" Count="0" />
+      <LineId Id="1183" Count="1" />
+      <LineId Id="1256" Count="0" />
+      <LineId Id="1259" Count="0" />
+      <LineId Id="1475" Count="0" />
+      <LineId Id="1291" Count="0" />
+      <LineId Id="1464" Count="0" />
+      <LineId Id="1431" Count="0" />
+      <LineId Id="1210" Count="0" />
+      <LineId Id="1212" Count="2" />
+      <LineId Id="1453" Count="2" />
+      <LineId Id="1215" Count="2" />
+      <LineId Id="1451" Count="0" />
+      <LineId Id="1218" Count="6" />
+    </LineIds>
+    <LineIds Name="S13_Labeling.FlowInit">
+      <LineId Id="437" Count="9" />
+      <LineId Id="459" Count="7" />
+      <LineId Id="436" Count="0" />
+    </LineIds>
+    <LineIds Name="S13_Labeling.General">
+      <LineId Id="361" Count="0" />
+      <LineId Id="381" Count="0" />
+    </LineIds>
+    <LineIds Name="S13_Labeling.ILC">
+      <LineId Id="234" Count="5" />
+      <LineId Id="307" Count="0" />
+      <LineId Id="290" Count="0" />
+      <LineId Id="244" Count="0" />
+      <LineId Id="274" Count="0" />
+    </LineIds>
+    <LineIds Name="S13_Labeling.TipAuto">
+      <LineId Id="118" Count="0" />
+      <LineId Id="141" Count="0" />
+      <LineId Id="145" Count="0" />
+      <LineId Id="148" Count="1" />
+      <LineId Id="183" Count="0" />
+    </LineIds>
+    <LineIds Name="S13_Labeling.TipManual">
+      <LineId Id="137" Count="1" />
+      <LineId Id="176" Count="0" />
+      <LineId Id="262" Count="1" />
+      <LineId Id="246" Count="0" />
+      <LineId Id="156" Count="0" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="41" Count="0" />
+    </LineIds>
+    <LineIds Name="S13_Labeling.Z_Output">
+      <LineId Id="2" Count="0" />
+      <LineId Id="20" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

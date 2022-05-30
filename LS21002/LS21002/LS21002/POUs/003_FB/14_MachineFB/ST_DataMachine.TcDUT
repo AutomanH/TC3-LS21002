@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_DataMachine" Id="{b55d0312-0977-4047-9409-0b76ed46ee01}">
+    <Declaration><![CDATA[TYPE ST_DataMachine :
+STRUCT
+	bDummyDisabled				: BOOL;					//点检屏蔽
+	nSampleSet					: UINT;					//取样数量设置
+	rMasterSpeed                : REAL;                 //主轴送料速度mm/s
+	rCycleTime					: REAL;					//循环时间，单位s
+	nGoods						: UDINT;				//当前良品数量
+	nBads						: UDINT;				//当前不良数量
+	nTotal						: UDINT;				//当前总数量
+	rYield						: REAL;					//当前良品率
+	rReject						: REAL;					//当前不良率
+	nTotalGoods					: UDINT;				//历史良品数量
+	nTotalBads					: UDINT;				//历史不良数量
+	nTotalOutputs				: UDINT;				//历史总数量
+	rTotalYield					: REAL;					//历史良品率
+	rTotalReject				: REAL;					//历史不良率
+	nRunningTimer				: UDINT;				//运行时间计时器，单位100ns，除以10000单位ms
+	nRunningTime				: UDINT;				//运行时间总秒数
+	nRunningDays				: UDINT;				//运行时间-天
+	nRunningHour				: UINT;					//运行时间-时
+	nRunningMinute				: UINT;					//运行时间-分
+	nRunningSecond				: UINT;					//运行时间-秒
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

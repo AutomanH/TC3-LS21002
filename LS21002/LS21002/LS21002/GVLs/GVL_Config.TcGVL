@@ -1,0 +1,24 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <GVL Name="GVL_Config" Id="{8587d0b6-f2fe-49ff-8cdc-4a18bf130fa8}">
+    <Declaration><![CDATA[VAR_GLOBAL CONSTANT
+	gc_xEstopYesORno               		  : BOOL:=1;   //机器拍急停:1-停机重新初始化，0-继续跑不用初始化
+	gc_uiAxisNum						  : INT:=19;//轴数量
+	gc_uiAxisMoveNum          			 : INT:=10 ;  //轴点位数量
+	gc_uiCylinderNum					  : INT:=40; //气缸数量 
+	gc_uiMachineNum						 : INT:=1;	//机器数量
+	gc_uiStationNum				 		  : INT:=16;//工站数量
+	gc_uiHMI_Num						  : INT:=2;	//人机界面数量
+	gc_uiPXF5Num							 :INT:=2;//温控器个数
+	gc_uiRGI_14_Number                	 	: INT :=1 ;  //大寰电动夹爪（旋转+夹紧）
+	gc_uiHITBOT_Number						: INT :=2;//惠灵电动夹爪(旋转+夹持）
+	gc_uiTURINRobot_Num             	    : INT :=1 ;   //图灵机械手
+	gc_uiRudongPump							:INT := 12;//蠕动泵控制器个数
+	gc_MainLineFixtureNumber				:INT:=40;//主流线的位置数
+	gc_MainLineAxisPositionOffset			:REAL:=36;//主流线位置偏移
+	gc_StepHistory							:INT:=500;//step log数量
+	gc_RecipeNum							:WORD:=1;//保存配方数量
+	gc_ModuleProNo							:INT:=10;//过程数据数组大小
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

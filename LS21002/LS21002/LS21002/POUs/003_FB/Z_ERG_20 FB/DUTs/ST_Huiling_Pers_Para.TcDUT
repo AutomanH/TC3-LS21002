@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_Huiling_Pers_Para" Id="{45999169-7629-402a-9faf-c94859e58afe}">
+    <Declaration><![CDATA[TYPE ST_Huiling_Pers_Para :
+STRUCT
+	aHMIClampPara , aHMIReleasePara : ARRAY[1..5] OF ST_Huiling_PosPara;//夹紧轴点位信息
+	aHMIRotateClampPara , aHMIRotateReleasePara : ARRAY[1..5] OF ST_Huiling_PosPara;//旋转轴点位信息
+	aHMIRotateRelClampPara , aHMIRotateRelReleasePara : ARRAY[1..5] OF ST_Huiling_PosPara;//旋转轴点位信息
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,242 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_Recipes" Id="{850c5608-11a9-488d-9dba-0d4d2e0cbc10}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Recipes
+VAR_INPUT
+	xICreateRecipe:BOOL;
+	xILoadRecipe:BOOL;
+	xIDeleteRecipe:BOOL;
+	strRecipeDefinitionName:STRING:='Recipes';
+	RecipeName:STRING:='';
+	FileName: STRING (255):='';
+	
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+	fbRecipeManCommands:Recipe_Management.RecipeManCommands;
+	dwReturnCreate:DWORD;
+	dwReturnWrite:DWORD;
+	dwReturnRead:DWORD;
+	dwReturnDelete:DWORD;
+	dwSetPath		:DWORD;
+	dwReturnDeleteFile: DWORD;
+	xRecipeCreate:BOOL;
+	xRecipeDelete:BOOL;
+	xRecipeRead:BOOL;
+	xRecipeWrite:BOOL;
+	xLoadRecipe:BOOL;
+	xSetPath:BOOL;
+	
+	
+	stPath:STRING:='\Hard Disk1\prog\';//CE系统路径
+	wActionStep:WORD;
+	wActionStep1: WORD;
+	wActionStep2: WORD;
+	
+	dwReturnLoadFromAndWrite: DWORD;
+	
+	dwResetLastError: DWORD;
+END_VAR
+VAR_OUTPUT
+	xQBusy:BOOL;
+	xQErrorID:DWORD;
+END_VAR
+
+VAR CONSTANT
+	ERR_OK                                     	:DWORD:=16#0000;//Result OK
+	ERR_NO_RECIPE_MANAGER_SET                 	:DWORD:=16#4006;//The global recipe manager has not been created.
+	ERR_RECIPE_DEFINITION_NOT_FOUND           	:DWORD:=16#4004;  //The recipe definition does not exist.                                      
+	ERR_RECIPE_ALREADY_EXIST                  	:DWORD:=16#4005; //The recipe already exists in the recipe definition. Create a new recipe under a different name                                     
+	ERR_RECIPE_NOMEMORY                       	:DWORD:=16#4008;  //  The recipe definition has no free memory to create a new recipe.                        
+	ERR_RECIPE_NOT_FOUND                        :DWORD:=16#4003; //The recipe does not exist                                          
+	ERR_RECIPE_FILE_NOT_FOUND                   :DWORD:=16#4000;//The recipe file was not found.
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ACT_Create();
+ACT_Delete();
+ACT_Read();
+IF   wActionStep =0 AND   wActionStep1 =0  AND wActionStep2=0 THEN
+	xQBusy:=FALSE;
+ELSE
+	xQBusy:=TRUE;
+END_IF
+IF  xQErrorID<>ERR_OK THEN
+	dwResetLastError:=fbRecipeManCommands.ResetLastError();
+			
+END_IF
+]]></ST>
+    </Implementation>
+    <Action Name="ACT_Create" Id="{d7eaaf49-7b9e-457e-9557-df95981b2860}">
+      <Implementation>
+        <ST><![CDATA[CASE wActionStep OF
+	0:
+		IF  xICreateRecipe THEN
+			xICreateRecipe:=FALSE;
+			wActionStep:=10;
+			
+		END_IF
+	10: //创建配方保存路径
+	 	xSetPath:=fbRecipeManCommands.SetStoragePath(stPath:=(*stPath*)'\Hard Disk1\Recipefiles\' );
+		wActionStep:=20;
+	20:	
+		IF   xSetPath THEN
+		
+			wActionStep:=30;
+		END_IF
+	30:  ///(*创建一个配方，并且把当前PLC数据写入到配方中*)
+		dwReturnCreate:=fbRecipeManCommands.CreateRecipe(RecipeDefinitionName:=strRecipeDefinitionName , RecipeName:=RecipeName );
+		wActionStep:=40;
+	40: 
+		IF  dwReturnCreate =ERR_OK  OR    dwReturnCreate =ERR_RECIPE_ALREADY_EXIST  THEN
+			
+			wActionStep:=50;
+		ELSE
+			xQErrorID:=dwReturnCreate;
+		END_IF
+	50:  //将PLC数据写入到配方中去
+			dwReturnRead:=fbRecipeManCommands.ReadRecipe(RecipeDefinitionName:= strRecipeDefinitionName, RecipeName:=RecipeName );
+			wActionStep:=60;
+	60:
+		 IF   dwReturnRead =ERR_OK THEN
+			
+			 wActionStep:=70;
+		ELSE
+			xQErrorID:=dwReturnRead;
+		 END_IF
+	70:   	
+			wActionStep:=0;
+END_CASE]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Delete" Id="{7f98c8e3-f269-4fef-8331-b86c9c8ddc00}">
+      <Implementation>
+        <ST><![CDATA[
+CASE wActionStep2 OF
+	0:
+		IF  xILoadRecipe THEN
+			xILoadRecipe:=FALSE;
+			wActionStep2:=10;
+		END_IF
+	10: //删除配方
+	 	dwReturnDelete:=fbRecipeManCommands.DeleteRecipe(RecipeDefinitionName:=strRecipeDefinitionName , RecipeName:=RecipeName );
+		wActionStep2:=20;
+	20:	
+		IF   dwReturnDelete= ERR_OK THEN
+			wActionStep2:=30;
+		ELSE
+			xQErrorID:=dwReturnDelete;
+		END_IF
+	30://删除配方文件
+		dwReturnDeleteFile:=fbRecipeManCommands.DeleteRecipeFile(RecipeDefinitionName:= strRecipeDefinitionName , RecipeName:=RecipeName );
+		wActionStep2:=40;	
+	40:		
+		IF   dwReturnDeleteFile= ERR_OK THEN
+			wActionStep2:=50;
+		ELSE
+			xQErrorID:=dwReturnDeleteFile;
+		END_IF
+	50:   wActionStep2:=0;
+END_CASE
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Read" Id="{7a2c162f-48f9-4cec-93fb-b3762e117bdf}">
+      <Implementation>
+        <ST><![CDATA[
+CASE wActionStep1 OF
+	0:
+		IF  xILoadRecipe THEN
+			xILoadRecipe:=FALSE;
+			wActionStep1:=10;
+		END_IF
+		
+	
+	10: //读取配方数据，写入PLC变量中
+	 		dwReturnRead:=fbRecipeManCommands.ReadAndSaveRecipe(RecipeDefinitionName:= strRecipeDefinitionName, RecipeName:=RecipeName );
+		(*dwReturnLoadFromAndWrite:=fbRecipeManCommands.LoadFromAndWriteRecipe(RecipeDefinitionName:=strRecipeDefinitionName , RecipeName:=RecipeName , FileName:=FileName );*)
+		(*dwReturnWrite:=fbRecipeManCommands.WriteRecipe(RecipeDefinitionName:= strRecipeDefinitionName, RecipeName:=RecipeName );*)
+		(*dwReturnLoadFromAndWrite:=fbRecipeManCommands.ReadRecipe(RecipeDefinitionName:=strRecipeDefinitionName , RecipeName:=RecipeName );*)
+		IF  dwReturnRead>0 THEN
+			wActionStep1:=20;
+		END_IF
+	20:	
+		IF   dwReturnLoadFromAndWrite= ERR_OK THEN
+			wActionStep1:=30;
+		ELSE
+			xQErrorID:=dwReturnLoadFromAndWrite;
+		END_IF
+	30:   wActionStep1:=0;
+END_CASE]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="FB_Recipes">
+      <LineId Id="442" Count="11" />
+      <LineId Id="296" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Recipes.ACT_Create">
+      <LineId Id="1" Count="1" />
+      <LineId Id="8" Count="0" />
+      <LineId Id="15" Count="1" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="54" Count="0" />
+      <LineId Id="53" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="35" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="47" Count="1" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="37" Count="1" />
+      <LineId Id="4" Count="0" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="57" Count="0" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="58" Count="0" />
+      <LineId Id="49" Count="1" />
+      <LineId Id="43" Count="1" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="3" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Recipes.ACT_Delete">
+      <LineId Id="2" Count="12" />
+      <LineId Id="18" Count="1" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="29" Count="3" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="17" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Recipes.ACT_Read">
+      <LineId Id="4" Count="0" />
+      <LineId Id="6" Count="5" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="12" Count="1" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="40" Count="1" />
+      <LineId Id="43" Count="2" />
+      <LineId Id="15" Count="2" />
+      <LineId Id="34" Count="1" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

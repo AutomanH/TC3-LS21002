@@ -1,0 +1,637 @@
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <FileVersion>1.0.0.0</FileVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{a9506cae-9db1-4445-8afa-f1453ada065c}</ProjectGuid>
+    <SubObjectsSortedByName>True</SubObjectsSortedByName>
+    <DownloadApplicationInfo>true</DownloadApplicationInfo>
+    <WriteProductVersion>true</WriteProductVersion>
+    <GenerateTpy>false</GenerateTpy>
+    <Name>LS21002</Name>
+    <ProgramVersion>3.1.4023.0</ProgramVersion>
+    <Application>{71e01e90-e8da-48dd-9ed9-9487f7d1265c}</Application>
+    <TypeSystem>{ea47d74f-d841-4efe-96a8-14e69b308f9e}</TypeSystem>
+    <Implicit_Task_Info>{4f75b689-f3e1-4661-8785-60441898b607}</Implicit_Task_Info>
+    <Implicit_KindOfTask>{be9c4ab7-8620-4bd5-8848-f4cf66611446}</Implicit_KindOfTask>
+    <Implicit_Jitter_Distribution>{422a6a00-5046-4d74-b087-7d2fe6143969}</Implicit_Jitter_Distribution>
+    <LibraryReferences>{5e07ffe3-306b-46fc-ad87-fe99badb8cbd}</LibraryReferences>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="DUTs\Camera\DUT_CameraSend.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\DUT_NCIO.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\DUT_NCIO_1.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\EPS Robot\CmdRobot1.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\EPS Robot\DUT_SysFromRobot1.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\EPS Robot\DUT_SysToRobot1.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\EPS Robot\stPutPartPosChoose.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\EPS Robot\stTakePartPosChoose.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\IO\EL1889.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\IO\EL2889.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Others\DUT_Calibration.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Others\DUT_Sta.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Others\DUT_StaHistory.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Others\stWorkStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Others\tDateAndTime.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\PartData\DUT_LidChecking.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\PartData\DUT_MainlineFixture.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\PartData\DUT_PartFlag.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\PartData\DUT_PartStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\PartData\DUT_Robot2.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\PartData\DUT_Process.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\PartSequence\tsPartSequence.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\PartSequence\tsSequence.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\PC\DUT_FomularData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\PC\DUT_PCReceive.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\PC\DUT_PCSend.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\PC\DUT_UploadProcessData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Recipe\DUT.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\Recipe\ST_Thermostat.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\S7-200SMART\DUT_200SMARTReceive.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="DUTs\S7-200SMART\DUT_200SMARTSend.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GVLs\Common.TcGVL">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GVLs\GVL_Config.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
+    <Compile Include="GVLs\GVL_Robot.TcGVL">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GVLs\GVL_PC.TcGVL">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="GVLs\GVL_Standard.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
+    <Compile Include="GVLs\GVL_System.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
+    <Compile Include="GVLs\GVL_UPS.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
+    <Compile Include="GVLs\IO.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
+    <Compile Include="PlcTask.TcTTO">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\001_Mapping\InputLink.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\001_Mapping\OutputLink.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\S01_Loading.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\S02_LidInjecting.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\S03_LidChecking.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\S04_AluCovering.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\S05_Adjusting.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\S06_Cutting.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\S07_BoxCarrying.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\S08_MainLine.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\S09_CardCarrying.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\S10_BeltCarrying.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\S11_Packing.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\S12_PreLine.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\S13_Labeling.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\S14_LabelChecking.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\S15_NG.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\001_Station\S16_Unloading.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\002_Machine\CallStandard.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\002_Machine\CommWithPC.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\002_Machine\ControlMachine.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\03_TURINRobotFB\DUTs\CmdRobot.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\03_TURINRobotFB\DUTs\DUT_SysFromRobot.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\03_TURINRobotFB\DUTs\DUT_SysToRobot.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\03_TURINRobotFB\DUTs\ST_Sys_Para.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\03_TURINRobotFB\DUTs\ST_TURINROBOT_Data.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\03_TURINRobotFB\DUTs\TURIN_ERROR.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\03_TURINRobotFB\DUTs\TURIN_STATE.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\03_TURINRobotFB\DUTs\T_MaxString.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\03_TURINRobotFB\FB_TURINContorl.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\05_StationFB\E_State.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\05_StationFB\FB_Station.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\100_test\FB_GetTime.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\10_CylinderFB\FB_Cylinder.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\10_CylinderFB\ST_DataCylinder.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\07_RGI_14_new\FB_RGI_14_Modbus.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\07_RGI_14_new\RGI_14_CMD.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\07_RGI_14_new\RGI_14_ERROR.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\07_RGI_14_new\ST_RGI_14_IOData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\07_RGI_14_new\ST_RGI_14_Sys_Para.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\07_RGI_14_new\ST_RGI_HMIStates.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\07_RGI_14_new\ST_RGI_Opera.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\07_RGI_14_new\ST_RGI_PosPara.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\12_BlinkFB\FB_Blinker.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\12_BlinkFB\ST_SysPulse.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\14_MachineFB\FB_Machine.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\14_MachineFB\ST_DataMachine.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\14_MachineFB\ST_OpeButton.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\17_HMIFB\FB_Proface.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\19-AxisFB\DUT_ActPos.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\19-AxisFB\FB_Axis.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\19-AxisFB\FB_AxisHome.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\19-AxisFB\FB_Axis_old.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\19-AxisFB\ST_DataAxis.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\41_GetSystemTime\DUT_TIMESET.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\41_GetSystemTime\PRG_GetSystemTime.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\43_implicit checks\CheckBounds.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\43_implicit checks\CheckDivDInt.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\43_implicit checks\CheckDivLInt.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\43_implicit checks\CheckDivLReal.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\43_implicit checks\CheckDivReal.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\43_implicit checks\CheckLRangeSigned.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\43_implicit checks\CheckLRangeUnsigned.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\43_implicit checks\CheckPointer.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\43_implicit checks\CheckRangeSigned.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\43_implicit checks\CheckRangeUnsigned.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\44_Ethercat\FB_EthercatTerminalState.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\50_Recipe\FB_Recipes.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\50_Recipe\ST_Recipe.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\52_Temperature\FB_TempControl_FUSHI.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\52_Temperature\ST_FUSHI_PXF_ParRead.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\52_Temperature\ST_FUSHI_PXF_ParSet.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\52_Temperature\ST_FUSHI_PXF_Sys_Pointer.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\DUTs\RudongPump_CMD.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\DUTs\RudongPump_ERROR.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\DUTs\RudongPump_IOData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\DUTs\RudongPump_Ope.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\DUTs\RudongPump_PumpHeadType.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\DUTs\RudongPump_PumpType.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\DUTs\RudongPump_RunData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\DUTs\RudongPump_SoftPipeType.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\DUTs\RudongPump_Sys_Para.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\DUTs\STATE_1.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\FB_RuDongPump_modbus_DF600Plus.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\FB_RuDongPump_modbus_LABV.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\校准程序\AutoCal_CMD.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\校准程序\AutoCal_ERROR.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\校准程序\FB_AutoCal.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\校准程序\STAutoCal_ParIn.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\校准程序\STAutoCal_ParOut.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\校准程序\ST_AutoCalOpe.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\校准程序\ST_AutoCal_SysPar.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\梅特勒托利多秤\DUTs\MT_MCK_CMD.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\梅特勒托利多秤\DUTs\MT_MCK_ERROR.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\梅特勒托利多秤\DUTs\ST_DeviceOpe.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\梅特勒托利多秤\DUTs\ST_MCK_ParIn.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\梅特勒托利多秤\DUTs\ST_MCK_ParOut.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\梅特勒托利多秤\DUTs\ST_SysPar.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\梅特勒托利多秤\FB_MT_MKC.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\Z_ERG_20 FB\DUTs\ERG_20_CMD.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\Z_ERG_20 FB\DUTs\ERG_20_ERROR.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\Z_ERG_20 FB\DUTs\ST_ERG_20_IOData.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\Z_ERG_20 FB\DUTs\ST_ERG_20_Sys_Para.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\Z_ERG_20 FB\DUTs\ST_Huiling_Pers_Para.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\Z_ERG_20 FB\DUTs\ST_Huiling_PosPara.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\Z_ERG_20 FB\FB_ERG_20_Modbus.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\004_FC\001_Parallel\FC_ParallelFinished.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\004_FC\001_Parallel\FC_ParallelRequest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\40_TcpIp\E_ClientSteps.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\40_TcpIp\E_DataExchaSteps.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\40_TcpIp\FB_ClientDataExcha.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\40_TcpIp\FB_TcpIpClient.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\40_TcpIp\stTcpIpBaseParaCfg.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\40_TcpIp\TcpIpClientConstants.TcGVL">
+      <SubType>Code</SubType>
+      <LinkAlways>true</LinkAlways>
+    </Compile>
+    <Compile Include="POUs\MAIN.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="DUTs" />
+    <Folder Include="DUTs\EPS Robot" />
+    <Folder Include="DUTs\IO" />
+    <Folder Include="DUTs\Camera" />
+    <Folder Include="DUTs\S7-200SMART" />
+    <Folder Include="DUTs\PartSequence" />
+    <Folder Include="DUTs\Others" />
+    <Folder Include="DUTs\PartData" />
+    <Folder Include="DUTs\PC" />
+    <Folder Include="DUTs\Recipe" />
+    <Folder Include="GVLs" />
+    <Folder Include="POUs\001_Station" />
+    <Folder Include="POUs\001_Station\001_Mapping" />
+    <Folder Include="POUs\002_Machine" />
+    <Folder Include="POUs\003_FB" />
+    <Folder Include="POUs\003_FB\03_TURINRobotFB" />
+    <Folder Include="POUs\003_FB\03_TURINRobotFB\DUTs" />
+    <Folder Include="POUs\003_FB\05_StationFB" />
+    <Folder Include="POUs\003_FB\100_test" />
+    <Folder Include="POUs\003_FB\10_CylinderFB" />
+    <Folder Include="POUs\003_FB\07_RGI_14_new" />
+    <Folder Include="POUs\003_FB\12_BlinkFB" />
+    <Folder Include="POUs\003_FB\14_MachineFB" />
+    <Folder Include="POUs\003_FB\17_HMIFB" />
+    <Folder Include="POUs\003_FB\19-AxisFB" />
+    <Folder Include="POUs\003_FB\41_GetSystemTime" />
+    <Folder Include="POUs\003_FB\43_implicit checks" />
+    <Folder Include="POUs\003_FB\44_Ethercat" />
+    <Folder Include="POUs\003_FB\50_Recipe" />
+    <Folder Include="POUs\003_FB\52_Temperature" />
+    <Folder Include="POUs\003_FB\53_RudongPump" />
+    <Folder Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB" />
+    <Folder Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\DUTs" />
+    <Folder Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\校准程序" />
+    <Folder Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\梅特勒托利多秤" />
+    <Folder Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\梅特勒托利多秤\DUTs" />
+    <Folder Include="POUs\003_FB\Z_ERG_20 FB" />
+    <Folder Include="POUs\003_FB\Z_ERG_20 FB\DUTs" />
+    <Folder Include="POUs\004_FC\001_Parallel" />
+    <Folder Include="POUs\004_FC" />
+    <Folder Include="POUs\40_TcpIp" />
+    <Folder Include="VISUs" />
+    <Folder Include="POUs" />
+  </ItemGroup>
+  <ItemGroup>
+    <PlaceholderReference Include="RecipeManagement">
+      <DefaultResolution>Recipe Management, * (System)</DefaultResolution>
+      <Namespace>Recipe_Management</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="SysMem">
+      <DefaultResolution>SysMem, * (System)</DefaultResolution>
+      <Namespace>SysMem</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_EtherCAT">
+      <DefaultResolution>Tc2_EtherCAT, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_EtherCAT</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_MC2">
+      <DefaultResolution>Tc2_MC2, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_MC2</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_MC2_Drive">
+      <DefaultResolution>Tc2_MC2_Drive, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_MC2_Drive</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_ModbusSrv">
+      <DefaultResolution>Tc2_ModbusSrv, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_ModbusSrv</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_Standard">
+      <DefaultResolution>Tc2_Standard, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_Standard</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_SUPS">
+      <DefaultResolution>Tc2_SUPS, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_SUPS</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_System">
+      <DefaultResolution>Tc2_System, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_System</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_TcpIp">
+      <DefaultResolution>Tc2_TcpIp, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_TcpIp</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_Utilities">
+      <DefaultResolution>Tc2_Utilities, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_Utilities</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc3_Module">
+      <DefaultResolution>Tc3_Module, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc3_Module</Namespace>
+    </PlaceholderReference>
+  </ItemGroup>
+  <ItemGroup>
+    <LibraryReference Include="BASE,1.0.0.0,MEGA">
+      <Namespace>BASE</Namespace>
+    </LibraryReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="LS21002.tmc">
+      <SubType>Content</SubType>
+    </None>
+  </ItemGroup>
+  <ProjectExtensions>
+    <PlcProjectOptions>
+      <XmlArchive>
+        <Data>
+          <o xml:space="preserve" t="OptionKey">
+      <v n="Name">"&lt;ProjectRoot&gt;"</v>
+      <d n="SubKeys" t="Hashtable" ckt="String" cvt="OptionKey">
+        <v>{192FAD59-8248-4824-A8DE-9177C94C195A}</v>
+        <o>
+          <v n="Name">"{192FAD59-8248-4824-A8DE-9177C94C195A}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" />
+        </o>
+        <v>{8F99A816-E488-41E4-9FA3-846536012284}</v>
+        <o>
+          <v n="Name">"{8F99A816-E488-41E4-9FA3-846536012284}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" />
+        </o>
+        <v>{40450F57-0AA3-4216-96F3-5444ECB29763}</v>
+        <o>
+          <v n="Name">"{40450F57-0AA3-4216-96F3-5444ECB29763}"</v>
+          <d n="SubKeys" t="Hashtable" />
+          <d n="Values" t="Hashtable" ckt="String" cvt="String">
+            <v>ActiveVisuProfile</v>
+            <v>IR0whWr8bwfwBwAAiD2qpQAAAABVAgAA37x72QAAAAABAAAAAAAAAAEaUwB5AHMAdABlAG0ALgBTAHQAcgBpAG4AZwACTHsAZgA5ADUAYgBiADQAMgA2AC0ANQA1ADIANAAtADQAYgA0ADUALQA5ADQAMAAwAC0AZgBiADAAZgAyAGUANwA3AGUANQAxAGIAfQADCE4AYQBtAGUABDBUAHcAaQBuAEMAQQBUACAAMwAuADEAIABCAHUAaQBsAGQAIAA0ADAAMgA0AC4ANwAFFlAAcgBvAGYAaQBsAGUARABhAHQAYQAGTHsAMQA2AGUANQA1AGIANgAwAC0ANwAwADQAMwAtADQAYQA2ADMALQBiADYANQBiAC0ANgAxADQANwAxADMAOAA3ADgAZAA0ADIAfQAHEkwAaQBiAHIAYQByAGkAZQBzAAhMewAzAGIAZgBkADUANAA1ADkALQBiADAANwBmAC0ANABkADYAZQAtAGEAZQAxAGEALQBhADgAMwAzADUANgBhADUANQAxADQAMgB9AAlMewA5AGMAOQA1ADgAOQA2ADgALQAyAGMAOAA1AC0ANAAxAGIAYgAtADgAOAA3ADEALQA4ADkANQBmAGYAMQBmAGUAZABlADEAYQB9AAoOVgBlAHIAcwBpAG8AbgALBmkAbgB0AAwKVQBzAGEAZwBlAA0KVABpAHQAbABlAA4aVgBpAHMAdQBFAGwAZQBtAE0AZQB0AGUAcgAPDkMAbwBtAHAAYQBuAHkAEAxTAHkAcwB0AGUAbQARElYAaQBzAHUARQBsAGUAbQBzABIwVgBpAHMAdQBFAGwAZQBtAHMAUwBwAGUAYwBpAGEAbABDAG8AbgB0AHIAbwBsAHMAEyhWAGkAcwB1AEUAbABlAG0AcwBXAGkAbgBDAG8AbgB0AHIAbwBsAHMAFCRWAGkAcwB1AEUAbABlAG0AVABlAHgAdABFAGQAaQB0AG8AcgAVIlYAaQBzAHUATgBhAHQAaQB2AGUAQwBvAG4AdAByAG8AbAAWFHYAaQBzAHUAaQBuAHAAdQB0AHMAFwxzAHkAcwB0AGUAbQAYGFYAaQBzAHUARQBsAGUAbQBCAGEAcwBlABkmRABlAHYAUABsAGEAYwBlAGgAbwBsAGQAZQByAHMAVQBzAGUAZAAaCGIAbwBvAGwAGyJQAGwAdQBnAGkAbgBDAG8AbgBzAHQAcgBhAGkAbgB0AHMAHEx7ADQAMwBkADUAMgBiAGMAZQAtADkANAAyAGMALQA0ADQAZAA3AC0AOQBlADkANAAtADEAYgBmAGQAZgAzADEAMABlADYAMwBjAH0AHRxBAHQATABlAGEAcwB0AFYAZQByAHMAaQBvAG4AHhRQAGwAdQBnAGkAbgBHAHUAaQBkAB8WUwB5AHMAdABlAG0ALgBHAHUAaQBkACBIYQBmAGMAZAA1ADQANAA2AC0ANAA5ADEANAAtADQAZgBlADcALQBiAGIANwA4AC0AOQBiAGYAZgBlAGIANwAwAGYAZAAxADcAIRRVAHAAZABhAHQAZQBJAG4AZgBvACJMewBiADAAMwAzADYANgBhADgALQBiADUAYwAwAC0ANABiADkAYQAtAGEAMAAwAGUALQBlAGIAOAA2ADAAMQAxADEAMAA0AGMAMwB9ACMOVQBwAGQAYQB0AGUAcwAkTHsAMQA4ADYAOABmAGYAYwA5AC0AZQA0AGYAYwAtADQANQAzADIALQBhAGMAMAA2AC0AMQBlADMAOQBiAGIANQA1ADcAYgA2ADkAfQAlTHsAYQA1AGIAZAA0ADgAYwAzAC0AMABkADEANwAtADQAMQBiADUALQBiADEANgA0AC0ANQBmAGMANgBhAGQAMgBiADkANgBiADcAfQAmFk8AYgBqAGUAYwB0AHMAVAB5AHAAZQAnVFUAcABkAGEAdABlAEwAYQBuAGcAdQBhAGcAZQBNAG8AZABlAGwARgBvAHIAQwBvAG4AdgBlAHIAdABpAGIAbABlAEwAaQBiAHIAYQByAGkAZQBzACgQTABpAGIAVABpAHQAbABlACkUTABpAGIAQwBvAG0AcABhAG4AeQAqHlUAcABkAGEAdABlAFAAcgBvAHYAaQBkAGUAcgBzACs4UwB5AHMAdABlAG0ALgBDAG8AbABsAGUAYwB0AGkAbwBuAHMALgBIAGEAcwBoAHQAYQBiAGwAZQAsEnYAaQBzAHUAZQBsAGUAbQBzAC1INgBjAGIAMQBjAGQAZQAxAC0AZAA1AGQAYwAtADQAYQAzAGIALQA5ADAANQA0AC0AMgAxAGYAYQA3ADUANgBhADMAZgBhADQALihJAG4AdABlAHIAZgBhAGMAZQBWAGUAcgBzAGkAbwBuAEkAbgBmAG8AL0x7AGMANgAxADEAZQA0ADAAMAAtADcAZgBiADkALQA0AGMAMwA1AC0AYgA5AGEAYwAtADQAZQAzADEANABiADUAOQA5ADYANAAzAH0AMBhNAGEAagBvAHIAVgBlAHIAcwBpAG8AbgAxGE0AaQBuAG8AcgBWAGUAcgBzAGkAbwBuADIMTABlAGcAYQBjAHkAMzBMAGEAbgBnAHUAYQBnAGUATQBvAGQAZQBsAFYAZQByAHMAaQBvAG4ASQBuAGYAbwA0MEwAbwBhAGQATABpAGIAcgBhAHIAaQBlAHMASQBuAHQAbwBQAHIAbwBqAGUAYwB0ADUaQwBvAG0AcABhAHQAaQBiAGkAbABpAHQAeQDQAAIaA9ADAS0E0AUGGgfQBwgaAUUHCQjQAAkaBEUKCwQDAAAABQAAAA0AAAAAAAAA0AwLrQIAAADQDQEtDtAPAS0Q0AAJGgRFCgsEAwAAAAUAAAANAAAAKAAAANAMC60BAAAA0A0BLRHQDwEtENAACRoERQoLBAMAAAAFAAAADQAAAAAAAADQDAutAgAAANANAS0S0A8BLRDQAAkaBEUKCwQDAAAABQAAAA0AAAAUAAAA0AwLrQIAAADQDQEtE9APAS0Q0AAJGgRFCgsEAwAAAAUAAAANAAAAAAAAANAMC60CAAAA0A0BLRTQDwEtENAACRoERQoLBAMAAAAFAAAADQAAAAAAAADQDAutAgAAANANAS0V0A8BLRDQAAkaBEUKCwQDAAAABQAAAA0AAAAAAAAA0AwLrQIAAADQDQEtFtAPAS0X0AAJGgRFCgsEAwAAAAUAAAANAAAAKAAAANAMC60EAAAA0A0BLRjQDwEtENAZGq0BRRscAdAAHBoCRR0LBAMAAAAFAAAADQAAAAAAAADQHh8tINAhIhoCRSMkAtAAJRoFRQoLBAMAAAADAAAAAAAAAAoAAADQJgutAAAAANADAS0n0CgBLRHQKQEtENAAJRoFRQoLBAMAAAADAAAAAAAAAAoAAADQJgutAQAAANADAS0n0CgBLRHQKQEtEJoqKwFFAAEC0AABLSzQAAEtF9AAHy0t0C4vGgPQMAutAQAAANAxC60XAAAA0DIarQDQMy8aA9AwC60CAAAA0DELrQMAAADQMhqtANA0Gq0A0DUarQA=</v>
+          </d>
+        </o>
+      </d>
+      <d n="Values" t="Hashtable" />
+    </o>
+        </Data>
+        <TypeList>
+          <Type n="Hashtable">System.Collections.Hashtable</Type>
+          <Type n="OptionKey">{54dd0eac-a6d8-46f2-8c27-2f43c7e49861}</Type>
+          <Type n="String">System.String</Type>
+        </TypeList>
+      </XmlArchive>
+    </PlcProjectOptions>
+  </ProjectExtensions>
+</Project>

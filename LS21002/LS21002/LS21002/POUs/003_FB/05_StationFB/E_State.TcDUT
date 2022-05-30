@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="E_State" Id="{21135e33-2701-4434-aabd-cf22183955dd}">
+    <Declaration><![CDATA[
+{attribute 'strict'}
+TYPE E_State :
+(
+	NotReady:=0,				//未准备好
+	iRunning:=3,					//运行中
+	Alarm:=2,					//报警中
+	Ready:=1,					//准备好
+	Done:=4          //工站完成
+	
+)UINT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

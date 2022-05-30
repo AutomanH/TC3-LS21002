@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="AutoCal_CMD" Id="{9c28970b-945a-4ddb-ade3-9d8528ac2ee0}">
+    <Declaration><![CDATA[TYPE AutoCal_CMD :
+(
+ 	Nodef,
+	Cmd_96PumpHeadCal,//校准96个泵头
+	Cmd_SpecificPumpHeadCal,	//校准指定泵头
+	Cmd_ContinuesInject,//连续加液测试
+	Cmd_Init	//初始化
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

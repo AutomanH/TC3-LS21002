@@ -1,0 +1,50 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_PCSend" Id="{41d6261f-03fd-42a1-b55f-688ffdcbdb2b}">
+    <Declaration><![CDATA[TYPE DUT_PCSend :
+STRUCT
+   //PC---PLC
+   xPCAlive : INT ;//0=false  1=true
+   //移液枪
+   iActionResult1	:INT;//0=false  1=true
+ //1=取TIP头 2=扔TIP头 3=吸液 4=吐液 5=初始化（正常）   6=查询TIP头状态
+//11=取TIP头失败（连续三次失败报警）12=扔Tip头失败。。。。   
+	iBodyType		:INT;//1=NEST,2=生工
+   //喷码命令
+   xMarkDataUpdataDone : INT ;//模板更新完成
+   xMarkDone			:INT;//喷码完成  -----待确认是否有此信号
+   iCoverColor			:INT;//盖子颜色  1=白 2=蓝 3= 橙色
+   iOrderCounter		:INT;//生产总数
+   iTipChangeCounter	:INT;//TIP头更换次数	
+   //CCD检测
+   iCameraCheckResult:INT; //检测瓶盖结果 1=OK 
+                           //11-拧盖NG 12-贴标NG 
+	//Tip头托盘选择						   
+   iTipTrayChoose	  :INT;//tIP托盘抓取位置  1=左侧TIP头  2=右侧TIP头
+   iTipRowChoose	  :INT;//1-12代表1-12排	 
+   //设备灯控制
+   iMachineLampControl :INT;//设备灯 1=开 2=关
+   iultravioletLampControl:INT;//紫外灯 1=开 2=关
+   iZEUSSafetyPosition: INT;//1=移液枪安全位置   0 =移液枪不在安全位置
+   iInitComfirm			:INT;//初始化确认
+   iReloadTipCommand	:INT;//更换TIP头或者母液指令  1=更换
+   iReloadTipCompleted	:INT;//更换TIP头或者母液完成信号 1=完成
+   iSetButton			:INT;//界面订单 TIP头等设置按钮键
+   iUptakeAndSpitType	:INT;//移液枪模式 1=一吸一吐  2=两吸两吐  3=一吸多吐
+   iSpitCounter		    :INT; //移液枪模式  吐液次数
+   iOpenDoorCmd			:INT;//开门指令 1-12安全门开
+   iEmptyComfirm		:INT;//设备清空确认  1=清空 0=无操作
+   iPCAlarm				:INT;//1=PC有报警   0=PC无报警
+   iBodyFeederEmptyCmd	:INT; // 瓶身振动盘请料命令;
+   iCoverFeederEmptyCmd	:INT; //瓶盖振动盘请料命令 ;	
+   iBodySizeChoose		:INT;//1=2ml 2=1.5ml 3=0.5ml
+   iCoverFeederStartCmd	:INT;//1=振动盘启动
+   iBodyFeederStartCmd	:INT;//1=振动盘启动
+   iEmptyLineWithoutLid :INT; //1=母液用尽，开始请料
+   iBypassLidStation	:INT;//0=屏蔽吸液  1=不屏蔽吸液
+   iScrapLabel			:INT;//0=不废弃   1=需要废弃空白标签
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="RudongPump_Sys_Para" Id="{0c9229e5-8d6c-4240-9ca3-1da12638bde7}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE RudongPump_Sys_Para :
+STRUCT
+	bySlaveID 		    : BYTE;//旋转从站号(modbus RTU)
+	strSlaveIP        : STRING(15) := '127.0.0.0';//modbus子站IP地址
+  iSlavePort	      : UINT:=1031;
+	xPumpRunSignal    : BOOL;//泵运行信号：true（泵处于运行状态）；false(泵处于停止状态)
+	iType             : INT :=2;//1:modbus RTU;2:modbus TCP(默认)
+	pRunSignal		    : POINTER TO INT;//
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

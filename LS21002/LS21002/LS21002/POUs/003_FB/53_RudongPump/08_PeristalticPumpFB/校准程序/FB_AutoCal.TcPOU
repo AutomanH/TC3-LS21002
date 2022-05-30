@@ -1,0 +1,1138 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_AutoCal" Id="{666d666e-5622-456d-b634-396736292374}" SpecialFunc="None">
+    <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+FUNCTION_BLOCK FB_AutoCal//METTLER电子秤
+VAR_INPUT
+	xExecute		: BOOL;//指令执行
+	xAbort			: BOOL;//指令中断
+	xEstop			: BOOL;//急停
+	xDeviceRunning	: BOOL;
+	xResetRequest	: BOOL;//复位操作
+	stDeviceOpe		: ST_AutoCalOpe;
+	stparIn				: STAutoCal_ParIn;	 
+	stSysPar			: ST_AutoCal_SysPar; 
+	xAutoMode    	: BOOL;//0:mannal 1:auto
+	xIniting    	: BOOL;//初始化过程中  
+
+END_VAR
+VAR_OUTPUT
+	xDone			: BOOL;(*完成条件满足*)
+	xBusy			: BOOL;(*动作正在执行*)
+	xRunning	: BOOL;
+	xError			: BOOL;(*错误条件满足*)
+	eERRORID		: AutoCal_ERROR;
+	xRdyCmd			: BOOL;//指令就绪
+	xRdy			: BOOL;//初始化完成
+	sHmiError	:STRING;
+	stParOut		: STAutoCal_ParOut;
+END_VAR
+
+VAR
+{attribute 'tc_no_symbol'}
+	eState: STATE;//当前状态
+{attribute 'tc_no_symbol'}
+	xAborted: BOOL;(*指令被打断，一般是处于急停中*)
+{attribute 'tc_no_symbol'}
+	_CalStep	:INT;//校准流程
+{attribute 'tc_no_symbol'}
+	_CurrentPumpController	:INT:=1;//当前控制器
+{attribute 'tc_no_symbol'}
+	_CurrentPumpHead	:INT:=1;//当前泵头
+{attribute 'tc_no_symbol'}
+	_first :BOOL;
+{attribute 'tc_no_symbol'}		
+	_xModeChange:BOOL;
+{attribute 'tc_no_symbol'}
+	_fManual:F_TRIG;
+{attribute 'tc_no_symbol'}
+	_rManual:R_TRIG;
+{attribute 'tc_no_symbol'}	
+	i:INT;
+{attribute 'tc_no_symbol'}		
+	xFirstInvocation:BOOL;
+{attribute 'tc_no_symbol'}	
+	xAutomodeFlag:BOOL;	
+{attribute 'tc_no_symbol'}		
+	_diCmdState:INT;
+{attribute 'tc_no_symbol'}
+	eCmd:AutoCal_CMD;
+{attribute 'tc_no_symbol'}
+	tOperationTimer:TON;
+{attribute 'tc_no_symbol'}
+	tSteadyTimer:TON;	
+{attribute 'tc_no_symbol'}	
+	_xAutoOpe:BOOL;
+{attribute 'tc_no_symbol'}	
+	_xHMIOpe:BOOL;
+{attribute 'tc_no_symbol'}	
+	_xDone:BOOL;
+{attribute 'tc_no_symbol'}	
+	_InjectNum	:INT;//
+{attribute 'tc_no_symbol'}
+	k	:INT;//
+{attribute 'tc_no_symbol'}
+	xRuDongPumpError	:BOOL;	
+END_VAR
+
+VAR_TEMP
+{attribute 'tc_no_symbol'}
+	xAgain: BOOL;
+
+END_VAR
+
+VAR
+
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+IF NOT _first 
+THEN
+	_first := TRUE;
+
+ELSE
+	xAgain:=0;	
+//检测是否允许指令控制(初始状态，没有报警发生)	
+	xRdyCmd := eState = STATE.DORMANT AND eERRORID = AutoCal_ERROR.No_ERROR;
+	xDone:=_xDone AND xExecute;	
+	//检测是否有模式变化
+_fManual(CLK:=xAutoMode);
+_rManual(CLK:=xAutoMode);
+//
+
+IF eState <> STATE.DORMANT//只有在运行的时候，才会检测是否有模式切换发生
+THEN
+	IF _fManual.Q OR _rManual.Q
+	THEN
+		_xModeChange := TRUE;
+	END_IF
+END_IF
+	REPEAT
+		CASE eState OF
+			STATE.DORMANT:
+				HandleDormantState(xAgain=> xAgain);
+			STATE.EXECUTING:
+				HandleExecutingState(xAgain=> xAgain);
+			STATE.DONE:
+				HandleDoneState(xAgain=> xAgain);
+			STATE.INERROR:
+				HandleErrorState(xAgain=> xAgain);
+			STATE.ABORTING:
+				HandleAbortingState(xAgain=> xAgain);
+			STATE.ABORTED:
+				HandleAbortedState(xAgain=> xAgain);
+			STATE.RESETING:
+				HandleResettingState(xAgain=> xAgain);
+			END_CASE
+	UNTIL (xAgain=0)
+	END_REPEAT
+END_IF
+
+
+//报错内容输出
+CASE eERRORID OF
+	AutoCal_ERROR.FLT_AutoMode:
+		sHmiError:='FLT_AutoMode';
+	AutoCal_ERROR.FLT_CmdTimeOut:
+		sHmiError:='FLT_CmdTimeOut';	
+	AutoCal_ERROR.FLT_MT_MCK204C:
+		sHmiError:='FLT_MT_MCK204C';	
+	AutoCal_ERROR.FLT_PARA:
+		sHmiError:='FLT_PARA';	
+	AutoCal_ERROR.FLT_RudongPump:
+		sHmiError:='FLT_RudongPump';	
+	AutoCal_ERROR.No_ERROR:
+		sHmiError:='No_ERROR';
+END_CASE
+
+
+
+
+_xAutoOpe:=stDeviceOpe.x96PumpHeadCal_Auto OR
+					stDeviceOpe.xSpecificPumpHeadCal_Auto;
+_xHMIOpe:=stDeviceOpe.x96PumpHeadCal_HMI OR
+					stDeviceOpe.xContinuesInject_HMI OR
+					stDeviceOpe.xInit_Hmi OR
+					stDeviceOpe.xSpecificPumpHeadCal_HMI;				
+
+
+					
+					
+
+
+	]]></ST>
+    </Implementation>
+    <Folder Name="Control" Id="{89e1fc37-6f6a-4b35-a9e7-cec8fe2e71f9}" />
+    <Method Name="AbortAction" Id="{40c5fd6f-87a9-403a-aca3-e8645c812a00}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PROTECTED AbortAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+	eErrorID: AutoCal_ERROR;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+* Cleaning
+* => abort all running operation
+* => if an NBS.ERROR codition is reached, set eErrorID to a Value rather then NBS.ERROR.NO_ERROR 
+*)
+xComplete:=1;
+eErrorID:=AutoCal_ERROR.NO_ERROR;]]></ST>
+      </Implementation>
+    </Method>
+    <Action Name="ACT_DensityConversion" Id="{9656d47a-dbee-49fe-8433-c711d80dd636}" FolderPath="Control\">
+      <Implementation>
+        <ST><![CDATA[{attribute 'tc_no_symbol'}
+//密度计算公式，ρ＝m/V 
+IF stParIn.rDensity<>0 THEN
+	stParOut.rVolume:=stParOut.rSteadyWeight/stParIn.rDensity;
+ELSE
+	stParOut.rVolume:=0;
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Method Name="Cmd_ContinuesInject" Id="{3e5b722f-fa7b-4887-9f26-cfa9b867f01d}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED Cmd_ContinuesInject : BOOL
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> AutoCal_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+stParOut.iCalStep:=_diCmdState;//流程步输出
+
+CASE _diCmdState OF	
+	
+		
+	0://判断是否到达校准位置
+		_diCmdState:=_diCmdState+1;	
+			
+	1://判断是否结束
+	IF _InjectNum<=stparIn.iContinuesInjectNum THEN
+		_diCmdState:=_diCmdState+1;
+	ELSE
+		_diCmdState:=30;//结束加液
+	END_IF				
+	
+	2://等待秤Ready
+		IF stsyspar.fbMTMCK204C^.xRdyCmd AND stsyspar.fbRuDongPump[stparIn.iPumpController-1].xRdyCmd THEN
+			_diCmdState:=_diCmdState+1;	
+		END_IF
+	
+	3://秤体清零
+		stsyspar.fbMTMCK204C^.stDeviceOpe.xShelling_Auto:=TRUE;
+		IF stsyspar.fbMTMCK204C^.xDone THEN
+			stsyspar.fbMTMCK204C^.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+
+	4://等待稳定时间
+		tSteadyTimer(IN:=stsyspar.fbMTMCK204C^.xRdyCmd,PT:=T#1S);
+		IF tSteadyTimer.Q THEN
+			tSteadyTimer(IN:=FALSE);
+			_diCmdState:=_diCmdState+1;
+		END_IF	
+	
+	5://蠕动泵加液
+		stsyspar.fbRuDongPump[stparIn.iPumpController-1].stDeviceOpe.xPush_Auto[1]:=TRUE;
+		IF stsyspar.fbRuDongPump[stparIn.iPumpController-1].xDone THEN
+			stsyspar.fbRuDongPump[stparIn.iPumpController-1].xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+
+	6://等待稳定时间
+		tSteadyTimer(IN:=stsyspar.fbRuDongPump[stparIn.iPumpController-1].xRdyCmd,PT:=TO_TIME((stparIn.tSteadyTime +stsyspar.fbRuDongPump[stparIn.iPumpController-1].stRunPara.rPushRuntime[1])*1000 ));
+		IF tSteadyTimer.Q THEN
+			tSteadyTimer(IN:=FALSE);
+			_diCmdState:=_diCmdState+1;
+		END_IF
+	
+	7://读取重量
+		stsyspar.fbMTMCK204C^.stDeviceOpe.xAcquireWeight_Steady_Auto:=TRUE;
+		IF stsyspar.fbMTMCK204C^.xDone THEN
+			stsyspar.fbMTMCK204C^.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+	
+	8://等待稳定时间
+		tSteadyTimer(IN:=stsyspar.fbMTMCK204C^.xRdyCmd,PT:=T#1S);
+		IF tSteadyTimer.Q THEN
+			tSteadyTimer(IN:=FALSE);
+			_diCmdState:=_diCmdState+1;
+		END_IF		
+		
+	9://传递重量值
+		IF stsyspar.fbMTMCK204C^.stParOut.rCurrentWeight>0 THEN
+			stParOut.rContinuesInjectWeight[_InjectNum]:=stsyspar.fbMTMCK204C^.stParOut.rCurrentWeight;
+			IF stParOut.rContinuesInjectWeight[_InjectNum]=stsyspar.fbMTMCK204C^.stParOut.rCurrentWeight THEN
+				_diCmdState:=_diCmdState+1;
+			END_IF
+		ELSE
+			_diCmdState:=7;
+		END_IF		
+	
+	10://累加
+		_InjectNum:=_InjectNum+1;
+		_diCmdState:=_diCmdState+1;
+	
+	11://复位状态
+		tSteadyTimer(IN:=TRUE,PT:=T#1S);
+		IF tSteadyTimer.Q THEN
+			tSteadyTimer(IN:=FALSE);
+			_diCmdState:=0;
+		END_IF	
+		
+		
+(**************************************************加液结束***************************************************)	
+	30://校准完成
+		xComplete:=TRUE;
+		
+	
+	
+	
+	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Cmd_Init" Id="{50f3d719-e078-4a6e-b8f9-f6b59207e421}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED Cmd_Init : BOOL
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> AutoCal_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+stParOut.iCalStep:=_diCmdState;//流程步输出
+CASE _diCmdState OF	
+		
+	0://
+		_CurrentPumpController:=1;//从1#泵开始
+		_diCmdState:=10;
+(**************蠕动泵停止**************)			
+	10://判断N#泵控制器参数
+		_CurrentPumpController:=1;//从1#开始
+		_diCmdState:=_diCmdState+1;
+		
+	11://判断是否结束
+		IF	_CurrentPumpController>gc_uiRudongPump THEN
+			_diCmdState:=20;
+		ELSE
+			IF stSysPar.fbRuDongPump[_CurrentPumpController-1].xRdyCmd THEN
+				_diCmdState:=_diCmdState+1;
+			END_IF
+		END_IF
+		
+	12://停止N#泵控制器	
+		stSysPar.fbRuDongPump[_CurrentPumpController-1].stDeviceOpe.xStop_Auto:=TRUE;
+		IF stSysPar.fbRuDongPump[_CurrentPumpController-1].xDone THEN
+			stSysPar.fbRuDongPump[_CurrentPumpController-1].xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF		
+	
+	13://累加1
+		_CurrentPumpController:=_CurrentPumpController+1;
+		_diCmdState:=_diCmdState+1;
+		
+	14://回去循环执行
+		_diCmdState:=11;
+
+(**************************************************秤清零***************************************************)	
+	20://判断秤体状态
+		IF stSysPar.fbMTMCK204C^.xRdyCmd THEN
+			_diCmdState:=22;
+		ELSE
+			IF stSysPar.fbMTMCK204C^.stParOut.xContinuesRead THEN
+				_diCmdState:=_diCmdState+1;
+			END_IF
+		END_IF
+	
+	21://停止连续读取
+			stSysPar.fbMTMCK204C^.stDeviceOpe.xAcquireWeight_Stop_Auto:=TRUE;
+			IF stSysPar.fbMTMCK204C^.xRdyCmd THEN
+				_diCmdState:=_diCmdState+1;
+			END_IF			
+
+	22://秤重启
+			stSysPar.fbMTMCK204C^.stDeviceOpe.xRestart_Auto:=TRUE;
+			IF stSysPar.fbMTMCK204C^.xDone THEN
+				stSysPar.fbMTMCK204C^.xExecute:=FALSE;
+				_diCmdState:=30;
+			END_IF			
+	
+
+(*************************************************初始化结束***************************************************)
+	30://校准完成
+		xComplete:=TRUE;
+		
+
+	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Cmd_SpecificPumpHeadCal" Id="{1cec9c0a-cf09-4f24-bf88-6065c78435b3}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED Cmd_SpecificPumpHeadCal : BOOL
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> AutoCal_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+stParOut.iCalStep:=_diCmdState;//流程步输出
+
+CASE _diCmdState OF	
+	
+		
+	0://判断是否到达校准位置
+		_diCmdState:=_diCmdState+1;	
+		
+	1://等待校准就绪
+		IF stsyspar.fbMTMCK204C^.xRdyCmd AND stsyspar.fbRuDongPump[stparIn.iPumpController-1].xRdyCmd THEN
+			_diCmdState:=_diCmdState+1;	
+		END_IF		
+		
+(**************************************************校准***************************************************)		
+	2://秤体清零	
+		stSysPar.fbMTMCK204C^.stDeviceOpe.xClearZero_Auto:=TRUE;
+		IF stSysPar.fbMTMCK204C^.xDone THEN
+			stSysPar.fbMTMCK204C^.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;	
+		END_IF
+		
+	3://等待稳定时间
+		tSteadyTimer(IN:=TRUE,PT:=T#1S);
+		IF tSteadyTimer.Q THEN
+			tSteadyTimer(IN:=FALSE);
+			_diCmdState:=_diCmdState+1;
+		END_IF		
+		
+	4://校准启动	
+		stSysPar.fbRuDongPump[_CurrentPumpController-1].stDeviceOpe.xPumpCal_Auto:=TRUE;
+		IF stSysPar.fbRuDongPump[_CurrentPumpController-1].xDone THEN
+			stSysPar.fbMTMCK204C^.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		
+	5://等待稳定时间
+		tSteadyTimer(IN:=TRUE,PT:=TO_TIME((stparIn.tSteadyTime+1)*1000));
+		IF tSteadyTimer.Q THEN
+			_diCmdState:=_diCmdState+1;
+		END_IF
+
+	6://获取称重结果
+			stSysPar.fbMTMCK204C^.stDeviceOpe.xAcquireWeight_Steady_Auto:=TRUE;
+			IF stSysPar.fbMTMCK204C^.xDone THEN
+				stSysPar.fbMTMCK204C^.xExecute:=FALSE;
+				_diCmdState:=_diCmdState+1;	
+			END_IF	
+	
+	7://等待稳定时间
+		tSteadyTimer(IN:=TRUE,PT:=T#1S);
+		IF tSteadyTimer.Q THEN
+			tSteadyTimer(IN:=FALSE);
+			_diCmdState:=_diCmdState+1;
+		END_IF			
+
+	8://获取称重结果
+		IF stSysPar.fbMTMCK204C^.stParOut.rCurrentWeight>0 THEN
+			stParOut.rSteadyWeight:=stSysPar.fbMTMCK204C^.stParOut.rCurrentWeight;
+			IF stParOut.rSteadyWeight=stSysPar.fbMTMCK204C^.stParOut.rCurrentWeight THEN
+				_diCmdState:=_diCmdState+1;
+			END_IF
+		ELSE
+			_diCmdState:=6;//未获取到重量重新读
+		END_IF
+		
+	9://给校准参数赋值
+		stSysPar.fbRuDongPump^.stRunPara.rModuleRealFluVolume:=stParOut.rVolume;
+		stSysPar.fbRuDongPump^.stDeviceOpe.xCalParWrite_Auto:=TRUE;
+		IF stSysPar.fbRuDongPump^.xDone THEN
+			_diCmdState:=30;
+		END_IF
+	
+
+(**************************************************校准结束***************************************************)	
+	30://校准完成
+		xComplete:=TRUE;
+		
+	
+	
+	
+	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CyclicAction" Id="{0fea1345-6f6c-4620-b1bd-e9c33dd9c2e2}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PROTECTED CyclicAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+VAR	
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xAbort=0 THEN
+	IF xFirstInvocation THEN//执行初始化
+	(*
+	* Staring
+	* for then first (!) invocaion,
+	* sample then input variables
+	*)
+		xFirstInvocation:=0;
+	END_IF    
+	REPEAT 	
+//判断是否有参数错误		
+		IF stSysPar.fbMTMCK204C=0 OR
+				stSysPar.fbRuDongPump=0 OR
+				stSysPar.iRuDongPumpHeadNum>32
+		THEN
+			eERRORID:=AutoCal_ERROR.FLT_PARA;//参数配置错误
+		ELSE
+			xRuDongPumpError:=FALSE;
+			FOR k:=1 TO gc_uiRudongPump DO
+				IF stSysPar.fbRuDongPump[k].xError THEN
+					xRuDongPumpError:=TRUE;
+					EXIT;
+				END_IF
+			END_FOR			
+
+			//IF stSysPar.fbMTMCK204C^.xError THEN
+			//	eERRORID:=AutoCal_ERROR.FLT_MT_MCK204C;//秤出错
+			//ELSE
+			//	IF xRuDongPumpError THEN
+			//		eERRORID:=AutoCal_ERROR.FLT_RudongPump;//蠕动泵出错
+			//	END_IF						
+			//END_IF
+		END_IF
+
+			//如果不在自动模式则报错
+			IF _xAutoOpe OR _xHMIOpe THEN
+					xRunning:=TRUE;
+			END_IF
+
+			CASE eCmd OF//判断指令类型
+				AutoCal_CMD.Cmd_SpecificPumpHeadCal://单个泵头校准
+					Cmd_SpecificPumpHeadCal(xComplete=> xComplete);	
+				AutoCal_CMD.Cmd_Init://初始化
+					Cmd_Init(xComplete=> xComplete);	
+				AutoCal_CMD.Cmd_ContinuesInject://连续加液测试
+					Cmd_ContinuesInject(xComplete=> xComplete);
+					;				
+				
+			ELSE
+				;	
+			END_CASE
+	   
+		UNTIL (TRUE)//处于一直刷新阶段
+	END_REPEAT
+END_IF
+
+IF NOT xExecute OR xComplete OR eErrorID<>AutoCal_ERROR.No_ERROR THEN    
+    (*
+    * Cleaning
+    * => free as much allocated resources as possible
+    *)    
+    tOperationTimer(IN:=0);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleAbortedState" Id="{c4be324d-cc71-4443-a6ae-151a688040e9}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleAbortedSTATE
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xAborted AND xResetRequest THEN
+    eState:=STATE.RESETING;
+    xAgain:=1;
+ELSE
+    xBusy:=0;
+    xAborted:=1;
+    //xResetRequest:=(xExecute=0);
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleAbortingState" Id="{02931520-ed5d-41c4-a893-eb29ec4ccedf}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleAbortingSTATE
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+{attribute 'tc_no_symbol'}	
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[AbortAction(xComplete=> xComplete, eErrorID=> eErrorID);
+
+IF eErrorID<>AutoCal_ERROR.NO_ERROR THEN
+    eState:=STATE.INERROR;
+    xAgain:=1;
+ELSIF xComplete THEN
+    eState:=STATE.ABORTED;
+    xAgain:=1;
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleDoneState" Id="{90d4ccf9-393c-4fbc-92e5-c92e86958d5b}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleDoneSTATE
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//在运行过程中要是切换模式，再运行完成之后，检测到模式的切换，就需要回到初始位置，进行下一次执行准备
+IF _xDone AND ((xExecute=0) OR ( _xModeChange AND NOT _xAutoOpe)  OR ( NOT xAutoMode AND NOT xDeviceRunning AND ( NOT _xAutoOpe OR _xHMIOpe))) THEN
+	eState:=STATE.RESETING;
+	xAgain:=1;
+ELSE
+	xBusy:=0;
+	_xDone:=1;
+	//xResetRequest:=(xExecute=0);
+	xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleDormantState" Id="{b077e08a-44a2-46c3-8e9c-df3fd9cf939c}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleDormantSTATE
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xExecute THEN
+    xBusy:=1;
+    eState:=STATE.EXECUTING;
+    xAgain:=1;
+END_IF
+
+IF xResetRequest//清空报警
+THEN
+	eERRORID := AutoCal_ERROR.No_ERROR;
+END_IF
+IF  xAutoMode OR xDeviceRunning THEN
+	xAutomodeFlag:=TRUE;
+ELSE
+	xAutomodeFlag:=FALSE;
+END_IF
+(********************************等待手动操作******************************)
+
+
+IF eErrorID = AutoCal_ERROR.NO_ERROR AND xEStop
+THEN
+	
+//校准指定泵头
+	IF (stDeviceOpe.xSpecificPumpHeadCal_HMI OR stDeviceOpe.xSpecificPumpHeadCal_Auto)THEN//
+		_CurrentPumpController:=stparIn.iPumpController;
+		_CurrentPumpHead:=stparIn.iPumpHead;
+		eCmd := AutoCal_CMD.Cmd_SpecificPumpHeadCal;
+		xExecute := TRUE;
+	END_IF
+//初始化校准程序
+	IF stDeviceOpe.xInit_Hmi THEN//
+		eCmd := AutoCal_CMD.Cmd_Init;
+		xExecute := TRUE;
+	END_IF	
+	
+//连续加液测试
+	IF stDeviceOpe.xContinuesInject_HMI THEN//
+		FOR i:=1 TO 30 DO
+			stParOut.rContinuesInjectWeight[i]:=0;
+		END_FOR
+		_InjectNum:=1;
+		eCmd := AutoCal_CMD.Cmd_ContinuesInject;
+		xExecute := TRUE;
+	END_IF	
+	
+END_IF
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleErrorState" Id="{2834be5f-0b02-4f72-a9d0-a241c99e8854}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL  HandleErrorSTATE
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xError AND  (xResetRequest OR NOT xExecute) THEN
+    eState:=STATE.RESETING;
+    xAgain:=1;
+ELSE
+    xBusy:=0;
+    xError:=1;    
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleExecutingState" Id="{aba2cef6-09f0-45da-904a-a99c7496a79c}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleExecutingSTATE
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+{attribute 'tc_no_symbol'}	
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+IF xAbort=0 THEN   
+    CyclicAction(xComplete=> xComplete);
+END_IF
+
+IF eErrorID<>AutoCal_ERROR.NO_ERROR THEN
+    eState:=STATE.INERROR;
+    xAgain:=1;
+ELSIF xAbort THEN
+    eState:=STATE.ABORTING;
+    xAgain:=1;
+ELSIF xComplete THEN
+    eState:=STATE.DONE;
+    xAgain:=1;
+END_IF ]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleResettingState" Id="{8d7e1e10-f174-46af-b024-96956c089b72}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleResettingSTATE
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+{attribute 'tc_no_symbol'}	
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ResetAction(xComplete=> xComplete);
+
+IF xComplete THEN
+		xExecute:=0;//清除输入指令 
+    xBusy:=0;
+    xDone:=0;
+    xError:=0;
+
+    eErrorID:=AutoCal_ERROR.NO_ERROR;
+    eState:=STATE.DORMANT;
+    xFirstInvocation:=1;
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ResetAction" Id="{6acb7093-0bcb-495d-8c5e-582e0a23a161}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PROTECTED ResetAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+* Cleaning
+* => free all allocated resources
+* => reinitialize instance variables
+*)
+tOperationTimer(IN:=0);
+_diCmdState:=0;
+_CurrentPumpController:=1;
+stDeviceOpe.x96PumpHeadCal_Auto:=
+stDeviceOpe.x96PumpHeadCal_HMI:=
+stDeviceOpe.xInit_Auto:=
+stDeviceOpe.xInit_Hmi:=
+stDeviceOpe.xSpecificPumpHeadCal_Auto:=
+stDeviceOpe.xContinuesInject_HMI:=
+stDeviceOpe.xSpecificPumpHeadCal_HMI:=FALSE;
+xRunning:=FALSE; 
+xComplete:=1;	
+
+stsyspar.fbRuDongPump[stparIn.iPumpController-1].xExecute:=FALSE;
+stsyspar.fbRuDongPump[stparIn.iPumpController-1].stDeviceOpe.xPush_Auto[1]:=TRUE;
+stsyspar.fbMTMCK204C^.xExecute:=FALSE;]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_AutoCal">
+      <LineId Id="268" Count="1" />
+      <LineId Id="272" Count="0" />
+      <LineId Id="274" Count="0" />
+      <LineId Id="298" Count="0" />
+      <LineId Id="275" Count="0" />
+      <LineId Id="300" Count="0" />
+      <LineId Id="904" Count="0" />
+      <LineId Id="301" Count="0" />
+      <LineId Id="892" Count="0" />
+      <LineId Id="473" Count="2" />
+      <LineId Id="886" Count="0" />
+      <LineId Id="662" Count="0" />
+      <LineId Id="476" Count="5" />
+      <LineId Id="472" Count="0" />
+      <LineId Id="303" Count="17" />
+      <LineId Id="299" Count="0" />
+      <LineId Id="273" Count="0" />
+      <LineId Id="270" Count="1" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="912" Count="0" />
+      <LineId Id="916" Count="0" />
+      <LineId Id="921" Count="9" />
+      <LineId Id="918" Count="0" />
+      <LineId Id="917" Count="0" />
+      <LineId Id="913" Count="2" />
+      <LineId Id="669" Count="0" />
+      <LineId Id="666" Count="0" />
+      <LineId Id="897" Count="4" />
+      <LineId Id="663" Count="0" />
+      <LineId Id="910" Count="0" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="911" Count="0" />
+      <LineId Id="218" Count="0" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_AutoCal.AbortAction">
+      <LineId Id="10" Count="2" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="19" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_AutoCal.ACT_DensityConversion">
+      <LineId Id="3" Count="1" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="6" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_AutoCal.Cmd_ContinuesInject">
+      <LineId Id="6" Count="5" />
+      <LineId Id="216" Count="0" />
+      <LineId Id="12" Count="3" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="106" Count="0" />
+      <LineId Id="320" Count="1" />
+      <LineId Id="324" Count="0" />
+      <LineId Id="323" Count="0" />
+      <LineId Id="322" Count="0" />
+      <LineId Id="129" Count="0" />
+      <LineId Id="281" Count="0" />
+      <LineId Id="285" Count="0" />
+      <LineId Id="287" Count="1" />
+      <LineId Id="286" Count="0" />
+      <LineId Id="289" Count="2" />
+      <LineId Id="348" Count="0" />
+      <LineId Id="292" Count="1" />
+      <LineId Id="333" Count="0" />
+      <LineId Id="335" Count="4" />
+      <LineId Id="334" Count="0" />
+      <LineId Id="340" Count="0" />
+      <LineId Id="283" Count="0" />
+      <LineId Id="295" Count="0" />
+      <LineId Id="297" Count="0" />
+      <LineId Id="326" Count="0" />
+      <LineId Id="298" Count="1" />
+      <LineId Id="296" Count="0" />
+      <LineId Id="294" Count="0" />
+      <LineId Id="284" Count="0" />
+      <LineId Id="300" Count="0" />
+      <LineId Id="329" Count="0" />
+      <LineId Id="301" Count="1" />
+      <LineId Id="130" Count="0" />
+      <LineId Id="159" Count="0" />
+      <LineId Id="303" Count="0" />
+      <LineId Id="307" Count="0" />
+      <LineId Id="325" Count="0" />
+      <LineId Id="308" Count="0" />
+      <LineId Id="306" Count="0" />
+      <LineId Id="304" Count="0" />
+      <LineId Id="343" Count="4" />
+      <LineId Id="341" Count="1" />
+      <LineId Id="305" Count="0" />
+      <LineId Id="359" Count="0" />
+      <LineId Id="309" Count="0" />
+      <LineId Id="330" Count="2" />
+      <LineId Id="360" Count="0" />
+      <LineId Id="362" Count="0" />
+      <LineId Id="361" Count="0" />
+      <LineId Id="310" Count="0" />
+      <LineId Id="312" Count="0" />
+      <LineId Id="314" Count="0" />
+      <LineId Id="316" Count="0" />
+      <LineId Id="313" Count="0" />
+      <LineId Id="311" Count="0" />
+      <LineId Id="350" Count="3" />
+      <LineId Id="349" Count="0" />
+      <LineId Id="318" Count="1" />
+      <LineId Id="155" Count="0" />
+      <LineId Id="131" Count="0" />
+      <LineId Id="139" Count="0" />
+      <LineId Id="141" Count="0" />
+      <LineId Id="140" Count="0" />
+      <LineId Id="132" Count="2" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_AutoCal.Cmd_Init">
+      <LineId Id="6" Count="7" />
+      <LineId Id="229" Count="0" />
+      <LineId Id="240" Count="0" />
+      <LineId Id="231" Count="0" />
+      <LineId Id="267" Count="1" />
+      <LineId Id="303" Count="0" />
+      <LineId Id="276" Count="0" />
+      <LineId Id="278" Count="0" />
+      <LineId Id="304" Count="0" />
+      <LineId Id="306" Count="1" />
+      <LineId Id="309" Count="0" />
+      <LineId Id="320" Count="0" />
+      <LineId Id="310" Count="0" />
+      <LineId Id="321" Count="0" />
+      <LineId Id="308" Count="0" />
+      <LineId Id="305" Count="0" />
+      <LineId Id="279" Count="11" />
+      <LineId Id="239" Count="0" />
+      <LineId Id="159" Count="0" />
+      <LineId Id="295" Count="1" />
+      <LineId Id="311" Count="0" />
+      <LineId Id="313" Count="0" />
+      <LineId Id="315" Count="3" />
+      <LineId Id="314" Count="0" />
+      <LineId Id="312" Count="0" />
+      <LineId Id="155" Count="0" />
+      <LineId Id="319" Count="0" />
+      <LineId Id="323" Count="2" />
+      <LineId Id="250" Count="1" />
+      <LineId Id="326" Count="1" />
+      <LineId Id="330" Count="0" />
+      <LineId Id="328" Count="1" />
+      <LineId Id="254" Count="1" />
+      <LineId Id="248" Count="0" />
+      <LineId Id="131" Count="0" />
+      <LineId Id="139" Count="0" />
+      <LineId Id="141" Count="0" />
+      <LineId Id="140" Count="0" />
+      <LineId Id="134" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_AutoCal.Cmd_SpecificPumpHeadCal">
+      <LineId Id="6" Count="5" />
+      <LineId Id="216" Count="0" />
+      <LineId Id="12" Count="3" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="106" Count="0" />
+      <LineId Id="285" Count="1" />
+      <LineId Id="284" Count="0" />
+      <LineId Id="217" Count="0" />
+      <LineId Id="283" Count="0" />
+      <LineId Id="223" Count="6" />
+      <LineId Id="278" Count="4" />
+      <LineId Id="276" Count="1" />
+      <LineId Id="251" Count="0" />
+      <LineId Id="315" Count="5" />
+      <LineId Id="252" Count="8" />
+      <LineId Id="311" Count="0" />
+      <LineId Id="262" Count="2" />
+      <LineId Id="289" Count="4" />
+      <LineId Id="287" Count="0" />
+      <LineId Id="294" Count="0" />
+      <LineId Id="296" Count="0" />
+      <LineId Id="330" Count="0" />
+      <LineId Id="299" Count="3" />
+      <LineId Id="331" Count="0" />
+      <LineId Id="333" Count="0" />
+      <LineId Id="332" Count="0" />
+      <LineId Id="288" Count="0" />
+      <LineId Id="265" Count="0" />
+      <LineId Id="129" Count="0" />
+      <LineId Id="326" Count="3" />
+      <LineId Id="130" Count="0" />
+      <LineId Id="159" Count="0" />
+      <LineId Id="155" Count="0" />
+      <LineId Id="131" Count="0" />
+      <LineId Id="139" Count="0" />
+      <LineId Id="141" Count="0" />
+      <LineId Id="140" Count="0" />
+      <LineId Id="132" Count="2" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_AutoCal.CyclicAction">
+      <LineId Id="346" Count="0" />
+      <LineId Id="45" Count="4" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="733" Count="0" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="773" Count="0" />
+      <LineId Id="757" Count="0" />
+      <LineId Id="761" Count="0" />
+      <LineId Id="763" Count="3" />
+      <LineId Id="792" Count="5" />
+      <LineId Id="789" Count="0" />
+      <LineId Id="791" Count="0" />
+      <LineId Id="767" Count="0" />
+      <LineId Id="781" Count="4" />
+      <LineId Id="769" Count="0" />
+      <LineId Id="762" Count="0" />
+      <LineId Id="758" Count="0" />
+      <LineId Id="798" Count="1" />
+      <LineId Id="803" Count="0" />
+      <LineId Id="741" Count="0" />
+      <LineId Id="805" Count="0" />
+      <LineId Id="742" Count="1" />
+      <LineId Id="748" Count="0" />
+      <LineId Id="751" Count="0" />
+      <LineId Id="750" Count="0" />
+      <LineId Id="754" Count="0" />
+      <LineId Id="756" Count="0" />
+      <LineId Id="749" Count="0" />
+      <LineId Id="752" Count="0" />
+      <LineId Id="746" Count="1" />
+      <LineId Id="745" Count="0" />
+      <LineId Id="740" Count="0" />
+      <LineId Id="499" Count="1" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="495" Count="0" />
+      <LineId Id="285" Count="5" />
+      <LineId Id="85" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_AutoCal.HandleAbortedState">
+      <LineId Id="15" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="26" Count="1" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="29" Count="1" />
+      <LineId Id="25" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_AutoCal.HandleAbortingState">
+      <LineId Id="15" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="28" Count="1" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="32" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_AutoCal.HandleDoneState">
+      <LineId Id="19" Count="1" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="12" Count="5" />
+      <LineId Id="11" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_AutoCal.HandleDormantState">
+      <LineId Id="5" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="12" Count="1" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="35" Count="7" />
+      <LineId Id="17" Count="1" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="33" Count="1" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="144" Count="0" />
+      <LineId Id="128" Count="5" />
+      <LineId Id="125" Count="0" />
+      <LineId Id="137" Count="1" />
+      <LineId Id="141" Count="1" />
+      <LineId Id="134" Count="1" />
+      <LineId Id="145" Count="1" />
+      <LineId Id="150" Count="0" />
+      <LineId Id="152" Count="2" />
+      <LineId Id="147" Count="1" />
+      <LineId Id="136" Count="0" />
+      <LineId Id="149" Count="0" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="159" Count="0" />
+      <LineId Id="156" Count="0" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="83" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_AutoCal.HandleErrorState">
+      <LineId Id="10" Count="5" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_AutoCal.HandleExecutingState">
+      <LineId Id="29" Count="0" />
+      <LineId Id="57" Count="1" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="48" Count="8" />
+      <LineId Id="19" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_AutoCal.HandleResettingState">
+      <LineId Id="5" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="16" Count="1" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="18" Count="3" />
+      <LineId Id="15" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_AutoCal.ResetAction">
+      <LineId Id="10" Count="2" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="18" Count="1" />
+      <LineId Id="51" Count="1" />
+      <LineId Id="54" Count="4" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="53" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="62" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="63" Count="1" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_PartStatus" Id="{9ecbf31b-2cfa-4d1a-b9c3-900809f89e79}">
+    <Declaration><![CDATA[TYPE DUT_PartStatus :
+STRUCT
+	xALL_OK : 	BOOL ; //总的OK
+	xPart_Normal :BOOL;//产品正常
+	xPart_NG	:BOOL;	//其中有NG
+	xLoading_OK :BOOL ;
+	xLoading_NOK :BOOL;
+	xlidInjecting_OK: BOOL ;
+	xlidInjecting_NOK :BOOL;
+	xLidChecking_OK : BOOL ;
+	xLidChecking_NOK :BOOL;
+	xAluCovering_OK : BOOL ;
+	xAluCovering_NOK :BOOL;
+	xAdjusting_OK: BOOL ;
+	xAdjusting_NOK :BOOL;
+	xCutting_OK		:BOOL;
+	xCutting_NOK		:BOOL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,43 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_UploadProcessData" Id="{64638e57-535d-4710-a320-eddb1403b68e}">
+    <Declaration><![CDATA[TYPE DUT_UploadProcessData :
+STRUCT
+	iGoodNum:INT ;//良品数
+	iNGNum:INT ;//NG数
+	iCT:INT ;//总CT
+	
+    iSTAlarm :ARRAY[1..9] OF DINT; //工站报警字
+    iMachineAlarm:DINT ;//设备报警字
+
+
+    iSTAutoTip: ARRAY[1..9] OF DINT; //工站提示字
+    iMachineAutoTip:DINT ;//设备提示字
+	
+	
+	iSTStatus:ARRAY[1..9] OF INT ;//工站状态字
+	
+	iCoverTightenCT:INT ;//电动夹爪CT
+	iCoverTightenRotateCurrentPosition:INT ;//电动夹爪夹持当前位置
+	iCoverTightenRotateCurrentSpeed:INT ;//电动夹爪夹持当前速度 
+	iCoverTightenRotateCurrentTorque:INT ;//电动夹爪夹持当前扭力
+
+	iPipetCT:INT ;//移液CT
+	iLabelCT:INT ;//贴标CT
+	iLabelSpeed:INT ;//贴标速度
+	Share1:INT;//
+	Share2:INT;//
+	Share3:INT;//
+	Share4:INT;//
+	Share5:INT;//
+	Share6:INT;//
+	Share7:INT;//
+	Share8:INT;//
+	Share9:INT;//
+	Share10:INT;//
+
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

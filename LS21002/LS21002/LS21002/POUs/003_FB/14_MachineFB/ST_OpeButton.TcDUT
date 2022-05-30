@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_OpeButton" Id="{87d3c730-bdd4-440a-8255-f8dc46e0800b}">
+    <Declaration><![CDATA[TYPE ST_OpeButton :
+STRUCT
+	xStart						: BOOL;					//启动按钮
+	xStop						: BOOL;					//停止按钮
+	xReset						: BOOL;					//复位按钮
+	xPause						: BOOL;					//暂停按钮
+	xInit						: BOOL;					//初始化按钮
+	xManualMode					: BOOL;					//手动模式
+	xAutoMode					: BOOL;					//自动模式
+
+
+
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

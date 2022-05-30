@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <GVL Name="GVL_UPS" Id="{8e2bb939-97b0-45fc-acc4-8abaa643c677}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL
+	fb_1sUPS						: FB_S_UPS_CX51x0;///用于配有1sUPS的PLC
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="tsPartSequence" Id="{a209d107-eeff-4e91-98f6-01d225359873}">
+    <Declaration><![CDATA[TYPE tsPartSequence :
+STRUCT
+	asSequenceData:ARRAY[0..gc_uiStationNum] OF tsSequence;(*module sequence *)
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

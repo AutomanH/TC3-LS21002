@@ -1,0 +1,74 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <GVL Name="GVL_Standard" Id="{87b4e9c5-9101-4e64-9fc0-274c5f9afa2e}">
+    <Declaration><![CDATA[VAR_GLOBAL
+	Axis						  : ARRAY[1..gc_uiAxisNum] OF AXIS_REF;
+	fbAxis						: ARRAY[1..gc_uiAxisNum] 			OF FB_Axis;
+	fbAxisHome						: ARRAY[1..gc_uiAxisNum] 			OF FB_AxisHome;
+	fbCylinder					: ARRAY[1..gc_uiCylinderNum] 		OF FB_Cylinder;
+	fbProface						: ARRAY[1..gc_uiHMI_Num] 			OF FB_Proface;
+	fbMachine					: ARRAY[1..gc_uiMachineNum] 		OF FB_Machine;
+	fbStation					: ARRAY[1..gc_uiStationNum] 		OF FB_Station;
+	fbRGI_14_Modbus 			: ARRAY[1..gc_uiRGI_14_Number] OF FB_RGI_14_Modbus;
+	fbTempretureControl           : ARRAY [1..gc_uiPXF5Num] OF FB_TempControl_FUSHI;    //modbus tcp
+	fbMCK204W					  : FB_MT_MKC;//秤
+	fbAutoCal					  :	FB_AutoCal;
+	fbRudongPump 				:ARRAY[1..gc_uiRudongPump] OF FB_RuDongPump_modbus_DF600Plus;	
+	fbTURINContorl                : ARRAY[1..gc_uiTURINRobot_Num]     OF FB_TURINContorl;
+	(*fb_CommWithPC				:FB_CommWithPC;*)
+	fbRecipes					:ARRAY[1..gc_RecipeNum]OF FB_Recipes;
+	fbERG_20_Modbus				:ARRAY[1..gc_uiHITBOT_Number] OF FB_ERG_20_Modbus;
+	fbGetTime					:FB_GetTime;
+	fbEthercatTerminalState		:FB_EthercatTerminalState;
+	
+	
+    xNot_power					: ARRAY[1..gc_uiAxisNum] OF BOOL;//设原点时断使能
+	cnSlaveAddr	        : ARRAY[1..gc_uiAxisNum] OF UINT;//伺服的从站地址
+	sDeviceNetId AT%I* : AmsNetID ; //设备的ethercat地址
+	sEctNetId : STRING ;//需要将读到的地址转成string
+
+	home_method : ARRAY[1..gc_uiAxisNum] OF SINT := [gc_uiAxisNum(35)];	
+	bSetPosDone	: ARRAY[1..gc_uiAxisNum] OF BOOL;
+	(*其他信号*)
+	strDoorBypassHmi	:BOOL;
+	xMachineLamp		:BOOL;
+	xultravioletLampControl:BOOL;///紫外灯控制按钮
+	xultravioletButtonLamp	:BOOL;
+	
+	strLocalDateTime: STRING;
+	
+	xMainLineRunTestHMI:BOOL;//环形线运行测试按钮
+	
+	axBypassSignal	:ARRAY[1..50] OF BOOL ;
+	//
+	stPara: INT;
+	aReleaseControl: INT;
+END_VAR
+
+VAR_GLOBAL 
+	stToRobot,stToRobotZero       : DUT_SysToRobot; //
+	stFromRobot,stFromRobotZero   : DUT_SysFromRobot; //
+	// 深孔板选择
+	iBoxChoose: INT;
+	//允许主流线运行
+	xS07MainlineRunPermit	:BOOL;
+	//程序编号调用
+	asModuleSeqData	    	:ARRAY[1..gc_uiStationNum] OF tsPartSequence;(*module sequence *)
+	stZ_ERG_20_IOData      :ARRAY[1..gc_uiHITBOT_Number] OF ST_ERG_20_IOData;
+	stCameraHmi		    	:DUT_CameraSend;
+	stCamearHmiTrigger		:ARRAY[1..18] OF BOOL;
+	
+END_VAR
+
+VAR_GLOBAL PERSISTENT
+	stData	 					:ST_Recipe;
+	arStepAuto					:DUT_Sta;
+	arStepInit					:DUT_Sta;
+	stCalibration			:DUT_Calibration;
+END_VAR
+
+
+
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

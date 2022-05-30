@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_PCReceive" Id="{3dbc6954-14df-4d8f-bc66-fa08fe087eca}">
+    <Declaration><![CDATA[TYPE DUT_PCReceive :
+STRUCT
+   //PLC---PC
+   xPLCALive : INT ;//0=false  1=true
+       //贴标
+  iMachineEmptyDone:INT; //1=清空完成  0=无操作
+  iBodyFeederEmtpyDone:INT;//瓶身振动盘请料  1=清空完成
+  iCoverFeederEmptyDone:INT;//瓶盖振动盘清料 1=清空完成
+   //CCD检测
+   xCameraCheckEnable :INT;//相机检测开始//0=false  1=true
+   //移液枪
+	iFunctionCode1: INT ; //1=取TIP头 2=扔TIP头 3=吸液 4=吐液 5=回原点\
+	xActionPermit1:INT;//移液枪执行指令/0=false  1=true
+	iLabelPrintCompeleted : INT ; //标签打印完成
+  	iCoverFeederLoadFinished : INT ; //1=瓶盖振动盘上料完成
+	iBodyFeederLoadFinished	:INT;//1=瓶身振动盘上料完成
+	iInitCommand:INT;//设备初始化命令
+	iInitFinished:INT;//设备初始化完成
+	iMachineStart:INT;//设备启动
+	iUnloadDone:INT;//下料完成信号
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

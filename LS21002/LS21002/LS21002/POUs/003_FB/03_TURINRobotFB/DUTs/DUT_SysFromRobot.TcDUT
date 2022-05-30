@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_SysFromRobot" Id="{557f7e8e-2740-4e02-8a5f-dce865926119}">
+    <Declaration><![CDATA[TYPE DUT_SysFromRobot :
+STRUCT
+//Robot-PLC
+xEstop,   			      //机器人急停
+xLocal_Remote,			  //本地/远程
+xEnable,              //机器人使能
+xRuntip,              //运行中
+xStopTip,             //停止
+xAt_HomePosition,     //在原点位
+xAt_PickPoint,        //在取料位
+xAt_PickPointUp,      //在取料位上方
+xAt_PutPoint1,        //在放料位1
+xAt_PutPoint2,        //在放料位2
+xAt_PutPoint3,        //在放料位3
+xStepRuning,          //流程运行中
+xInitOK,              //初始化完成
+xGoHomeDone,          //回原点完成
+xOutofseg1,           //取料区域
+xOutofseg2,           //放料区域
+xSeg1Complete,           
+xSeg2Complete,
+xOutofseg3,           
+xCycleDone      :BOOL;//循环完成
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

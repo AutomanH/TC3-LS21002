@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <GVL Name="GVL_PC" Id="{dc3939c5-e481-4168-9b1e-3e5db0363608}">
+    <Declaration><![CDATA[VAR_GLOBAL 
+  sPLC_TO_PC   			AT%MW400  :DUT_PCReceive;
+  sPLC_From_PC  		AT%MW0    :DUT_PCSend;
+  sCamera_TO_Plc 		AT%MW100  :DUT_CameraSend;
+  sPLC_TO_200SMART		AT%MW300 :DUT_200SMARTReceive;
+  sPLC_From_200SMART	AT%MW400 :DUT_200SMARTSend;
+END_VAR	]]></Declaration>
+  </GVL>
+</TcPlcObject>

@@ -1,0 +1,674 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_Machine" Id="{ecb78df5-d5e5-4d68-a31a-3ef2798ecc8e}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK  FB_Machine
+VAR_INPUT
+	xEStop						: BOOL;					//急停(运行时常ON)
+	xKey						: BOOL;					//钥匙开关
+	xDoorClosed					: BOOL;					//所有安全门关好
+	xSafety						: BOOL;					//安全防护中
+	xAirOn						: BOOL;					//气压正常
+	xAlarm						: BOOL;					//报警中
+	xManualTip					: BOOL;					//手动提示中
+	xAutoTip					: BOOL;					//自动提示中
+	xTip						: BOOL;					//提示中
+	
+	xStart						: BOOL;					//启动按钮
+	xStop						: BOOL;					//停止按钮
+	xReset						: BOOL;					//复位按钮
+	xPause						: BOOL;					//暂停按钮
+	xInit						: BOOL;					//初始化按钮
+	xManualMode					: BOOL;					//手动模式
+	xAutoMode					: BOOL;					//自动模式
+
+	
+	xInitConfirm				: BOOL;					//初始化确认
+	xInitDone					: BOOL;					//初始化完成
+	tInitTimeout				: TIME:=T#3M;			//初始化超时延时
+	
+	xDummyMode					: BOOL;					//点检模式，点检使能
+	xStationDummyDone			: BOOL;					//工站点检完成
+	xDummyDone					: BOOL;					//点检完成
+	xDummyDoneConfirm			: BOOL;					//点检完成确认
+	
+	xSampling					: BOOL;					//取样中
+	uiSampleCount				: UINT;					//取样数量统计
+	xSampleDone					: BOOL;					//取样完成
+	xEmptyHmi					: BOOL;					//清料HMI
+	xEmptyConfirmHmi			: BOOL;					//清料确认HMI
+	xEmptyDone					: BOOL;					//清料完成
+	xOrderFinished				: BOOL;					//订单完成
+	xOrderChanged				: BOOL;					//订单切换
+	
+	xTryRun						: BOOL;					//空跑试运行
+	xCycleEnable      	 		: BOOL;          		//设备CT计时
+	xDataEmpty					: BOOL;					//数据清空
+	tDataEmpty					: TIME;					//数据清空延时，默认为0
+	xCarrierDataClear			: BOOL;					//载座数据清空
+	tCarrierDataClear			: TIME;					//载座数据清空延时，默认为0
+	
+	xInitConfirmDialog			: BOOL;					//初始化确认对话框
+	
+	dwStatus					:ARRAY[1..4] OF DWORD;	//状态，bit.0急停中.1钥匙关闭.2气压低.3手动模式.4自动模式.5未准备好.6准备就绪.7运行中.8停止中.9报警中.10暂停中.11初始化中.12清料中.13清料完成.14取样中.15取样完成.16订单完成.17点检屏蔽中.18要求点检.其它可自定义	
+ 
+	dwMessage					:ARRAY[1..5] OF DWORD;	//提示信息
+	dwAlarm						:ARRAY[1..5] OF DWORD;	//报警信息	
+	
+	xDummyDisabled				: REFERENCE TO BOOL;	//点检屏
+	//rCycleTime				: REAL;					//生产周期，单位s
+	//生产信息相关变量
+	xClearCountData 			: BOOL ; //清除产量数据
+	udiGoods					: UDINT;				//当前良品数量
+	udiBads						: UDINT;				//当前不良数量
+	udiTotal					:  UDINT;				//当前总数量
+	rYield						:  REAL;				//当前良品率
+	rReject						:  REAL;				//当前不良率
+END_VAR
+
+VAR_OUTPUT
+	xEStopped					: BOOL;					//急停状态
+	xRunning					: BOOL;					//自动中
+	xStopped					: BOOL;					//停止状态
+	xPaused						: BOOL;					//暂停状态
+	xIniting					: BOOL;					//初始化中
+	xEmptying					: BOOL;					//清料中
+	
+	xAutoModeTip				: BOOL;					//自动模式上升沿提示
+	
+	xInitTimeout				: BOOL;					//初始化超时
+	xReInit						: BOOL;					//整机重新初始化，用于复位各工站初始化完成
+	
+	xInitDoneDialog				: BOOL;					//初始化完成对话框
+	xInitFailedDialog			: BOOL;					//初始化失败对话框
+	
+	xEmptyConfirmDialog			: BOOL;					//清料确认对话框
+	xEmptyDoneDialog			: BOOL;					//清料完成对话框
+	
+	xShowAlarm					: BOOL;					//报警信息显示
+	xShowTip					: BOOL;					//提示信息显示
+	
+	xStartLight					: BOOL;					//启动按钮灯
+	xStopLight					: BOOL;					//停止按钮灯
+	xResetLight					: BOOL;					//复位按钮灯
+	xPauseLight					: BOOL;					//暂停按钮灯
+	xInitLight					: BOOL;					//初始化按钮灯
+	
+	xLampGreen					: BOOL;					//三色灯-绿
+	xLampYellow					: BOOL;					//三色灯-黄
+	xLampRed					: BOOL;					//三色灯-红
+	xLampBuzzer					: BOOL;					//三色灯-蜂鸣器	
+	
+	diLastCycleTime				:DINT;					//基础时间是100ms
+	diCycleTime        			: DINT;					//基础时间是100ms
+
+END_VAR
+
+VAR
+	{attribute 'hide'}
+	rtRunning					: R_TRIG;				//自动中上升沿
+	{attribute 'hide'}
+	rtEmptyDone					: R_TRIG;				//清料完成上升沿
+	{attribute 'hide'}
+	tonDataEmpty				: TON;					//数据清零延时
+	rtDataEmpty					: R_TRIG;				//数据清空上升沿
+	{attribute 'hide'}
+	tonCarrierDataClear			: TON;					//载座数据清空延时
+	rtCarrierDataClear			: R_TRIG;				//载座数据清空上升沿
+	{attribute 'hide'}
+	xDummyWarnTime				: BOOL;					//点检提醒时间
+	{attribute 'hide'}
+	rtDummyWarnTime				: R_TRIG;				//点检提醒时间上升沿
+	{attribute 'hide'}
+	xDummyAlarmTime				: BOOL;					//点检报警时间
+	{attribute 'hide'}
+	rtDummyAlarmTime			: R_TRIG;				//点检报警时间上升沿
+	{attribute 'hide'}
+	rtDummyDoneConfirm			: R_TRIG;				//点检完成确认上升沿
+	{attribute 'hide'}
+	xDummyDoneCache				: BOOL;					//点检完成缓存
+	{attribute 'hide'}
+	xDummyComplete				: BOOL;					//点检完成状态
+	{attribute 'hide'}
+	xDummyRequirement			: BOOL;					//要求点检提醒
+	{attribute 'hide'}
+	rtInit						: R_TRIG;				//初始化上升沿
+	{attribute 'hide'}
+	rtInitConfirm				: R_TRIG;				//初始化确认上升沿
+	{attribute 'hide'}
+	ftIniting					: F_TRIG;				//初始化下降沿
+	{attribute 'hide'}
+	rtEmptyHmi					: R_TRIG;				//清料HMI上升沿
+	{attribute 'hide'}
+	ftEmptying					: F_TRIG;				//清料中下降沿
+	{attribute 'hide'}
+	xInitAble					: BOOL;					//初始化条件
+	{attribute 'hide'}
+	xRunAble					: BOOL;					//运行条件
+	{attribute 'hide'}
+	tonInitTimeout				: TON;					//初始化超时
+	{attribute 'hide'}
+	tonLampBuzzer				: TON;					//蜂鸣器关闭延时
+	{attribute 'hide'}
+	rtCycleFlag					: R_TRIG;				//循环标志上升沿
+	{attribute 'hide'}
+	lrCycleTimer				: LREAL;				//计时器，单位100ns，除于10000后单位ms
+	{attribute 'hide'}
+	tonHydraGoodsOut			: TON;					//Hydra良品输出信号延时
+	{attribute 'hide'}
+	tonHydraGoodsInterval		: TON;					//Hydra良品输出信号间隔
+	{attribute 'hide'}
+	tonHydraBadsOut				: TON;					//Hydra不良输出信号延时
+	{attribute 'hide'}
+	tonHydraBadsInterval		: TON;					//Hydra不良输出信号间隔
+	
+	rtAutoMode					: R_TRIG;				//自动模式上升沿
+	rMachineStart       		: R_TRIG;
+	i : INT ;
+
+END_VAR
+
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ACT_General();
+ACT_Init();
+ACT_Empty();
+ACT_Start();
+ACT_Pause();
+ACT_Stop();
+ACT_Reset();
+ACT_Lamp();
+ACT_Data();
+ACT_CycleTime();
+
+
+
+
+
+
+
+
+]]></ST>
+    </Implementation>
+    <Action Name="ACT_CycleTime" Id="{65a8cfbb-cc79-4209-b0f3-5959fe5fd849}">
+      <Implementation>
+        <ST><![CDATA[//	初始化时同时初始化工站周期计时
+IF xIniting THEN
+	xCycleEnable:=FALSE;
+END_IF
+
+//工站完成触发信号
+rMachineStart(CLK:= xCycleEnable);
+IF rMachineStart.Q
+THEN
+	diCycleTime:=diLastCycleTime;
+	diLastCycleTime := 0;
+END_IF
+//	工站周期计时
+IF xRunning AND xCycleEnable AND stSysPulse.xR100ms
+THEN
+	diLastCycleTime := diLastCycleTime + 1;//对应最小周期是0.1ms
+END_IF	
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Data" Id="{16946f3b-4b42-4ee4-9ba9-0ee8c42b216a}">
+      <Implementation>
+        <ST><![CDATA[//	当前数据清零
+tonDataEmpty(IN:=xDataEmpty, PT:=tDataEmpty, Q=> , ET=> );
+rtDataEmpty(CLK:=tonDataEmpty.Q, Q=> );
+IF rtDataEmpty.Q THEN
+	udiGoods:=0;
+	udiBads:=0;
+END_IF
+
+//	计算当前良品率
+udiTotal:=udiGoods + udiBads;
+IF udiTotal > 0 THEN
+	rYield:=LREAL_TO_REAL(100 * UDINT_TO_LREAL(udiGoods) / UDINT_TO_LREAL(udiTotal));
+	rReject:=100.0 - rYield;
+ELSE
+	rReject:=0;
+	rYield:=0;
+END_IF
+
+
+
+//	转台数据清零上升沿
+tonCarrierDataClear(IN:=xCarrierDataClear, PT:=tCarrierDataClear, Q=> , ET=> );
+rtCarrierDataClear(CLK:=tonCarrierDataClear.Q, Q=> );
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Empty" Id="{56c0e3b3-3484-4b23-b587-634ad589f2f4}">
+      <Implementation>
+        <ST><![CDATA[//	启动时，先复位清料完成
+IF xStart
+	AND NOT xRunning
+	AND NOT xEmptying
+THEN
+	xEmptyDone:=FALSE;
+END_IF
+
+//	清料HMI上升沿，弹出清料确认对话框
+rtEmptyHmi(CLK:=xEmptyHmi, Q=> );
+xEmptyConfirmDialog:=rtEmptyHmi.Q
+	AND xEStop
+	AND xKey
+	AND xSafety
+	AND xInitDone
+	AND NOT xAlarm
+	AND NOT xTip
+	AND NOT xIniting;
+
+//	清料
+IF xEStop
+	AND NOT xIniting
+	AND NOT xEmptyDone
+THEN
+	IF xEmptyConfirmHmi
+		AND xKey
+		AND xSafety
+		AND xInitDone
+		AND NOT xAlarm
+		AND NOT xTip
+	THEN
+		xEmptying:=TRUE;
+		xEmptyConfirmHmi := FALSE ;
+	END_IF
+ELSE
+	xEmptying:=FALSE;
+END_IF
+
+//	清料中下降沿，弹出清料完成对话框
+ftEmptying(CLK:=xEmptying, Q=> );
+xEmptyDoneDialog:=ftEmptying.Q
+	AND xEmptyDone;
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_General" Id="{a6fecb08-fcff-406b-b289-21fda141098f}">
+      <Implementation>
+        <ST><![CDATA[//	急停中
+xEStopped:=NOT xEStop;
+
+xShowAlarm := FALSE;
+FOR i:=1 TO 4 BY 1 DO 	
+ IF dwMessage[i]<>0 THEN 
+		xShowAlarm := TRUE ;
+		EXIT ;
+ END_IF
+END_FOR
+//提示报警显示
+xShowAlarm:= xShowAlarm OR xAlarm;
+
+//提示信息显示
+xShowTip:=xTip;
+
+//报警复位
+IF xReset THEN
+	FOR i:=1 TO 5 BY 1 DO 
+		dwMessage[i] := dwAlarm[i]  := 0;
+	END_FOR
+END_IF
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Init" Id="{8b6816ed-3105-4052-930f-0adcccf5382c}">
+      <Implementation>
+        <ST><![CDATA[//	初始化条件
+xInitAble:=xEStop
+	AND xKey
+	AND xSafety
+	AND xManualMode
+	AND NOT xAlarm
+	AND NOT xInitTimeout;
+
+//	初始化上升沿，弹出初始化确认对话框
+rtInit(CLK:=xInit, Q=> );
+IF rtInit.Q AND xInitAble AND NOT xIniting THEN
+  xInitConfirmDialog :=TRUE;	
+END_IF
+(*bInitConfirmDialog:=rtInit.Q
+	AND bInitAble
+	AND NOT bIniting;*)
+
+//	初始化确认上升沿，触发各工站重新初始化
+rtInitConfirm(CLK:=xInitConfirm, Q=> );
+xReInit:=rtInitConfirm.Q
+	AND xInitAble
+	AND NOT xIniting;
+//false初始化弹出的窗口
+IF rtInitConfirm.Q
+THEN 
+  xInitConfirmDialog :=FALSE;
+  
+END_IF
+
+//	初始化中
+IF xInitAble
+	AND NOT xPause
+	AND NOT xInitDone
+THEN
+	IF xInitConfirm THEN
+		xIniting:=TRUE;
+	END_IF
+ELSE
+	xIniting:=FALSE;
+END_IF
+
+//	初始化按钮灯，初始化中闪烁，初始化完成熄灭
+xInitLight:=xIniting AND stSysPulse.xP1s ;
+
+//	初始化超时
+tonInitTimeout(
+	IN:=xIniting,
+	PT:=tInitTimeout,
+	Q=> , ET=>
+);
+IF xReset THEN
+	xInitTimeout:=FALSE;
+END_IF
+IF tonInitTimeout.Q THEN
+	xInitTimeout:=TRUE;
+END_IF
+
+//	初始化中下降沿，弹出初始化完成或失败对话框
+ftIniting(CLK:=xIniting, Q=> );
+xInitDoneDialog:=ftIniting.Q
+	AND xInitDone;
+xInitFailedDialog:=ftIniting.Q
+	AND NOT xInitDone;
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Lamp" Id="{62062740-d336-40dc-95f1-dd84c4dc7c15}">
+      <Implementation>
+        <ST><![CDATA[//	三色灯-绿，运行中绿灯常亮
+xLampGreen:=xRunning OR xStartLight;
+
+//	三色灯-红，报警或急停中红灯常亮
+xLampRed:=xAlarm OR xEStopped;
+
+//	三色灯-黄，其余情况下黄灯常亮，有等待信息时黄灯闪烁
+
+xLampYellow:=NOT xLampGreen AND NOT xLampRed AND  (stSysPulse.xP1s OR (xinitdone AND xmanualmode));	
+
+
+
+
+//	蜂鸣器关闭延时
+tonLampBuzzer(IN:=xAlarm, PT:=T#3S, Q=> , ET=> );
+
+//	三色灯-蜂鸣器
+xLampBuzzer:=xAlarm
+	AND stSysPulse.xP1s
+	AND NOT tonLampBuzzer.Q;
+	
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Pause" Id="{1fef50f2-0796-4828-acd1-ed4de3f66130}">
+      <Implementation>
+        <ST><![CDATA[//	暂停中
+IF xPause  THEN
+	xPaused:=TRUE;
+END_IF
+
+IF xEStopped
+	OR xStart
+THEN
+	xPaused:=FALSE;
+END_IF
+
+//暂停按钮灯，暂停中常亮
+xPauseLight:=xPaused;
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Reset" Id="{fa441c03-0b4b-43b3-9618-3288d848113b}">
+      <Implementation>
+        <ST><![CDATA[//	复位按钮灯，报警时闪烁
+xResetLight:=xAlarm
+	AND stSysPulse.xP1s;
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Start" Id="{1b8b94df-917e-41b6-81e2-2ed791b4769f}">
+      <Implementation>
+        <ST><![CDATA[//	运行条件
+xRunAble:=xEStop
+	AND xKey
+	AND xSafety
+	AND xAutoMode
+	AND xInitDone
+	AND NOT xAlarm
+	AND NOT xAutoTip
+	AND NOT xStopped;
+
+//	运行中
+IF xRunAble
+	AND NOT xPause
+	AND NOT xEmptyDone//清料完成
+THEN
+	IF xStart THEN
+		xRunning:=TRUE;
+	END_IF
+ELSE
+	xRunning:=FALSE;
+END_IF
+
+//	启动按钮灯，运行中常亮，准备就绪时闪烁
+xStartLight:=xRunning
+	OR xRunAble
+		AND stSysPulse.xP1s;
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Stop" Id="{8311a3c5-498c-485a-8d69-bd28534ee613}">
+      <Implementation>
+        <ST><![CDATA[//	停止中
+IF xStop AND xRunning THEN
+	xStopped:=TRUE;
+END_IF
+
+IF xEStopped
+	OR xStart
+	OR xPaused
+THEN
+	xStopped:=FALSE;
+END_IF
+
+//停止按钮灯，停止中常亮
+xStopLight:=xStopped;
+]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="FB_Machine">
+      <LineId Id="262" Count="1" />
+      <LineId Id="93" Count="0" />
+      <LineId Id="79" Count="0" />
+      <LineId Id="264" Count="0" />
+      <LineId Id="80" Count="0" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="85" Count="0" />
+      <LineId Id="1246" Count="0" />
+      <LineId Id="1483" Count="7" />
+      <LineId Id="1482" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Machine.ACT_CycleTime">
+      <LineId Id="60" Count="0" />
+      <LineId Id="53" Count="0" />
+      <LineId Id="55" Count="1" />
+      <LineId Id="157" Count="0" />
+      <LineId Id="160" Count="3" />
+      <LineId Id="172" Count="0" />
+      <LineId Id="164" Count="0" />
+      <LineId Id="159" Count="0" />
+      <LineId Id="170" Count="0" />
+      <LineId Id="166" Count="2" />
+      <LineId Id="165" Count="0" />
+      <LineId Id="171" Count="0" />
+      <LineId Id="79" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Machine.ACT_Data">
+      <LineId Id="22" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="32" Count="2" />
+      <LineId Id="38" Count="0" />
+      <LineId Id="35" Count="0" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="36" Count="1" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="70" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="42" Count="1" />
+    </LineIds>
+    <LineIds Name="FB_Machine.ACT_Empty">
+      <LineId Id="79" Count="31" />
+      <LineId Id="120" Count="0" />
+      <LineId Id="111" Count="8" />
+      <LineId Id="60" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Machine.ACT_General">
+      <LineId Id="34" Count="1" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="90" Count="1" />
+      <LineId Id="93" Count="5" />
+      <LineId Id="57" Count="0" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="38" Count="0" />
+      <LineId Id="100" Count="0" />
+      <LineId Id="99" Count="0" />
+      <LineId Id="102" Count="3" />
+      <LineId Id="101" Count="0" />
+      <LineId Id="61" Count="1" />
+      <LineId Id="40" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Machine.ACT_Init">
+      <LineId Id="32" Count="5" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="78" Count="0" />
+      <LineId Id="80" Count="0" />
+      <LineId Id="100" Count="0" />
+      <LineId Id="102" Count="1" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="79" Count="0" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="49" Count="0" />
+      <LineId Id="104" Count="1" />
+      <LineId Id="107" Count="0" />
+      <LineId Id="111" Count="0" />
+      <LineId Id="106" Count="0" />
+      <LineId Id="108" Count="0" />
+      <LineId Id="17" Count="1" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="22" Count="1" />
+      <LineId Id="27" Count="3" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="95" Count="0" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="97" Count="0" />
+      <LineId Id="96" Count="0" />
+      <LineId Id="60" Count="11" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="52" Count="1" />
+      <LineId Id="57" Count="0" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="58" Count="0" />
+      <LineId Id="92" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Machine.ACT_Lamp">
+      <LineId Id="25" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="62" Count="2" />
+      <LineId Id="49" Count="1" />
+      <LineId Id="86" Count="0" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="94" Count="2" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="3" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="6" Count="0" />
+      <LineId Id="87" Count="1" />
+      <LineId Id="91" Count="0" />
+      <LineId Id="93" Count="0" />
+      <LineId Id="90" Count="0" />
+      <LineId Id="29" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Machine.ACT_Pause">
+      <LineId Id="38" Count="0" />
+      <LineId Id="33" Count="3" />
+      <LineId Id="27" Count="1" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="15" Count="1" />
+      <LineId Id="39" Count="1" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Machine.ACT_Reset">
+      <LineId Id="4" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="3" Count="0" />
+      <LineId Id="8" Count="0" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Machine.ACT_Start">
+      <LineId Id="45" Count="7" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="24" Count="2" />
+      <LineId Id="32" Count="1" />
+      <LineId Id="35" Count="3" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="69" Count="3" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="66" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Machine.ACT_Stop">
+      <LineId Id="29" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="8" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="21" Count="5" />
+      <LineId Id="30" Count="1" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

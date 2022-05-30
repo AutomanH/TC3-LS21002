@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_DataAxis" Id="{c41a232b-45c7-4b81-a590-8ff8fcebfe37}">
+    <Declaration><![CDATA[TYPE ST_DataAxis :
+STRUCT
+	rJogVelocity				: REAL:=1;				//轴Jog速度
+	rAcceleration,rDeceleration : REAL ;
+	rRelativeDistance,rRelativeVelocity,rVelocityVel      : REAL ;
+	rManualVelocity			: REAL:=10;				//轴手动速度
+	rAutoVelocity				: REAL:=50;				//轴自动速度
+	rMovePosition				: ARRAY[1..gc_uiAxisMoveNum] OF REAL;//绝对定位位置
+	rMoveVelocity				: ARRAY[1..gc_uiAxisMoveNum] OF REAL;//绝对定位速度
+	tInPosition					: ARRAY[1..gc_uiAxisMoveNum] OF TIME;//绝对到位延时
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

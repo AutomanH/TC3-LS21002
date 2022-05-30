@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_MainlineFixture" Id="{8707e05e-86c7-4629-a577-967014eadd0d}">
+    <Declaration><![CDATA[TYPE DUT_MainlineFixture :
+STRUCT
+		xMaterialOnOff : BOOL ;
+        stProduct : DUT_PartStatus ;
+		stProductFlag :DUT_PartFlag;
+		stProcessData:DUT_LidChecking;
+		arCycletimeStation: ARRAY[1..20] OF REAL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

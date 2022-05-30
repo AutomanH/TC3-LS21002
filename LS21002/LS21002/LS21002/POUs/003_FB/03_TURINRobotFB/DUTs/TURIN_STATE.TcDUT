@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="TURIN_STATE" Id="{68ec1020-2a6f-4d4b-8b60-723273478cf9}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE TURIN_STATE :
+(
+	DORMANT  							:= 0,
+	EXECUTING 						:= 1,
+	DONE 								  := 2,
+	INERROR								:= 3,
+	ABORTING 							:= 4,
+	ABORTED 							:= 5,
+	RESETING 							:= 6
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

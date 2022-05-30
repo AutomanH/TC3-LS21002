@@ -1,0 +1,11 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_StaHistory" Id="{d02c2898-9095-4bfa-9d63-0bc815c3ee2f}">
+    <Declaration><![CDATA[TYPE DUT_StaHistory :
+STRUCT
+		History:ARRAY [1..500] OF STRING[100];
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

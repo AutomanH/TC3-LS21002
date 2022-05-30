@@ -1,0 +1,66 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_RGI_14_IOData" Id="{b7d75999-dbe9-4319-8a3e-f944c1530075}">
+    <Declaration><![CDATA[TYPE ST_RGI_14_IOData :
+STRUCT
+	///夹持初始化状态：0：夹持未初始化；1：夹持初始化成功
+	I_ClampInit: INT;
+	///0：运动中，1：到达位置；2：夹住物体；3：物体掉落
+	I_ClampState: INT;
+	///反馈当前夹爪实时位置
+	I_CurrentPos: INT;
+	///0：无任何问题;04 过 热;08 过载;11 过速
+	I_DeviceERRORState: INT;
+	///反馈当前夹爪旋转实时角度
+	I_RotateAngleL: INT;
+	///反馈当前夹爪旋转实时角度(高位)
+	I_RotateAngleH: INT;
+	///夹持初始化状态：0：夹持未初始化；1：夹持初始化成功
+	I_RotateInit: INT;
+	///0：运动中，1：到达位置；2：堵转；3：到达指定位置过程中有堵转
+	I_RotateState: INT;
+	///旋转速度	
+	I_RotateSpeed: INT;
+	///16#0100写入 1：回零位（找单向位置）；写入 0xA5: 重新标定
+	O_Init: INT;
+	///16#0101设置力值( 20-100（%）)
+	O_ClampForceSet: INT;
+	///16#0103设定夹爪位置( 0-1000（‰）)
+	O_ClampPosSet: INT;
+	///16#0104以设定速度运行(1-100（%）)
+	O_ClampSpeedSet: INT;
+	///16#0105绝对角度低位
+	O_RotateAngleLSet: INT;
+	///16#0106绝对角度高位
+	O_RotateAngleHSet: INT;
+	///16#0107以设定旋转速度运行(1-100（%）)
+	O_RotateSpeedSet: INT;
+	///16#0108以设定旋转力运行( 20-100（%）)
+	O_RotateForseSet: INT;
+	///16#0109旋转相对旋转角度
+	O_RotateRelAngle: INT;
+	///写入 1：夹爪停止
+	O_Stop: INT;
+	///16#0100写入 1：回零位（找单向位置）；写入 0xA5: 重新标定
+	i_Init: INT;
+	///16#0101设置力值( 20-100（%）)
+	i_ClampForceSet: INT;
+	///16#0103设定夹爪位置( 0-1000（‰）)
+	i_ClampPosSet: INT;
+	///16#0104以设定速度运行(1-100（%）)
+	i_ClampSpeedSet: INT;
+	///16#0105绝对角度低位
+	i_RotateAngleLSet: INT;
+	///16#0106绝对角度高位
+	i_RotateAngleHSet: INT;
+	///16#0107以设定旋转速度运行(1-100（%）)
+	i_RotateSpeedSet: INT;
+	///16#0108以设定旋转力运行( 20-100（%）)
+	i_RotateForseSet: INT;
+	///16#0109旋转相对旋转角度
+	i_RotateRelAngle: INT;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

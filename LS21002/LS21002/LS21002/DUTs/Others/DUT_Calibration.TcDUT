@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_Calibration" Id="{fab8e822-d797-4f00-b962-be218691c8a3}">
+    <Declaration><![CDATA[TYPE DUT_Calibration :
+STRUCT
+	strCalibHmi:STRING;
+	xWindowsTrigger :BOOL;
+	xStartButtonHmi:BOOL;
+	xNextButtonHmi:BOOL;
+	xCompletedButtonHmi:BOOL;
+	xNeedCalibration  :BOOL;
+	iXCounter:INT;
+	iYCounter:INT;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

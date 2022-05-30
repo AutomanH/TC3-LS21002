@@ -1,0 +1,26 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_SysToRobot" Id="{377eab9a-fab9-4431-97ad-8208942e0644}">
+    <Declaration><![CDATA[TYPE DUT_SysToRobot :
+STRUCT
+//PLC-Robot	
+xStepRunPermit,            //流程允许运行
+xGo_PickPoint,             //到取料位
+xGo_PickPointUp,           //到取料位上方
+xGo_PutPoint1,             //到放料位1
+xGo_PutPoint2,             //到放料位2
+xGo_PutPoint3,             //到放料位3
+xGo_StandByPos,            //回待机点
+xResetWorkDone,            //复位工作完成
+xGo_PutPoint11,             //到放料位11
+xGo_PutPoint12,             //到放料位12
+xGo_PutPoint13       :BOOL; //到放料位13
+
+iMoveMode           :WORD;//1=回原点 2=自动流程 
+iRatio              :WORD;//机器人速率
+
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

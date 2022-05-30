@@ -1,0 +1,530 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_Station" Id="{dbb5d7ec-30e7-4744-a385-a20c08560420}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Station
+VAR_INPUT
+	xEStop						: BOOL;					//急停
+	xKey						: BOOL:=TRUE;			//钥匙开关
+	xSafety						: BOOL;					//安全防护
+	xManualMode					: BOOL;					//手动模式
+	xReset						: BOOL;					//复位按钮	
+	xMachinePause				: BOOL;					//整机暂停按钮
+	xMachineReInit				: BOOL;					//整机重新初始化时，复位初始化完成
+	xMachineIniting				: BOOL;					//整机初始化中
+	xMachineRunning				: BOOL;					//整机自动中
+	tInitTimeout				: TIME:=T#90S;			//初始化超时
+	xPauseDisable        		: BOOL;            		//暂停失效标志位
+	
+	xEmptying					:BOOL;					//工站清空中
+	xEmptyDone					:BOOL;					//工站清空结束
+	
+	
+	
+	
+	xInitHmi					: BOOL;					//初始化HMI
+	xInitDone					: BOOL;					//初始化完成
+	xDisabled					: BOOL;					//工站屏蔽
+	xCycleRunHmi				: BOOL;					//连动HMI
+	xJogRunHmi					: BOOL;					//寸动HMI
+	xPauseHmi					: BOOL;					//暂停HMI
+	xStop						: BOOL;					//其它条件要求工站停止运行
+	xSingleRunFlag				: BOOL;					//单动标志
+	xCycleEnable				: BOOL;					//循环开始，工站周期计时开始
+	rWaitingTime				: REAL;					//周期等待时间，如待料，单位s  
+	
+	adwAlarm	          		: ARRAY[1..4] OF DWORD;	//报警
+	adwAutoTip					: ARRAY[1..4] OF DWORD;	//自动提示
+	adwManualTip				: ARRAY[1..4] OF DWORD;	//手动提示
+	xAlarm						: BOOL;					//报警中
+	xAutoTip					: BOOL;					//自动提示中
+	xManualTip					: BOOL;					//手动提示中
+	xTip						: BOOL;					//提示中
+	xDone						: BOOL;					//工站完成
+	xCanRun						: BOOL;					//工站可动作
+	iStepAuto           		: INT ;         		//自动流程步
+	iStepInit           		: INT ;         		//初始化流程步
+	bAutoState					: BYTE ;				//工站自动流程状态机 
+	xRunningOffProhibit			: BOOL;					///流程中禁止停止
+	xSingleContinuousRun		: BOOL;					///连续测试运行
+END_VAR
+
+VAR_OUTPUT
+	xStationIniting				: BOOL;					//单工站初始化中
+	xIniting					: BOOL;					//初始化中
+	xInitTimeout				: BOOL;					//初始化超时
+	xCycleRunning				: BOOL;					//连动中
+	xJogRunning					: BOOL;					//寸动中
+	xSingleRunning				: BOOL;					//单动中
+	xRunning					: BOOL;					//运行中
+	xDeviceRunning		: BOOL;					//第三方设备运行中
+	uiState						: UINT;					//工站状态
+	//tCycleTime				:TIME;
+	diCycleTime 				: DINT;					//基础时间是100ms
+	diLastCycleTime				: DINT;					//基础时间是100ms
+	QstrStepInitDescription		: STRING[50];			//初始化描述
+	QstrStepAutoDecription		:STRING[50];			//自动步骤描述
+	xQStepAutoTrans				:BOOL;					//自动步跳转
+	xQStepInitTrans				:BOOL;					//初始化步跳转
+	
+	xQSingleContinuousRunning		: BOOL;					///连续测试运行中
+END_VAR
+
+VAR
+	{attribute 'hide'}
+	ftInitHmi					: F_TRIG;				//初始化HMI上升沿
+	{attribute 'hide'}
+	rtMachineReInit				: R_TRIG;				//整机重新初始化上升沿
+	{attribute 'hide'}
+	xInitAble					: BOOL;					//初始化条件
+	{attribute 'hide'}
+	xRunAble					: BOOL;					//运行条件
+	{attribute 'hide'}
+	tonInitTimeout				: TON;					//初始化超时计时
+	{attribute 'hide'}
+	ftCycleRunHMI				: F_TRIG;				//连动HMI上升沿
+	{attribute 'hide'}
+	rtJogRunHMI					: R_TRIG;				//寸动HMI上升沿
+	{attribute 'hide'}
+	xPause						: BOOL;					//暂停
+	{attribute 'hide'}
+	lrCycleTimer					: LREAL;				//计时器，单位100ns，除于10000后单位ms
+	{attribute 'hide'}
+	lrWaitingTimer				: LREAL;				//等待时间计时器
+	{attribute 'hide'}
+	rtCycleTimeStop				: R_TRIG;				//工站周期计时停止上升沿
+	
+	ton_AutoTimeout				:TON;					//工站自动流程超时			//自动程序有BUG
+	i : INT ;
+	xFirstCycle : BOOL ;	
+	{attribute 'hide'}
+	rStationStart	  : R_TRIG;							//工站完成上升沿
+	{attribute 'hide'}
+	fStationRunning : R_TRIG;
+	{attribute 'hide'}
+	iOldStepAuto           		: INT ;         		//自动流程步历史
+	{attribute 'hide'}
+	iOldStepInit           		: INT ;         		//初始化流程历史
+	{attribute 'hide'}
+	OldStepAutoR_TRIG						:R_TRIG;
+	{attribute 'hide'}
+	OldStepInitR_TRIG						:R_TRIG;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ACT_General();
+ACT_Init();
+ACT_Run();
+ACT_State();
+ACT_CycleTime();
+ACT_Logfile();
+]]></ST>
+    </Implementation>
+    <Action Name="ACT_CycleTime" Id="{7c42e4b9-e197-4af7-acd4-c307ed1c9c98}">
+      <Implementation>
+        <ST><![CDATA[//	初始化时同时初始化工站周期计时
+IF xIniting THEN
+	xCycleEnable:=FALSE;
+END_IF
+
+//工站完成触发信号
+rStationStart(CLK:= xCycleEnable);
+IF rStationStart.Q 
+THEN
+	diCycleTime:=diLastCycleTime;
+	diLastCycleTime := 0;
+END_IF
+//	工站周期计时
+IF xRunning AND xCycleEnable AND stSysPulse.xR100ms
+THEN
+	diLastCycleTime := diLastCycleTime + 1;//对应最小周期是0.1ms
+END_IF	
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_General" Id="{142b073a-387d-49de-ba4c-46324a4cd688}">
+      <Implementation>
+        <ST><![CDATA[//	报警中
+FOR i:=1 TO 4 BY 1 DO 
+		  xAlarm := FALSE ;
+	 IF adwAlarm[i]<>0 THEN 
+		  xAlarm := TRUE ;
+			EXIT ;
+	 END_IF
+END_FOR
+
+//	提示中
+FOR i:=1 TO 4 BY 1 DO 
+		  xAutoTip := FALSE ;
+	 IF adwAutoTip[i]<>0 THEN 
+		  xAutoTip := TRUE ;
+			EXIT ;
+	 END_IF
+END_FOR
+FOR i:=1 TO 4 BY 1 DO 
+		  xManualTip := FALSE ;
+	 IF adwManualTip[i]<>0 THEN 
+		  xManualTip := TRUE ;
+			EXIT ;
+	 END_IF
+END_FOR
+xTip:=xAutoTip
+	OR xManualTip;
+
+//	暂停
+xPause:=xMachinePause
+	OR xPauseHmi
+	OR xStop;
+
+//	报警复位
+IF xReset THEN
+	FOR i:=1 TO 4 BY 1 DO 
+		adwAutoTip[i] := adwAlarm[i] := adwManualTip[i] := 0;
+	END_FOR
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Init" Id="{e4dc5b10-aa9f-4ac3-babb-aad85dc89e6b}">
+      <Implementation>
+        <ST><![CDATA[//	初始化条件
+xInitAble:=xEStop
+	AND xKey
+	AND xSafety
+	AND xManualMode
+	AND NOT xAlarm
+	AND NOT xInitTimeout;
+
+//	急停或初始化时先复位初始化完成
+ftInitHmi(CLK:=xInitHmi, Q=>);
+rtMachineReInit(CLK:=xMachineReInit, Q=>);
+
+IF ((NOT xEStop OR rtMachineReInit.Q OR ftInitHmi.Q )AND gc_xEstopYesORno)OR 
+	 (( rtMachineReInit.Q OR ftInitHmi.Q AND xInitAble)AND NOT gc_xEstopYesORno)
+THEN
+	xInitDone:=FALSE;
+END_IF
+
+//	单工站初始化中
+IF xInitAble
+	AND NOT xInitDone
+	AND NOT xInitTimeout
+	AND NOT xPause
+	AND NOT xMachineIniting
+THEN
+	IF ftInitHmi.Q THEN
+		xStationIniting:=TRUE;
+	END_IF
+ELSE
+	xStationIniting:=FALSE;
+END_IF
+
+//	初始化中
+xIniting:=xStationIniting
+	OR xMachineIniting
+		AND xInitAble
+		AND NOT xInitDone;
+
+//	初始化超时
+tonInitTimeout(
+	IN:=xIniting,
+	PT:=tInitTimeout,
+	Q=>, ET=>);
+IF xReset THEN
+	xInitTimeout:=FALSE;
+END_IF
+IF tonInitTimeout.Q THEN
+	xInitTimeout:=TRUE;
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Logfile" Id="{1e491811-434e-4e11-9cb9-ddd6124b8259}">
+      <Implementation>
+        <ST><![CDATA[//********************************//
+IF iOldStepAuto=iStepAuto THEN
+	xQStepAutoTrans:=FALSE;
+END_IF
+IF    iOldStepAuto<>iStepAuto THEN
+	xQStepAutoTrans:=TRUE;
+	iOldStepAuto:=iStepAuto;
+END_IF
+
+IF  iOldStepInit=iStepInit THEN
+	xQStepInitTrans:=FALSE;
+END_IF
+
+IF    iOldStepInit<>iStepInit THEN
+	xQStepInitTrans:=TRUE;
+	iOldStepInit:=iStepInit;
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Run" Id="{291628e0-ba54-4cc4-92aa-b50d2ed803d8}">
+      <Implementation>
+        <ST><![CDATA[//	运行条件
+xRunAble:=xEStop
+	AND xKey
+	AND xSafety
+	AND xInitDone
+	AND NOT xAlarm
+	AND NOT xAutoTip;
+
+//	单动标志
+ftCycleRunHMI(CLK:=xCycleRunHmi, Q=>);
+rtJogRunHmi(CLK:=xJogRunHmi, Q=>);
+IF xEStop
+	AND xInitDone
+THEN
+	IF (ftCycleRunHMI.Q
+			OR rtJogRunHmi.Q)
+		AND xRunAble
+		AND xManualMode
+	THEN
+		xSingleRunFlag:=TRUE;
+	END_IF
+ELSE
+	xSingleRunFlag:=FALSE;
+END_IF
+
+//	连动中、寸动中
+IF xRunAble
+	AND xManualMode
+	AND xSingleRunFlag
+	AND NOT xPause
+THEN
+	IF ftCycleRunHMI.Q THEN
+		xCycleRunning:=TRUE;
+	END_IF
+	xJogRunning:=rtJogRunHmi.CLK;
+ELSE
+	xCycleRunning:=FALSE;
+	xJogRunning:=FALSE;
+END_IF
+
+//	单动中
+xSingleRunning:=xCycleRunning
+	OR xJogRunning;
+
+//	运行中
+xRunning:=xSingleRunning
+	OR xMachineRunning
+		AND xRunAble;
+
+xDeviceRunning := xRunning OR xIniting;		
+		
+//工站自动流程超时
+
+//ton_AutoTimeout(IN:= bRunning 
+//					AND NOT bSingleRunFlag 
+//					AND bCycleStart , PT:=T#35S , Q=> , ET=> );		//自动程序有BUG
+
+(**********************连续单循环标志位************************)
+IF  xSingleContinuousRun THEN
+		xQSingleContinuousRunning:=true;
+else
+		xQSingleContinuousRunning:=FALSE;
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_State" Id="{d666b0f9-8f43-4032-9ec5-072d94378a50}">
+      <Implementation>
+        <ST><![CDATA[
+
+//	未准备好
+IF NOT xInitDone
+	AND NOT xAlarm
+THEN
+	uiState:=E_State.NotReady;
+END_IF
+
+//	运行中
+IF xRunning THEN
+	uiState:=E_State.iRunning;
+END_IF
+
+//	报警中
+IF xAlarm THEN
+	uiState:=E_State.Alarm;
+END_IF
+
+//	准备好
+IF xInitDone
+	AND NOT xAlarm
+	AND NOT xRunning
+THEN
+	uiState:=E_State.Ready;
+END_IF
+
+//工站完成
+IF xInitDone AND xDone THEN 
+	uiState:=E_State.Done;
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="FB_Station">
+      <LineId Id="733" Count="0" />
+      <LineId Id="100" Count="0" />
+      <LineId Id="487" Count="0" />
+      <LineId Id="533" Count="0" />
+      <LineId Id="967" Count="0" />
+      <LineId Id="1064" Count="1" />
+    </LineIds>
+    <LineIds Name="FB_Station.ACT_CycleTime">
+      <LineId Id="60" Count="0" />
+      <LineId Id="53" Count="0" />
+      <LineId Id="55" Count="1" />
+      <LineId Id="157" Count="0" />
+      <LineId Id="160" Count="3" />
+      <LineId Id="177" Count="0" />
+      <LineId Id="164" Count="0" />
+      <LineId Id="159" Count="0" />
+      <LineId Id="170" Count="0" />
+      <LineId Id="166" Count="2" />
+      <LineId Id="165" Count="0" />
+      <LineId Id="87" Count="0" />
+      <LineId Id="155" Count="0" />
+      <LineId Id="79" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Station.ACT_General">
+      <LineId Id="23" Count="0" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="77" Count="0" />
+      <LineId Id="71" Count="0" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="57" Count="0" />
+      <LineId Id="8" Count="0" />
+      <LineId Id="82" Count="12" />
+      <LineId Id="80" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="42" Count="1" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="100" Count="1" />
+      <LineId Id="49" Count="1" />
+      <LineId Id="55" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Station.ACT_Init">
+      <LineId Id="145" Count="7" />
+      <LineId Id="86" Count="0" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="166" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="167" Count="0" />
+      <LineId Id="23" Count="2" />
+      <LineId Id="90" Count="0" />
+      <LineId Id="88" Count="0" />
+      <LineId Id="92" Count="2" />
+      <LineId Id="91" Count="0" />
+      <LineId Id="165" Count="0" />
+      <LineId Id="95" Count="0" />
+      <LineId Id="105" Count="1" />
+      <LineId Id="102" Count="0" />
+      <LineId Id="98" Count="1" />
+      <LineId Id="96" Count="0" />
+      <LineId Id="144" Count="0" />
+      <LineId Id="143" Count="0" />
+      <LineId Id="108" Count="1" />
+      <LineId Id="131" Count="0" />
+      <LineId Id="142" Count="0" />
+      <LineId Id="153" Count="11" />
+      <LineId Id="135" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Station.ACT_Logfile">
+      <LineId Id="1" Count="0" />
+      <LineId Id="42" Count="1" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="8" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="46" Count="1" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="18" Count="2" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="35" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Station.ACT_Run">
+      <LineId Id="107" Count="6" />
+      <LineId Id="115" Count="0" />
+      <LineId Id="89" Count="0" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="53" Count="2" />
+      <LineId Id="60" Count="0" />
+      <LineId Id="62" Count="0" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="65" Count="0" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="57" Count="2" />
+      <LineId Id="92" Count="0" />
+      <LineId Id="91" Count="0" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="105" Count="0" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="71" Count="0" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="77" Count="1" />
+      <LineId Id="95" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="94" Count="0" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="96" Count="0" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="98" Count="0" />
+      <LineId Id="97" Count="0" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="106" Count="0" />
+      <LineId Id="123" Count="0" />
+      <LineId Id="116" Count="0" />
+      <LineId Id="124" Count="0" />
+      <LineId Id="117" Count="1" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="120" Count="1" />
+      <LineId Id="126" Count="0" />
+      <LineId Id="125" Count="0" />
+      <LineId Id="136" Count="1" />
+      <LineId Id="139" Count="1" />
+      <LineId Id="134" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Station.ACT_State">
+      <LineId Id="67" Count="0" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="2" Count="1" />
+      <LineId Id="5" Count="2" />
+      <LineId Id="54" Count="4" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="13" Count="2" />
+      <LineId Id="47" Count="2" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="50" Count="3" />
+      <LineId Id="60" Count="0" />
+      <LineId Id="69" Count="2" />
+      <LineId Id="61" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

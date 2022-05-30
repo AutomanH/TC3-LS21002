@@ -1,0 +1,490 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <GVL Name="IO" Id="{391cbaad-8851-46d9-8ebe-0ec4b5f4bee8}">
+    <Declaration><![CDATA[VAR_GLOBAL 
+//电柜+ET01
+    ET01_Input AT %I* : ARRAY [1..6] OF EL1889;//输入
+    ET01_Output AT %Q* : ARRAY [1..6] OF EL2889;//输出
+	
+	ET02_Input AT %I* : ARRAY [1..6] OF EL1889;//输入
+    ET02_Output AT %Q* : ARRAY [1..5] OF EL2889;//输出
+	
+	ET03_Input AT %I* : ARRAY [1..1] OF EL1889;//输入
+	
+	ET04_Input AT %I* : ARRAY [1..2] OF EL1889;//输入
+    ET04_Output AT %Q* : ARRAY [1..2] OF EL2889;//输出
+	
+	arEtherCATWcState AT %I* : ARRAY [1..20] OF BOOL;//输出
+	uiStatusCopy		AT %I*   : ARRAY[1..gc_uiAxisNum] OF  USINT;
+IxSafetyRelayOK	:BOOL;//	安全继电器信号
+IxStartButton	:BOOL;//	启动按钮信号
+IxStopButton	:BOOL;//	停止按钮信号
+IxResetButton	:BOOL;//	复位按钮信号
+IxInitButton	:BOOL;//	初始化按钮信号
+IxAutoMode	:BOOL;//	自动模式信号
+IxManualMode	:BOOL;//	手动模式信号
+IxAirPressure	:BOOL;//	上料工位¶气压检测
+IxS01PositionSensor1	:BOOL;//	链板线深孔板¶位置1传感器
+IxS01PositionSensor2	:BOOL;//	链板线深孔板¶位置2传感器
+IxS01PositionSensor3	:BOOL;//	链板线深孔板¶位置3传感器
+IxS01PositionSensor4	:BOOL;//	链板线深孔板¶位置4传感器
+IxS01Sensor1Reached	:BOOL;//	上料工位¶到位传感器1
+IxS01Sensor2Reached	:BOOL;//	上料工位¶到位传感器2
+IxS02Sensor1Reached	:BOOL;//	注液工位¶到位传感器1
+IxS02Sensor2Reached	:BOOL;//	注液工位¶到位传感器2
+IxS01ReserveSensor1	:BOOL;//	链板线深孔板备料¶位置1传感器
+IxS01ReserveSensor2	:BOOL;//	链板线深孔板备料¶位置2传感器
+IxS01ReserveSensor3	:BOOL;//	链板线深孔板备料¶位置3传感器
+IxS01ReserveSensor4	:BOOL;//	链板线深孔板备料¶位置4传感器
+IxS03Sensor1Reached	:BOOL;//	相机工位¶到位传感器1
+IxS03Sensor2Reached	:BOOL;//	相机工位¶到位传感器2
+IxS03Sensor3Reached	:BOOL;//	相机工位¶到位传感器3
+IxS03Sensor4Reached	:BOOL;//	相机工位¶到位传感器4
+IxS03Sensor5Reached	:BOOL;//	相机工位¶到位传感器5
+IxVFDErrorSignal	:BOOL;//	上料链板线变频器异常
+Ixshare2	:BOOL;//	备用1
+Ixshare3	:BOOL;//	备用2
+Ixshare4	:BOOL;//	备用3
+Ixshare5	:BOOL;//	备用4
+IxS01SafetyDoorReady	:BOOL;//	上料工位安全门
+IxS02SafetyDoorReady_2	:BOOL;//	注液工位安全门
+IxS01VTCPressCyl_1WP	:BOOL;//	Z轴阻挡气缸1¶动点
+IxS01VTCPressCyl_1HP	:BOOL;//	Z轴阻挡气缸1¶原点
+IxS01VTCPressCyl_2WP	:BOOL;//	Z轴阻挡气缸2¶动点
+IxS01VTCPressCyl_2HP	:BOOL;//	Z轴阻挡气缸2¶原点
+IxS01VTCPressCyl_3WP	:BOOL;//	Z轴阻挡气缸3¶动点
+IxS01VTCPressCyl_3HP	:BOOL;//	Z轴阻挡气缸3¶原点
+IxS01VTCPressCyl_4WP	:BOOL;//	Z轴阻挡气缸4¶原点
+IxS01VTCPressCyl_4HP	:BOOL;//	Z轴阻挡气缸4¶原点
+IxS01VTCCyl_1WP	:BOOL;//	上料工位¶移栽Z轴气缸1¶动点
+IxS01VTCCyl_1HP	:BOOL;//	上料工位¶移移栽Z轴气缸1¶动点
+IxS01VTCCyl_2WP	:BOOL;//	上料工位¶移移栽Z轴气缸2¶动点
+IxS01VTCCyl_2HP	:BOOL;//	上料工位¶移移栽Z轴气缸2¶原点
+IxS02HOZAdjustCyl_1WP	:BOOL;//	注液工位¶上层水平调整气缸1¶动点
+IxS02HOZAdjustCyl_1HP	:BOOL;//	注液工位¶上层水平调整气缸1¶原点
+IxS02HOZAdjustCyl_2WP	:BOOL;//	注液工位¶上层水平调整气缸2¶动点
+IxS02HOZAdjustCyl_2HP	:BOOL;//	注液工位¶上层水平调整气缸2¶原点
+IxS02HOZAdjustCyl_3WP	:BOOL;//	注液工位¶下层水平调整气缸1¶动点
+IxS02HOZAdjustCyl_3HP	:BOOL;//	注液工位¶下层水平调整气缸1¶原点点
+IxS02HOZAdjustCyl_4WP	:BOOL;//	注液工位¶下层水平调整气缸2¶动点
+IxS02HOZAdjustCyl_4HP	:BOOL;//	注液工位¶下层水平调整气缸2¶原点
+IxS02ROTCylWP	:BOOL;//	注液工位¶防滴液气缸¶动点
+IxS02ROTCylHP	:BOOL;//	注液工位¶防滴液气缸¶原点
+Ixshare6	:BOOL;//	备用
+Ixshare7	:BOOL;//	备用
+IxS03HOZAdjustCyl_1WP	:BOOL;//	相机检测工位¶上层水平调整气缸1¶动点
+IxS03HOZAdjustCyl_1HP	:BOOL;//	相机检测工位¶上层水平调整气缸1¶原点
+IxS03HOZAdjustCyl_2WP	:BOOL;//	相机检测工位¶上层水平调整气缸2¶动点
+IxS03HOZAdjustCyl_2HP	:BOOL;//	相机检测工位¶上层水平调整气缸2¶原点
+IxS03HOZAdjustCyl_3WP	:BOOL;//	相机检测工位¶上层水平调整气缸3¶动点
+IxS03HOZAdjustCyl_3HP	:BOOL;//	相机检测工位¶上层水平调整气缸3¶原点
+IxS03HOZAdjustCyl_4WP	:BOOL;//	相机检测工位¶上层水平调整气缸4¶动点
+IxS03HOZAdjustCyl_4HP	:BOOL;//	相机检测工位¶上层水平调整气缸4¶动点
+IxS03HOZAdjustCyl_5WP	:BOOL;//	相机检测工位¶下层水平调整气缸1¶动点
+IxS03HOZAdjustCyl_5HP	:BOOL;//	相机检测工位¶下层水平调整气缸1¶原点
+IxS03HOZAdjustCyl_6WP	:BOOL;//	相机检测工位¶下层水平调整气缸2¶动点
+IxS03HOZAdjustCyl_6HP	:BOOL;//	相机检测工位¶下层水平调整气缸2¶原点
+IxS03HOZAdjustCyl_7WP	:BOOL;//	相机检测工位¶下层水平调整气缸3¶动点
+IxS03HOZAdjustCyl_7HP	:BOOL;//	相机检测工位¶下层水平调整气缸3¶原点
+IxS03HOZAdjustCyl_8WP	:BOOL;//	相机检测工位¶下层水平调整气缸4¶动点
+IxS03HOZAdjustCyl_8HP	:BOOL;//	相机检测工位¶下层水平调整气缸4¶原点
+IxErrorSignal	:BOOL;//	上料工位¶离子风棒¶异常信号
+IxMaintenanceSignal	:BOOL;//	上料工位¶离子风棒¶维护信号
+Ixshare9	:BOOL;//	备用
+Ixshare10	:BOOL;//	备用
+Ixshare11	:BOOL;//	备用
+Ixshare12	:BOOL;//	备用
+Ixshare13	:BOOL;//	备用
+Ixshare14	:BOOL;//	备用
+Ixshare15	:BOOL;//	备用
+Ixshare16	:BOOL;//	备用
+Ixshare17	:BOOL;//	备用
+Ixshare18	:BOOL;//	备用
+Ixshare19	:BOOL;//	备用
+Ixshare20	:BOOL;//	备用
+Ixshare21	:BOOL;//	备用
+Ixshare22	:BOOL;//	备用
+Ixshare23	:BOOL;//	备用
+Ixshare24	:BOOL;//	备用
+Ixshare25	:BOOL;//	备用
+Ixshare26	:BOOL;//	备用
+Ixshare27	:BOOL;//	备用
+Ixshare28	:BOOL;//	备用
+Ixshare29	:BOOL;//	备用
+Ixshare30	:BOOL;//	备用
+QxStartButtonLamp	:BOOL;//	启动按钮指示灯
+QxStopButtonLamp	:BOOL;//	停止按钮指示灯
+QxResetButtonLamp	:BOOL;//	复位按钮指示灯
+QxInitButtonLamp	:BOOL;//	初始化按钮指示灯
+QxIonStopControl	:BOOL;//	上料工位¶离子风棒¶停止放电信号
+QxIonCheckDirtyControl	:BOOL;//	上料工位¶离子风棒¶电极针脏污检出信号
+QxFlowLineStart	:BOOL;//	链板线电机¶正转输出
+QxFlowLineStop	:BOOL;//	链板线电机¶停止输出
+QxFlowLineSpeedCtrl_1	:BOOL;//	链板线电机¶多段速1输出
+QxFlowLineSpeedCtrl_2	:BOOL;//	链板线电机¶多段速2输出
+QxMachineLamp1Control	:BOOL;//	日光灯1控制
+QxMachineLamp2Control	:BOOL;//	日光灯2控制
+QxRedLamp	:BOOL;//	三色灯-红灯
+QxYellowLamp	:BOOL;//	三色灯-黄灯
+QxGreenLamp	:BOOL;//	三色灯-绿灯
+QxBuzzer	:BOOL;//	三色-蜂鸣器灯
+QxS01VTCPressCyl_1WP	:BOOL;//	链板线¶Z轴阻挡气缸1¶动点输出
+QxS01VTCPressCyl_1HP	:BOOL;//	链板线¶Z轴阻挡气缸1¶原点输出
+QxS01VTCPressCyl_2WP	:BOOL;//	链板线¶Z轴阻挡气缸2¶动点输出
+QxS01VTCPressCyl_2HP	:BOOL;//	链板线¶Z轴阻挡气缸2¶原点输出
+QxS01VTCPressCyl_3WP	:BOOL;//	链板线¶Z轴阻挡气缸3¶动点输出
+QxS01VTCPressCyl_3HP	:BOOL;//	链板线¶Z轴阻挡气缸3¶原点输出
+QxS01VTCPressCyl_4WP	:BOOL;//	链板线¶Z轴阻挡气缸4¶动点输出
+QxS01VTCPressCyl_4HP	:BOOL;//	链板线¶Z轴阻挡气缸4¶原点输出
+QxS01VTCCyl_1WP	:BOOL;//	上料工位¶移栽Z轴气缸1¶动点输出
+QxS01VTCCyl_1HP	:BOOL;//	上料工位¶移栽Z轴气缸¶原点输出
+QxS01VTCCyl_2WP	:BOOL;//	上料工位¶移栽Z轴气缸2¶动点输出
+QxS01VTCCyl_2HP	:BOOL;//	上料工位¶移栽变距气缸¶原点输出
+QxS02HOZAdjustCyl_1WP	:BOOL;//	注液工位¶上层水平调整气缸1¶动点输出
+QxS02HOZAdjustCyl_1HP	:BOOL;//	注液工位¶上层水平调整气缸1¶原点输出
+QxS02HOZAdjustCyl_2WP	:BOOL;//	注液工位¶上层水平调整气缸2¶动点输出
+QxS02HOZAdjustCyl_2HP	:BOOL;//	注液工位¶上层水平调整气缸2¶原点输出
+QxS02HOZAdjustCyl_3WP	:BOOL;//	注液工位¶下层水平调整气缸1¶动点输出
+QxS02HOZAdjustCyl_3HP	:BOOL;//	注液工位¶下层水平调整气缸1¶原点输出
+QxS02HOZAdjustCyl_4WP	:BOOL;//	注液工位¶下层水平调整气缸2¶动点输出
+QxS02HOZAdjustCyl_4HP	:BOOL;//	注液工位¶下层水平调整气缸2¶原点输出
+QxS02ROTCylWP	:BOOL;//	注液工位¶防滴液¶动点输出
+QxS02ROTCylHP	:BOOL;//	注液工位¶防滴液¶原点输出
+QxS03HOZAdjustCyl_1WP	:BOOL;//	相机工位¶上层水平调整气缸1¶动点输出
+QxS03HOZAdjustCyl_1HP	:BOOL;//	相机工位¶上层水平调整气缸1¶原点输出
+QxS03HOZAdjustCyl_2WP	:BOOL;//	相机工位¶上层水平调整气缸2¶动点输出
+QxS03HOZAdjustCyl_2HP	:BOOL;//	相机工位¶上层水平调整气缸2¶原点输出
+QxS03HOZAdjustCyl_3WP	:BOOL;//	相机工位¶上层水平调整气缸3¶动点输出
+QxS03HOZAdjustCyl_3HP	:BOOL;//	相机工位¶上层水平调整气缸3¶原点输出
+QxS03HOZAdjustCyl_4WP	:BOOL;//	相机工位¶上层水平调整气缸4¶动点输出
+QxS03HOZAdjustCyl_4HP	:BOOL;//	相机工位¶上层水平调整气缸4¶原点输出
+QxS03HOZAdjustCyl_5WP	:BOOL;//	相机工位¶下层水平调整气缸1¶动点输出
+QxS03HOZAdjustCyl_5HP	:BOOL;//	相机工位¶下层水平调整气缸1¶原点输出
+QxS03HOZAdjustCyl_6WP	:BOOL;//	相机工位¶下层水平调整气缸2¶动点输出
+QxS03HOZAdjustCyl_6HP	:BOOL;//	相机工位¶下层水平调整气缸2¶原点输出
+QxS03HOZAdjustCyl_7WP	:BOOL;//	相机工位¶下层水平调整气缸3¶动点输出
+QxS03HOZAdjustCyl_7HP	:BOOL;//	相机工位¶下层水平调整气缸3¶原点输出
+QxS03HOZAdjustCyl_8WP	:BOOL;//	相机工位¶下层水平调整气缸3¶原点输出
+QxS03HOZAdjustCyl_8HP	:BOOL;//	相机工位¶下层水平调整气缸4¶原点输出
+QxShare7	:BOOL;//	备用
+QxShare8	:BOOL;//	备用
+QxShare9	:BOOL;//	备用
+QxShare10	:BOOL;//	备用
+QxShare11	:BOOL;//	备用
+QxShare12	:BOOL;//	备用
+QxShare13	:BOOL;//	备用
+QxShare14	:BOOL;//	备用
+QxShare15	:BOOL;//	备用
+QxShare16	:BOOL;//	备用
+QxCamera1Trigger	:BOOL;//	相机检测工位¶相机触发1
+QxCamera2Trigger	:BOOL;//	相机检测工位¶相机触发2
+QxCamera3Trigger	:BOOL;//	相机检测工位¶相机触发3
+QxCamera4Trigger	:BOOL;//	相机检测工位¶相机触发4
+QxCamera5Trigger	:BOOL;//	相机检测工位¶相机触发5
+QxCamera6Trigger	:BOOL;//	相机检测工位¶相机触发6
+QxCamera7Trigger	:BOOL;//	相机检测工位¶相机触发7
+QxCamera8Trigger	:BOOL;//	相机检测工位¶相机触发8
+QxCamera9Trigger	:BOOL;//	相机检测工位¶相机触发9
+QxCamera10Trigger	:BOOL;//	相机检测工位¶相机触发10
+QxCamera11Trigger	:BOOL;//	相机检测工位¶相机触发11
+QxCamera12Trigger	:BOOL;//	相机检测工位¶相机触发12
+QxCamera13Trigger	:BOOL;//	相机检测工位¶相机触发13
+QxCamera14Trigger	:BOOL;//	相机检测工位¶相机触发14
+QxCamera15Trigger	:BOOL;//	相机检测工位¶相机触发15
+QxCamera16Trigger	:BOOL;//	相机检测工位¶相机触发16
+QxCamera17Trigger	:BOOL;//	相机检测工位¶相机触发17
+QxCameraLight1Trigger	:BOOL;//	相机光源触发通道1
+QxCameraLight2Trigger	:BOOL;//	相机光源触发通道2
+QxCameraLight3Trigger	:BOOL;//	相机光源触发通道3
+QxCameraLight4Trigger	:BOOL;//	相机光源触发通道4
+QxShare21	:BOOL;//	备用
+QxShare22	:BOOL;//	备用
+QxShare23	:BOOL;//	备用
+QxShare24	:BOOL;//	备用
+QxShare25	:BOOL;//	备用
+QxShare26	:BOOL;//	备用
+QxShare27	:BOOL;//	备用
+QxShare28	:BOOL;//	备用
+QxShare29	:BOOL;//	备用
+QxShare30	:BOOL;//	备用
+QxShare31	:BOOL;//	备用
+IxS04HOZAdjustCyl_1WP	:BOOL;//	热熔工位¶上层水平调整气缸1¶动点
+IxS04HOZAdjustCyl_1HP	:BOOL;//	热熔工位¶上层水平调整气缸1¶原点
+IxS04HOZAdjustCyl_2WP	:BOOL;//	热熔工位¶上层水平调整气缸2¶动点
+IxS04HOZAdjustCyl_2HP	:BOOL;//	热熔工位¶上层水平调整气缸2¶原点
+IxS04HOZAdjustCyl_3WP	:BOOL;//	热熔工位¶下层水平调整气缸1¶动点
+IxS04HOZAdjustCyl_3HP	:BOOL;//	热熔工位¶下层水平调整气缸1¶原点
+IxS04HOZAdjustCyl_4WP	:BOOL;//	热熔工位¶下层水平调整气缸2¶动点
+IxS04HOZAdjustCyl_4HP	:BOOL;//	热熔+A9工位¶下层水平调整气缸2¶原点
+IxS06GlampCyl_1WP	:BOOL;//	切膜工位¶前侧夹膜气缸1¶动点
+IxS06GlampCyl_1HP	:BOOL;//	切膜工位¶前侧夹膜气缸1¶原点
+IxS06GlampCyl_2WP	:BOOL;//	切膜工位¶前侧夹膜气缸2¶动点
+IxS06GlampCyl_2HP	:BOOL;//	切膜工位¶前侧夹膜气缸2¶原点
+IxS06GlampCyl_3WP	:BOOL;//	切膜工位¶后侧夹膜气缸1¶动点
+IxS06GlampCyl_3HP	:BOOL;//	切膜工位¶后侧夹膜气缸1¶原点
+IxS06GlampCyl_4WP	:BOOL;//	切膜工位¶后侧夹膜气缸2¶动点
+IxS06GlampCyl_4HP	:BOOL;//	切膜工位¶后侧夹膜气缸2¶原点
+IxS06HOZReachedCyl_1WP	:BOOL;//	切膜工位¶水平到位气缸1¶动点
+IxS06HOZReachedCyl_1HP	:BOOL;//	切膜工位¶水平到位气缸1¶原点
+IxS06HOZReachedCyl_2WP	:BOOL;//	切膜工位¶水平到位气缸2¶动点
+IxS06HOZReachedCyl_2HP	:BOOL;//	切膜工位¶水平到位气缸2¶原点
+IxS06HOZCyl_1WP	:BOOL;//	切膜工位¶水平切膜气缸¶动点
+IxS06HOZCyl_1HP	:BOOL;//	切膜工位¶水平切膜气缸¶原点
+IxShare60	:BOOL;//	备用
+IxShare61	:BOOL;//	备用
+IxS06VTCAdjustCylWP	:BOOL;//	切膜工位¶下方对中顶升气缸¶动点
+IxS06VTCAdjustCylHP	:BOOL;//	切膜工位¶下方对中顶升气缸¶原点
+IxS06GlampAdjustCyl_1WP	:BOOL;//	切膜工位¶下方对中夹爪气缸1¶动点
+IxS06GlampAdjustCyl_1HP	:BOOL;//	切膜工位¶下方对中夹爪气缸1¶原点
+IxS06GlampAdjustCyl_2WP	:BOOL;//	切膜工位¶下方对中夹爪气缸2¶动点
+IxS06GlampAdjustCyl_2HP	:BOOL;//	切膜工位¶下方对中夹爪气缸2¶原点
+IxS06GlampAdjustCyl_3WP	:BOOL;//	切膜工位¶下方对中夹爪气缸3¶动点
+IxS06GlampAdjustCyl_3HP	:BOOL;//	切膜工位¶下方对中夹爪气缸3¶原点
+IxS08HOZCylWP	:BOOL;//	卡片搬运工位¶水平气缸¶动点
+IxS08HOZCylHP	:BOOL;//	卡片搬运工位¶水平气缸¶原点
+IxShare62	:BOOL;//	备用
+IxShare63	:BOOL;//	备用
+IxS08VTCCyl_1WP	:BOOL;//	卡片搬运工位¶Z轴气缸1¶动点
+IxS08VTCCyl_1HP	:BOOL;//	卡片搬运工位¶Z轴气缸1¶原点
+IxS08VTCCyl_2WP	:BOOL;//	卡片搬运工位¶Z轴气缸2¶动点
+IxS08VTCCyl_2HP	:BOOL;//	卡片搬运工位¶Z轴气缸2¶原点
+IxS08Vacuum1_Output1	:BOOL;//	卡片搬运工位¶真空发生器1¶输出OUT1
+IxS08Vacuum1_Output2	:BOOL;//	卡片搬运工位¶真空发生器1¶输出OUT2
+IxS08Vacuum2_Output1	:BOOL;//	卡片搬运工位¶真空发生器2¶输出OUT1
+IxS08Vacuum2_Output2	:BOOL;//	卡片搬运工位¶真空发生器2¶输出OUT2
+IxMaintenanceSignal_1	:BOOL;//	卡片搬运工位¶离子风棒¶维护信号
+IxErrorSignal_1	:BOOL;//	卡片搬运工位¶离子风棒¶异常信号
+IxStartSignal	:BOOL;//	卡片搬运工位¶离子风棒¶放电信号
+IxShare64	:BOOL;//	备用
+IxS04Sensor1Reached	:BOOL;//	热熔工位¶深孔板¶位置1传感器
+IxS04Sensor2Reached	:BOOL;//	热熔工位¶深孔板¶位置2传感器
+IxS04Sensor3Reached	:BOOL;//	热熔工位¶深孔板¶位置3传感器
+IxS04Sensor4Reached	:BOOL;//	热熔工位¶深孔板¶位置4传感器
+IxS04AluChcekSensor1	:BOOL;//	热熔工位¶检测铝膜传感器1
+IxS04AluChcekSensor2	:BOOL;//	热熔工位¶检测铝膜传感器2
+IxS08CardSensor1Reached	:BOOL;//	卡片工位¶产品到位传感器1
+IxS08CardSensor2Reached	:BOOL;//	卡片工位¶产品到位传感器2
+IxS08CardChcekSensor1	:BOOL;//	卡片工位¶有无传感器1
+IxS08CardChcekSensor2	:BOOL;//	卡片工位¶有无传感器2
+IxS07CheckSensor1	:BOOL;//	NG流道¶入料口检测
+IxS07CheckSensor2	:BOOL;//	NG流道¶到位传感器
+IxS07CheckSensor3	:BOOL;//	NG流道¶停止传感器
+IxShare65	:BOOL;//	备用
+IxBufferCheckSensor1	:BOOL;//	深孔板搬运处¶缓冲位检测传感器
+IxShare66	:BOOL;//	备用
+IxLineEndSensor1Reached	:BOOL;//	主流线尾端¶到位检测传感器1
+IxLineEndSensor2Reached	:BOOL;//	主流线尾端¶到位检测传感器2
+IxLineEndCheckSensor1	:BOOL;//	主流线尾端¶有无产品传感器1
+IxLineEndCheckSensor2	:BOOL;//	主流线尾端¶有无产品传感器2
+IxBeltEntryCardCheckSensor1	:BOOL;//	皮带线入口处¶卡片检测传感器1
+IxBeltEntryCardCheckSensor2	:BOOL;//	皮带线入口处¶卡片检测传感器2
+IxBeltEntryBoxCheckSensor1	:BOOL;//	皮带线入口处¶深孔板检测传感器1
+IxBeltEntryBoxCheckSensor2	:BOOL;//	皮带线入口处¶深孔板检测传感器2
+IxShare71	:BOOL;//	备用
+IxShare72	:BOOL;//	备用
+IxShare73	:BOOL;//	备用
+IxShare74	:BOOL;//	备用
+IxShare75	:BOOL;//	备用
+IxShare76	:BOOL;//	备用
+IxShare77	:BOOL;//	备用
+IxShare78	:BOOL;//	备用
+IxShare79	:BOOL;//	备用
+IxShare80	:BOOL;//	备用
+IxShare81	:BOOL;//	备用
+IxShare82	:BOOL;//	备用
+IxShare83	:BOOL;//	备用
+IxShare84	:BOOL;//	备用
+IxShare85	:BOOL;//	备用
+IxShare86	:BOOL;//	备用
+IxShare87	:BOOL;//	备用
+IxShare88	:BOOL;//	备用
+IxShare89	:BOOL;//	备用
+IxShare90	:BOOL;//	备用
+IxShare91	:BOOL;//	备用
+IxShare92	:BOOL;//	备用
+IxShare93	:BOOL;//	备用
+IxShare94	:BOOL;//	备用
+QxRedLamp_1	:BOOL;//	三色灯-红灯
+QxYellowLamp_1	:BOOL;//	三色灯-黄灯
+QxGreenLamp_1	:BOOL;//	三色灯-绿灯
+QxBuzzer_1	:BOOL;//	三色灯-蜂鸣器灯
+QxHeatRelayContorl1	:BOOL;//	加热棒供电接触器1
+QxHeatRelayContorl2	:BOOL;//	加热棒供电接触器2
+QxMachineLamp3Contorl	:BOOL;//	日光灯控制
+QxVacuum1_FeedValveControl	:BOOL;//	卡片搬运工位¶真空发生器1¶供给阀控制
+QxVacuum1_BreakValveControl	:BOOL;//	卡片搬运工位¶真空发生器1¶破坏阀控制
+QxVacuum2_FeedValveControl	:BOOL;//	卡片搬运工位¶真空发生器2¶供给阀控制
+QxVacuum2_BreakValveControl	:BOOL;//	卡片搬运工位¶真空发生器2¶破坏阀控制
+QxET02IonControlSignal1	:BOOL;//	卡片搬运工位¶离子风棒¶外部给定信号1
+QxET02IonControlSignal2	:BOOL;//	卡片搬运工位¶离子风棒¶外部给定信号2
+QxET02IonStopControl	:BOOL;//	卡片搬运工位¶离子风棒¶停止放电信号
+QxET02IonResetControl	:BOOL;//	卡片搬运工位¶离子风棒¶复位信号
+QxShare79	:BOOL;//	备用
+QxS04HOZAdjustCyl_1WP	:BOOL;//	热熔工位¶上层水平调整气缸1¶动点输出
+QxS04HOZAdjustCyl_1HP	:BOOL;//	热熔工位¶上层水平调整气缸1¶原点输出
+QxS04HOZAdjustCyl_2WP	:BOOL;//	热熔工位¶上层水平调整气缸2¶动点输出
+QxS04HOZAdjustCyl_2HP	:BOOL;//	热熔工位¶上层水平调整气缸2¶原点输出
+QxS04HOZAdjustCyl_3WP	:BOOL;//	热熔工位¶下层水平调整气缸1¶动点输出
+QxS04HOZAdjustCyl_3HP	:BOOL;//	热熔工位¶下层水平调整气缸1¶原点输出
+QxS04HOZAdjustCyl_4WP	:BOOL;//	热熔工位¶下层水平调整气缸2¶动点输出
+QxS04HOZAdjustCyl_4HP	:BOOL;//	热熔工位¶下层水平调整气缸2¶原点输出
+QxS06GlampCyl_1WP	:BOOL;//	切膜工位¶前侧夹膜气缸¶动点输出
+QxS06GlampCyl_1HP	:BOOL;//	切膜工位¶前侧夹膜气缸¶原点输出
+QxS06GlampCyl_2WP	:BOOL;//	切膜工位¶后侧夹膜气缸¶动点输出
+QxS06GlampCyl_2HP	:BOOL;//	切膜工位¶后侧夹膜气缸¶原点输出
+QxS06HOZReachedCyl_1WP	:BOOL;//	切膜工位¶水平到位气缸1¶动点出输出
+QxS06HOZReachedCyl_1HP	:BOOL;//	切膜工位¶水平到位气缸1¶原点出输出
+QxS06HOZReachedCyl_2WP	:BOOL;//	切膜工位¶水平到位气缸2¶动点输出
+QxS06HOZReachedCyl_2HP	:BOOL;//	切膜工位¶水平到位气缸2¶原点输出
+QxS06HOZCyl_1WP	:BOOL;//	切膜工位¶水平切膜气缸¶动点输出
+QxS06HOZCyl_1HP	:BOOL;//	切膜工位¶水平切膜气缸¶原点输出
+QxS06VTCAdjustCylWP	:BOOL;//	切膜工位¶下方对中顶升气缸¶动点输出
+QxS06VTCAdjustCylHP	:BOOL;//	切膜工位¶下方对中顶升气缸¶原点输出
+QxS06GlampAdjustCyl_1WP	:BOOL;//	切膜工位¶下方对中夹爪气缸1¶动点输出
+QxS06GlampAdjustCyl_1HP	:BOOL;//	切膜工位¶下方对中夹爪气缸1¶原点输出
+QxS06GlampAdjustCyl_2WP	:BOOL;//	切膜工位¶下方对中夹爪气缸2¶动点输出
+QxS06GlampAdjustCyl_2HP	:BOOL;//	切膜工位¶下方对中夹爪气缸2¶原点输出
+QxS06GlampAdjustCyl_3WP	:BOOL;//	切膜工位¶下方对中夹爪气缸3¶动点输出
+QxS06GlampAdjustCyl_3HP	:BOOL;//	切膜工位¶下方对中夹爪气缸3¶原点输出
+QxS08HOZCylWP	:BOOL;//	卡片工位¶水平气缸¶动点输出
+QxS08HOZCylHP	:BOOL;//	卡片工位¶水平气缸¶原点输出
+QxS08VTCCyl_1WP	:BOOL;//	卡片工位¶Z轴气缸1¶动点输出
+QxS08VTCCyl_1HP	:BOOL;//	卡片工位¶Z轴气缸1¶原点输出
+QxS08VTCCyl_2WP	:BOOL;//	卡片工位¶Z轴气缸2¶动点输出
+QxS08VTCCyl_2HP	:BOOL;//	卡片工位¶Z轴气缸2¶原点输出
+QxShare80	:BOOL;//	备用
+QxShare81	:BOOL;//	备用
+QxShare82	:BOOL;//	备用
+QxShare83	:BOOL;//	备用
+QxShare84	:BOOL;//	备用
+QxShare85	:BOOL;//	备用
+QxShare86	:BOOL;//	备用
+QxShare87	:BOOL;//	备用
+QxShare88	:BOOL;//	备用
+QxShare89	:BOOL;//	备用
+QxShare90	:BOOL;//	备用
+QxShare91	:BOOL;//	备用
+QxShare92	:BOOL;//	备用
+QxShare93	:BOOL;//	备用
+QxShare94	:BOOL;//	备用
+QxShare95	:BOOL;//	备用
+
+
+
+
+IxShare100	:BOOL;//	
+IxShare101	:BOOL;//	
+IxShare102	:BOOL;//	
+IxShare103	:BOOL;//	
+IxShare104	:BOOL;//	
+IxShare105	:BOOL;//	
+IxShare106	:BOOL;//	
+IxS01SafetyDoorReady_1	:BOOL;//	蠕动泵处安全门开关
+IxShare107	:BOOL;//	
+IxShare108	:BOOL;//	
+IxShare109	:BOOL;//	
+IxShare110	:BOOL;//	
+IxShare111	:BOOL;//	
+IxShare112	:BOOL;//	
+IxShare113	:BOOL;//	
+IxShare114	:BOOL;//	
+
+
+
+IxLabelJobRdySignal	:BOOL;//	贴标机JOBRDY信号
+IxLabelReadySignal	:BOOL;//	贴标机READY信号
+IxLabelErrorSignal	:BOOL;//	贴标机ERROR信号
+IxS11SensorReached	:BOOL;//	贴标工位¶检查到位传感器
+IxS12SensorReached	:BOOL;//	标签检测工位¶检查到位传感器
+IxS13SensorReached1	:BOOL;//	NG皮带线¶检测到料传感器1
+IxS13SensorReached2	:BOOL;//	NG皮带线¶检测到料传感器2
+IxS13SensorReached3	:BOOL;//	NG皮带线¶检测到料传感器3
+IxS11HOZCylWP	:BOOL;//	贴标处推料气缸¶动点
+IxS11HOZCylHP	:BOOL;//	贴标处推料气缸¶原点
+IxS12HOZCyl_1WP	:BOOL;//	贴标检测工位¶推料气缸1¶动点
+IxS12HOZCyl_1HP	:BOOL;//	贴标检测工位¶推料气缸1¶原点
+IxS12HOZCyl_2WP	:BOOL;//	贴标检测工位¶推料气缸2¶动点
+IxS12HOZCyl_2HP	:BOOL;//	贴标检测工位¶推料气缸2¶原点
+IxS13HOZCyl_1WP	:BOOL;//	NG推料气缸1¶动点
+IxS13HOZCyl_1HP	:BOOL;//	NG推料气缸1¶原点
+IxS13HOZCyl_2WP	:BOOL;//	NG推料气缸2¶动点
+IxS13HOZCyl_2HP	:BOOL;//	NG推料气缸2¶原点
+IxShare150	:BOOL;//	
+IxShare151	:BOOL;//	
+IxShare152	:BOOL;//	
+IxShare153	:BOOL;//	
+IxShare154	:BOOL;//	
+IxShare155	:BOOL;//	
+IxShare156	:BOOL;//	
+IxShare157	:BOOL;//	
+IxShare158	:BOOL;//	
+IxShare159	:BOOL;//	
+IxShare160	:BOOL;//	
+IxShare161	:BOOL;//	
+IxShare162	:BOOL;//	
+IxShare163	:BOOL;//	
+QxMotorForward	:BOOL;//	热缩封膜出料线体¶电机正转
+QxMotorStop	:BOOL;//	热缩封膜出料线体¶电机停止
+QxMotorBackward	:BOOL;//	热缩封膜出料线体¶电机反转
+QxMotorReserve	:BOOL;//	热缩封膜出料线体¶电机备用
+QxCameraTrigger	:BOOL;//	相机触发
+QxLabelStart	:BOOL;//	贴标机Start
+QxLabelRibwarn	:BOOL;//	贴标机RIBWARN
+QxLabelReset	:BOOL;//	贴标机RESET
+QxS11HOZCylWP	:BOOL;//	贴标处推料气缸¶动点
+QxS11HOZCylHP	:BOOL;//	贴标处推料气缸¶原点
+QxS12HOZCyl_1WP	:BOOL;//	贴标检测工位¶推料气缸1¶动点
+QxS12HOZCyl_1HP	:BOOL;//	贴标检测工位¶推料气缸1¶原点
+QxS12HOZCyl_2WP	:BOOL;//	贴标检测工位¶推料气缸2¶动点
+QxS12HOZCyl_2HP	:BOOL;//	贴标检测工位¶推料气缸2¶原点
+QxS13HOZCyl_1WP	:BOOL;//	NG推料气缸1¶动点
+QxS13HOZCyl_1HP	:BOOL;//	NG推料气缸1¶原点
+QxS13HOZCyl_2WP	:BOOL;//	NG推料气缸2¶动点
+QxS13HOZCyl_2HP	:BOOL;//	NG推料气缸2¶原点
+QxShare150	:BOOL;//	
+QxShare151	:BOOL;//	
+QxShare152	:BOOL;//	
+QxShare153	:BOOL;//	
+QxShare154	:BOOL;//	
+QxShare155	:BOOL;//	
+QxShare156	:BOOL;//	
+QxShare157	:BOOL;//	
+QxShare158	:BOOL;//	
+QxShare159	:BOOL;//	
+QxShare160	:BOOL;//	
+QxShare161	:BOOL;//	
+QxShare162	:BOOL;//	
+QxShare163	:BOOL;//	
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
+END_VAR               
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></Declaration>
+  </GVL>
+</TcPlcObject>

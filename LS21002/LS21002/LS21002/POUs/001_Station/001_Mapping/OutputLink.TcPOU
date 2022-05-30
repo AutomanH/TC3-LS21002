@@ -1,0 +1,249 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="OutputLink" Id="{3916e100-52b7-48c2-b60c-bf9d9159bc35}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM OutputLink
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ACT_ET01();
+ACT_ET02();
+ACT_ET03();
+ACT_ET04();
+
+]]></ST>
+    </Implementation>
+    <Action Name="ACT_ET01" Id="{8c88af3e-a87b-4b70-bcc1-63291acacd8a}">
+      <Implementation>
+        <ST><![CDATA[ET01_Output[1].Output.0	:=	QxStartButtonLamp	;//	启动按钮指示灯
+ET01_Output[1].Output.1	:=	QxStopButtonLamp	;//	停止按钮指示灯
+ET01_Output[1].Output.2	:=	QxResetButtonLamp	;//	复位按钮指示灯
+ET01_Output[1].Output.3	:=	QxInitButtonLamp	;//	初始化按钮指示灯
+ET01_Output[1].Output.4	:=	QxIonStopControl	;//	上料工位¶离子风棒¶停止放电信号
+ET01_Output[1].Output.5	:=	QxIonCheckDirtyControl	;//	上料工位¶离子风棒¶电极针脏污检出信号
+ET01_Output[1].Output.6	:=	QxFlowLineStart	;//	链板线电机¶正转输出
+ET01_Output[1].Output.7	:=	QxFlowLineStop	;//	链板线电机¶停止输出
+ET01_Output[1].Output.8	:=	QxFlowLineSpeedCtrl_1	;//	链板线电机¶多段速1输出
+ET01_Output[1].Output.9	:=	QxFlowLineSpeedCtrl_2	;//	链板线电机¶多段速2输出
+ET01_Output[1].Output.10	:=	QxMachineLamp1Control	;//	日光灯1控制
+ET01_Output[1].Output.11	:=	QxMachineLamp2Control	;//	日光灯2控制
+ET01_Output[1].Output.12	:=	QxRedLamp	;//	三色灯-红灯
+ET01_Output[1].Output.13	:=	QxYellowLamp	;//	三色灯-黄灯
+ET01_Output[1].Output.14	:=	QxGreenLamp	;//	三色灯-绿灯
+ET01_Output[1].Output.15	:=	QxBuzzer	;//	三色-蜂鸣器灯
+ET01_Output[2].Output.0	:=	QxS01VTCPressCyl_1WP	;//	链板线¶Z轴阻挡气缸1¶动点输出
+ET01_Output[2].Output.1	:=	QxS01VTCPressCyl_1HP	;//	链板线¶Z轴阻挡气缸1¶原点输出
+ET01_Output[2].Output.2	:=	QxS01VTCPressCyl_2WP	;//	链板线¶Z轴阻挡气缸2¶动点输出
+ET01_Output[2].Output.3	:=	QxS01VTCPressCyl_2HP	;//	链板线¶Z轴阻挡气缸2¶原点输出
+ET01_Output[2].Output.4	:=	QxS01VTCPressCyl_3WP	;//	链板线¶Z轴阻挡气缸3¶动点输出
+ET01_Output[2].Output.5	:=	QxS01VTCPressCyl_3HP	;//	链板线¶Z轴阻挡气缸3¶原点输出
+ET01_Output[2].Output.6	:=	QxS01VTCPressCyl_4WP	;//	链板线¶Z轴阻挡气缸4¶动点输出
+ET01_Output[2].Output.7	:=	QxS01VTCPressCyl_4HP	;//	链板线¶Z轴阻挡气缸4¶原点输出
+ET01_Output[2].Output.8	:=	QxS01VTCCyl_1WP	;//	上料工位¶移栽Z轴气缸1¶动点输出
+ET01_Output[2].Output.9	:=	QxS01VTCCyl_1HP	;//	上料工位¶移栽Z轴气缸¶原点输出
+ET01_Output[2].Output.10	:=	QxS01VTCCyl_2WP	;//	上料工位¶移栽Z轴气缸2¶动点输出
+ET01_Output[2].Output.11	:=	QxS01VTCCyl_2HP	;//	上料工位¶移栽变距气缸¶原点输出
+ET01_Output[2].Output.12	:=	QxS02HOZAdjustCyl_1WP	;//	注液工位¶上层水平调整气缸1¶动点输出
+ET01_Output[2].Output.13	:=	QxS02HOZAdjustCyl_1HP	;//	注液工位¶上层水平调整气缸1¶原点输出
+ET01_Output[2].Output.14	:=	QxS02HOZAdjustCyl_2WP	;//	注液工位¶上层水平调整气缸2¶动点输出
+ET01_Output[2].Output.15	:=	QxS02HOZAdjustCyl_2HP	;//	注液工位¶上层水平调整气缸2¶原点输出
+ET01_Output[3].Output.0	:=	QxS02HOZAdjustCyl_3WP	;//	注液工位¶下层水平调整气缸1¶动点输出
+ET01_Output[3].Output.1	:=	QxS02HOZAdjustCyl_3HP	;//	注液工位¶下层水平调整气缸1¶原点输出
+ET01_Output[3].Output.2	:=	QxS02HOZAdjustCyl_4WP	;//	注液工位¶下层水平调整气缸2¶动点输出
+ET01_Output[3].Output.3	:=	QxS02HOZAdjustCyl_4HP	;//	注液工位¶下层水平调整气缸2¶原点输出
+ET01_Output[3].Output.4	:=	QxS02ROTCylWP	;//	注液工位¶防滴液¶动点输出
+ET01_Output[3].Output.5	:=	QxS02ROTCylHP	;//	注液工位¶防滴液¶原点输出
+ET01_Output[3].Output.6	:=	QxS03HOZAdjustCyl_1WP	;//	相机工位¶上层水平调整气缸1¶动点输出
+ET01_Output[3].Output.7	:=	QxS03HOZAdjustCyl_1HP	;//	相机工位¶上层水平调整气缸1¶原点输出
+ET01_Output[3].Output.8	:=	QxS03HOZAdjustCyl_2WP	;//	相机工位¶上层水平调整气缸2¶动点输出
+ET01_Output[3].Output.9	:=	QxS03HOZAdjustCyl_2HP	;//	相机工位¶上层水平调整气缸2¶原点输出
+ET01_Output[3].Output.10	:=	QxS03HOZAdjustCyl_3WP	;//	相机工位¶上层水平调整气缸3¶动点输出
+ET01_Output[3].Output.11	:=	QxS03HOZAdjustCyl_3HP	;//	相机工位¶上层水平调整气缸3¶原点输出
+ET01_Output[3].Output.12	:=	QxS03HOZAdjustCyl_4WP	;//	相机工位¶上层水平调整气缸4¶动点输出
+ET01_Output[3].Output.13	:=	QxS03HOZAdjustCyl_4HP	;//	相机工位¶上层水平调整气缸4¶原点输出
+ET01_Output[3].Output.14	:=	QxS03HOZAdjustCyl_5WP	;//	相机工位¶下层水平调整气缸1¶动点输出
+ET01_Output[3].Output.15	:=	QxS03HOZAdjustCyl_5HP	;//	相机工位¶下层水平调整气缸1¶原点输出
+ET01_Output[4].Output.0	:=	QxS03HOZAdjustCyl_6WP	;//	相机工位¶下层水平调整气缸2¶动点输出
+ET01_Output[4].Output.1	:=	QxS03HOZAdjustCyl_6HP	;//	相机工位¶下层水平调整气缸2¶原点输出
+ET01_Output[4].Output.2	:=	QxS03HOZAdjustCyl_7WP	;//	相机工位¶下层水平调整气缸3¶动点输出
+ET01_Output[4].Output.3	:=	QxS03HOZAdjustCyl_7HP	;//	相机工位¶下层水平调整气缸3¶原点输出
+ET01_Output[4].Output.4	:=	QxS03HOZAdjustCyl_8WP	;//	相机工位¶下层水平调整气缸3¶原点输出
+ET01_Output[4].Output.5	:=	QxS03HOZAdjustCyl_8HP	;//	相机工位¶下层水平调整气缸4¶原点输出
+ET01_Output[4].Output.6	:=	QxShare7	;//	备用
+ET01_Output[4].Output.7	:=	QxShare8	;//	备用
+ET01_Output[4].Output.8	:=	QxShare9	;//	备用
+ET01_Output[4].Output.9	:=	QxShare10	;//	备用
+ET01_Output[4].Output.10	:=	QxShare11	;//	备用
+ET01_Output[4].Output.11	:=	QxShare12	;//	备用
+ET01_Output[4].Output.12	:=	QxShare13	;//	备用
+ET01_Output[4].Output.13	:=	QxShare14	;//	备用
+ET01_Output[4].Output.14	:=	QxShare15	;//	备用
+ET01_Output[4].Output.15	:=	QxShare16	;//	备用
+ET01_Output[5].Output.0	:=	QxCamera1Trigger	;//	相机检测工位¶相机触发1
+ET01_Output[5].Output.1	:=	QxCamera2Trigger	;//	相机检测工位¶相机触发2
+ET01_Output[5].Output.2	:=	QxCamera3Trigger	;//	相机检测工位¶相机触发3
+ET01_Output[5].Output.3	:=	QxCamera4Trigger	;//	相机检测工位¶相机触发4
+ET01_Output[5].Output.4	:=	QxCamera5Trigger	;//	相机检测工位¶相机触发5
+ET01_Output[5].Output.5	:=	QxCamera6Trigger	;//	相机检测工位¶相机触发6
+ET01_Output[5].Output.6	:=	QxCamera7Trigger	;//	相机检测工位¶相机触发7
+ET01_Output[5].Output.7	:=	QxCamera8Trigger	;//	相机检测工位¶相机触发8
+ET01_Output[5].Output.8	:=	QxCamera9Trigger	;//	相机检测工位¶相机触发9
+ET01_Output[5].Output.9	:=	QxCamera10Trigger	;//	相机检测工位¶相机触发10
+ET01_Output[5].Output.10	:=	QxCamera11Trigger	;//	相机检测工位¶相机触发11
+ET01_Output[5].Output.11	:=	QxCamera12Trigger	;//	相机检测工位¶相机触发12
+ET01_Output[5].Output.12	:=	QxCamera13Trigger	;//	相机检测工位¶相机触发13
+ET01_Output[5].Output.13	:=	QxCamera14Trigger	;//	相机检测工位¶相机触发14
+ET01_Output[5].Output.14	:=	QxCamera15Trigger	;//	相机检测工位¶相机触发15
+ET01_Output[5].Output.15	:=	QxCamera16Trigger	;//	相机检测工位¶相机触发16
+ET01_Output[6].Output.0	:=	QxCamera17Trigger	;//	相机检测工位¶相机触发17
+ET01_Output[6].Output.1	:=	QxCameraLight1Trigger	;//	相机光源触发通道1
+ET01_Output[6].Output.2	:=	QxCameraLight2Trigger	;//	相机光源触发通道2
+ET01_Output[6].Output.3	:=	QxCameraLight3Trigger	;//	相机光源触发通道3
+ET01_Output[6].Output.4	:=	QxCameraLight4Trigger	;//	相机光源触发通道4
+ET01_Output[6].Output.5	:=	QxShare21	;//	备用
+ET01_Output[6].Output.6	:=	QxShare22	;//	备用
+ET01_Output[6].Output.7	:=	QxShare23	;//	备用
+ET01_Output[6].Output.8	:=	QxShare24	;//	备用
+ET01_Output[6].Output.9	:=	QxShare25	;//	备用
+ET01_Output[6].Output.10	:=	QxShare26	;//	备用
+ET01_Output[6].Output.11	:=	QxShare27	;//	备用
+ET01_Output[6].Output.12	:=	QxShare28	;//	备用
+ET01_Output[6].Output.13	:=	QxShare29	;//	备用
+ET01_Output[6].Output.14	:=	QxShare30	;//	备用
+ET01_Output[6].Output.15	:=	QxShare31	;//	备用]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_ET02" Id="{590e7e36-4c0c-490a-9dc2-73cf8cee6727}">
+      <Implementation>
+        <ST><![CDATA[ET02_Output[1].Output.0	:=	QxRedLamp_1	;//	三色灯-红灯
+ET02_Output[1].Output.1	:=	QxYellowLamp_1	;//	三色灯-黄灯
+ET02_Output[1].Output.2	:=	QxGreenLamp_1	;//	三色灯-绿灯
+ET02_Output[1].Output.3	:=	QxBuzzer_1	;//	三色灯-蜂鸣器灯
+ET02_Output[1].Output.4	:=	QxHeatRelayContorl1	;//	加热棒供电接触器1
+ET02_Output[1].Output.5	:=	QxHeatRelayContorl2	;//	加热棒供电接触器2
+ET02_Output[1].Output.6	:=	QxMachineLamp3Contorl	;//	日光灯控制
+ET02_Output[1].Output.7	:=	QxVacuum1_FeedValveControl	;//	卡片搬运工位¶真空发生器1¶供给阀控制
+ET02_Output[1].Output.8	:=	QxVacuum1_BreakValveControl	;//	卡片搬运工位¶真空发生器1¶破坏阀控制
+ET02_Output[1].Output.9	:=	QxVacuum2_FeedValveControl	;//	卡片搬运工位¶真空发生器2¶供给阀控制
+ET02_Output[1].Output.10	:=	QxVacuum2_BreakValveControl	;//	卡片搬运工位¶真空发生器2¶破坏阀控制
+ET02_Output[1].Output.11	:=	QxET02IonControlSignal1	;//	卡片搬运工位¶离子风棒¶外部给定信号1
+ET02_Output[1].Output.12	:=	QxET02IonControlSignal2	;//	卡片搬运工位¶离子风棒¶外部给定信号2
+ET02_Output[1].Output.13	:=	QxET02IonStopControl	;//	卡片搬运工位¶离子风棒¶停止放电信号
+ET02_Output[1].Output.14	:=	QxET02IonResetControl	;//	卡片搬运工位¶离子风棒¶复位信号
+ET02_Output[1].Output.15	:=	QxShare79	;//	备用
+ET02_Output[2].Output.0	:=	QxS04HOZAdjustCyl_1WP	;//	热熔工位¶上层水平调整气缸1¶动点输出
+ET02_Output[2].Output.1	:=	QxS04HOZAdjustCyl_1HP	;//	热熔工位¶上层水平调整气缸1¶原点输出
+ET02_Output[2].Output.2	:=	QxS04HOZAdjustCyl_2WP	;//	热熔工位¶上层水平调整气缸2¶动点输出
+ET02_Output[2].Output.3	:=	QxS04HOZAdjustCyl_2HP	;//	热熔工位¶上层水平调整气缸2¶原点输出
+ET02_Output[2].Output.4	:=	QxS04HOZAdjustCyl_3WP	;//	热熔工位¶下层水平调整气缸1¶动点输出
+ET02_Output[2].Output.5	:=	QxS04HOZAdjustCyl_3HP	;//	热熔工位¶下层水平调整气缸1¶原点输出
+ET02_Output[2].Output.6	:=	QxS04HOZAdjustCyl_4WP	;//	热熔工位¶下层水平调整气缸2¶动点输出
+ET02_Output[2].Output.7	:=	QxS04HOZAdjustCyl_4HP	;//	热熔工位¶下层水平调整气缸2¶原点输出
+ET02_Output[2].Output.8	:=	QxS06GlampCyl_1WP	;//	切膜工位¶前侧夹膜气缸¶动点输出
+ET02_Output[2].Output.9	:=	QxS06GlampCyl_1HP	;//	切膜工位¶前侧夹膜气缸¶原点输出
+ET02_Output[2].Output.10	:=	QxS06GlampCyl_2WP	;//	切膜工位¶后侧夹膜气缸¶动点输出
+ET02_Output[2].Output.11	:=	QxS06GlampCyl_2HP	;//	切膜工位¶后侧夹膜气缸¶原点输出
+ET02_Output[2].Output.12	:=	QxS06HOZReachedCyl_1WP	;//	切膜工位¶水平到位气缸1¶动点出输出
+ET02_Output[2].Output.13	:=	QxS06HOZReachedCyl_1HP	;//	切膜工位¶水平到位气缸1¶原点出输出
+ET02_Output[2].Output.14	:=	QxS06HOZReachedCyl_2WP	;//	切膜工位¶水平到位气缸2¶动点输出
+ET02_Output[2].Output.15	:=	QxS06HOZReachedCyl_2HP	;//	切膜工位¶水平到位气缸2¶原点输出
+ET02_Output[3].Output.0	:=	QxS06HOZCyl_1WP	;//	切膜工位¶水平切膜气缸¶动点输出
+ET02_Output[3].Output.1	:=	QxS06HOZCyl_1HP	;//	切膜工位¶水平切膜气缸¶原点输出
+ET02_Output[3].Output.2	:=	QxS06VTCAdjustCylWP	;//	切膜工位¶下方对中顶升气缸¶动点输出
+ET02_Output[3].Output.3	:=	QxS06VTCAdjustCylHP	;//	切膜工位¶下方对中顶升气缸¶原点输出
+ET02_Output[3].Output.4	:=	QxS06GlampAdjustCyl_1WP	;//	切膜工位¶下方对中夹爪气缸1¶动点输出
+ET02_Output[3].Output.5	:=	QxS06GlampAdjustCyl_1HP	;//	切膜工位¶下方对中夹爪气缸1¶原点输出
+ET02_Output[3].Output.6	:=	QxS06GlampAdjustCyl_2WP	;//	切膜工位¶下方对中夹爪气缸2¶动点输出
+ET02_Output[3].Output.7	:=	QxS06GlampAdjustCyl_2HP	;//	切膜工位¶下方对中夹爪气缸2¶原点输出
+ET02_Output[3].Output.8	:=	QxS06GlampAdjustCyl_3WP	;//	切膜工位¶下方对中夹爪气缸3¶动点输出
+ET02_Output[3].Output.9	:=	QxS06GlampAdjustCyl_3HP	;//	切膜工位¶下方对中夹爪气缸3¶原点输出
+ET02_Output[3].Output.10	:=	QxS08HOZCylWP	;//	卡片工位¶水平气缸¶动点输出
+ET02_Output[3].Output.11	:=	QxS08HOZCylHP	;//	卡片工位¶水平气缸¶原点输出
+ET02_Output[3].Output.12	:=	QxS08VTCCyl_1WP	;//	卡片工位¶Z轴气缸1¶动点输出
+ET02_Output[3].Output.13	:=	QxS08VTCCyl_1HP	;//	卡片工位¶Z轴气缸1¶原点输出
+ET02_Output[3].Output.14	:=	QxS08VTCCyl_2WP	;//	卡片工位¶Z轴气缸2¶动点输出
+ET02_Output[3].Output.15	:=	QxS08VTCCyl_2HP	;//	卡片工位¶Z轴气缸2¶原点输出
+ET02_Output[4].Output.0	:=	QxShare80	;//	备用
+ET02_Output[4].Output.1	:=	QxShare81	;//	备用
+ET02_Output[4].Output.2	:=	QxShare82	;//	备用
+ET02_Output[4].Output.3	:=	QxShare83	;//	备用
+ET02_Output[4].Output.4	:=	QxShare84	;//	备用
+ET02_Output[4].Output.5	:=	QxShare85	;//	备用
+ET02_Output[4].Output.6	:=	QxShare86	;//	备用
+ET02_Output[4].Output.7	:=	QxShare87	;//	备用
+ET02_Output[4].Output.8	:=	QxShare88	;//	备用
+ET02_Output[4].Output.9	:=	QxShare89	;//	备用
+ET02_Output[4].Output.10	:=	QxShare90	;//	备用
+ET02_Output[4].Output.11	:=	QxShare91	;//	备用
+ET02_Output[4].Output.12	:=	QxShare92	;//	备用
+ET02_Output[4].Output.13	:=	QxShare93	;//	备用
+ET02_Output[4].Output.14	:=	QxShare94	;//	备用
+ET02_Output[4].Output.15	:=	QxShare95	;//	备用
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_ET03" Id="{4c3f35d5-c1b2-4514-a9d5-142363eb864a}">
+      <Implementation>
+        <ST><![CDATA[]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_ET04" Id="{98a3b441-9716-46f3-a4fc-a90567759c7b}">
+      <Implementation>
+        <ST><![CDATA[ET04_Output[1].Output.0	:=	QxMotorForward	;//	热缩封膜出料线体¶电机正转
+ET04_Output[1].Output.1	:=	QxMotorStop	;//	热缩封膜出料线体¶电机停止
+ET04_Output[1].Output.2	:=	QxMotorBackward	;//	热缩封膜出料线体¶电机反转
+ET04_Output[1].Output.3	:=	QxMotorReserve	;//	热缩封膜出料线体¶电机备用
+ET04_Output[1].Output.4	:=	QxCameraTrigger	;//	相机触发
+ET04_Output[1].Output.5	:=	QxLabelStart	;//	贴标机Start
+ET04_Output[1].Output.6	:=	QxLabelRibwarn	;//	贴标机RIBWARN
+ET04_Output[1].Output.7	:=	QxLabelReset	;//	贴标机RESET
+ET04_Output[1].Output.8	:=	QxS11HOZCylWP	;//	贴标处推料气缸¶动点
+ET04_Output[1].Output.9	:=	QxS11HOZCylHP	;//	贴标处推料气缸¶原点
+ET04_Output[1].Output.10	:=	QxS12HOZCyl_1WP	;//	贴标检测工位¶推料气缸1¶动点
+ET04_Output[1].Output.11	:=	QxS12HOZCyl_1HP	;//	贴标检测工位¶推料气缸1¶原点
+ET04_Output[1].Output.12	:=	QxS12HOZCyl_2WP	;//	贴标检测工位¶推料气缸2¶动点
+ET04_Output[1].Output.13	:=	QxS12HOZCyl_2HP	;//	贴标检测工位¶推料气缸2¶原点
+ET04_Output[1].Output.14	:=	QxS13HOZCyl_1WP	;//	NG推料气缸1¶动点
+ET04_Output[1].Output.15	:=	QxS13HOZCyl_1HP	;//	NG推料气缸1¶原点
+ET04_Output[2].Output.0	:=	QxS13HOZCyl_2WP	;//	NG推料气缸2¶动点
+ET04_Output[2].Output.1	:=	QxS13HOZCyl_2HP	;//	NG推料气缸2¶原点
+ET04_Output[2].Output.2	:=	QxShare150	;//	备用
+ET04_Output[2].Output.3	:=	QxShare151	;//	备用
+ET04_Output[2].Output.4	:=	QxShare152	;//	备用
+ET04_Output[2].Output.5	:=	QxShare153	;//	备用
+ET04_Output[2].Output.6	:=	QxShare154	;//	备用
+ET04_Output[2].Output.7	:=	QxShare155	;//	备用
+ET04_Output[2].Output.8	:=	QxShare156	;//	备用
+ET04_Output[2].Output.9	:=	QxShare157	;//	备用
+ET04_Output[2].Output.10	:=	QxShare158	;//	备用
+ET04_Output[2].Output.11	:=	QxShare159	;//	备用
+ET04_Output[2].Output.12	:=	QxShare160	;//	备用
+ET04_Output[2].Output.13	:=	QxShare161	;//	备用
+ET04_Output[2].Output.14	:=	QxShare162	;//	备用
+ET04_Output[2].Output.15	:=	QxShare163	;//	备用
+]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="OutputLink">
+      <LineId Id="144" Count="2" />
+      <LineId Id="135" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="OutputLink.ACT_ET01">
+      <LineId Id="253" Count="94" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="OutputLink.ACT_ET02">
+      <LineId Id="193" Count="63" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="OutputLink.ACT_ET03">
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="OutputLink.ACT_ET04">
+      <LineId Id="2" Count="31" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

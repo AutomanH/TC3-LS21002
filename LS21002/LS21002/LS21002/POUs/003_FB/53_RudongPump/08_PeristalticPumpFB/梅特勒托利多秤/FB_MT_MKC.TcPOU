@@ -1,0 +1,2533 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_MT_MKC" Id="{9c5c5713-6838-4d49-a290-d2d58cb57824}" SpecialFunc="None">
+    <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+FUNCTION_BLOCK FB_MT_MKC//METTLER电子秤
+VAR_INPUT
+	xExecute: BOOL;//指令执行
+	xAbort: BOOL;//指令中断
+	xEstop	:BOOL;//急停
+	xDeviceRunning:BOOL;
+	xResetRequest: BOOL;//复位操作
+	stDeviceOpe	:ST_DeviceOpe;//秤体操作
+	stpar		:ST_MCK_ParIn;
+	stSysPar	:ST_SysPar;
+	dwTimeOut: DWORD;//[ms],0 => no executing time limit	  
+	xManualHMIControl : BOOL;
+	xAutoMode    : BOOL;//0:mannal 1:auto
+	xIniting     : BOOL;//初始化过程中  
+END_VAR
+VAR_OUTPUT
+	xDone			: BOOL;(*完成条件满足*)
+	xBusy			: BOOL;(*动作正在执行*)
+	xError			: BOOL;(*错误条件满足*)
+	eErrorID		: MT_MCK_ERROR;(*错误码*)
+	eTCPErrorID 	:UDINT;(*TCPIP Client错误码*)
+	xRdyCmd 		: BOOL;//代表指令准备完成
+ 	xRefOk          : BOOL;//初始化完成
+	stParOut		: ST_MCK_ParOut;//参数输出
+END_VAR
+
+VAR
+{attribute 'tc_no_symbol'}
+	eState: STATE;//当前状态
+{attribute 'tc_no_symbol'}
+	xAborted: BOOL;(*指令被打断，一般是处于急停中*)
+{attribute 'tc_no_symbol'}
+	sFromServer			: T_MaxString := '';//(*string from server*)
+{attribute 'tc_no_symbol'}
+	rxBuffer			: ARRAY[1..MAX_PLCPRJ_RXBUFFER_SIZE] OF BYTE;//接收缓存区域(byte数组)
+{attribute 'tc_no_symbol'}
+	xFirstInvocation: BOOL := TRUE;	 
+{attribute 'tc_no_symbol'}
+	xTimeOut: BOOL;
+{attribute 'tc_no_symbol'}
+	tOperationTimer : TON;
+{attribute 'tc_no_symbol'}
+	_tDelay : TON;
+{attribute 'tc_no_symbol'}
+	_fbTcpIpClient	: FB_TcpIpClient;
+{attribute 'tc_no_symbol'}
+  	_first : BOOL;
+{attribute 'tc_no_symbol'}
+	_sReceiveData : T_MaxString := '';//实际发送和接收的数据
+{attribute 'tc_no_symbol'}
+	_sSendData : T_MaxString := '';//实际发送和接收的数据
+{attribute 'tc_no_symbol'}
+	_sReadDataTemp : T_MaxString := '';//实际发送和接收的数据
+{attribute 'tc_no_symbol'}
+	_iSendNGCount: INT;//发送NG计数。读取NG计数，读取数据计数
+{attribute 'tc_no_symbol'}
+	_iNGCount,_iReadNGCount: INT;// 
+{attribute 'tc_no_symbol'}
+	_iReadDataCount: INT;//发送NG计数。读取NG计数，读取数据计数 
+{attribute 'tc_no_symbol'}	
+	 _iStatusIndex: INT;//发送NG计数。读取NG计数，读取数据计数 
+{attribute 'tc_no_symbol'}
+	_iReadDataFristIndex : INT;
+{attribute 'tc_no_symbol'}
+	 _iReadDataLastIndex : INT;
+{attribute 'tc_no_symbol'}
+	_rHMIControl : R_TRIG;
+{attribute 'tc_no_symbol'}
+	_rManual : R_TRIG;
+{attribute 'tc_no_symbol'}
+	_fManual : F_TRIG;
+{attribute 'tc_no_symbol'}
+	_xModeChange : BOOL;
+{attribute 'tc_no_symbol'}
+	_diCmdState 	: DINT; 
+{attribute 'tc_no_symbol'}
+	_tonTimeout: TON;	
+{attribute 'tc_no_symbol'}	
+	_tonCmdTimeout: TON;	
+{attribute 'tc_no_symbol'}	
+	_tonDelay: TON;	
+{attribute 'tc_no_symbol'}		
+	_rOperaTrig	:ARRAY [1..15] OF R_TRIG;
+{attribute 'tc_no_symbol'}
+	eCmd:MT_MCK_CMD;
+{attribute 'tc_no_symbol'}
+	xAutomodeFlag:BOOL;
+{attribute 'tc_no_symbol'}
+	rTareSet		:REAL;
+{attribute 'tc_no_symbol'}
+	_rStopCmdTrig :R_TRIG;
+{attribute 'tc_no_symbol'}
+	_Stemp		:ARRAY [1..20] OF STRING;	
+{attribute 'tc_no_symbol'}
+	_xHMIOpe :BOOL;//是否有手动操作，是否有自动操作	
+{attribute 'tc_no_symbol'}	
+	 _xAutoOpe : BOOL;//是否有手动操作，是否有自动操作
+{attribute 'tc_no_symbol'}		 
+	 _xDone:BOOL;
+{attribute 'tc_no_symbol'}	 
+	 _rInit:R_TRIG;
+END_VAR
+VAR_TEMP
+{attribute 'tc_no_symbol'}
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+IF NOT _first 
+THEN
+	_first := TRUE;
+	_fbTcpIpClient.nRemotePort := stSysPar.nRemotePort;//端口号
+	_fbTcpIpClient.sRemoteHost := stSysPar.sRemoteHost;//IP地址
+ELSE
+  xAgain:=0;
+  _fbTcpIpClient();
+	eTCPErrorID := _fbTcpIpClient.udiErrorID;
+	xRdyCmd := eState = STATE.DORMANT AND eERRORID = MT_MCK_ERROR.No_ERROR;//检测是否允许指令控制(初始状态，没有报警发生)	
+	xDone:=_xDone AND xExecute;
+  _rInit(CLK:= xIniting);//检测是否是初始化中，如果是的去切换模式
+  IF _rInit.Q
+  THEN
+   eState := STATE.RESETING;
+  END_IF 	
+	//检测是否有模式变化
+_fManual(CLK:=xAutoMode);
+_rManual(CLK:=xAutoMode);
+
+IF eState <> STATE.DORMANT//只有在运行的时候，才会检测是否有模式切换发生
+THEN
+	IF _fManual.Q OR _rManual.Q
+	THEN
+		_xModeChange := TRUE;
+	END_IF
+END_IF
+	//_fbTcpIpClient.xNeedReceive := xNeedReceive;//设置发送之后是否需要反馈信息
+	REPEAT
+		CASE eState OF
+			STATE.DORMANT:
+				HandleDormantState(xAgain=> xAgain);
+			STATE.EXECUTING:
+				HandleExecutingState(xAgain=> xAgain);
+			STATE.DONE:
+				HandleDoneState(xAgain=> xAgain);
+			STATE.INERROR:
+				HandleErrorState(xAgain=> xAgain);
+			STATE.ABORTING:
+				HandleAbortingState(xAgain=> xAgain);
+			STATE.ABORTED:
+				HandleAbortedState(xAgain=> xAgain);
+			STATE.RESETING:
+				HandleResettingState(xAgain=> xAgain);
+			END_CASE
+	UNTIL (xAgain=0)
+	END_REPEAT
+END_IF
+
+
+//报错内容输出
+CASE eErrorID OF 
+	MT_MCK_ERROR.FLT_CMD_TIMEOUT:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_CMD_TIMEOUT';
+	MT_MCK_ERROR.FLT_CmdFeedback:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_CmdFeedback';
+	MT_MCK_ERROR.FLT_CommandCantSend:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_CommandCantSend';
+	MT_MCK_ERROR.FLT_CONNECT:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_CONNECT';
+	MT_MCK_ERROR.FLT_LogicaL:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_LogicaL';
+	MT_MCK_ERROR.FLT_Par:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_Par';
+	MT_MCK_ERROR.FLT_PARA:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_PARA';
+	MT_MCK_ERROR.FLT_RDYCMD:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_RDYCMD';
+	MT_MCK_ERROR.FLT_STOP_TIMEOUT:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_STOP_TIMEOUT';
+	MT_MCK_ERROR.FLT_Syntax:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_Syntax';
+	MT_MCK_ERROR.FLT_TOverMax:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_TOverMax';
+	MT_MCK_ERROR.FLT_TOverMin:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_TOverMin';
+	MT_MCK_ERROR.FLT_ZI:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_ZI';
+	MT_MCK_ERROR.FLT_ZOverMax:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_ZOverMax';
+	MT_MCK_ERROR.FLT_ZOverMin:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_ZOverMin';
+	MT_MCK_ERROR.No_ERROR:
+		stParOut.sErrorID:='MT_MCK_ERROR.No_ERROR';		
+END_CASE
+
+
+//手动自动操作检测
+_xHMIOpe :=
+			stDeviceOpe.xAcquireWeight_Continuous_HMI OR 
+			stDeviceOpe.xAcquireWeight_RealTime_HMI OR 
+			stDeviceOpe.xAcquireWeight_Steady_HMI OR 		
+			stDeviceOpe.xAcquireWeight_Stop_HMI OR 					
+			stDeviceOpe.xClearZero_HMI OR 
+			stDeviceOpe.xClearZeroInstanly_HMI OR 
+			stDeviceOpe.xlearTare_HMI OR 
+			stDeviceOpe.xReadSerialNum_HMI OR 
+			stDeviceOpe.xRestart_HMI OR 			
+			stDeviceOpe.xSetTare_HMI 	OR
+			stDeviceOpe.xShelling_HMI OR 	
+			stDeviceOpe.xShellingInstanly_HMI;		
+			
+_xAutoOpe:=	
+			stDeviceOpe.xAcquireWeight_Continuous_Auto OR 
+			stDeviceOpe.xAcquireWeight_RealTime_Auto OR 
+			stDeviceOpe.xAcquireWeight_Steady_Auto OR 		
+			stDeviceOpe.xAcquireWeight_Stop_Auto OR 					
+			stDeviceOpe.xClearZero_Auto OR 
+			stDeviceOpe.xClearZeroInstanly_Auto OR 
+			stDeviceOpe.xlearTare_Auto OR 
+			stDeviceOpe.xReadSerialNum_Auto OR 
+			stDeviceOpe.xRestart_Auto OR 			
+			stDeviceOpe.xSetTare_Auto 	OR
+			stDeviceOpe.xShelling_Auto OR 	
+			stDeviceOpe.xShellingInstanly_Auto;
+
+
+	]]></ST>
+    </Implementation>
+    <Folder Name="Control" Id="{d75f9b5d-00a7-4df1-957a-718921002672}" />
+    <Method Name="AbortAction" Id="{cba88355-f830-417b-a093-acffd9d0f62d}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PROTECTED AbortAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+	eErrorID: MT_MCK_ERROR;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+* Cleaning
+* => abort all running operation
+* => if an NBS.ERROR codition is reached, set eErrorID to a Value rather then NBS.ERROR.NO_ERROR 
+*)
+xComplete:=1;
+eErrorID:=MT_MCK_ERROR.NO_ERROR;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdAcquireWeight_Continuous" Id="{646c034d-7c3d-4c04-a125-8990a1210d1d}" FolderPath="Control\">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PROTECTED CmdAcquireWeight_Continuous
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> MT_MCK_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+		
+		
+	0://清空发送与接收缓冲区
+		_tonDelay(IN:= TRUE,pt:=T#1MS);//保证执行的是最新的一次
+		stParOut.rWeightMax:=0;
+		stParOut.rWeightMin:=0;
+		SysMemSet( ADR( _sSendData ), 0, SIZEOF(_sSendData) );//清除发送区域
+		SysMemSet( ADR( _sReadDataTemp ), 0, SIZEOF(_sReadDataTemp) );//清除接收报告数据缓存区域
+		SysMemSet( ADR( sFromServer ), 0, SIZEOF(sFromServer) );//清除发送区域
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF		
+		
+	1://拼接读取指令
+		_tonDelay(IN:= _fbTcpIpClient.xRdyCmd ,pt:=T#1MS);
+		_tonCmdTimeout(IN:= FALSE,pt:=T#2S);
+		_sSendData := 'SI$R$N';
+		IF _tonDelay.Q THEN 
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_fbTcpIpClient.xEnable := FALSE;
+			_diCmdState:=_diCmdState+1;		
+		END_IF		
+		
+	2://发送指令,等待接收成功
+		_tonCmdTimeout(IN:=TRUE ,pt:=T#2S);
+		SysMemCpy(ADR(_fbTcpIpClient.aToServer),ADR(_sSendData),SIZEOF(_sSendData));	
+		_fbTcpIpClient.udiSendNumber := LEN(_sSendData);			
+		_fbTcpIpClient.xEnable := TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN			
+			_fbTcpIpClient.xEnable := FALSE;
+			sFromServer := _sReceiveData := _fbTcpIpClient.sFromServer;//传递接收数据		
+			rxBuffer := _fbTcpIpClient.rxBuffer;		
+			IF FIND(_sReceiveData,'$R$N') <> 0 AND FIND(_sReceiveData,'S') <>0			
+			THEN
+				IF FIND(_sReceiveData,'mg') <> 0 THEN
+					_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-5);
+					_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'mg$R$N')-1);
+					stParOut.rCurrentWeight := TO_REAL(_Stemp[2]);
+					stParOut.sWeightUnit:='mg';				
+				ELSE 
+					IF FIND(_sReceiveData,'g') <> 0 THEN
+						_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-5);
+						_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'g$R$N')-1);
+						stParOut.rCurrentWeight := TO_REAL(_Stemp[2]);
+						stParOut.sWeightUnit:='g';				
+					END_IF				
+				END_IF
+				IF stParOut.rCurrentWeight>stParOut.rWeightMax THEN
+					stParOut.rWeightMax:=stParOut.rCurrentWeight;
+				END_IF
+				IF stParOut.rCurrentWeight<stParOut.rWeightMin THEN
+					stParOut.rWeightMin:=stParOut.rCurrentWeight;
+				END_IF	
+				_diCmdState:=_diCmdState+1;
+			ELSIF FIND(_sReceiveData,'EL') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_LogicaL;//逻辑错误
+				_diCmdState:=999;
+			ELSIF FIND(_sReceiveData,'ES') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_Syntax;//语法错误
+				_diCmdState:=999;				
+			ELSIF FIND(_sReceiveData,'I') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_CommandCantSend;//指令条件不满足,无法发送
+				_diCmdState:=999;				
+			ELSIF FIND(_sReceiveData,'L') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_PARA;//参数错误
+				_diCmdState:=999;				
+			END_IF
+		END_IF
+		IF _tonCmdTimeout.Q THEN
+			eErrorID:=MT_MCK_ERROR.FLT_CMD_TIMEOUT;
+			_diCmdState:=999;
+		END_IF
+	
+	3://判断是否停止读取	
+			_diCmdState:=_diCmdState+1;
+		
+	4://
+		xComplete := TRUE; 
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdAcquireWeight_RealTime" Id="{3cbbed2f-1dbe-4328-8715-77c4e8b5faeb}" FolderPath="Control\">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PROTECTED CmdAcquireWeight_RealTime
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> MT_MCK_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+		
+		
+	0://清空发送与接收缓冲区
+		_tonDelay(IN:= TRUE,pt:=T#1MS);//保证执行的是最新的一次
+		SysMemSet( ADR( _Stemp ), 0, SIZEOF(_Stemp) );//清除缓存数据处理区域
+		SysMemSet( ADR( _sSendData ), 0, SIZEOF(_sSendData) );//清除发送区域
+		SysMemSet( ADR( _sReadDataTemp ), 0, SIZEOF(_sReadDataTemp) );//清除接收报告数据缓存区域
+		SysMemSet( ADR( sFromServer ), 0, SIZEOF(sFromServer) );//清除发送区域
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF		
+		
+	1://拼接读取指令
+		_tonDelay(IN:= _fbTcpIpClient.xRdyCmd ,pt:=T#1MS);
+		_tonCmdTimeout(IN:= FALSE,pt:=T#2S);
+		_sSendData := 'SI$R$N';
+		IF _tonDelay.Q THEN 
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_fbTcpIpClient.xEnable := FALSE;
+			_diCmdState:=_diCmdState+1;		
+		END_IF		
+		
+	2://发送指令,等待接收成功
+		_tonCmdTimeout(IN:=TRUE ,pt:=T#2S);
+		SysMemCpy(ADR(_fbTcpIpClient.aToServer),ADR(_sSendData),SIZEOF(_sSendData));	
+		_fbTcpIpClient.udiSendNumber := LEN(_sSendData);			
+		_fbTcpIpClient.xEnable := TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN			
+			_fbTcpIpClient.xEnable := FALSE;
+			sFromServer := _sReceiveData := _fbTcpIpClient.sFromServer;//传递接收数据		
+			rxBuffer := _fbTcpIpClient.rxBuffer;		
+			IF FIND(_sReceiveData,'$R$N') <> 0 AND FIND(_sReceiveData,'S') <>0			
+			THEN
+				IF FIND(_sReceiveData,'mg') <> 0 THEN
+					_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-5);
+					_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'mg$R$N')-1);
+					stParOut.rCurrentWeight := TO_REAL(_Stemp[2]);
+					stParOut.sWeightUnit:='mg';
+				ELSE 
+					IF FIND(_sReceiveData,'g') <> 0 THEN
+						_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-5);
+						_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'g$R$N')-1);
+						stParOut.rCurrentWeight := TO_REAL(_Stemp[2]);
+						stParOut.sWeightUnit:='g';				
+					END_IF				
+				END_IF
+				_diCmdState:=_diCmdState+1;
+			ELSIF FIND(_sReceiveData,'EL') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_LogicaL;//逻辑错误
+				_diCmdState:=999;
+			ELSIF FIND(_sReceiveData,'ES') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_Syntax;//语法错误
+				_diCmdState:=999;				
+			ELSIF FIND(_sReceiveData,'I') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_CommandCantSend;//指令条件不满足,无法发送
+				_diCmdState:=999;				
+			ELSIF FIND(_sReceiveData,'L') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_PARA;//参数错误
+				_diCmdState:=999;				
+			END_IF
+		END_IF
+		IF _tonCmdTimeout.Q THEN
+			eErrorID:=MT_MCK_ERROR.FLT_CMD_TIMEOUT;
+			_diCmdState:=999;
+		END_IF
+	
+	3://
+		xComplete := TRUE; 
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdAcquireWeight_Stop" Id="{417a22ee-fcee-48dc-947d-1159ea3c073d}" FolderPath="Control\">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PROTECTED CmdAcquireWeight_Stop
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> MT_MCK_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+		
+		
+	0://清空发送与接收缓冲区
+		_tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的是最新的一次
+		SysMemSet( ADR( _Stemp ), 0, SIZEOF(_Stemp) );//清除缓存数据处理区域
+		SysMemSet( ADR( _sSendData ), 0, SIZEOF(_sSendData) );//清除发送区域
+		SysMemSet( ADR( _sReadDataTemp ), 0, SIZEOF(_sReadDataTemp) );//清除接收报告数据缓存区域
+		SysMemSet( ADR( sFromServer ), 0, SIZEOF(sFromServer) );//清除发送区域
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF		
+		
+	1://拼接读取指令
+		_tonDelay(IN:= _fbTcpIpClient.xRdyCmd ,pt:=T#10MS);
+		_tonCmdTimeout(IN:= FALSE,pt:=T#2S);
+		_sSendData := 'SI$R$N';
+		IF _tonDelay.Q THEN 
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_fbTcpIpClient.xEnable := FALSE;
+			_diCmdState:=_diCmdState+1;		
+		END_IF		
+		
+	2://发送指令,等待接收成功
+		SysMemCpy(ADR(_fbTcpIpClient.aToServer),ADR(_sSendData),SIZEOF(_sSendData));	
+		_fbTcpIpClient.udiSendNumber := LEN(_sSendData);				
+		_fbTcpIpClient.xEnable := TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN			
+			_fbTcpIpClient.xEnable := FALSE;
+			sFromServer := _sReceiveData := _fbTcpIpClient.sFromServer;//传递接收数据		
+			rxBuffer := _fbTcpIpClient.rxBuffer;		
+			IF FIND(_sReceiveData,'$R$N') <> 0 AND FIND(_sReceiveData,'S') <> 0						
+			THEN
+				_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-4);
+				_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'g$R$N')-1);
+				stParOut.rCurrentWeight := TO_REAL(_Stemp[2]);
+				_diCmdState:=_diCmdState+1;	
+			END_IF
+		END_IF
+	
+	3://
+		xComplete := TRUE; 
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdClearTare" Id="{205f9396-e1f6-49ef-8684-8959114033ab}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED CmdClearTare
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> MT_MCK_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+		
+		
+	0://清空发送与接收缓冲区
+		_tonDelay(IN:= TRUE,pt:=T#1MS);//保证执行的是最新的一次
+		sysMEMSET( ADR( _Stemp ), 0, SIZEOF(_Stemp) );//清除缓存数据处理区域
+		sysMEMSET( ADR( _sSendData ), 0, SIZEOF(_sSendData) );//清除发送区域
+		sysMEMSET( ADR( _sReadDataTemp ), 0, SIZEOF(_sReadDataTemp) );//清除接收报告数据缓存区域
+		sysMEMSET( ADR( sFromServer ), 0, SIZEOF(sFromServer) );//清除发送区域
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF		
+		
+	1://拼接读取指令
+		_tonDelay(IN:= _fbTcpIpClient.xRdyCmd ,pt:=T#1MS);
+		_tonCmdTimeout(IN:= FALSE,pt:=T#2S);
+		_sSendData := 'TAC$R$N';//清除皮重
+		IF _tonDelay.Q THEN 
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_fbTcpIpClient.xEnable := FALSE;
+			_diCmdState:=_diCmdState+1;		
+		END_IF				
+		
+	2://发送指令,等待接收成功
+		sysMEMCPY(ADR(_fbTcpIpClient.aToServer),ADR(_sSendData),SIZEOF(_sSendData));	
+		_fbTcpIpClient.udiSendNumber := LEN(_sSendData);				
+		_fbTcpIpClient.xEnable := TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN			
+			_fbTcpIpClient.xEnable := FALSE;
+			sFromServer := _sReceiveData := _fbTcpIpClient.sFromServer;//传递接收数据		
+			rxBuffer := _fbTcpIpClient.rxBuffer;		
+			IF FIND(_sReceiveData,'$R$N') <> 0 AND FIND(_sReceiveData,'TAC') <> 0						
+			THEN
+				stParOut.rCurrentTareWight:=0;
+				_diCmdState:=_diCmdState+1;
+			ELSIF FIND(_sReceiveData,'EL') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_LogicaL;//逻辑错误
+				_diCmdState:=999;
+			ELSIF FIND(_sReceiveData,'ES') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_Syntax;//语法错误
+				_diCmdState:=999;				
+			ELSIF FIND(_sReceiveData,'I') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_CommandCantSend;//指令条件不满足,无法发送
+				_diCmdState:=999;				
+			ELSIF FIND(_sReceiveData,'L') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_PARA;//参数错误
+				_diCmdState:=999;				
+			END_IF
+		END_IF
+
+	3://清空发送与接收缓冲区
+		_tonDelay(IN:= TRUE,pt:=T#1MS);//保证执行的是最新的一次
+		SysMemSet( ADR( _Stemp ), 0, SIZEOF(_Stemp) );//清除缓存数据处理区域
+		SysMemSet( ADR( _sSendData ), 0, SIZEOF(_sSendData) );//清除发送区域
+		SysMemSet( ADR( _sReadDataTemp ), 0, SIZEOF(_sReadDataTemp) );//清除接收报告数据缓存区域
+		SysMemSet( ADR( sFromServer ), 0, SIZEOF(sFromServer) );//清除发送区域
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF
+		
+	4://拼接读取指令
+		_tonDelay(IN:= _fbTcpIpClient.xRdyCmd ,pt:=T#1MS);
+		_tonCmdTimeout(IN:= FALSE,pt:=T#2S);
+		_sSendData := 'SI$R$N';//立即读取当前重量
+		IF _tonDelay.Q THEN 
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_fbTcpIpClient.xEnable := FALSE;
+			_diCmdState:=_diCmdState+1;		
+		END_IF				
+		
+	5://发送指令,等待接收成功
+		_tonCmdTimeout(IN:=TRUE ,pt:=T#2S);
+		SysMemCpy(ADR(_fbTcpIpClient.aToServer),ADR(_sSendData),SIZEOF(_sSendData));	
+		_fbTcpIpClient.udiSendNumber := LEN(_sSendData);				
+		_fbTcpIpClient.xEnable := TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN			
+			_fbTcpIpClient.xEnable := FALSE;
+			sFromServer := _sReceiveData := _fbTcpIpClient.sFromServer;//传递接收数据		
+			rxBuffer := _fbTcpIpClient.rxBuffer;		
+			IF FIND(_sReceiveData,'$R$N') <> 0 AND FIND(_sReceiveData,'S') <>0			
+			THEN
+				IF FIND(_sReceiveData,'mg') <> 0 THEN
+					_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-5);
+					_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'mg$R$N')-1);
+					stParOut.rCurrentWeight := TO_REAL(_Stemp[2]);
+					stParOut.sWeightUnit:='mg';
+				ELSE 
+					IF FIND(_sReceiveData,'g') <> 0 THEN
+						_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-5);
+						_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'g$R$N')-1);
+						stParOut.rCurrentWeight := TO_REAL(_Stemp[2]);
+						stParOut.sWeightUnit:='g';				
+					END_IF				
+				END_IF
+				_diCmdState:=_diCmdState+1;
+			ELSIF FIND(_sReceiveData,'EL') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_LogicaL;//逻辑错误
+				_diCmdState:=999;
+			ELSIF FIND(_sReceiveData,'ES') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_Syntax;//语法错误
+				_diCmdState:=999;				
+			ELSIF FIND(_sReceiveData,'I') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_CommandCantSend;//指令条件不满足,无法发送
+				_diCmdState:=999;				
+			ELSIF FIND(_sReceiveData,'L') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_PARA;//参数错误
+				_diCmdState:=999;				
+			END_IF
+		END_IF
+		IF _tonCmdTimeout.Q THEN
+			eErrorID:=MT_MCK_ERROR.FLT_CMD_TIMEOUT;
+			_diCmdState:=999;
+		END_IF
+	
+	6://
+		xComplete := TRUE; 
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdClearZero" Id="{1bb17084-3d03-4f30-ad14-e664698e7b94}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED CmdClearZero
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> MT_MCK_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+		
+		
+	0://清空发送与接收缓冲区
+		_tonDelay(IN:= TRUE,pt:=T#1MS);//保证执行的是最新的一次
+		_iNGCount:=0;
+		SysMemSet( ADR( _sSendData ), 0, SIZEOF(_sSendData) );//清除发送区域
+		SysMemSet( ADR( _sReadDataTemp ), 0, SIZEOF(_sReadDataTemp) );//清除接收报告数据缓存区域
+		SysMemSet( ADR( sFromServer ), 0, SIZEOF(sFromServer) );//清除发送区域
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF		
+		
+	1://拼接读取指令
+		_tonDelay(IN:= _fbTcpIpClient.xRdyCmd ,pt:=T#2MS);
+		_tonCmdTimeout(IN:= FALSE,pt:=T#2S);
+		_sSendData := 'Z$R$N';//稳态清零
+		IF _tonDelay.Q THEN 
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_fbTcpIpClient.xEnable := FALSE;
+			_diCmdState:=_diCmdState+1;		
+		END_IF		
+		
+	2://发送指令,等待接收成功
+		_tonCmdTimeout(IN:=TRUE ,pt:=T#2S);
+		SysMemCpy(ADR(_fbTcpIpClient.aToServer),ADR(_sSendData),SIZEOF(_sSendData));	
+		_fbTcpIpClient.udiSendNumber := LEN(_sSendData);				
+		_fbTcpIpClient.xEnable := TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN			
+			_tonCmdTimeout(IN:=FALSE ,pt:=T#2S);
+			_fbTcpIpClient.xEnable := FALSE;
+			sFromServer := _sReceiveData := _fbTcpIpClient.sFromServer;//传递接收数据		
+			rxBuffer := _fbTcpIpClient.rxBuffer;		
+			IF FIND(_sReceiveData,'$R$N') <> 0  						
+			THEN
+				IF FIND(_sReceiveData,'Z A') <> 0 THEN
+					stParOut.rCurrentTareWight :=0;
+					stParOut.rCurrentWeight :=0;
+					_diCmdState:=_diCmdState+1;
+				ELSE
+					_iNGCount:=_iNGCount+1;
+					IF _iNGCount< 3 THEN
+						_diCmdState:=1;						
+					ELSE
+						IF FIND(_sReceiveData,'Z +') <> 0 THEN
+							eErrorID:=MT_MCK_ERROR.FLT_ZOverMax;							
+						ELSIF FIND(_sReceiveData,'Z -') <> 0 THEN
+							eErrorID:=MT_MCK_ERROR.FLT_ZOverMin;				
+						ELSIF FIND(_sReceiveData,'Z I') <> 0 THEN
+							eErrorID:=MT_MCK_ERROR.FLT_ZI;					
+						END_IF
+						eErrorID:=MT_MCK_ERROR.FLT_CmdFeedback;//指令反馈出错
+						_diCmdState:=999;
+					END_IF
+				END_IF
+			END_IF
+		END_IF
+		IF _tonCmdTimeout.Q THEN
+			eErrorID:=MT_MCK_ERROR.FLT_CMD_TIMEOUT;
+			_diCmdState:=999;
+		END_IF
+	
+	3://
+		xComplete := TRUE; 
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdClearZeroInstanly" Id="{99b6b69a-1a4b-45d2-9fc0-10800ca7df9c}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED CmdClearZeroInstanly
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> MT_MCK_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+		
+		
+	0://清空发送与接收缓冲区
+		_tonDelay(IN:= TRUE,pt:=T#1MS);//保证执行的是最新的一次
+		_iNGCount:=0;
+		SysMemSet( ADR( _sSendData ), 0, SIZEOF(_sSendData) );//清除发送区域
+		SysMemSet( ADR( _sReadDataTemp ), 0, SIZEOF(_sReadDataTemp) );//清除接收报告数据缓存区域
+		SysMemSet( ADR( sFromServer ), 0, SIZEOF(sFromServer) );//清除发送区域
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF		
+		
+	1://拼接读取指令
+		_tonDelay(IN:= _fbTcpIpClient.xRdyCmd ,pt:=T#2MS);
+		_tonCmdTimeout(IN:= FALSE,pt:=T#2S);
+		_sSendData := 'ZI$R$N';//稳态清零
+		IF _tonDelay.Q THEN 
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_fbTcpIpClient.xEnable := FALSE;
+			_diCmdState:=_diCmdState+1;		
+		END_IF		
+		
+	2://发送指令,等待接收成功
+		_tonCmdTimeout(IN:=TRUE ,pt:=T#2S);
+		SysMemCpy(ADR(_fbTcpIpClient.aToServer),ADR(_sSendData),SIZEOF(_sSendData));	
+		_fbTcpIpClient.udiSendNumber := LEN(_sSendData);			
+		_fbTcpIpClient.xEnable := TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN			
+			_tonCmdTimeout(IN:=FALSE ,pt:=T#2S);
+			_fbTcpIpClient.xEnable := FALSE;
+			sFromServer := _sReceiveData := _fbTcpIpClient.sFromServer;//传递接收数据		
+			rxBuffer := _fbTcpIpClient.rxBuffer;		
+			IF FIND(_sReceiveData,'$R$N') <> 0 						
+			THEN
+				IF FIND(_sReceiveData,'ZI') <> 0 AND (FIND(_sReceiveData,'S') <> 0 OR FIND(_sReceiveData,'D') <> 0) THEN
+					stParOut.rCurrentTareWight :=0;
+					stParOut.rCurrentWeight :=0;
+					_diCmdState:=_diCmdState+1;
+				ELSE
+					_iNGCount:=_iNGCount+1;
+					IF _iNGCount< 3 THEN
+						_diCmdState:=1;						
+					ELSE
+						IF FIND(_sReceiveData,'Z +') <> 0 THEN
+							eErrorID:=MT_MCK_ERROR.FLT_ZOverMax;							
+						ELSIF FIND(_sReceiveData,'Z -') <> 0 THEN
+							eErrorID:=MT_MCK_ERROR.FLT_ZOverMin;				
+						ELSIF FIND(_sReceiveData,'Z I') <> 0 THEN
+							eErrorID:=MT_MCK_ERROR.FLT_ZI;					
+						END_IF
+						eErrorID:=MT_MCK_ERROR.FLT_CmdFeedback;//指令反馈出错
+						_diCmdState:=999;
+					END_IF
+				END_IF
+			END_IF
+		END_IF
+		IF _tonCmdTimeout.Q THEN
+			eErrorID:=MT_MCK_ERROR.FLT_CMD_TIMEOUT;
+			_diCmdState:=999;
+		END_IF
+	
+	3://
+		xComplete := TRUE; 
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdCmd_AcquireWeight_Steady" Id="{2fb8b0d6-7b76-4999-ac11-6914f698a6d1}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED CmdCmd_AcquireWeight_Steady
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> MT_MCK_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+		
+		
+	0://清空发送与接收缓冲区
+		_tonDelay(IN:= TRUE,pt:=T#1MS);//保证执行的是最新的一次
+		SysMemSet( ADR( _Stemp ), 0, SIZEOF(_Stemp) );//清除缓存数据处理区域
+		SysMemSet( ADR( _sSendData ), 0, SIZEOF(_sSendData) );//清除发送区域
+		SysMemSet( ADR( _sReadDataTemp ), 0, SIZEOF(_sReadDataTemp) );//清除接收报告数据缓存区域
+		SysMemSet( ADR( sFromServer ), 0, SIZEOF(sFromServer) );//清除发送区域
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF		
+		
+	1://拼接读取指令
+		_tonDelay(IN:= _fbTcpIpClient.xRdyCmd ,pt:=T#10MS);
+		_tonCmdTimeout(IN:= FALSE,pt:=T#2S);
+		_sSendData := 'S$R$N';
+		IF _tonDelay.Q THEN 
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_fbTcpIpClient.xEnable := FALSE;
+			_diCmdState:=_diCmdState+1;		
+		END_IF		
+		
+	2://发送指令,等待接收成功
+		_tonCmdTimeout(IN:=TRUE ,pt:=T#2S);
+		SysMemCpy(ADR(_fbTcpIpClient.aToServer),ADR(_sSendData),SIZEOF(_sSendData));	
+		_fbTcpIpClient.udiSendNumber := LEN(_sSendData);				
+		_fbTcpIpClient.xEnable := TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN			
+			_fbTcpIpClient.xEnable := FALSE;
+			sFromServer := _sReceiveData := _fbTcpIpClient.sFromServer;//传递接收数据		
+			rxBuffer := _fbTcpIpClient.rxBuffer;		
+			IF FIND(_sReceiveData,'$R$N') <> 0 AND FIND(_sReceiveData,'S') <>0			
+			THEN
+				IF FIND(_sReceiveData,'mg') <> 0 THEN
+					_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-5);
+					_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'mg$R$N')-1);
+					stParOut.rCurrentWeight := TO_REAL(_Stemp[2]);
+					stParOut.sWeightUnit:='mg';
+				ELSE 
+					IF FIND(_sReceiveData,'g') <> 0 THEN
+						_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-5);
+						_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'g$R$N')-1);
+						stParOut.rCurrentWeight := TO_REAL(_Stemp[2]);
+						stParOut.sWeightUnit:='g';				
+					END_IF				
+				END_IF
+				_diCmdState:=_diCmdState+1;
+			ELSIF FIND(_sReceiveData,'EL') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_LogicaL;//逻辑错误
+				_diCmdState:=999;
+			ELSIF FIND(_sReceiveData,'ES') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_Syntax;//语法错误
+				_diCmdState:=999;				
+			ELSIF FIND(_sReceiveData,'I') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_CommandCantSend;//指令条件不满足,无法发送
+				_diCmdState:=999;				
+			ELSIF FIND(_sReceiveData,'L') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_PARA;//参数错误
+				_diCmdState:=999;				
+			END_IF
+		END_IF
+		IF _tonCmdTimeout.Q THEN
+			eErrorID:=MT_MCK_ERROR.FLT_CMD_TIMEOUT;
+			_diCmdState:=999;
+		END_IF
+	
+	3://
+		xComplete := TRUE; 
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdRestart" Id="{b311542c-2d85-47b6-8f96-c51b6cd5d725}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED CmdRestart
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> MT_MCK_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+		
+		
+	0://清空发送与接收缓冲区
+		xRefOk:=FALSE;
+		_tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的是最新的一次
+		SysMemSet( ADR( _sSendData ), 0, SIZEOF(_sSendData) );//清除发送区域
+		SysMemSet( ADR( _sReadDataTemp ), 0, SIZEOF(_sReadDataTemp) );//清除接收报告数据缓存区域
+		SysMemSet( ADR( sFromServer ), 0, SIZEOF(sFromServer) );//清除发送区域
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF		
+		
+	1://拼接读取指令
+		_tonDelay(IN:= _fbTcpIpClient.xRdyCmd ,pt:=T#10MS);
+		_tonCmdTimeout(IN:= FALSE,pt:=T#2S);
+		_sSendData := 'R01$R$N';
+		IF _tonDelay.Q THEN 
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_fbTcpIpClient.xEnable := FALSE;
+			_diCmdState:=_diCmdState+1;		
+		END_IF		
+		
+	2://发送指令,等待接收成功
+		_tonCmdTimeout(IN:=TRUE ,pt:=T#6S);
+		SysMemCpy(ADR(_fbTcpIpClient.aToServer),ADR(_sSendData),SIZEOF(_sSendData));	
+		_fbTcpIpClient.udiSendNumber := LEN(_sSendData);				
+		_fbTcpIpClient.xEnable := TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN			
+			_fbTcpIpClient.xEnable := FALSE;
+			sFromServer := _sReceiveData := _fbTcpIpClient.sFromServer;//传递接收数据		
+			rxBuffer := _fbTcpIpClient.rxBuffer;		
+			IF FIND(_sReceiveData,'$R$N') <> 0 AND FIND(_sReceiveData,'I4') <> 0						
+			THEN
+				CutStrToSeperator('"',_sReceiveData);
+				stParOut.sSrialNumber := CutStrToSeperator('"',_sReceiveData);
+				_diCmdState:=_diCmdState+1;	
+			END_IF
+		END_IF
+		IF _tonCmdTimeout.Q THEN
+			eErrorID:=MT_MCK_ERROR.FLT_CMD_TIMEOUT;
+			_diCmdState:=999;
+		END_IF
+		
+		
+	3://
+		xRefOk:=TRUE;
+		xComplete := TRUE; 
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdSerialNum" Id="{9654d8cc-663a-46db-8bbd-800f226764a9}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED CmdSerialNum
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> MT_MCK_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+		
+		
+	0://清空发送与接收缓冲区
+		xRefOk:=FALSE;
+		_tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的是最新的一次
+		SysMemSet( ADR( _sSendData ), 0, SIZEOF(_sSendData) );//清除发送区域
+		SysMemSet( ADR( _sReadDataTemp ), 0, SIZEOF(_sReadDataTemp) );//清除接收报告数据缓存区域
+		SysMemSet( ADR( sFromServer ), 0, SIZEOF(sFromServer) );//清除发送区域
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF		
+		
+	1://拼接读取指令
+		_tonDelay(IN:= _fbTcpIpClient.xRdyCmd ,pt:=T#10MS);
+		_tonCmdTimeout(IN:= FALSE,pt:=T#2S);
+		_sSendData := 'I4$R$N';
+		IF _tonDelay.Q THEN 
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_fbTcpIpClient.xEnable := FALSE;
+			_diCmdState:=_diCmdState+1;		
+		END_IF		
+		
+	2://发送指令,等待接收成功
+		SysMemCpy(ADR(_fbTcpIpClient.aToServer),ADR(_sSendData),SIZEOF(_sSendData));	
+		_fbTcpIpClient.udiSendNumber := LEN(_sSendData);				
+		_fbTcpIpClient.xEnable := TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN			
+			_fbTcpIpClient.xEnable := FALSE;
+			sFromServer := _sReceiveData := _fbTcpIpClient.sFromServer;//传递接收数据		
+			rxBuffer := _fbTcpIpClient.rxBuffer;		
+			IF FIND(_sReceiveData,'$R$N') <> 0 AND FIND(_sReceiveData,'I4') <> 0						
+			THEN
+				CutStrToSeperator('"',_sReceiveData);
+				stParOut.sSrialNumber := CutStrToSeperator('"',_sReceiveData);
+				_diCmdState:=_diCmdState+1;	
+		  ELSE
+				_diCmdState:=_diCmdState+1;	
+			END_IF
+		 END_IF
+		IF _fbTcpIpClient.xError 
+		THEN//以太网功能报警，一般就是网络建立有问题，此时一般需要去查网络问题
+			IF _iSendNgCount < 2//3次重发
+			THEN		
+				_tDelay(in:=TRUE,PT:=T#100MS);	
+				IF _tDelay.Q
+				THEN
+			    _iSendNgCount := _iSendNgCount + 1;					
+					_tDelay(in:=FALSE);
+					_diCmdState:=1;//重发
+				END_IF							
+			ELSE						
+					eErrorID:=MT_MCK_ERROR.FLT_CommandCantSend;
+					_diCmdState := 999;
+			END_IF						
+		END_IF 
+	
+	3://
+		xRefOk:=TRUE;
+		xComplete := TRUE; 
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdSetTare" Id="{8fbad118-b545-4735-9733-728e23d9352b}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED CmdSetTare
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> MT_MCK_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+	0://清空发送与接收缓冲区
+		_tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的是最新的一次
+		SysMemSet( ADR( _Stemp ), 0, SIZEOF(_Stemp) );//清除缓存数据处理区域
+		SysMemSet( ADR( _sSendData ), 0, SIZEOF(_sSendData) );//清除发送区域
+		SysMemSet( ADR( _sReadDataTemp ), 0, SIZEOF(_sReadDataTemp) );//清除接收报告数据缓存区域
+		SysMemSet( ADR( sFromServer ), 0, SIZEOF(sFromServer) );//清除发送区域
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF			
+		
+	1://拼接读取指令
+		_tonDelay(IN:= _fbTcpIpClient.xRdyCmd ,pt:=T#10MS);
+		_tonCmdTimeout(IN:= FALSE,pt:=T#2S);
+		_sSendData := CONCAT(_sSendData,'TA');
+		_sSendData := CONCAT(_sSendData,' ');		
+		_sSendData := CONCAT(_sSendData,TO_STRING(rTareSet));
+		_sSendData := CONCAT(_sSendData,' ');
+		_sSendData := CONCAT(_sSendData,'g');//单位
+		_sSendData := CONCAT(_sSendData,'$R$N');//回车换行符				
+		IF _tonDelay.Q THEN 
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_fbTcpIpClient.xEnable := FALSE;
+			_diCmdState:=_diCmdState+1;		
+		END_IF
+	
+	2://发送指令,等待接收成功
+		_tonCmdTimeout(IN:=TRUE ,pt:=T#2S);
+		SysMemCpy(ADR(_fbTcpIpClient.aToServer),ADR(_sSendData),SIZEOF(_sSendData));	
+		_fbTcpIpClient.udiSendNumber := LEN(_sSendData);				
+		_fbTcpIpClient.xEnable := TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN			
+			_fbTcpIpClient.xEnable := FALSE;
+			sFromServer := _sReceiveData := _fbTcpIpClient.sFromServer;//传递接收数据		
+			rxBuffer := _fbTcpIpClient.rxBuffer;		
+			IF FIND(_sReceiveData,'$R$N') <> 0 AND FIND(_sReceiveData,'TA') <> 0						
+			THEN
+				_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-5);
+				_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'g$R$N')-1);
+				stParOut.rCurrentTareWight := TO_REAL(_Stemp[2]);
+				_diCmdState:=_diCmdState+1;	
+			END_IF
+		END_IF		
+		IF _tonCmdTimeout.Q THEN
+			eErrorID:=MT_MCK_ERROR.FLT_CMD_TIMEOUT;
+			_diCmdState:=999;
+		END_IF
+		
+	3://清空发送与接收缓冲区
+		_tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的是最新的一次
+		SysMemSet( ADR( _Stemp ), 0, SIZEOF(_Stemp) );//清除缓存数据处理区域
+		SysMemSet( ADR( _sSendData ), 0, SIZEOF(_sSendData) );//清除发送区域
+		SysMemSet( ADR( _sReadDataTemp ), 0, SIZEOF(_sReadDataTemp) );//清除接收报告数据缓存区域
+		SysMemSet( ADR( sFromServer ), 0, SIZEOF(sFromServer) );//清除发送区域
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF		
+
+	4://拼接读取指令
+		_tonDelay(IN:= _fbTcpIpClient.xRdyCmd ,pt:=T#10MS);
+		_tonCmdTimeout(IN:= FALSE,pt:=T#2S);
+		_sSendData := 'SI$R$N';
+		IF _tonDelay.Q THEN 
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_fbTcpIpClient.xEnable := FALSE;
+			_diCmdState:=_diCmdState+1;		
+		END_IF		
+		
+	5://发送指令,等待接收成功
+		_tonCmdTimeout(IN:=TRUE ,pt:=T#2S);
+		SysMemCpy(ADR(_fbTcpIpClient.aToServer),ADR(_sSendData),SIZEOF(_sSendData));	
+		_fbTcpIpClient.udiSendNumber := LEN(_sSendData);				
+		_fbTcpIpClient.xEnable := TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN			
+			_fbTcpIpClient.xEnable := FALSE;
+			sFromServer := _sReceiveData := _fbTcpIpClient.sFromServer;//传递接收数据		
+			rxBuffer := _fbTcpIpClient.rxBuffer;		
+			IF FIND(_sReceiveData,'$R$N') <> 0 AND FIND(_sReceiveData,'S') <>0			
+			THEN
+				IF FIND(_sReceiveData,'mg') <> 0 THEN
+					_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-5);
+					_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'mg$R$N')-1);
+					stParOut.rCurrentWeight := TO_REAL(_Stemp[2]);
+					stParOut.sWeightUnit:='mg';
+				ELSE 
+					IF FIND(_sReceiveData,'g') <> 0 THEN
+						_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-5);
+						_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'g$R$N')-1);
+						stParOut.rCurrentWeight := TO_REAL(_Stemp[2]);
+						stParOut.sWeightUnit:='g';				
+					END_IF				
+				END_IF
+				_diCmdState:=_diCmdState+1;
+			ELSIF FIND(_sReceiveData,'EL') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_LogicaL;//逻辑错误
+				_diCmdState:=999;
+			ELSIF FIND(_sReceiveData,'ES') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_Syntax;//语法错误
+				_diCmdState:=999;				
+			ELSIF FIND(_sReceiveData,'I') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_CommandCantSend;//指令条件不满足,无法发送
+				_diCmdState:=999;				
+			ELSIF FIND(_sReceiveData,'L') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_PARA;//参数错误
+				_diCmdState:=999;				
+			END_IF			
+		END_IF
+		IF _tonCmdTimeout.Q THEN
+			eErrorID:=MT_MCK_ERROR.FLT_CMD_TIMEOUT;
+			_diCmdState:=999;
+		END_IF		
+		
+	6://
+		xComplete := TRUE; 
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdShelling" Id="{c622f665-0dad-4f32-9de7-5851db1d2a4a}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED CmdShelling
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> MT_MCK_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+	0://清空发送与接收缓冲区
+		_tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的是最新的一次
+		SysMemSet( ADR( _Stemp ), 0, SIZEOF(_Stemp) );//清除缓存数据处理区域
+		SysMemSet( ADR( _sSendData ), 0, SIZEOF(_sSendData) );//清除发送区域
+		SysMemSet( ADR( _sReadDataTemp ), 0, SIZEOF(_sReadDataTemp) );//清除接收报告数据缓存区域
+		SysMemSet( ADR( sFromServer ), 0, SIZEOF(sFromServer) );//清除发送区域
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF		
+		
+	1://拼接读取指令
+		_tonDelay(IN:= _fbTcpIpClient.xRdyCmd ,pt:=T#10MS);
+		_tonCmdTimeout(IN:= FALSE,pt:=T#2S);
+		_sSendData := 'T$R$N';//稳态去皮重
+		IF _tonDelay.Q THEN 
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_fbTcpIpClient.xEnable := FALSE;
+			_diCmdState:=_diCmdState+1;		
+		END_IF		
+		
+	2://发送指令,等待接收成功
+		_tonCmdTimeout(IN:=TRUE ,pt:=T#2S);
+		SysMemCpy(ADR(_fbTcpIpClient.aToServer),ADR(_sSendData),SIZEOF(_sSendData));	
+		_fbTcpIpClient.udiSendNumber := LEN(_sSendData);				
+		_fbTcpIpClient.xEnable := TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN			
+			_fbTcpIpClient.xEnable := FALSE;
+			sFromServer := _sReceiveData := _fbTcpIpClient.sFromServer;//传递接收数据		
+			rxBuffer := _fbTcpIpClient.rxBuffer;		
+			IF FIND(_sReceiveData,'$R$N') <> 0 						
+			THEN
+				IF FIND(_sReceiveData,'S') <> 0 THEN
+					_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-4);
+					_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'g$R$N')-1);
+					stParOut.rCurrentTareWight := TO_REAL(_Stemp[2]);
+					_diCmdState:=_diCmdState+1;
+				ELSIF FIND(_sReceiveData,'T +') <> 0 THEN	
+					eErrorID:=MT_MCK_ERROR.FLT_ZOverMax;
+					_diCmdState:=999;
+				ELSIF FIND(_sReceiveData,'T -') <> 0 THEN	
+					eErrorID:=MT_MCK_ERROR.FLT_ZOverMax;
+					_diCmdState:=999;
+				END_IF										
+			END_IF
+		END_IF		
+		IF _tonCmdTimeout.Q THEN
+			eErrorID:=MT_MCK_ERROR.FLT_CMD_TIMEOUT;
+			_diCmdState:=999;
+		END_IF
+		
+	3://清空发送与接收缓冲区
+		_tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的是最新的一次
+		SysMemSet( ADR( _Stemp ), 0, SIZEOF(_Stemp) );//清除缓存数据处理区域
+		SysMemSet( ADR( _sSendData ), 0, SIZEOF(_sSendData) );//清除发送区域
+		SysMemSet( ADR( _sReadDataTemp ), 0, SIZEOF(_sReadDataTemp) );//清除接收报告数据缓存区域
+		SysMemSet( ADR( sFromServer ), 0, SIZEOF(sFromServer) );//清除发送区域
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF		
+
+	4://拼接读取指令
+		_tonDelay(IN:= _fbTcpIpClient.xRdyCmd ,pt:=T#10MS);
+		_tonCmdTimeout(IN:= FALSE,pt:=T#2S);
+		_sSendData := 'SI$R$N';
+		IF _tonDelay.Q THEN 
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_fbTcpIpClient.xEnable := FALSE;
+			_diCmdState:=_diCmdState+1;		
+		END_IF		
+		
+	5://发送指令,等待接收成功
+		_tonCmdTimeout(IN:=TRUE ,pt:=T#2S);
+		SysMemCpy(ADR(_fbTcpIpClient.aToServer),ADR(_sSendData),SIZEOF(_sSendData));	
+		_fbTcpIpClient.udiSendNumber := LEN(_sSendData);				
+		_fbTcpIpClient.xEnable := TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN			
+			_fbTcpIpClient.xEnable := FALSE;
+			sFromServer := _sReceiveData := _fbTcpIpClient.sFromServer;//传递接收数据		
+			rxBuffer := _fbTcpIpClient.rxBuffer;		
+			IF FIND(_sReceiveData,'$R$N') <> 0 AND FIND(_sReceiveData,'S') <>0			
+			THEN
+				IF FIND(_sReceiveData,'mg') <> 0 THEN
+					_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-5);
+					_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'mg$R$N')-1);
+					stParOut.rCurrentWeight := TO_REAL(_Stemp[2]);
+					stParOut.sWeightUnit:='mg';
+				ELSE 
+					IF FIND(_sReceiveData,'g') <> 0 THEN
+						_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-5);
+						_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'g$R$N')-1);
+						stParOut.rCurrentWeight := TO_REAL(_Stemp[2]);
+						stParOut.sWeightUnit:='g';				
+					END_IF				
+				END_IF
+				_diCmdState:=_diCmdState+1;
+			ELSIF FIND(_sReceiveData,'EL') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_LogicaL;//逻辑错误
+				_diCmdState:=999;
+			ELSIF FIND(_sReceiveData,'ES') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_Syntax;//语法错误
+				_diCmdState:=999;				
+			ELSIF FIND(_sReceiveData,'I') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_CommandCantSend;//指令条件不满足,无法发送
+				_diCmdState:=999;				
+			ELSIF FIND(_sReceiveData,'L') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_PARA;//参数错误
+				_diCmdState:=999;				
+			END_IF			
+		END_IF
+		IF _tonCmdTimeout.Q THEN
+			eErrorID:=MT_MCK_ERROR.FLT_CMD_TIMEOUT;
+			_diCmdState:=999;
+		END_IF
+
+	
+	6://
+		xComplete := TRUE; 
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdShellingInstanly" Id="{32eafcd7-29bb-4672-9439-b9d41af947ce}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED CmdShellingInstanly
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> MT_MCK_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+	0://清空发送与接收缓冲区
+		_tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的是最新的一次
+		SysMemSet( ADR( _Stemp ), 0, SIZEOF(_Stemp) );//清除缓存数据处理区域
+		SysMemSet( ADR( _sSendData ), 0, SIZEOF(_sSendData) );//清除发送区域
+		SysMemSet( ADR( _sReadDataTemp ), 0, SIZEOF(_sReadDataTemp) );//清除接收报告数据缓存区域
+		SysMemSet( ADR( sFromServer ), 0, SIZEOF(sFromServer) );//清除发送区域
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF		
+		
+	1://拼接读取指令
+		_tonDelay(IN:= _fbTcpIpClient.xRdyCmd ,pt:=T#10MS);
+		_tonCmdTimeout(IN:= FALSE,pt:=T#2S);
+		_sSendData := 'TI$R$N';//立即去皮重
+		IF _tonDelay.Q THEN 
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_fbTcpIpClient.xEnable := FALSE;
+			_diCmdState:=_diCmdState+1;		
+		END_IF		
+		
+	2://发送指令,等待接收成功
+		_tonCmdTimeout(IN:=TRUE ,pt:=T#2S);
+		SysMemCpy(ADR(_fbTcpIpClient.aToServer),ADR(_sSendData),SIZEOF(_sSendData));	
+		_fbTcpIpClient.udiSendNumber := LEN(_sSendData);			
+		_fbTcpIpClient.xEnable := TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN			
+			_fbTcpIpClient.xEnable := FALSE;
+			sFromServer := _sReceiveData := _fbTcpIpClient.sFromServer;//传递接收数据		
+			rxBuffer := _fbTcpIpClient.rxBuffer;		
+			IF FIND(_sReceiveData,'$R$N') <> 0 						
+			THEN
+				IF FIND(_sReceiveData,'TI S') <> 0 OR FIND(_sReceiveData,'TI D') <> 0 THEN
+					_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-4);
+					_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'g$R$N')-1);
+					stParOut.rCurrentTareWight := TO_REAL(_Stemp[2]);
+					_diCmdState:=_diCmdState+1;
+				ELSIF FIND(_sReceiveData,'TI +') <> 0 THEN	
+					eErrorID:=MT_MCK_ERROR.FLT_ZOverMax;
+					_diCmdState:=999;
+				ELSIF FIND(_sReceiveData,'TI -') <> 0 THEN	
+					eErrorID:=MT_MCK_ERROR.FLT_ZOverMax;
+					_diCmdState:=999;
+				END_IF										
+			END_IF
+		END_IF		
+		IF _tonCmdTimeout.Q THEN
+			eErrorID:=MT_MCK_ERROR.FLT_CMD_TIMEOUT;
+			_diCmdState:=999;
+		END_IF
+		
+	3://清空发送与接收缓冲区
+		_tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的是最新的一次
+		SysMemSet( ADR( _Stemp ), 0, SIZEOF(_Stemp) );//清除缓存数据处理区域
+		SysMemSet( ADR( _sSendData ), 0, SIZEOF(_sSendData) );//清除发送区域
+		SysMemSet( ADR( _sReadDataTemp ), 0, SIZEOF(_sReadDataTemp) );//清除接收报告数据缓存区域
+		SysMemSet( ADR( sFromServer ), 0, SIZEOF(sFromServer) );//清除发送区域
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF		
+
+	4://拼接读取指令
+		_tonDelay(IN:= _fbTcpIpClient.xRdyCmd ,pt:=T#10MS);
+		_tonCmdTimeout(IN:= FALSE,pt:=T#2S);
+		_sSendData := 'SI$R$N';
+		IF _tonDelay.Q THEN 
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_fbTcpIpClient.xEnable := FALSE;
+			_diCmdState:=_diCmdState+1;		
+		END_IF		
+		
+	5://发送指令,等待接收成功
+		_tonCmdTimeout(IN:=TRUE ,pt:=T#2S);
+		SysMemCpy(ADR(_fbTcpIpClient.aToServer),ADR(_sSendData),SIZEOF(_sSendData));	
+		_fbTcpIpClient.udiSendNumber := LEN(_sSendData);				
+		_fbTcpIpClient.xEnable := TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN			
+			_fbTcpIpClient.xEnable := FALSE;
+			sFromServer := _sReceiveData := _fbTcpIpClient.sFromServer;//传递接收数据		
+			rxBuffer := _fbTcpIpClient.rxBuffer;		
+			IF FIND(_sReceiveData,'$R$N') <> 0 AND FIND(_sReceiveData,'S') <>0			
+			THEN
+				IF FIND(_sReceiveData,'mg') <> 0 THEN
+					_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-5);
+					_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'mg$R$N')-1);
+					stParOut.rCurrentWeight := TO_REAL(_Stemp[2]);
+					stParOut.sWeightUnit:='mg';
+				ELSE 
+					IF FIND(_sReceiveData,'g') <> 0 THEN
+						_Stemp[1]:=RIGHT(_sReceiveData,LEN(_sReceiveData)-5);
+						_Stemp[2]:=LEFT(_Stemp[1],FIND(_Stemp[1],'g$R$N')-1);
+						stParOut.rCurrentWeight := TO_REAL(_Stemp[2]);
+						stParOut.sWeightUnit:='g';				
+					END_IF				
+				END_IF
+				_diCmdState:=_diCmdState+1;
+			ELSIF FIND(_sReceiveData,'EL') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_LogicaL;//逻辑错误
+				_diCmdState:=999;
+			ELSIF FIND(_sReceiveData,'ES') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_Syntax;//语法错误
+				_diCmdState:=999;				
+			ELSIF FIND(_sReceiveData,'I') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_CommandCantSend;//指令条件不满足,无法发送
+				_diCmdState:=999;				
+			ELSIF FIND(_sReceiveData,'L') <>0 THEN
+				eErrorID:=MT_MCK_ERROR.FLT_PARA;//参数错误
+				_diCmdState:=999;				
+			END_IF			
+		END_IF
+		IF _tonCmdTimeout.Q THEN
+			eErrorID:=MT_MCK_ERROR.FLT_CMD_TIMEOUT;
+			_diCmdState:=999;
+		END_IF
+
+	
+	6://
+		xComplete := TRUE; 
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CyclicAction" Id="{c20bcb3d-26c4-4116-b457-54a6dac60407}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PROTECTED CyclicAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+VAR	
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xAbort=0 THEN
+	IF xFirstInvocation THEN//执行初始化
+	(*
+	* Staring
+	* for then first (!) invocaion,
+	* sample then input variables
+	*)
+		SysMemSet(ADR(_sReceiveData),0,SIZEOF(_sReceiveData));//清空接收数据
+		SysMemSet(ADR(sFromServer),0,SIZEOF(sFromServer));//清空数据
+		//_iSendNgCount := _iReadNGCount := _iReadDataCount := 0;//控制重发次数
+		xFirstInvocation:=0;
+	END_IF   
+
+//检测停止指令是否发生
+_rStopCmdTrig(CLK:= NOT xEStop OR (stDeviceOpe.xAcquireWeight_Stop_HMI AND NOT xAutoMode AND NOT xDeviceRunning) OR (stDeviceOpe.xAcquireWeight_Stop_Auto AND (xAutoMode OR xDeviceRunning)));	
+IF _rStopCmdTrig.Q//检测到停止指令
+THEN
+	_diCmdState := 0;
+	eCmd := MT_MCK_CMD.Cmd_AcquireWeight_Stop;
+	_tonCmdTimeout(in:=FALSE);
+	_tonDelay(IN:= FALSE);
+	_tonTimeout(in:=FALSE);
+END_IF
+
+	REPEAT 	
+			IF	stSysPar.sRemoteHost = ''  OR //检测参数是否配置正确		
+				stSysPar.nRemotePort = 0			 				 	 
+			THEN
+				eERRORID := MT_MCK_ERROR.FLT_PARA;//参数配置错误
+			END_IF	
+
+			CASE eCmd OF//判断指令类型
+				MT_MCK_CMD.Cmd_SerialNum://获取序列号
+					CmdSerialNum(xComplete=> xComplete);
+					
+				MT_MCK_CMD.Cmd_AcquireWeight_RealTime://获取及时重量
+					CmdAcquireWeight_RealTime(xComplete=> xComplete);
+
+				MT_MCK_CMD.Cmd_AcquireWeight_Steady://获取稳态重量
+					CmdCmd_AcquireWeight_Steady(xComplete=> xComplete);
+
+				MT_MCK_CMD.Cmd_AcquireWeight_Continuous://获取连续重量
+					CmdAcquireWeight_Continuous(xComplete=> xComplete);
+					
+				MT_MCK_CMD.Cmd_AcquireWeight_Stop://停止获取重量
+					CmdAcquireWeight_Stop(xComplete=> xComplete);	
+
+				MT_MCK_CMD.Cmd_ShellingInstanly://立即去皮
+					CmdShellingInstanly(xComplete=> xComplete);
+
+				MT_MCK_CMD.Cmd_Shelling://稳态去皮
+					CmdShelling(xComplete=> xComplete);	
+
+				MT_MCK_CMD.Cmd_SetTare://设置皮重
+					CmdSetTare(xComplete=> xComplete);
+
+				MT_MCK_CMD.Cmd_ClearTare://清除皮重
+					CmdClearTare(xComplete=> xComplete);	
+
+				MT_MCK_CMD.Cmd_ClearZero://稳态清零
+					CmdClearZero(xComplete=> xComplete);
+					
+				MT_MCK_CMD.Cmd_ClearZeroInstanly://立即清零
+					CmdClearZeroInstanly(xComplete=> xComplete);	
+
+				MT_MCK_CMD.Cmd_Restart://重启
+					CmdRestart(xComplete=> xComplete);				
+			ELSE
+				;	
+			END_CASE
+	   
+		UNTIL (TRUE)//处于一直刷新阶段
+	END_REPEAT
+END_IF
+
+IF NOT xExecute OR xComplete OR eErrorID<>MT_MCK_ERROR.No_ERROR THEN    
+    (*
+    * Cleaning
+    * => free as much allocated resources as possible
+    *)    
+    tOperationTimer(IN:=0);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleAbortedState" Id="{3207a647-f934-4f64-a5f6-1ed9112e5d60}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleAbortedSTATE
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+{attribute 'tc_no_symbol'}	
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xAborted AND xResetRequest THEN
+    eState:=STATE.RESETING;
+    xAgain:=1;
+ELSE
+    xBusy:=0;
+    xAborted:=1;
+    //xResetRequest:=(xExecute=0);
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleAbortingState" Id="{e0a94db2-90bd-4ab8-9a2e-636838cae108}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleAbortingSTATE
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+{attribute 'tc_no_symbol'}	
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[AbortAction(xComplete=> xComplete, eErrorID=> eErrorID);
+
+IF eErrorID<>MT_MCK_ERROR.NO_ERROR THEN
+    eState:=STATE.INERROR;
+    xAgain:=1;
+ELSIF xComplete THEN
+    eState:=STATE.ABORTED;
+    xAgain:=1;
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleDoneState" Id="{40bd56d5-e241-4fc8-8736-1998ad4dc8ce}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleDoneSTATE
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//在运行过程中要是切换模式，再运行完成之后，检测到模式的切换，就需要回到初始位置，进行下一次执行准备
+IF _xDone AND ((xExecute=0) OR ( _xModeChange AND NOT _xAutoOpe)  OR ( NOT xAutoMode AND NOT xDeviceRunning AND ( NOT _xAutoOpe OR _xHMIOpe))) THEN
+	eState:=STATE.RESETING;
+	xAgain:=1;
+ELSE
+	xBusy:=0;
+	_xDone:=1;
+	//xResetRequest:=(xExecute=0);
+	xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleDormantState" Id="{f5af82d5-7fc2-42ba-8765-d71834dc628c}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleDormantSTATE
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//判断是否需要重新触发
+//IF xExecute AND NOT xDone THEN
+IF xExecute THEN
+    xBusy:=1;
+    eState:=STATE.EXECUTING;
+    xAgain:=1;
+END_IF
+
+IF xResetRequest//清空报警
+THEN
+	eERRORID := MT_MCK_ERROR.No_ERROR;
+END_IF
+IF  xAutoMode OR xDeviceRunning THEN
+	xAutomodeFlag:=TRUE;
+ELSE
+	xAutomodeFlag:=FALSE;
+END_IF
+
+
+IF eErrorID = MT_MCK_ERROR.NO_ERROR AND xEStop 
+THEN
+//获取序列号
+	IF(stDeviceOpe.xReadSerialNum_HMI AND NOT xAutomodeFlag) OR (stDeviceOpe.xReadSerialNum_Auto AND xAutomodeFlag) THEN
+		eCmd := MT_MCK_CMD.Cmd_SerialNum;
+		xExecute := TRUE;
+	END_IF
+//获取重量
+	IF (stDeviceOpe.xAcquireWeight_Steady_HMI AND NOT xAutomodeFlag) OR (stDeviceOpe.xAcquireWeight_Steady_Auto AND xAutomodeFlag) THEN
+		eCmd := MT_MCK_CMD.Cmd_AcquireWeight_Steady;
+		xExecute := TRUE;		
+	END_IF
+	IF (stDeviceOpe.xAcquireWeight_RealTime_HMI AND NOT xAutomodeFlag) OR (stDeviceOpe.xAcquireWeight_RealTime_Auto AND xAutomodeFlag) THEN
+		eCmd := MT_MCK_CMD.Cmd_AcquireWeight_RealTime;
+		xExecute := TRUE;		
+	END_IF	
+	IF (stDeviceOpe.xAcquireWeight_Continuous_HMI AND NOT xAutomodeFlag) OR (stDeviceOpe.xAcquireWeight_Continuous_Auto AND xAutomodeFlag) THEN
+		eCmd := MT_MCK_CMD.Cmd_AcquireWeight_Continuous;
+		xExecute := TRUE;		
+	END_IF	
+	IF (stDeviceOpe.xAcquireWeight_Stop_HMI AND NOT xAutomodeFlag) OR (stDeviceOpe.xAcquireWeight_Stop_Auto AND xAutomodeFlag) THEN
+		eCmd := MT_MCK_CMD.Cmd_AcquireWeight_Stop;
+		xExecute := TRUE;		
+	END_IF
+//重启
+	IF (stDeviceOpe.xRestart_HMI AND NOT xAutomodeFlag) OR (stDeviceOpe.xRestart_Auto AND xAutomodeFlag) THEN
+		eCmd := MT_MCK_CMD.Cmd_Restart;
+		xExecute := TRUE;		
+	END_IF	
+//去皮重
+	IF (stDeviceOpe.xShelling_HMI AND NOT xAutomodeFlag) OR (stDeviceOpe.xShelling_Auto AND xAutomodeFlag) THEN
+		eCmd := MT_MCK_CMD.Cmd_Shelling;
+		xExecute := TRUE;		
+	END_IF	
+	IF (stDeviceOpe.xShellingInstanly_HMI AND NOT xAutomodeFlag) OR (stDeviceOpe.xShellingInstanly_Auto AND xAutomodeFlag) THEN
+		eCmd := MT_MCK_CMD.Cmd_ShellingInstanly;
+		xExecute := TRUE;		
+	END_IF
+	IF (stDeviceOpe.xSetTare_HMI AND NOT xAutomodeFlag) OR (stDeviceOpe.xSetTare_Auto AND xAutomodeFlag) THEN
+		rTareSet:=stpar.rTarePresetValue;//
+		eCmd := MT_MCK_CMD.Cmd_SetTare;
+		xExecute := TRUE;		
+	END_IF
+	IF (stDeviceOpe.xlearTare_HMI AND NOT xAutomodeFlag) OR (stDeviceOpe.xlearTare_Auto AND xAutomodeFlag) THEN
+		eCmd := MT_MCK_CMD.Cmd_ClearTare;
+		xExecute := TRUE;		
+	END_IF	
+//清零
+	IF (stDeviceOpe.xClearZero_HMI AND NOT xAutomodeFlag) OR (stDeviceOpe.xClearZero_Auto AND xAutomodeFlag) THEN
+		eCmd := MT_MCK_CMD.Cmd_ClearZero;
+		xExecute := TRUE;		
+	END_IF	
+	IF (stDeviceOpe.xClearZeroInstanly_HMI AND NOT xAutomodeFlag) OR (stDeviceOpe.xClearZeroInstanly_Auto AND xAutomodeFlag) THEN
+		eCmd := MT_MCK_CMD.Cmd_ClearZeroInstanly;
+		xExecute := TRUE;		
+	END_IF		
+	
+END_IF
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleErrorState" Id="{8f13fa8b-8921-4cd6-9b51-c646e5dbc973}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL  HandleErrorSTATE
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xError AND  (xResetRequest OR NOT xExecute) THEN
+    eState:=STATE.RESETING;
+    xAgain:=1;
+ELSE
+    xBusy:=0;
+    xError:=1;    
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleExecutingState" Id="{c5588225-2da1-46be-9786-a50d4b212603}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleExecutingSTATE
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+{attribute 'tc_no_symbol'}	
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+IF xAbort=0 THEN   
+    CyclicAction(xComplete=> xComplete);
+END_IF
+
+IF eErrorID<>MT_MCK_ERROR.NO_ERROR THEN
+    eState:=STATE.INERROR;
+    xAgain:=1;
+ELSIF xAbort THEN
+    eState:=STATE.ABORTING;
+    xAgain:=1;
+ELSIF xComplete THEN
+    eState:=STATE.DONE;
+    xAgain:=1;
+END_IF ]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleResettingState" Id="{19f8804d-25a0-4393-9376-ab7671526ed1}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PRIVATE FINAL HandleResettingSTATE
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+{attribute 'tc_no_symbol'}	
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ResetAction(xComplete=> xComplete);
+
+IF xComplete THEN
+		xExecute:=0;//清除输入指令 
+    xBusy:=0;
+    _xDone:=0;
+    xError:=0;
+
+    eErrorID:=MT_MCK_ERROR.NO_ERROR;
+    eState:=STATE.DORMANT;
+    xFirstInvocation:=1;
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ResetAction" Id="{3e53897c-81b6-4881-90a4-999db377aed9}">
+      <Declaration><![CDATA[{attribute 'tc_no_symbol'}
+METHOD PROTECTED ResetAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+* Cleaning
+* => free all allocated resources
+* => reinitialize instance variables
+*)
+tOperationTimer(IN:=0);
+_tDelay(IN:=FALSE);
+_iNGCount  := 0;
+_fbTcpIpClient(xEnable:=FALSE);
+_diCmdState:=0;
+eCmd := MT_MCK_CMD.Nodef;
+
+//复位操作按钮
+	stDeviceOpe.xAcquireWeight_Continuous_Auto	:=
+	stDeviceOpe.xAcquireWeight_Continuous_HMI	:=
+	stDeviceOpe.xAcquireWeight_RealTime_Auto	:=
+	stDeviceOpe.xAcquireWeight_RealTime_HMI		:=
+	stDeviceOpe.xAcquireWeight_Steady_Auto		:=
+	stDeviceOpe.xAcquireWeight_Steady_HMI		:=
+	stDeviceOpe.xAcquireWeight_Stop_Auto		:=
+	stDeviceOpe.xAcquireWeight_Stop_HMI			:=
+	stDeviceOpe.xClearZero_Auto					:=
+	stDeviceOpe.xClearZero_HMI                  :=
+	stDeviceOpe.xClearZeroInstanly_Auto         :=
+	stDeviceOpe.xClearZeroInstanly_HMI          :=
+	stDeviceOpe.xlearTare_Auto                  :=
+	stDeviceOpe.xlearTare_HMI                   :=
+	stDeviceOpe.xReadSerialNum_Auto             :=
+	stDeviceOpe.xReadSerialNum_HMI              :=
+	stDeviceOpe.xRestart_Auto					:=
+	stDeviceOpe.xRestart_HMI                    :=
+	stDeviceOpe.xSetTare_Auto                   :=
+	stDeviceOpe.xSetTare_HMI                    :=
+	stDeviceOpe.xShelling_Auto                  :=
+	stDeviceOpe.xShelling_HMI                   :=
+	stDeviceOpe.xShellingInstanly_Auto          :=
+	stDeviceOpe.xShellingInstanly_HMI           :=FALSE;
+
+xComplete:=1;	
+]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_MT_MKC">
+      <LineId Id="268" Count="1" />
+      <LineId Id="272" Count="0" />
+      <LineId Id="274" Count="0" />
+      <LineId Id="297" Count="1" />
+      <LineId Id="275" Count="0" />
+      <LineId Id="300" Count="0" />
+      <LineId Id="296" Count="0" />
+      <LineId Id="276" Count="0" />
+      <LineId Id="301" Count="0" />
+      <LineId Id="862" Count="0" />
+      <LineId Id="970" Count="3" />
+      <LineId Id="969" Count="0" />
+      <LineId Id="473" Count="2" />
+      <LineId Id="662" Count="0" />
+      <LineId Id="476" Count="5" />
+      <LineId Id="472" Count="0" />
+      <LineId Id="302" Count="18" />
+      <LineId Id="299" Count="0" />
+      <LineId Id="273" Count="0" />
+      <LineId Id="270" Count="1" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="667" Count="1" />
+      <LineId Id="670" Count="0" />
+      <LineId Id="674" Count="0" />
+      <LineId Id="673" Count="0" />
+      <LineId Id="676" Count="0" />
+      <LineId Id="675" Count="0" />
+      <LineId Id="678" Count="0" />
+      <LineId Id="677" Count="0" />
+      <LineId Id="680" Count="0" />
+      <LineId Id="679" Count="0" />
+      <LineId Id="682" Count="0" />
+      <LineId Id="681" Count="0" />
+      <LineId Id="684" Count="0" />
+      <LineId Id="683" Count="0" />
+      <LineId Id="686" Count="0" />
+      <LineId Id="685" Count="0" />
+      <LineId Id="688" Count="0" />
+      <LineId Id="687" Count="0" />
+      <LineId Id="690" Count="0" />
+      <LineId Id="689" Count="0" />
+      <LineId Id="692" Count="0" />
+      <LineId Id="691" Count="0" />
+      <LineId Id="694" Count="0" />
+      <LineId Id="693" Count="0" />
+      <LineId Id="696" Count="0" />
+      <LineId Id="695" Count="0" />
+      <LineId Id="698" Count="0" />
+      <LineId Id="697" Count="0" />
+      <LineId Id="700" Count="0" />
+      <LineId Id="699" Count="0" />
+      <LineId Id="702" Count="0" />
+      <LineId Id="701" Count="0" />
+      <LineId Id="669" Count="0" />
+      <LineId Id="666" Count="0" />
+      <LineId Id="663" Count="0" />
+      <LineId Id="703" Count="4" />
+      <LineId Id="713" Count="0" />
+      <LineId Id="719" Count="1" />
+      <LineId Id="736" Count="0" />
+      <LineId Id="739" Count="1" />
+      <LineId Id="737" Count="0" />
+      <LineId Id="741" Count="0" />
+      <LineId Id="744" Count="0" />
+      <LineId Id="738" Count="0" />
+      <LineId Id="721" Count="0" />
+      <LineId Id="745" Count="10" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="218" Count="0" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.AbortAction">
+      <LineId Id="10" Count="2" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="19" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.CmdAcquireWeight_Continuous">
+      <LineId Id="241" Count="4" />
+      <LineId Id="252" Count="1" />
+      <LineId Id="936" Count="1" />
+      <LineId Id="1015" Count="1" />
+      <LineId Id="1272" Count="1" />
+      <LineId Id="1152" Count="2" />
+      <LineId Id="1026" Count="0" />
+      <LineId Id="1150" Count="0" />
+      <LineId Id="1158" Count="0" />
+      <LineId Id="1155" Count="1" />
+      <LineId Id="1027" Count="0" />
+      <LineId Id="1206" Count="10" />
+      <LineId Id="1235" Count="0" />
+      <LineId Id="1274" Count="0" />
+      <LineId Id="1217" Count="8" />
+      <LineId Id="1243" Count="0" />
+      <LineId Id="1226" Count="2" />
+      <LineId Id="1250" Count="0" />
+      <LineId Id="1244" Count="0" />
+      <LineId Id="1246" Count="0" />
+      <LineId Id="1251" Count="2" />
+      <LineId Id="1247" Count="1" />
+      <LineId Id="1245" Count="0" />
+      <LineId Id="1267" Count="4" />
+      <LineId Id="1266" Count="0" />
+      <LineId Id="1229" Count="0" />
+      <LineId Id="1254" Count="0" />
+      <LineId Id="1256" Count="0" />
+      <LineId Id="1255" Count="0" />
+      <LineId Id="1260" Count="1" />
+      <LineId Id="1257" Count="0" />
+      <LineId Id="1262" Count="1" />
+      <LineId Id="1258" Count="0" />
+      <LineId Id="1264" Count="1" />
+      <LineId Id="1259" Count="0" />
+      <LineId Id="1230" Count="0" />
+      <LineId Id="1168" Count="0" />
+      <LineId Id="1231" Count="2" />
+      <LineId Id="1178" Count="0" />
+      <LineId Id="1234" Count="0" />
+      <LineId Id="1236" Count="0" />
+      <LineId Id="1239" Count="0" />
+      <LineId Id="1275" Count="0" />
+      <LineId Id="1179" Count="0" />
+      <LineId Id="1114" Count="1" />
+      <LineId Id="344" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.CmdAcquireWeight_RealTime">
+      <LineId Id="241" Count="4" />
+      <LineId Id="252" Count="1" />
+      <LineId Id="936" Count="1" />
+      <LineId Id="1015" Count="1" />
+      <LineId Id="1210" Count="0" />
+      <LineId Id="1152" Count="2" />
+      <LineId Id="1026" Count="0" />
+      <LineId Id="1150" Count="0" />
+      <LineId Id="1158" Count="0" />
+      <LineId Id="1155" Count="1" />
+      <LineId Id="1027" Count="1" />
+      <LineId Id="1165" Count="0" />
+      <LineId Id="1129" Count="0" />
+      <LineId Id="1145" Count="0" />
+      <LineId Id="1113" Count="0" />
+      <LineId Id="1193" Count="0" />
+      <LineId Id="1159" Count="0" />
+      <LineId Id="1161" Count="0" />
+      <LineId Id="1160" Count="0" />
+      <LineId Id="1164" Count="0" />
+      <LineId Id="846" Count="0" />
+      <LineId Id="1216" Count="0" />
+      <LineId Id="1257" Count="0" />
+      <LineId Id="1217" Count="39" />
+      <LineId Id="1178" Count="0" />
+      <LineId Id="1214" Count="0" />
+      <LineId Id="1179" Count="0" />
+      <LineId Id="1114" Count="1" />
+      <LineId Id="344" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.CmdAcquireWeight_Stop">
+      <LineId Id="241" Count="4" />
+      <LineId Id="252" Count="1" />
+      <LineId Id="936" Count="1" />
+      <LineId Id="1015" Count="1" />
+      <LineId Id="1190" Count="0" />
+      <LineId Id="1152" Count="2" />
+      <LineId Id="1026" Count="0" />
+      <LineId Id="1150" Count="0" />
+      <LineId Id="1158" Count="0" />
+      <LineId Id="1155" Count="1" />
+      <LineId Id="1027" Count="1" />
+      <LineId Id="1165" Count="0" />
+      <LineId Id="1129" Count="0" />
+      <LineId Id="1145" Count="0" />
+      <LineId Id="1113" Count="0" />
+      <LineId Id="1193" Count="0" />
+      <LineId Id="1159" Count="0" />
+      <LineId Id="1161" Count="0" />
+      <LineId Id="1160" Count="0" />
+      <LineId Id="1164" Count="0" />
+      <LineId Id="1206" Count="0" />
+      <LineId Id="1222" Count="0" />
+      <LineId Id="1207" Count="13" />
+      <LineId Id="1168" Count="0" />
+      <LineId Id="1178" Count="1" />
+      <LineId Id="1114" Count="1" />
+      <LineId Id="344" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.CmdClearTare">
+      <LineId Id="241" Count="4" />
+      <LineId Id="252" Count="1" />
+      <LineId Id="936" Count="1" />
+      <LineId Id="1202" Count="1" />
+      <LineId Id="1205" Count="18" />
+      <LineId Id="1240" Count="0" />
+      <LineId Id="1225" Count="0" />
+      <LineId Id="1356" Count="0" />
+      <LineId Id="1226" Count="8" />
+      <LineId Id="1298" Count="0" />
+      <LineId Id="1238" Count="0" />
+      <LineId Id="1344" Count="11" />
+      <LineId Id="1239" Count="0" />
+      <LineId Id="1168" Count="0" />
+      <LineId Id="1283" Count="2" />
+      <LineId Id="1287" Count="7" />
+      <LineId Id="1241" Count="0" />
+      <LineId Id="1295" Count="0" />
+      <LineId Id="1258" Count="10" />
+      <LineId Id="1303" Count="0" />
+      <LineId Id="1357" Count="0" />
+      <LineId Id="1304" Count="39" />
+      <LineId Id="1178" Count="0" />
+      <LineId Id="1257" Count="0" />
+      <LineId Id="1179" Count="0" />
+      <LineId Id="1114" Count="1" />
+      <LineId Id="344" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.CmdClearZero">
+      <LineId Id="241" Count="4" />
+      <LineId Id="252" Count="1" />
+      <LineId Id="936" Count="1" />
+      <LineId Id="1015" Count="1" />
+      <LineId Id="1221" Count="0" />
+      <LineId Id="1152" Count="2" />
+      <LineId Id="1026" Count="0" />
+      <LineId Id="1150" Count="0" />
+      <LineId Id="1158" Count="0" />
+      <LineId Id="1155" Count="1" />
+      <LineId Id="1027" Count="1" />
+      <LineId Id="1165" Count="0" />
+      <LineId Id="1129" Count="0" />
+      <LineId Id="1145" Count="0" />
+      <LineId Id="1113" Count="0" />
+      <LineId Id="1193" Count="0" />
+      <LineId Id="1159" Count="0" />
+      <LineId Id="1161" Count="0" />
+      <LineId Id="1160" Count="0" />
+      <LineId Id="1164" Count="0" />
+      <LineId Id="846" Count="0" />
+      <LineId Id="1234" Count="0" />
+      <LineId Id="1243" Count="0" />
+      <LineId Id="1180" Count="3" />
+      <LineId Id="1242" Count="0" />
+      <LineId Id="1184" Count="1" />
+      <LineId Id="1166" Count="0" />
+      <LineId Id="1187" Count="0" />
+      <LineId Id="1167" Count="0" />
+      <LineId Id="1202" Count="0" />
+      <LineId Id="1192" Count="0" />
+      <LineId Id="1206" Count="0" />
+      <LineId Id="1215" Count="0" />
+      <LineId Id="1217" Count="2" />
+      <LineId Id="1222" Count="0" />
+      <LineId Id="1225" Count="0" />
+      <LineId Id="1227" Count="5" />
+      <LineId Id="1226" Count="0" />
+      <LineId Id="1241" Count="0" />
+      <LineId Id="1240" Count="0" />
+      <LineId Id="1223" Count="0" />
+      <LineId Id="1216" Count="0" />
+      <LineId Id="1186" Count="0" />
+      <LineId Id="1168" Count="0" />
+      <LineId Id="1235" Count="2" />
+      <LineId Id="1178" Count="0" />
+      <LineId Id="1238" Count="0" />
+      <LineId Id="1179" Count="0" />
+      <LineId Id="1114" Count="1" />
+      <LineId Id="344" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.CmdClearZeroInstanly">
+      <LineId Id="241" Count="4" />
+      <LineId Id="252" Count="1" />
+      <LineId Id="936" Count="1" />
+      <LineId Id="1015" Count="0" />
+      <LineId Id="1206" Count="1" />
+      <LineId Id="1209" Count="20" />
+      <LineId Id="1265" Count="0" />
+      <LineId Id="1230" Count="34" />
+      <LineId Id="1168" Count="0" />
+      <LineId Id="1178" Count="1" />
+      <LineId Id="1114" Count="1" />
+      <LineId Id="344" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.CmdCmd_AcquireWeight_Steady">
+      <LineId Id="241" Count="4" />
+      <LineId Id="252" Count="1" />
+      <LineId Id="936" Count="1" />
+      <LineId Id="1015" Count="1" />
+      <LineId Id="1231" Count="0" />
+      <LineId Id="1152" Count="2" />
+      <LineId Id="1026" Count="0" />
+      <LineId Id="1150" Count="0" />
+      <LineId Id="1158" Count="0" />
+      <LineId Id="1155" Count="1" />
+      <LineId Id="1027" Count="0" />
+      <LineId Id="1206" Count="10" />
+      <LineId Id="1232" Count="0" />
+      <LineId Id="1273" Count="0" />
+      <LineId Id="1233" Count="39" />
+      <LineId Id="1168" Count="0" />
+      <LineId Id="1178" Count="1" />
+      <LineId Id="1114" Count="1" />
+      <LineId Id="344" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.CmdRestart">
+      <LineId Id="241" Count="4" />
+      <LineId Id="252" Count="1" />
+      <LineId Id="936" Count="1" />
+      <LineId Id="1015" Count="0" />
+      <LineId Id="1220" Count="0" />
+      <LineId Id="1016" Count="0" />
+      <LineId Id="1152" Count="2" />
+      <LineId Id="1026" Count="0" />
+      <LineId Id="1150" Count="0" />
+      <LineId Id="1158" Count="0" />
+      <LineId Id="1155" Count="1" />
+      <LineId Id="1027" Count="1" />
+      <LineId Id="1165" Count="0" />
+      <LineId Id="1129" Count="0" />
+      <LineId Id="1145" Count="0" />
+      <LineId Id="1113" Count="0" />
+      <LineId Id="1193" Count="0" />
+      <LineId Id="1159" Count="0" />
+      <LineId Id="1161" Count="0" />
+      <LineId Id="1160" Count="0" />
+      <LineId Id="1164" Count="0" />
+      <LineId Id="1206" Count="0" />
+      <LineId Id="1222" Count="0" />
+      <LineId Id="1229" Count="0" />
+      <LineId Id="1207" Count="12" />
+      <LineId Id="1168" Count="0" />
+      <LineId Id="1178" Count="0" />
+      <LineId Id="1228" Count="0" />
+      <LineId Id="1226" Count="1" />
+      <LineId Id="1224" Count="1" />
+      <LineId Id="1179" Count="0" />
+      <LineId Id="1221" Count="0" />
+      <LineId Id="1114" Count="1" />
+      <LineId Id="344" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.CmdSerialNum">
+      <LineId Id="241" Count="4" />
+      <LineId Id="252" Count="1" />
+      <LineId Id="936" Count="1" />
+      <LineId Id="1015" Count="0" />
+      <LineId Id="1195" Count="0" />
+      <LineId Id="1016" Count="0" />
+      <LineId Id="1152" Count="2" />
+      <LineId Id="1026" Count="0" />
+      <LineId Id="1150" Count="0" />
+      <LineId Id="1158" Count="0" />
+      <LineId Id="1155" Count="1" />
+      <LineId Id="1027" Count="1" />
+      <LineId Id="1165" Count="0" />
+      <LineId Id="1129" Count="0" />
+      <LineId Id="1145" Count="0" />
+      <LineId Id="1113" Count="0" />
+      <LineId Id="1193" Count="0" />
+      <LineId Id="1159" Count="0" />
+      <LineId Id="1161" Count="0" />
+      <LineId Id="1160" Count="0" />
+      <LineId Id="1164" Count="0" />
+      <LineId Id="846" Count="0" />
+      <LineId Id="1196" Count="0" />
+      <LineId Id="1180" Count="5" />
+      <LineId Id="1166" Count="0" />
+      <LineId Id="1187" Count="0" />
+      <LineId Id="1167" Count="0" />
+      <LineId Id="1191" Count="1" />
+      <LineId Id="1189" Count="0" />
+      <LineId Id="1221" Count="1" />
+      <LineId Id="1186" Count="0" />
+      <LineId Id="1168" Count="0" />
+      <LineId Id="1202" Count="14" />
+      <LineId Id="1201" Count="0" />
+      <LineId Id="1178" Count="1" />
+      <LineId Id="1194" Count="0" />
+      <LineId Id="1114" Count="1" />
+      <LineId Id="344" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.CmdSetTare">
+      <LineId Id="241" Count="4" />
+      <LineId Id="252" Count="1" />
+      <LineId Id="1202" Count="1" />
+      <LineId Id="1205" Count="7" />
+      <LineId Id="936" Count="1" />
+      <LineId Id="1213" Count="2" />
+      <LineId Id="1247" Count="0" />
+      <LineId Id="1246" Count="0" />
+      <LineId Id="1245" Count="0" />
+      <LineId Id="1244" Count="0" />
+      <LineId Id="1243" Count="0" />
+      <LineId Id="1240" Count="0" />
+      <LineId Id="1217" Count="3" />
+      <LineId Id="1168" Count="0" />
+      <LineId Id="1178" Count="0" />
+      <LineId Id="1225" Count="0" />
+      <LineId Id="1294" Count="0" />
+      <LineId Id="1348" Count="0" />
+      <LineId Id="1226" Count="13" />
+      <LineId Id="1221" Count="0" />
+      <LineId Id="1290" Count="2" />
+      <LineId Id="1222" Count="0" />
+      <LineId Id="1293" Count="0" />
+      <LineId Id="1248" Count="1" />
+      <LineId Id="1251" Count="9" />
+      <LineId Id="1295" Count="11" />
+      <LineId Id="1347" Count="0" />
+      <LineId Id="1307" Count="39" />
+      <LineId Id="1223" Count="1" />
+      <LineId Id="1179" Count="0" />
+      <LineId Id="1114" Count="1" />
+      <LineId Id="344" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.CmdShelling">
+      <LineId Id="241" Count="4" />
+      <LineId Id="252" Count="1" />
+      <LineId Id="1198" Count="1" />
+      <LineId Id="1201" Count="20" />
+      <LineId Id="1332" Count="0" />
+      <LineId Id="1335" Count="0" />
+      <LineId Id="1222" Count="8" />
+      <LineId Id="1321" Count="0" />
+      <LineId Id="1231" Count="2" />
+      <LineId Id="1327" Count="0" />
+      <LineId Id="1322" Count="1" />
+      <LineId Id="1333" Count="0" />
+      <LineId Id="1325" Count="0" />
+      <LineId Id="1324" Count="0" />
+      <LineId Id="1334" Count="0" />
+      <LineId Id="1326" Count="0" />
+      <LineId Id="1235" Count="0" />
+      <LineId Id="936" Count="0" />
+      <LineId Id="1328" Count="2" />
+      <LineId Id="1236" Count="0" />
+      <LineId Id="1331" Count="0" />
+      <LineId Id="1237" Count="1" />
+      <LineId Id="1240" Count="7" />
+      <LineId Id="1168" Count="0" />
+      <LineId Id="1248" Count="0" />
+      <LineId Id="1251" Count="10" />
+      <LineId Id="1280" Count="0" />
+      <LineId Id="1336" Count="0" />
+      <LineId Id="1281" Count="39" />
+      <LineId Id="1249" Count="1" />
+      <LineId Id="1178" Count="1" />
+      <LineId Id="1114" Count="1" />
+      <LineId Id="344" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.CmdShellingInstanly">
+      <LineId Id="241" Count="4" />
+      <LineId Id="252" Count="1" />
+      <LineId Id="1202" Count="0" />
+      <LineId Id="1288" Count="0" />
+      <LineId Id="1290" Count="21" />
+      <LineId Id="1406" Count="0" />
+      <LineId Id="1312" Count="29" />
+      <LineId Id="1343" Count="21" />
+      <LineId Id="1405" Count="0" />
+      <LineId Id="1365" Count="39" />
+      <LineId Id="1284" Count="3" />
+      <LineId Id="1114" Count="1" />
+      <LineId Id="344" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.CyclicAction">
+      <LineId Id="346" Count="0" />
+      <LineId Id="45" Count="4" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="293" Count="0" />
+      <LineId Id="314" Count="0" />
+      <LineId Id="357" Count="0" />
+      <LineId Id="733" Count="0" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="784" Count="0" />
+      <LineId Id="789" Count="1" />
+      <LineId Id="792" Count="6" />
+      <LineId Id="785" Count="0" />
+      <LineId Id="799" Count="0" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="734" Count="0" />
+      <LineId Id="736" Count="0" />
+      <LineId Id="738" Count="1" />
+      <LineId Id="498" Count="0" />
+      <LineId Id="741" Count="2" />
+      <LineId Id="748" Count="0" />
+      <LineId Id="752" Count="0" />
+      <LineId Id="751" Count="0" />
+      <LineId Id="749" Count="0" />
+      <LineId Id="753" Count="1" />
+      <LineId Id="750" Count="0" />
+      <LineId Id="755" Count="1" />
+      <LineId Id="744" Count="0" />
+      <LineId Id="757" Count="0" />
+      <LineId Id="759" Count="0" />
+      <LineId Id="758" Count="0" />
+      <LineId Id="761" Count="1" />
+      <LineId Id="760" Count="0" />
+      <LineId Id="764" Count="1" />
+      <LineId Id="763" Count="0" />
+      <LineId Id="767" Count="1" />
+      <LineId Id="766" Count="0" />
+      <LineId Id="770" Count="1" />
+      <LineId Id="769" Count="0" />
+      <LineId Id="773" Count="0" />
+      <LineId Id="776" Count="0" />
+      <LineId Id="774" Count="0" />
+      <LineId Id="777" Count="0" />
+      <LineId Id="779" Count="0" />
+      <LineId Id="778" Count="0" />
+      <LineId Id="781" Count="1" />
+      <LineId Id="780" Count="0" />
+      <LineId Id="746" Count="1" />
+      <LineId Id="745" Count="0" />
+      <LineId Id="740" Count="0" />
+      <LineId Id="499" Count="1" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="495" Count="0" />
+      <LineId Id="285" Count="5" />
+      <LineId Id="85" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.HandleAbortedState">
+      <LineId Id="15" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="26" Count="1" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="29" Count="1" />
+      <LineId Id="25" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.HandleAbortingState">
+      <LineId Id="15" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="28" Count="1" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="32" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.HandleDoneState">
+      <LineId Id="19" Count="1" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="12" Count="5" />
+      <LineId Id="11" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.HandleDormantState">
+      <LineId Id="134" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="165" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="12" Count="1" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="35" Count="7" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="164" Count="0" />
+      <LineId Id="33" Count="1" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="49" Count="2" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="87" Count="0" />
+      <LineId Id="91" Count="0" />
+      <LineId Id="88" Count="1" />
+      <LineId Id="92" Count="2" />
+      <LineId Id="86" Count="0" />
+      <LineId Id="95" Count="2" />
+      <LineId Id="85" Count="0" />
+      <LineId Id="98" Count="2" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="101" Count="0" />
+      <LineId Id="104" Count="2" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="107" Count="3" />
+      <LineId Id="102" Count="0" />
+      <LineId Id="111" Count="2" />
+      <LineId Id="103" Count="0" />
+      <LineId Id="117" Count="0" />
+      <LineId Id="133" Count="0" />
+      <LineId Id="118" Count="1" />
+      <LineId Id="115" Count="0" />
+      <LineId Id="120" Count="2" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="126" Count="3" />
+      <LineId Id="123" Count="0" />
+      <LineId Id="130" Count="2" />
+      <LineId Id="124" Count="1" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="54" Count="4" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="83" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.HandleErrorState">
+      <LineId Id="10" Count="5" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.HandleExecutingState">
+      <LineId Id="29" Count="0" />
+      <LineId Id="57" Count="1" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="48" Count="8" />
+      <LineId Id="19" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.HandleResettingState">
+      <LineId Id="5" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="16" Count="1" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="18" Count="3" />
+      <LineId Id="15" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_MT_MKC.ResetAction">
+      <LineId Id="10" Count="2" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="18" Count="1" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="99" Count="1" />
+      <LineId Id="75" Count="23" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="13" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

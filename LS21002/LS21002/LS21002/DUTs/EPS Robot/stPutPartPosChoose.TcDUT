@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="stPutPartPosChoose" Id="{6d87f4ff-d64b-43b3-8965-765dd8053529}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE stPutPartPosChoose :
+(
+	enum_member := 0,
+	CardPositon_1 := 1,
+	CardPostion_2 := 2,
+	NGPositon	  :=3,
+	BufferPostion :=4
+)WORD;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

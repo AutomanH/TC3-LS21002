@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_FUSHI_PXF_Sys_Pointer" Id="{669e421a-8ab5-484a-b80a-555ef991af99}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE ST_FUSHI_PXF_Sys_Pointer :
+STRUCT
+	bySlaveID 			  : BYTE;//从站号
+	strSlaveIP        : STRING(15) := '192.168.1.253';//modbus子站IP地址	
+	iSlavePort        : UINT :=502;  //端口号
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

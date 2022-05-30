@@ -1,0 +1,884 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_TURINContorl" Id="{95ab9dfb-0edd-4dfe-aa91-a4865101c459}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_TURINContorl
+VAR_INPUT
+	xManuMode : BOOL;//设备手动模式显示
+	xAutoRunning : BOOL;//设备是否自动运行
+	xEStop : BOOL;//设备急停信号
+	xMovePermit : BOOL;//运行允许
+	xReset      : BOOL;//复位按钮
+	xStart      : BOOL;//启动按钮
+	xStop      : BOOL;//停止按钮
+	xPause      : BOOL;//暂停按钮
+	xContinue      : BOOL;//继续按钮
+	xInitExte   : BOOL;//初始化执行指令	
+	xClearInitedFlag : BOOL;
+	stPara       : ST_Sys_Para;//系统参数	
+	pSysToRobot : ARRAY [0..3] OF WORD;//plc to robot 数据
+	pSysFromRobot : ARRAY [0..3] OF WORD;//plc from robot 数据
+END_VAR
+VAR_OUTPUT
+	xInitedFlag : BOOL;//初始化完成
+	xInitFinish : BOOL;
+	iCurrentStatus : INT; 
+	eErrID  : TURIN_ERROR;
+END_VAR
+VAR_IN_OUT	
+	stData : ST_TURINROBOT_Data;//机器人信号数据
+END_VAR
+VAR
+	{attribute 'tc_no_symbol'}
+	_iInitState , _iStartState , _iStopStateb , _iConnectState ,_iEpsonState: INT;//初始化状态
+	{attribute 'tc_no_symbol'}
+	_ton1 , _ton2 , _ton3 , _ton4 , _connectTon : TON;//
+	{attribute 'tc_no_symbol'}
+	_xInitFinish : BOOL;
+	{attribute 'tc_no_symbol'}
+	_fResetCheck : F_TRIG;
+	{attribute 'tc_no_symbol'}
+	_xConnectError : BOOL;//有连接报错发生
+	{attribute 'tc_no_symbol'}
+	_rManualMode : R_TRIG;
+	{attribute 'tc_no_symbol'}
+	_fManualMode : f_TRIG;
+	{attribute 'tc_no_symbol'}
+	_tonInit : TON;
+	{attribute 'tc_no_symbol'}
+	_tonPWM1 , _tonPWM2 : TON;
+	{attribute 'tc_no_symbol'}
+	_rTrig_Paused			:R_TRIG;
+	{attribute 'tc_no_symbol'}
+	_rTrig_Continue		:R_TRIG;
+	{attribute 'tc_no_symbol'}
+	_rTrig_Init				:R_TRIG;
+	{attribute 'tc_no_symbol'}
+	_tonCmd : TON ;
+	{attribute 'tc_no_symbol'}
+	_tonDelay : TON ;
+	{attribute 'tc_no_symbol'}
+	_iNGCount : INT ;
+	{attribute 'tc_no_symbol'}
+	_irxState: INT := 0;
+	{attribute 'tc_no_symbol'}
+	_aRead_VAR :ARRAY [1..2] OF FB_MBReadInputs;
+	{attribute 'tc_no_symbol'}
+	_aWirte_VAR: FB_MBWriteCoils;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+DataMap();//系统IO映射
+SYSError();
+
+//Start();//初始化流程已经启动机械手
+Stop();
+Init();
+Connect();
+CommonHandle();
+
+]]></ST>
+    </Implementation>
+    <Action Name="CommonHandle" Id="{6cde6465-2c8b-4a30-ab18-b4fcd553d32b}">
+      <Implementation>
+        <ST><![CDATA[//对应HMI显示窗：5-报警中；4-停止中；3-未初始化；2-运行中；
+IF (eErrID <> TURIN_ERROR.NO_ERROR) AND  (eErrID <> TURIN_ERROR.FLT_NO_INIT)
+THEN
+	iCurrentStatus := 5;
+ELSIF ( NOT stData.i_Running AND xInitFinish )
+THEN
+	iCurrentStatus := 4;
+ELSIF NOT xInitFinish
+THEN
+	iCurrentStatus := 3;
+ELSIF stData.i_Running
+THEN
+	iCurrentStatus := 2;
+ELSE
+	iCurrentStatus := 4;	
+END_IF
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Connect" Id="{ce714dee-59bd-41d4-a997-9d7b98bbb7d9}">
+      <Implementation>
+        <ST><![CDATA[//读取机械手数据
+_aRead_VAR[1](
+	sIPAddr:= stPara.strSlaveIP, 
+	nTCPPort:= stPara.iSlavePort, 
+	nUnitID:= stPara.bySlaveID, 
+	nQuantity:= 32, 
+	nMBAddr:= 0, 
+	cbLength:= 32, 
+	pDestAddr:= ADR(pSysFromRobot[0]), 
+	bExecute:= stSysPulse.xP10ms, //fbMachine[1].xStart, //
+	tTimeout:=T#1S , 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> , 
+	cbRead=> );
+
+_aRead_VAR[2](
+	sIPAddr:= stPara.strSlaveIP, 
+	nTCPPort:= stPara.iSlavePort, 
+	nUnitID:= stPara.bySlaveID, 
+	nQuantity:= 32, 
+	nMBAddr:= 36, 
+	cbLength:= 32, 
+	pDestAddr:= ADR(pSysFromRobot[2]), 
+	bExecute:= stSysPulse.xP10ms, //fbMachine[1].xStart, //
+	tTimeout:=T#1S , 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> , 
+	cbRead=> );
+	
+//写入机械手数据
+_aWirte_VAR(
+	sIPAddr:=stPara.strSlaveIP , 
+	nTCPPort:=stPara.iSlavePort , 
+	nUnitID:=stPara.bySlaveID , 
+	nQuantity:= 64, 
+	nMBAddr:= 24, 
+	cbLength:= 64, 
+	pSrcAddr:= ADR(pSysToRobot[0]), 
+	bExecute:=stSysPulse.xP10ms ,  
+	tTimeout:=T#1S , 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> );]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="DataMap" Id="{45c07053-7501-48bd-824a-9e0642486dbc}">
+      <Implementation>
+        <ST><![CDATA[	(********************************************from robot 数据映射*********************************************)
+	stData.i_EStopOn       := pSysFromRobot[0].0;	
+  stData.i_Ready         := pSysFromRobot[2].0;  
+	stData.i_Running       := pSysFromRobot[1].8;
+	stData.i_Paused        := pSysFromRobot[1].1;
+	stData.i_Error         := pSysFromRobot[2].3;
+	stData.i_SError        := pSysFromRobot[2].4;
+	stData.i_Waning        := pSysFromRobot[2].5;
+	stData.i_MotorsOn      := pSysFromRobot[2].6;
+	stData.i_AutoMode      := pSysFromRobot[0].2;
+	stData.i_TeachMode     := NOT pSysFromRobot[0].2;
+	stData.i_CmdError      := pSysFromRobot[2].9;
+
+	(********************************************to robot 数据映射*********************************************)
+	pSysToRobot[0].0 := stData.o_Start;    
+	pSysToRobot[0].1 := stData.o_Stop OR stData.o_Pause;        
+	pSysToRobot[0].2 := stData.o_Pause;       
+	pSysToRobot[0].3 := stData.o_Continue;    
+	pSysToRobot[0].4 := stData.o_Reset;      
+	pSysToRobot[0].5 := stData.o_Init; 
+	pSysToRobot[0].6 := stData.o_SetMotorsOff;
+	pSysToRobot[0].7 := stData.o_RunCondition:=NOT xMovePermit;	
+
+
+
+
+
+
+
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Init" Id="{cffcafac-7ad1-492a-86fd-79cbefe2a849}">
+      <Implementation>
+        <ST><![CDATA[_rTrig_Init(CLK:= xInitExte, Q=> );
+(*IF 	(NOT (eErrID =E_Epson_ERROR.FLT_NO_INIT)
+	AND
+		NOT (eErrID =E_Epson_ERROR.NO_ERROR))
+	OR
+		_tonInit.Q//初始化超时
+THEN
+		_iInitState := 0;	
+END_IF
+IF xManuMode//手动模式处于
+THEN	
+	CASE _iInitState OF 
+		0://执行条件是不能有错误发生，有错误发生，优先去处理错误
+			IF _rTrig_Init.Q AND (eErrID =E_Epson_ERROR.NO_ERROR OR eErrID =E_Epson_ERROR.FLT_NO_INIT)
+			THEN
+				_xInitFinish := FALSE;
+				xInitFinish:=FALSE;
+				_iInitState := 1;
+			END_IF
+		1://ROBOT Paused
+			IF  stData.i_Paused THEN
+				stData.o_Continue := TRUE;
+			END_IF
+			IF NOT stData.i_Paused THEN
+				IF stData.i_Running THEN
+					_iInitState :=3;	
+				END_IF
+				IF NOT stData.i_Running THEN
+					_iInitState :=2;	
+				END_IF	
+				stData.o_Continue := FALSE;		
+			END_IF
+		2://ROBOT NOT Running	
+					_iInitState :=4;				
+		3://ROBOT Running	
+				stData.o_Stop := TRUE;	
+				IF NOT stData.i_Running THEN
+					_iInitState :=4;	
+				END_IF		
+		4://进行信号准备
+			//xInitExte := FALSE;
+			stData.o_Stop := FALSE;
+			stData.o_Pause := FALSE;		
+      stData.o_Continue := FALSE;	
+			_iInitState := 5;	
+		5://等待robot Motor on
+			stData.o_SetMotorsOn := TRUE;
+			stData.o_SetMotorsOff := FALSE;			
+			IF stData.i_MotorsOn
+			THEN		
+				stData.o_SetMotorsOn := FALSE;
+				stData.o_SetMotorsOff := FALSE;		
+				_iInitState := 6;
+			END_IF		
+		6://程序启动成功
+			stData.o_Start := TRUE;
+			IF stData.i_Running//代表程序已经启动起来
+			THEN	
+				//检测启动程序是否正确
+				IF stData.o_SelProg1 = stData.i_CurrProg1 AND 	
+					 stData.o_SelProg2 = stData.i_CurrProg2 AND 
+					 stData.o_SelProg4 = stData.i_CurrProg4
+				THEN	
+					xInitedFlag := TRUE;	
+					_iInitState := 100;
+				ELSE
+					stData.o_Start := FALSE;
+					_iInitState := 0;
+				END_IF					
+			END_IF			
+	
+		100://等待外部响应完成，回到起始状态
+				stData.o_Start := FALSE;
+			IF stData.i_AtHome
+			THEN	
+				_xInitFinish := TRUE;
+				_iInitState := 110;
+			END_IF
+		110:
+			IF _xInitFinish THEN
+				xInitFinish:=TRUE;
+				_iInitState := 0;
+			END_IF
+		ELSE
+			;
+	END_CASE
+END_IF
+*)
+IF xManuMode//手动模式处于
+THEN	
+	CASE _iInitState OF 
+		0://触发信号
+		IF _rTrig_Init.Q THEN
+				xInitFinish:=FALSE;
+				xInitExte := FALSE;
+				_iNGCount := 0 ;
+				_iInitState := _iInitState + 1;
+		END_IF
+    1://判断条件是否满足
+		IF not stData.i_EStopOn THEN 
+				_iInitState := 999;
+				eErrID := TURIN_ERROR.FLT_ESTOPON ;
+		ELSIF eErrID <> TURIN_ERROR.NO_ERROR THEN
+				_iInitState := 999;
+		ELSIF NOT stData.i_AutoMode THEN 
+				_iInitState := 999;	
+				eErrID := TURIN_ERROR.FLT_AUTOMODE ;		
+		ELSE 
+
+				_iInitState := _iInitState + 1;
+		END_IF
+
+		2://检测是否运行中
+		 IF stData.i_Running THEN 
+		    stData.o_Stop := TRUE ;		
+		 ELSE
+				_iInitState:=_iInitState + 1;
+				stData.o_Stop := FALSE ;	
+		 END_IF		
+		
+		3://跳转首行
+				_tonDelay(IN:=TRUE,PT:=T#3S);
+				stData.o_Init:=TRUE;
+		 IF stData.i_Ready THEN 
+			 	stData.o_Init:=FALSE;
+			 	_iInitState := _iInitState + 1;
+		 ELSIF _tonDelay.Q THEN
+				_tonDelay(IN:=FALSE);
+				stData.o_Init:=False;
+				stToRobotZero.iMoveMode:=stToRobotZero.iMoveMode+1;
+				eErrID := TURIN_ERROR.FLT_SYSREADY ;				
+				_iInitState := 999;
+		 END_IF
+
+		4://__________
+				_tonDelay(IN:=TRUE,PT:=T#200MS);
+				IF _tonDelay.Q  THEN 
+				_tonDelay(IN:=FALSE);
+				_iInitState := _iInitState + 1;
+				END_IF
+	  5://触发停止信号
+				_tonDelay(IN:=TRUE,PT:=T#200MS);
+		    stData.o_Stop := TRUE ;
+		 IF _tonDelay.Q  THEN 
+				_tonDelay(IN:=FALSE);
+		    stData.o_Stop := FALSE ;
+
+				_iInitState := _iInitState + 1;
+		 END_IF
+		 6://检测不在运行中
+				_tonDelay(IN:=TRUE,PT:=T#200MS);
+		 IF _tonDelay.Q THEN 
+				 IF  NOT stData.i_Running THEN 
+						_tonDelay(IN:=FALSE);
+						_iInitState := _iInitState + 1;
+				 ELSE 
+						  _tonDelay(IN:=FALSE);
+							eErrID := TURIN_ERROR.FLT_SYSREADY ;
+							_iInitState := 999;			 
+				 END_IF
+		 END_IF
+	 
+		 7://触发启动信号
+				_tonDelay(IN:=TRUE,PT:=T#500MS);
+		    stData.o_Start := TRUE ;
+		 IF _tonDelay.Q THEN 
+				_tonDelay(IN:=FALSE);
+		    stData.o_Start := FALSE ;
+				_iInitState := _iInitState + 1;
+		 END_IF		 
+		 8://判断是否为Running
+		  IF stData.i_Running THEN 
+				_iInitState := _iInitState + 1;
+			ELSE 
+				_iInitState := 4 ;
+				_iNGCount := _iNGCount +1 ;
+				IF _iNGCount>3 THEN 
+					_iNGCount := 0 ;
+					eErrID := TURIN_ERROR.FLT_No_Runing ;
+				  _iInitState := 999;
+				END_IF
+			END_IF
+		  9://初始化完成
+				xInitFinish:=TRUE;
+				  _iInitState := 999;
+      999://
+				  _iInitState := 0;
+		 
+		 
+		 
+		 
+		 
+		 
+		 
+	END_CASE
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Start" Id="{54325a99-fc78-4746-84d0-64cb250bb490}">
+      <Implementation>
+        <ST><![CDATA[//启动主流程
+CASE _iStartState OF 
+	0://等待设备处于自动运行状态
+		IF xAutoRunning AND eErrID = TURIN_ERROR.NO_ERROR
+		THEN
+			_iStartState := _iStartState + 1;
+		END_IF
+	1://检测是否满足启动条件
+		IF NOT _xInitFinish
+		THEN
+			eErrID := TURIN_ERROR.FLT_NO_INIT;	
+			_iStartState := 0;		
+		END_IF	
+		IF eErrID = TURIN_ERROR.NO_ERROR
+		THEN
+			_iStartState := _iStartState + 1;
+		END_IF
+	2://等待开始启动
+		IF NOT stData.o_Stop
+		THEN
+			_iStartState := _iStartState + 1;
+		END_IF	
+	3://robot modeon
+		stData.o_SetMotorsOn := _tonPWM1.Q;
+		stData.o_SetMotorsOff := FALSE;
+		_ton1(IN:=stData.i_MotorsOn,PT:=T#200MS);
+		IF _ton1.Q
+		THEN			
+			_ton1(IN:=FALSE);
+			_iStartState := 10;
+		END_IF	
+	10://程序启动成功
+		stData.o_Start := _tonPWM1.Q; 
+		IF stData.i_Running
+		THEN				
+			stData.o_Start := FALSE;
+			_iStartState := 100;//代表启动完成	
+		END_IF
+	ELSE
+		;		
+END_CASE]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Stop" Id="{9a034eff-e3df-44e0-8d58-cc9d37bdd06f}">
+      <Implementation>
+        <ST><![CDATA[//robot停止信号控制
+
+	_rTrig_Paused(CLK:=NOT xAutoRunning , Q=> );
+	_rTrig_Continue(CLK:=xAutoRunning , Q=> );
+	
+(*IF _xInitFinish//已经初始化完成
+THEN
+	stData.o_Pause := ( _rTrig_Paused.Q OR  NOT xMovePermit ) AND NOT stData.i_Paused ;	
+	stData.o_Continue := (_rTrig_Continue.Q AND xMovePermit ) AND stData.i_Paused ;   
+END_IF
+*)
+//关联操作按钮
+stData.o_Reset := xReset;
+IF  xPause OR xStop OR _rTrig_Paused.Q THEN 
+	 stData.o_Pause := TRUE ;
+ELSE 
+	 stData.o_Pause := FALSE ;
+END_IF
+IF stData.i_Paused THEN 
+	 stData.o_Continue := xStart;
+ELSE 
+	 stData.o_Start := xStart ;
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="SYSError" Id="{123465e3-89a9-4aa0-8717-7f982d277b33}">
+      <Implementation>
+        <ST><![CDATA[
+_ton3(in:= NOT _ton4.Q,PT:= T#300MS);
+_ton4(in:= _ton3.Q,PT:= T#300MS);
+stData.o_Reset := xReset AND _ton3.Q;//产生脉冲信号
+IF eErrID <> TURIN_ERROR.NO_ERROR
+THEN
+	stData.o_Reset := xReset AND _ton3.Q;//产生脉冲信号
+END_IF
+
+//Epson cmd Status	
+
+IF NOT stData.i_EStopOn 
+THEN
+			eErrID := TURIN_ERROR.FLT_ESTOPON;//检测是否有急停产生
+ELSE
+CASE _iEpsonState OF 
+		
+	0://检测是否有指令错误发生
+		IF stData.i_CmdError  THEN
+			eErrID := TURIN_ERROR.FLT_CMDERROR;
+			_iEpsonState:=0;					
+		END_IF
+		IF (eErrID <> TURIN_ERROR.FLT_CMDERROR) THEN
+			_iEpsonState:=1;
+		END_IF
+	1://检测是否有错误发生
+		IF stData.i_Error  THEN
+			eErrID := TURIN_ERROR.FLT_ERROR;
+			_iEpsonState:=0;					
+		END_IF
+		IF (eErrID <> TURIN_ERROR.FLT_ERROR) THEN
+			_iEpsonState:=2;
+		END_IF
+	2://检测是否有系统错误产生
+		IF stData.i_SError  THEN
+			eErrID := TURIN_ERROR.FLT_SERROR;
+			_iEpsonState:=0;					
+		END_IF
+		IF (eErrID <> TURIN_ERROR.FLT_SERROR) THEN
+			_iEpsonState:=3;
+		END_IF
+	3://检测是否有警告发生
+		IF stData.i_Waning THEN
+			eErrID := TURIN_ERROR.FLT_SERROR;
+			_iEpsonState:=0;					
+		END_IF	
+		IF (eErrID <> TURIN_ERROR.FLT_SERROR) THEN
+			_iEpsonState:=4;
+		END_IF
+	4://检测配置参数是否不正确
+		IF stPara.iSlavePort = 0 OR 
+			 stPara.bySlaveID = 0  OR
+			 stPara.strSlaveIP = ''
+		THEN
+				eErrID := TURIN_ERROR.FLT_PARA;
+				_iEpsonState:=0;		
+		END_IF	
+		IF (eErrID <> TURIN_ERROR.FLT_PARA) THEN
+			_iEpsonState:=5;
+		END_IF	
+
+	5://检测是否有连接错误
+		IF _xConnectError 
+		THEN
+			eErrID := TURIN_ERROR.FLT_CONNECTERROR;
+			_iEpsonState:=0;		
+		END_IF
+		IF (eErrID <> TURIN_ERROR.FLT_CONNECTERROR) THEN
+			_iEpsonState:=7;
+		END_IF		
+	
+	6://检测是否Ready
+		IF xAutoRunning AND xInitFinish AND NOT stData.i_Running THEN
+			eErrID := TURIN_ERROR.FLT_No_Runing;
+			_iEpsonState:=0;					
+		END_IF	
+		IF (eErrID <> TURIN_ERROR.FLT_No_Runing) THEN
+			_iEpsonState:=7;
+		END_IF
+
+	7://检测是否自动
+		IF NOT xManuMode AND NOT stData.i_AutoMode THEN
+			eErrID := TURIN_ERROR.FLT_AUTOMODE;
+			xInitFinish:=FALSE;
+			_iEpsonState:=0;					
+		END_IF	
+		IF (eErrID <> TURIN_ERROR.FLT_AUTOMODE) THEN
+			_iEpsonState:=8;
+		END_IF
+	
+	8://检测是否初始化完成
+		IF NOT xManuMode AND NOT xInitFinish AND NOT xInitExte THEN
+			eErrID := TURIN_ERROR.FLT_NO_INIT;
+			_iEpsonState:=0;					
+		END_IF	
+		IF (eErrID <> TURIN_ERROR.FLT_NO_INIT) THEN
+			_iEpsonState:=9;
+		END_IF	
+	
+	9://检测是否初始化超时
+		IF _tonInit.Q THEN
+			eErrID := TURIN_ERROR.FLT_NO_INIT;
+			_iInitState := 0;	//初始化流程归零	
+			_iEpsonState:=0;					
+		END_IF	
+		IF (eErrID = TURIN_ERROR.NO_ERROR ) THEN
+			_iEpsonState:=100;
+		END_IF
+	
+100:	//检测无错误
+		eErrID := TURIN_ERROR.NO_ERROR;
+		_iEpsonState:=0;		
+	
+	END_CASE
+	END_IF
+
+//复位初始化完成
+		IF NOT stData.i_AutoMode THEN
+			xInitFinish:=FALSE;			
+		END_IF	
+	
+//清除错误
+IF xReset
+THEN 
+	_xConnectError := FALSE;//复位连接错误
+	_iEpsonState:=0;
+	eErrID := TURIN_ERROR.NO_ERROR;
+END_IF
+
+//初始化超时
+_tonInit(IN:=_iInitState <> 0 ,PT:=T#20S);
+]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="FB_TURINContorl">
+      <LineId Id="217" Count="0" />
+      <LineId Id="122" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="127" Count="2" />
+      <LineId Id="206" Count="0" />
+      <LineId Id="200" Count="0" />
+      <LineId Id="168" Count="0" />
+      <LineId Id="136" Count="0" />
+      <LineId Id="126" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TURINContorl.CommonHandle">
+      <LineId Id="7" Count="9" />
+      <LineId Id="20" Count="4" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="48" Count="2" />
+      <LineId Id="53" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TURINContorl.Connect">
+      <LineId Id="256" Count="0" />
+      <LineId Id="322" Count="12" />
+      <LineId Id="320" Count="0" />
+      <LineId Id="362" Count="13" />
+      <LineId Id="271" Count="0" />
+      <LineId Id="376" Count="0" />
+      <LineId Id="277" Count="0" />
+      <LineId Id="348" Count="0" />
+      <LineId Id="360" Count="1" />
+      <LineId Id="351" Count="8" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TURINContorl.DataMap">
+      <LineId Id="45" Count="1" />
+      <LineId Id="134" Count="0" />
+      <LineId Id="47" Count="2" />
+      <LineId Id="51" Count="5" />
+      <LineId Id="63" Count="8" />
+      <LineId Id="135" Count="1" />
+      <LineId Id="102" Count="0" />
+      <LineId Id="97" Count="0" />
+      <LineId Id="83" Count="7" />
+      <LineId Id="77" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TURINContorl.Init">
+      <LineId Id="191" Count="1" />
+      <LineId Id="225" Count="1" />
+      <LineId Id="228" Count="1" />
+      <LineId Id="224" Count="0" />
+      <LineId Id="222" Count="1" />
+      <LineId Id="2" Count="5" />
+      <LineId Id="162" Count="0" />
+      <LineId Id="221" Count="0" />
+      <LineId Id="8" Count="2" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="193" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="213" Count="0" />
+      <LineId Id="204" Count="1" />
+      <LineId Id="201" Count="0" />
+      <LineId Id="211" Count="1" />
+      <LineId Id="202" Count="0" />
+      <LineId Id="214" Count="0" />
+      <LineId Id="206" Count="4" />
+      <LineId Id="216" Count="1" />
+      <LineId Id="215" Count="0" />
+      <LineId Id="92" Count="0" />
+      <LineId Id="186" Count="0" />
+      <LineId Id="169" Count="0" />
+      <LineId Id="101" Count="0" />
+      <LineId Id="130" Count="0" />
+      <LineId Id="118" Count="0" />
+      <LineId Id="38" Count="0" />
+      <LineId Id="89" Count="0" />
+      <LineId Id="119" Count="0" />
+      <LineId Id="40" Count="1" />
+      <LineId Id="148" Count="1" />
+      <LineId Id="42" Count="1" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="74" Count="1" />
+      <LineId Id="135" Count="0" />
+      <LineId Id="131" Count="1" />
+      <LineId Id="134" Count="0" />
+      <LineId Id="136" Count="0" />
+      <LineId Id="147" Count="0" />
+      <LineId Id="137" Count="0" />
+      <LineId Id="140" Count="0" />
+      <LineId Id="219" Count="0" />
+      <LineId Id="142" Count="0" />
+      <LineId Id="133" Count="0" />
+      <LineId Id="76" Count="0" />
+      <LineId Id="185" Count="0" />
+      <LineId Id="121" Count="0" />
+      <LineId Id="218" Count="0" />
+      <LineId Id="122" Count="1" />
+      <LineId Id="127" Count="0" />
+      <LineId Id="125" Count="0" />
+      <LineId Id="124" Count="0" />
+      <LineId Id="187" Count="0" />
+      <LineId Id="189" Count="0" />
+      <LineId Id="220" Count="0" />
+      <LineId Id="188" Count="0" />
+      <LineId Id="190" Count="0" />
+      <LineId Id="65" Count="2" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="159" Count="0" />
+      <LineId Id="230" Count="1" />
+      <LineId Id="158" Count="0" />
+      <LineId Id="232" Count="0" />
+      <LineId Id="236" Count="0" />
+      <LineId Id="239" Count="0" />
+      <LineId Id="386" Count="0" />
+      <LineId Id="304" Count="0" />
+      <LineId Id="240" Count="0" />
+      <LineId Id="246" Count="0" />
+      <LineId Id="237" Count="0" />
+      <LineId Id="241" Count="0" />
+      <LineId Id="243" Count="1" />
+      <LineId Id="317" Count="0" />
+      <LineId Id="319" Count="0" />
+      <LineId Id="327" Count="2" />
+      <LineId Id="249" Count="0" />
+      <LineId Id="330" Count="0" />
+      <LineId Id="251" Count="0" />
+      <LineId Id="238" Count="0" />
+      <LineId Id="406" Count="0" />
+      <LineId Id="408" Count="0" />
+      <LineId Id="411" Count="1" />
+      <LineId Id="414" Count="2" />
+      <LineId Id="360" Count="0" />
+      <LineId Id="407" Count="0" />
+      <LineId Id="361" Count="3" />
+      <LineId Id="450" Count="0" />
+      <LineId Id="418" Count="0" />
+      <LineId Id="417" Count="0" />
+      <LineId Id="365" Count="0" />
+      <LineId Id="451" Count="0" />
+      <LineId Id="449" Count="0" />
+      <LineId Id="419" Count="0" />
+      <LineId Id="367" Count="0" />
+      <LineId Id="359" Count="0" />
+      <LineId Id="401" Count="0" />
+      <LineId Id="298" Count="0" />
+      <LineId Id="297" Count="0" />
+      <LineId Id="383" Count="1" />
+      <LineId Id="300" Count="0" />
+      <LineId Id="385" Count="0" />
+      <LineId Id="245" Count="0" />
+      <LineId Id="254" Count="0" />
+      <LineId Id="247" Count="0" />
+      <LineId Id="255" Count="0" />
+      <LineId Id="261" Count="0" />
+      <LineId Id="258" Count="0" />
+      <LineId Id="332" Count="0" />
+      <LineId Id="262" Count="0" />
+      <LineId Id="257" Count="0" />
+      <LineId Id="263" Count="0" />
+      <LineId Id="265" Count="0" />
+      <LineId Id="323" Count="0" />
+      <LineId Id="267" Count="2" />
+      <LineId Id="320" Count="0" />
+      <LineId Id="326" Count="0" />
+      <LineId Id="322" Count="0" />
+      <LineId Id="321" Count="0" />
+      <LineId Id="270" Count="0" />
+      <LineId Id="324" Count="0" />
+      <LineId Id="358" Count="0" />
+      <LineId Id="271" Count="0" />
+      <LineId Id="283" Count="5" />
+      <LineId Id="282" Count="0" />
+      <LineId Id="289" Count="1" />
+      <LineId Id="293" Count="1" />
+      <LineId Id="301" Count="1" />
+      <LineId Id="305" Count="1" />
+      <LineId Id="308" Count="0" />
+      <LineId Id="310" Count="0" />
+      <LineId Id="307" Count="0" />
+      <LineId Id="292" Count="0" />
+      <LineId Id="272" Count="0" />
+      <LineId Id="312" Count="0" />
+      <LineId Id="314" Count="0" />
+      <LineId Id="274" Count="0" />
+      <LineId Id="316" Count="0" />
+      <LineId Id="275" Count="6" />
+      <LineId Id="234" Count="1" />
+      <LineId Id="157" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TURINContorl.Start">
+      <LineId Id="3" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="4" Count="0" />
+      <LineId Id="8" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="14" Count="2" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="28" Count="2" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="43" Count="4" />
+      <LineId Id="49" Count="1" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="55" Count="2" />
+      <LineId Id="59" Count="1" />
+      <LineId Id="53" Count="0" />
+      <LineId Id="61" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TURINContorl.Stop">
+      <LineId Id="1" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="3" Count="1" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="33" Count="10" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TURINContorl.SYSError">
+      <LineId Id="18" Count="0" />
+      <LineId Id="20" Count="1" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="192" Count="0" />
+      <LineId Id="194" Count="0" />
+      <LineId Id="193" Count="0" />
+      <LineId Id="51" Count="13" />
+      <LineId Id="143" Count="0" />
+      <LineId Id="65" Count="6" />
+      <LineId Id="144" Count="1" />
+      <LineId Id="73" Count="5" />
+      <LineId Id="148" Count="1" />
+      <LineId Id="80" Count="5" />
+      <LineId Id="150" Count="1" />
+      <LineId Id="87" Count="3" />
+      <LineId Id="195" Count="0" />
+      <LineId Id="92" Count="3" />
+      <LineId Id="152" Count="1" />
+      <LineId Id="96" Count="7" />
+      <LineId Id="154" Count="1" />
+      <LineId Id="104" Count="6" />
+      <LineId Id="156" Count="1" />
+      <LineId Id="111" Count="0" />
+      <LineId Id="174" Count="8" />
+      <LineId Id="112" Count="0" />
+      <LineId Id="183" Count="0" />
+      <LineId Id="113" Count="4" />
+      <LineId Id="158" Count="1" />
+      <LineId Id="118" Count="0" />
+      <LineId Id="172" Count="0" />
+      <LineId Id="120" Count="2" />
+      <LineId Id="142" Count="0" />
+      <LineId Id="123" Count="1" />
+      <LineId Id="160" Count="1" />
+      <LineId Id="125" Count="7" />
+      <LineId Id="185" Count="0" />
+      <LineId Id="187" Count="1" />
+      <LineId Id="190" Count="0" />
+      <LineId Id="186" Count="0" />
+      <LineId Id="133" Count="4" />
+      <LineId Id="162" Count="1" />
+      <LineId Id="138" Count="3" />
+      <LineId Id="25" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

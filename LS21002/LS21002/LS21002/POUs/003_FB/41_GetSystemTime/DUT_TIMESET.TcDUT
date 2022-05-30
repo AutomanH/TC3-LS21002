@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_TIMESET" Id="{ebb617ca-6cce-47fb-918c-be2b713fecce}">
+    <Declaration><![CDATA[TYPE DUT_TIMESET :
+STRUCT
+
+	sTempTimeYYMMDD: STRING;
+	sTempTimeHO: STRING;
+	sTempTimeMI: STRING;
+	sTempTimeSe: STRING;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

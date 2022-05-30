@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ERG_20_CMD" Id="{c8c8b704-d375-499f-920e-dfc22d48ef6a}">
+    <Declaration><![CDATA[TYPE ERG_20_CMD :
+(
+  Nodef,
+	Cmd_Clamp,//夹紧指令
+	Cmd_Release,//松开指令
+	Cmd_RotateAbsClamp,//绝对旋转夹紧指令
+	Cmd_RotateAbsRelease,//绝对旋转松开指令
+	Cmd_RotateRelClamp,//绝对旋转夹紧指令
+	Cmd_RotateRelRelease,//绝对旋转松开指令
+	Cmd_Org//初始化指令
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="RudongPump_PumpHeadType" Id="{3bcb2fe3-1d86-4f06-994b-7d681d0dd97e}">
+    <Declaration><![CDATA[//保定申辰蠕动泵泵头类型选择
+TYPE RudongPump_PumpHeadType :
+(
+	MiniPump01:=1,
+	MiniPump02:=2,	
+	
+	HandyPump01:=3,
+	HandyPump02:=4,	
+	
+	EasyPumpI_III:=5,//单通道
+	EasyPumpII_IV:=6,//单通道
+	EasyPumpV_VI:=7,//双通道
+
+	AMC1_AMC12:=8,//适用(内径x壁厚0.13-3/0.8-1mm)
+	YZ1515x:=9,//适用13#,14#,16#,17#,18#,19#,25#管
+	YZ2515x:=10,//适用15#,24#管	
+	
+	DY15:=11,//
+	DY25:=12,
+	
+	UD15:=13
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

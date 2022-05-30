@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_200SMARTSend" Id="{e440131a-d174-4c08-9f50-71b76de8a99b}">
+    <Declaration><![CDATA[TYPE DUT_200SMARTSend :
+STRUCT
+	iStationAlive:INT;//设备心跳	值1 持续1S  ,再值0持续1S，再次循环
+	iStationInitCompleted:INT;//设备初始化完成	1=初始化完成
+	iStationRunning:INT;//设备运行中	1=设备运行 2=设备停止(暂停)中 3=设备急停
+	iStationResult:INT;//产品结果	1=OK  2 =NG
+	iStationError:INT;//设备故障/报警	1=设备正常  2=设备故障/报警 
+	iStationEntryEnable:INT;//前端进料	1=允许进料   0=暂停进料
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,296 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="InputLink" Id="{ec3de828-12ec-4dbd-a8c3-6a7b2cf4b740}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM InputLink
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ACT_ET01();
+ACT_ET02();
+ACT_ET03();
+ACT_ET04();]]></ST>
+    </Implementation>
+    <Action Name="ACT_ET01" Id="{7e955106-5e4a-4cf2-be70-0fd1741bc6d2}">
+      <Implementation>
+        <ST><![CDATA[IxSafetyRelayOK	:=	ET01_Input[1].INPUT.0	;//	安全继电器信号
+IxStartButton	:=	ET01_Input[1].INPUT.1	;//	启动按钮信号
+IxStopButton	:=	ET01_Input[1].INPUT.2	;//	停止按钮信号
+IxResetButton	:=	ET01_Input[1].INPUT.3	;//	复位按钮信号
+IxInitButton	:=	ET01_Input[1].INPUT.4	;//	初始化按钮信号
+IxAutoMode	:=	ET01_Input[1].INPUT.5	;//	自动模式信号
+IxManualMode	:=	ET01_Input[1].INPUT.6	;//	手动模式信号
+IxAirPressure	:=	ET01_Input[1].INPUT.7	;//	上料工位¶气压检测
+IxS01PositionSensor1	:=	ET01_Input[1].INPUT.8	;//	链板线深孔板¶位置1传感器
+IxS01PositionSensor2	:=	ET01_Input[1].INPUT.9	;//	链板线深孔板¶位置2传感器
+IxS01PositionSensor3	:=	ET01_Input[1].INPUT.10	;//	链板线深孔板¶位置3传感器
+IxS01PositionSensor4	:=	ET01_Input[1].INPUT.11	;//	链板线深孔板¶位置4传感器
+IxS01Sensor1Reached	:=	ET01_Input[1].INPUT.12	;//	上料工位¶到位传感器1
+IxS01Sensor2Reached	:=	ET01_Input[1].INPUT.13	;//	上料工位¶到位传感器2
+IxS02Sensor1Reached	:=	ET01_Input[1].INPUT.14	;//	注液工位¶到位传感器1
+IxS02Sensor2Reached	:=	ET01_Input[1].INPUT.15	;//	注液工位¶到位传感器2
+IxS01ReserveSensor1	:=	ET01_Input[2].INPUT.0	;//	链板线深孔板备料¶位置1传感器
+IxS01ReserveSensor2	:=	ET01_Input[2].INPUT.1	;//	链板线深孔板备料¶位置2传感器
+IxS01ReserveSensor3	:=	ET01_Input[2].INPUT.2	;//	链板线深孔板备料¶位置3传感器
+IxS01ReserveSensor4	:=	ET01_Input[2].INPUT.3	;//	链板线深孔板备料¶位置4传感器
+IxS03Sensor1Reached	:=	ET01_Input[2].INPUT.4	;//	相机工位¶到位传感器1
+IxS03Sensor2Reached	:=	ET01_Input[2].INPUT.5	;//	相机工位¶到位传感器2
+IxS03Sensor3Reached	:=	ET01_Input[2].INPUT.6	;//	相机工位¶到位传感器3
+IxS03Sensor4Reached	:=	ET01_Input[2].INPUT.7	;//	相机工位¶到位传感器4
+IxS03Sensor5Reached	:=	ET01_Input[2].INPUT.8	;//	相机工位¶到位传感器5
+IxVFDErrorSignal	:=	ET01_Input[2].INPUT.9	;//	上料链板线变频器异常
+Ixshare2	:=	ET01_Input[2].INPUT.10	;//	备用1
+Ixshare3	:=	ET01_Input[2].INPUT.11	;//	备用2
+Ixshare4	:=	ET01_Input[2].INPUT.12	;//	备用3
+Ixshare5	:=	ET01_Input[2].INPUT.13	;//	备用4
+IxS01SafetyDoorReady	:=	ET01_Input[2].INPUT.14	;//	上料工位安全门
+IxS02SafetyDoorReady_2	:=	ET01_Input[2].INPUT.15	;//	注液工位安全门
+IxS01VTCPressCyl_1WP	:=	ET01_Input[3].INPUT.0	;//	Z轴阻挡气缸1¶动点
+IxS01VTCPressCyl_1HP	:=	ET01_Input[3].INPUT.1	;//	Z轴阻挡气缸1¶原点
+IxS01VTCPressCyl_2WP	:=	ET01_Input[3].INPUT.2	;//	Z轴阻挡气缸2¶动点
+IxS01VTCPressCyl_2HP	:=	ET01_Input[3].INPUT.3	;//	Z轴阻挡气缸2¶原点
+IxS01VTCPressCyl_3WP	:=	ET01_Input[3].INPUT.4	;//	Z轴阻挡气缸3¶动点
+IxS01VTCPressCyl_3HP	:=	ET01_Input[3].INPUT.5	;//	Z轴阻挡气缸3¶原点
+IxS01VTCPressCyl_4WP	:=	ET01_Input[3].INPUT.6	;//	Z轴阻挡气缸4¶原点
+IxS01VTCPressCyl_4HP	:=	ET01_Input[3].INPUT.7	;//	Z轴阻挡气缸4¶原点
+IxS01VTCCyl_1WP	:=	ET01_Input[3].INPUT.8	;//	上料工位¶移栽Z轴气缸1¶动点
+IxS01VTCCyl_1HP	:=	ET01_Input[3].INPUT.9	;//	上料工位¶移移栽Z轴气缸1¶动点
+IxS01VTCCyl_2WP	:=	ET01_Input[3].INPUT.10	;//	上料工位¶移移栽Z轴气缸2¶动点
+IxS01VTCCyl_2HP	:=	ET01_Input[3].INPUT.11	;//	上料工位¶移移栽Z轴气缸2¶原点
+IxS02HOZAdjustCyl_1WP	:=	ET01_Input[3].INPUT.12	;//	注液工位¶上层水平调整气缸1¶动点
+IxS02HOZAdjustCyl_1HP	:=	ET01_Input[3].INPUT.13	;//	注液工位¶上层水平调整气缸1¶原点
+IxS02HOZAdjustCyl_2WP	:=	ET01_Input[3].INPUT.14	;//	注液工位¶上层水平调整气缸2¶动点
+IxS02HOZAdjustCyl_2HP	:=	ET01_Input[3].INPUT.15	;//	注液工位¶上层水平调整气缸2¶原点
+IxS02HOZAdjustCyl_3WP	:=	ET01_Input[4].INPUT.0	;//	注液工位¶下层水平调整气缸1¶动点
+IxS02HOZAdjustCyl_3HP	:=	ET01_Input[4].INPUT.1	;//	注液工位¶下层水平调整气缸1¶原点点
+IxS02HOZAdjustCyl_4WP	:=	ET01_Input[4].INPUT.2	;//	注液工位¶下层水平调整气缸2¶动点
+IxS02HOZAdjustCyl_4HP	:=	ET01_Input[4].INPUT.3	;//	注液工位¶下层水平调整气缸2¶原点
+IxS02ROTCylWP	:=	ET01_Input[4].INPUT.4	;//	注液工位¶防滴液气缸¶动点
+IxS02ROTCylHP	:=	ET01_Input[4].INPUT.5	;//	注液工位¶防滴液气缸¶原点
+Ixshare6	:=	ET01_Input[4].INPUT.6	;//	备用
+Ixshare7	:=	ET01_Input[4].INPUT.7	;//	备用
+IxS03HOZAdjustCyl_1WP	:=	ET01_Input[4].INPUT.8	;//	相机检测工位¶上层水平调整气缸1¶动点
+IxS03HOZAdjustCyl_1HP	:=	ET01_Input[4].INPUT.9	;//	相机检测工位¶上层水平调整气缸1¶原点
+IxS03HOZAdjustCyl_2WP	:=	ET01_Input[4].INPUT.10	;//	相机检测工位¶上层水平调整气缸2¶动点
+IxS03HOZAdjustCyl_2HP	:=	ET01_Input[4].INPUT.11	;//	相机检测工位¶上层水平调整气缸2¶原点
+IxS03HOZAdjustCyl_3WP	:=	ET01_Input[4].INPUT.12	;//	相机检测工位¶上层水平调整气缸3¶动点
+IxS03HOZAdjustCyl_3HP	:=	ET01_Input[4].INPUT.13	;//	相机检测工位¶上层水平调整气缸3¶原点
+IxS03HOZAdjustCyl_4WP	:=	ET01_Input[4].INPUT.14	;//	相机检测工位¶上层水平调整气缸4¶动点
+IxS03HOZAdjustCyl_4HP	:=	ET01_Input[4].INPUT.15	;//	相机检测工位¶上层水平调整气缸4¶动点
+IxS03HOZAdjustCyl_5WP	:=	ET01_Input[5].INPUT.0	;//	相机检测工位¶下层水平调整气缸1¶动点
+IxS03HOZAdjustCyl_5HP	:=	ET01_Input[5].INPUT.1	;//	相机检测工位¶下层水平调整气缸1¶原点
+IxS03HOZAdjustCyl_6WP	:=	ET01_Input[5].INPUT.2	;//	相机检测工位¶下层水平调整气缸2¶动点
+IxS03HOZAdjustCyl_6HP	:=	ET01_Input[5].INPUT.3	;//	相机检测工位¶下层水平调整气缸2¶原点
+IxS03HOZAdjustCyl_7WP	:=	ET01_Input[5].INPUT.4	;//	相机检测工位¶下层水平调整气缸3¶动点
+IxS03HOZAdjustCyl_7HP	:=	ET01_Input[5].INPUT.5	;//	相机检测工位¶下层水平调整气缸3¶原点
+IxS03HOZAdjustCyl_8WP	:=	ET01_Input[5].INPUT.6	;//	相机检测工位¶下层水平调整气缸4¶动点
+IxS03HOZAdjustCyl_8HP	:=	ET01_Input[5].INPUT.7	;//	相机检测工位¶下层水平调整气缸4¶原点
+IxErrorSignal	:=	ET01_Input[5].INPUT.8	;//	上料工位¶离子风棒¶异常信号
+IxMaintenanceSignal	:=	ET01_Input[5].INPUT.9	;//	上料工位¶离子风棒¶维护信号
+Ixshare9	:=	ET01_Input[5].INPUT.10	;//	备用
+Ixshare10	:=	ET01_Input[5].INPUT.11	;//	备用
+Ixshare11	:=	ET01_Input[5].INPUT.12	;//	备用
+Ixshare12	:=	ET01_Input[5].INPUT.13	;//	备用
+Ixshare13	:=	ET01_Input[5].INPUT.14	;//	备用
+Ixshare14	:=	ET01_Input[5].INPUT.15	;//	备用
+Ixshare15	:=	ET01_Input[6].INPUT.0	;//	备用
+Ixshare16	:=	ET01_Input[6].INPUT.1	;//	备用
+Ixshare17	:=	ET01_Input[6].INPUT.2	;//	备用
+Ixshare18	:=	ET01_Input[6].INPUT.3	;//	备用
+Ixshare19	:=	ET01_Input[6].INPUT.4	;//	备用
+Ixshare20	:=	ET01_Input[6].INPUT.5	;//	备用
+Ixshare21	:=	ET01_Input[6].INPUT.6	;//	备用
+Ixshare22	:=	ET01_Input[6].INPUT.7	;//	备用
+Ixshare23	:=	ET01_Input[6].INPUT.8	;//	备用
+Ixshare24	:=	ET01_Input[6].INPUT.9	;//	备用
+Ixshare25	:=	ET01_Input[6].INPUT.10	;//	备用
+Ixshare26	:=	ET01_Input[6].INPUT.11	;//	备用
+Ixshare27	:=	ET01_Input[6].INPUT.12	;//	备用
+Ixshare28	:=	ET01_Input[6].INPUT.13	;//	备用
+Ixshare29	:=	ET01_Input[6].INPUT.14	;//	备用
+Ixshare30	:=	ET01_Input[6].INPUT.15	;//	备用
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_ET02" Id="{093c2977-6c22-4e2f-921a-b465ce9b888b}">
+      <Implementation>
+        <ST><![CDATA[IxS04HOZAdjustCyl_1WP	:=	ET02_Input[1].INPUT.0	;//	热熔工位¶上层水平调整气缸1¶动点
+IxS04HOZAdjustCyl_1HP	:=	ET02_Input[1].INPUT.1	;//	热熔工位¶上层水平调整气缸1¶原点
+IxS04HOZAdjustCyl_2WP	:=	ET02_Input[1].INPUT.2	;//	热熔工位¶上层水平调整气缸2¶动点
+IxS04HOZAdjustCyl_2HP	:=	ET02_Input[1].INPUT.3	;//	热熔工位¶上层水平调整气缸2¶原点
+IxS04HOZAdjustCyl_3WP	:=	ET02_Input[1].INPUT.4	;//	热熔工位¶下层水平调整气缸1¶动点
+IxS04HOZAdjustCyl_3HP	:=	ET02_Input[1].INPUT.5	;//	热熔工位¶下层水平调整气缸1¶原点
+IxS04HOZAdjustCyl_4WP	:=	ET02_Input[1].INPUT.6	;//	热熔工位¶下层水平调整气缸2¶动点
+IxS04HOZAdjustCyl_4HP	:=	ET02_Input[1].INPUT.7	;//	热熔工位¶下层水平调整气缸2¶原点
+IxS06GlampCyl_1WP	:=	ET02_Input[1].INPUT.8	;//	切膜工位¶前侧夹膜气缸1¶动点
+IxS06GlampCyl_1HP	:=	ET02_Input[1].INPUT.9	;//	切膜工位¶前侧夹膜气缸1¶原点
+IxS06GlampCyl_2WP	:=	ET02_Input[1].INPUT.10	;//	切膜工位¶前侧夹膜气缸2¶动点
+IxS06GlampCyl_2HP	:=	ET02_Input[1].INPUT.11	;//	切膜工位¶前侧夹膜气缸2¶原点
+IxS06GlampCyl_3WP	:=	ET02_Input[1].INPUT.12	;//	切膜工位¶后侧夹膜气缸1¶动点
+IxS06GlampCyl_3HP	:=	ET02_Input[1].INPUT.13	;//	切膜工位¶后侧夹膜气缸1¶原点
+IxS06GlampCyl_4WP	:=	ET02_Input[1].INPUT.14	;//	切膜工位¶后侧夹膜气缸2¶动点
+IxS06GlampCyl_4HP	:=	ET02_Input[1].INPUT.15	;//	切膜工位¶后侧夹膜气缸2¶原点
+IxS06HOZReachedCyl_1WP	:=	ET02_Input[2].INPUT.0	;//	切膜工位¶水平到位气缸1¶动点
+IxS06HOZReachedCyl_1HP	:=	ET02_Input[2].INPUT.1	;//	切膜工位¶水平到位气缸1¶原点
+IxS06HOZReachedCyl_2WP	:=	ET02_Input[2].INPUT.2	;//	切膜工位¶水平到位气缸2¶动点
+IxS06HOZReachedCyl_2HP	:=	ET02_Input[2].INPUT.3	;//	切膜工位¶水平到位气缸2¶原点
+IxS06HOZCyl_1WP	:=	ET02_Input[2].INPUT.4	;//	切膜工位¶水平切膜气缸¶动点
+IxS06HOZCyl_1HP	:=	ET02_Input[2].INPUT.5	;//	切膜工位¶水平切膜气缸¶原点
+IxShare60	:=	ET02_Input[2].INPUT.6	;//	备用
+IxShare61	:=	ET02_Input[2].INPUT.7	;//	备用
+IxS06VTCAdjustCylWP	:=	ET02_Input[2].INPUT.8	;//	切膜工位¶下方对中顶升气缸¶动点
+IxS06VTCAdjustCylHP	:=	ET02_Input[2].INPUT.9	;//	切膜工位¶下方对中顶升气缸¶原点
+IxS06GlampAdjustCyl_1WP	:=	ET02_Input[2].INPUT.10	;//	切膜工位¶下方对中夹爪气缸1¶动点
+IxS06GlampAdjustCyl_1HP	:=	ET02_Input[2].INPUT.11	;//	切膜工位¶下方对中夹爪气缸1¶原点
+IxS06GlampAdjustCyl_2WP	:=	ET02_Input[2].INPUT.12	;//	切膜工位¶下方对中夹爪气缸2¶动点
+IxS06GlampAdjustCyl_2HP	:=	ET02_Input[2].INPUT.13	;//	切膜工位¶下方对中夹爪气缸2¶原点
+IxS06GlampAdjustCyl_3WP	:=	ET02_Input[2].INPUT.14	;//	切膜工位¶下方对中夹爪气缸3¶动点
+IxS06GlampAdjustCyl_3HP	:=	ET02_Input[2].INPUT.15	;//	切膜工位¶下方对中夹爪气缸3¶原点
+IxS08HOZCylWP	:=	ET02_Input[3].INPUT.0	;//	卡片搬运工位¶水平气缸¶动点
+IxS08HOZCylHP	:=	ET02_Input[3].INPUT.1	;//	卡片搬运工位¶水平气缸¶原点
+IxShare62	:=	ET02_Input[3].INPUT.2	;//	备用
+IxShare63	:=	ET02_Input[3].INPUT.3	;//	备用
+IxS08VTCCyl_1WP	:=	ET02_Input[3].INPUT.4	;//	卡片搬运工位¶Z轴气缸1¶动点
+IxS08VTCCyl_1HP	:=	ET02_Input[3].INPUT.5	;//	卡片搬运工位¶Z轴气缸1¶原点
+IxS08VTCCyl_2WP	:=	ET02_Input[3].INPUT.6	;//	卡片搬运工位¶Z轴气缸2¶动点
+IxS08VTCCyl_2HP	:=	ET02_Input[3].INPUT.7	;//	卡片搬运工位¶Z轴气缸2¶原点
+IxS08Vacuum1_Output1	:=	ET02_Input[3].INPUT.8	;//	卡片搬运工位¶真空发生器1¶输出OUT1
+IxS08Vacuum1_Output2	:=	ET02_Input[3].INPUT.9	;//	卡片搬运工位¶真空发生器1¶输出OUT2
+IxS08Vacuum2_Output1	:=	ET02_Input[3].INPUT.10	;//	卡片搬运工位¶真空发生器2¶输出OUT1
+IxS08Vacuum2_Output2	:=	ET02_Input[3].INPUT.11	;//	卡片搬运工位¶真空发生器2¶输出OUT2
+IxMaintenanceSignal_1	:=	ET02_Input[3].INPUT.12	;//	卡片搬运工位¶离子风棒¶维护信号
+IxErrorSignal_1	:=	ET02_Input[3].INPUT.13	;//	卡片搬运工位¶离子风棒¶异常信号
+IxStartSignal	:=	ET02_Input[3].INPUT.14	;//	卡片搬运工位¶离子风棒¶放电信号
+IxShare64	:=	ET02_Input[3].INPUT.15	;//	备用
+IxS04Sensor1Reached	:=	ET02_Input[4].INPUT.0	;//	热熔工位¶深孔板¶位置1传感器
+IxS04Sensor2Reached	:=	ET02_Input[4].INPUT.1	;//	热熔工位¶深孔板¶位置2传感器
+IxS04Sensor3Reached	:=	ET02_Input[4].INPUT.2	;//	热熔工位¶深孔板¶位置3传感器
+IxS04Sensor4Reached	:=	ET02_Input[4].INPUT.3	;//	热熔工位¶深孔板¶位置4传感器
+IxS04AluChcekSensor1	:=	ET02_Input[4].INPUT.4	;//	热熔工位¶检测铝膜传感器1
+IxS04AluChcekSensor2	:=	ET02_Input[4].INPUT.5	;//	热熔工位¶检测铝膜传感器2
+IxS08CardSensor1Reached	:=	ET02_Input[4].INPUT.6	;//	卡片工位¶产品到位传感器1
+IxS08CardSensor2Reached	:=	ET02_Input[4].INPUT.7	;//	卡片工位¶产品到位传感器2
+IxS08CardChcekSensor1	:=	ET02_Input[4].INPUT.8	;//	卡片工位¶有无传感器1
+IxS08CardChcekSensor2	:=	ET02_Input[4].INPUT.9	;//	卡片工位¶有无传感器2
+IxS07CheckSensor1	:=	ET02_Input[4].INPUT.10	;//	NG流道¶入料口检测
+IxS07CheckSensor2	:=	ET02_Input[4].INPUT.11	;//	NG流道¶到位传感器
+IxS07CheckSensor3	:=	ET02_Input[4].INPUT.12	;//	NG流道¶停止传感器
+IxShare65	:=	ET02_Input[4].INPUT.13	;//	备用
+IxBufferCheckSensor1	:=	ET02_Input[4].INPUT.14	;//	深孔板搬运处¶缓冲位检测传感器
+IxShare66	:=	ET02_Input[4].INPUT.15	;//	备用
+IxLineEndSensor1Reached	:=	ET02_Input[5].INPUT.0	;//	主流线尾端¶到位检测传感器1
+IxLineEndSensor2Reached	:=	ET02_Input[5].INPUT.1	;//	主流线尾端¶到位检测传感器2
+IxLineEndCheckSensor1	:=	ET02_Input[5].INPUT.2	;//	主流线尾端¶有无产品传感器1
+IxLineEndCheckSensor2	:=	ET02_Input[5].INPUT.3	;//	主流线尾端¶有无产品传感器2
+IxBeltEntryCardCheckSensor1	:=	ET02_Input[5].INPUT.4	;//	皮带线入口处¶卡片检测传感器1
+IxBeltEntryCardCheckSensor2	:=	ET02_Input[5].INPUT.5	;//	皮带线入口处¶卡片检测传感器2
+IxBeltEntryBoxCheckSensor1	:=	ET02_Input[5].INPUT.6	;//	皮带线入口处¶深孔板检测传感器1
+IxBeltEntryBoxCheckSensor2	:=	ET02_Input[5].INPUT.7	;//	皮带线入口处¶深孔板检测传感器2
+IxShare71	:=	ET02_Input[5].INPUT.8	;//	备用
+IxShare72	:=	ET02_Input[5].INPUT.9	;//	备用
+IxShare73	:=	ET02_Input[5].INPUT.10	;//	备用
+IxShare74	:=	ET02_Input[5].INPUT.11	;//	备用
+IxShare75	:=	ET02_Input[5].INPUT.12	;//	备用
+IxShare76	:=	ET02_Input[5].INPUT.13	;//	备用
+IxShare77	:=	ET02_Input[5].INPUT.14	;//	备用
+IxShare78	:=	ET02_Input[5].INPUT.15	;//	备用
+IxShare79	:=	ET02_Input[6].INPUT.0	;//	备用
+IxShare80	:=	ET02_Input[6].INPUT.1	;//	备用
+IxShare81	:=	ET02_Input[6].INPUT.2	;//	备用
+IxShare82	:=	ET02_Input[6].INPUT.3	;//	备用
+IxShare83	:=	ET02_Input[6].INPUT.4	;//	备用
+IxShare84	:=	ET02_Input[6].INPUT.5	;//	备用
+IxShare85	:=	ET02_Input[6].INPUT.6	;//	备用
+IxShare86	:=	ET02_Input[6].INPUT.7	;//	备用
+IxShare87	:=	ET02_Input[6].INPUT.8	;//	备用
+IxShare88	:=	ET02_Input[6].INPUT.9	;//	备用
+IxShare89	:=	ET02_Input[6].INPUT.10	;//	备用
+IxShare90	:=	ET02_Input[6].INPUT.11	;//	备用
+IxShare91	:=	ET02_Input[6].INPUT.12	;//	备用
+IxShare92	:=	ET02_Input[6].INPUT.13	;//	备用
+IxShare93	:=	ET02_Input[6].INPUT.14	;//	备用
+IxShare94	:=	ET02_Input[6].INPUT.15	;//	备用
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_ET03" Id="{0d06ce0b-2cb9-4284-8a93-f31708914c0f}">
+      <Implementation>
+        <ST><![CDATA[IxShare100	:=	ET03_Input[1].INPUT.0	;//	备用
+IxShare101	:=	ET03_Input[1].INPUT.1	;//	备用
+IxShare102	:=	ET03_Input[1].INPUT.2	;//	备用
+IxShare103	:=	ET03_Input[1].INPUT.3	;//	备用
+IxShare104	:=	ET03_Input[1].INPUT.4	;//	备用
+IxShare105	:=	ET03_Input[1].INPUT.5	;//	备用
+IxShare106	:=	ET03_Input[1].INPUT.6	;//	备用
+IxS01SafetyDoorReady_1	:=	ET03_Input[1].INPUT.7;//	蠕动泵处安全门开关
+IxShare107	:=	ET03_Input[1].INPUT.8	;//	备用
+IxShare108	:=	ET03_Input[1].INPUT.9	;//	备用
+IxShare109	:=	ET03_Input[1].INPUT.10	;//	备用
+IxShare110	:=	ET03_Input[1].INPUT.11	;//	备用
+IxShare111	:=	ET03_Input[1].INPUT.12	;//	备用
+IxShare112	:=	ET03_Input[1].INPUT.13	;//	备用
+IxShare113	:=	ET03_Input[1].INPUT.14	;//	备用
+IxShare114	:=	ET03_Input[1].INPUT.15	;//	备用]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_ET04" Id="{0afd11f6-31eb-4168-acca-c00fb1af02b5}">
+      <Implementation>
+        <ST><![CDATA[IxLabelJobRdySignal	:=	ET04_Input[1].INPUT.0	;//	贴标机JOBRDY信号
+IxLabelReadySignal	:=	ET04_Input[1].INPUT.1	;//	贴标机READY信号
+IxLabelErrorSignal	:=	ET04_Input[1].INPUT.2	;//	贴标机ERROR信号
+IxS11SensorReached	:=	ET04_Input[1].INPUT.3	;//	贴标工位¶检查到位传感器
+IxS12SensorReached	:=	ET04_Input[1].INPUT.4	;//	标签检测工位¶检查到位传感器
+IxS13SensorReached1	:=	ET04_Input[1].INPUT.5	;//	NG皮带线¶检测到料传感器1
+IxS13SensorReached2	:=	ET04_Input[1].INPUT.6	;//	NG皮带线¶检测到料传感器2
+IxS13SensorReached3	:=	ET04_Input[1].INPUT.7	;//	NG皮带线¶检测到料传感器3
+IxS11HOZCylWP	:=	ET04_Input[1].INPUT.8	;//	贴标处推料气缸¶动点
+IxS11HOZCylHP	:=	ET04_Input[1].INPUT.9	;//	贴标处推料气缸¶原点
+IxS12HOZCyl_1WP	:=	ET04_Input[1].INPUT.10	;//	贴标检测工位¶推料气缸1¶动点
+IxS12HOZCyl_1HP	:=	ET04_Input[1].INPUT.11	;//	贴标检测工位¶推料气缸1¶原点
+IxS12HOZCyl_2WP	:=	ET04_Input[1].INPUT.12	;//	贴标检测工位¶推料气缸2¶动点
+IxS12HOZCyl_2HP	:=	ET04_Input[1].INPUT.13	;//	贴标检测工位¶推料气缸2¶原点
+IxS13HOZCyl_1WP	:=	ET04_Input[1].INPUT.14	;//	NG推料气缸1¶动点
+IxS13HOZCyl_1HP	:=	ET04_Input[1].INPUT.15	;//	NG推料气缸1¶原点
+IxS13HOZCyl_2WP	:=	ET04_Input[2].INPUT.0	;//	NG推料气缸2¶动点
+IxS13HOZCyl_2HP	:=	ET04_Input[2].INPUT.1	;//	NG推料气缸2¶原点
+IxShare150	:=	ET04_Input[2].INPUT.2	;//	备用
+IxShare151	:=	ET04_Input[2].INPUT.3	;//	备用
+IxShare152	:=	ET04_Input[2].INPUT.4	;//	备用
+IxShare153	:=	ET04_Input[2].INPUT.5	;//	备用
+IxShare154	:=	ET04_Input[2].INPUT.6	;//	备用
+IxShare155	:=	ET04_Input[2].INPUT.7	;//	备用
+IxShare156	:=	ET04_Input[2].INPUT.8	;//	备用
+IxShare157	:=	ET04_Input[2].INPUT.9	;//	备用
+IxShare158	:=	ET04_Input[2].INPUT.10	;//	备用
+IxShare159	:=	ET04_Input[2].INPUT.11	;//	备用
+IxShare160	:=	ET04_Input[2].INPUT.12	;//	备用
+IxShare161	:=	ET04_Input[2].INPUT.13	;//	备用
+IxShare162	:=	ET04_Input[2].INPUT.14	;//	备用
+IxShare163	:=	ET04_Input[2].INPUT.15	;//	备用
+]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="InputLink">
+      <LineId Id="5" Count="0" />
+      <LineId Id="121" Count="1" />
+      <LineId Id="124" Count="0" />
+    </LineIds>
+    <LineIds Name="InputLink.ACT_ET01">
+      <LineId Id="194" Count="95" />
+      <LineId Id="385" Count="0" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="InputLink.ACT_ET02">
+      <LineId Id="690" Count="95" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="InputLink.ACT_ET03">
+      <LineId Id="2" Count="15" />
+    </LineIds>
+    <LineIds Name="InputLink.ACT_ET04">
+      <LineId Id="2" Count="31" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

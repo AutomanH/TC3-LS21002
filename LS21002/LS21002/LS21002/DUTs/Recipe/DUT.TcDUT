@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT" Id="{3f720a52-3456-4c16-af96-3e9ea2280f6c}">
+    <Declaration><![CDATA[TYPE DUT :
+STRUCT		
+	Length  :INT;
+	Width   :REAL;
+	Choose  :BOOL;
+
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

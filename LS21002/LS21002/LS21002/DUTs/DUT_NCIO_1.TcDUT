@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_NCIO_1" Id="{fdb1cd35-22a2-4c56-a47d-27b63ff5a465}">
+    <Declaration><![CDATA[TYPE DUT_NCIO_1 :
+STRUCT
+	nDataIn1:DINT;
+ (*	nDataIn2:INT;
+	nState1:UINT;
+	nState2:UINT;
+	nState3:UINT;
+	nState4:UINT;
+	nDataIn3:INT;
+	nDataIn4:INT;
+	nDataIn5:INT;
+	nDataIn6:INT;
+	nState5:SINT;
+	nState6:SINT;
+	nState7:SINT;
+	nState8:SINT;
+	nDcInputTime:INT;*)
+	nData1   :ARRAY[1..32] OF BYTE;
+	
+	nDataIn2:DINT;
+	nData2   :ARRAY[1..72] OF BYTE;
+	
+	
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

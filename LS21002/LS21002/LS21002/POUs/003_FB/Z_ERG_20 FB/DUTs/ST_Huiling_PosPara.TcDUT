@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_Huiling_PosPara" Id="{142f7bc7-8654-47b6-ae6a-c7e7e0c2f82a}">
+    <Declaration><![CDATA[TYPE ST_Huiling_PosPara :
+STRUCT
+	rTorqueSet   : REAL;//目标力值设置  ( 0.2 - 0.5A )
+	rSpeedSet    : REAL;//运行速度设置  (1-200mm)	
+	rPosAngleSet : REAL;//位置和速度设置值	 ( 0-30mm)
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

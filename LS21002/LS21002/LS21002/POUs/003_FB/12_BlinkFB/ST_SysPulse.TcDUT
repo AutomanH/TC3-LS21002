@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_SysPulse" Id="{8308b0dd-60be-423e-a355-ff7ada29ec92}">
+    <Declaration><![CDATA[TYPE ST_SysPulse :
+STRUCT
+	xP10ms						: BOOL;					//10ms脉冲
+	xP20ms						: BOOL;					//20ms脉冲
+	xP50ms						: BOOL;					//50ms脉冲
+	xP100ms						: BOOL;					//100ms脉冲
+	xP200ms						: BOOL;					//200ms脉冲
+	xP500ms						: BOOL;					//500ms脉冲
+	xP1s						  : BOOL;					//1s脉冲
+	xP2s						  : BOOL;					//2s脉冲
+	xP5s						  : BOOL;					//5s脉冲
+	xP10s						  : BOOL;					//10s脉冲
+	
+	xR10ms						: BOOL;					//10ms脉冲上升沿
+	xR20ms						: BOOL;					//20ms脉冲上升沿
+	xR50ms						: BOOL;					//50ms脉冲上升沿
+	xR100ms						: BOOL;					//100ms脉冲上升沿
+	xR200ms						: BOOL;					//200ms脉冲上升沿
+	xR500ms						: BOOL;					//500ms脉冲上升沿
+	xR1s						: BOOL;					//1s脉冲上升沿
+	xR2s						: BOOL;					//2s脉冲上升沿
+	xR5s						: BOOL;					//5s脉冲上升沿
+	xR10s						: BOOL;					//10s脉冲上升沿
+	
+	xF10ms						: BOOL;					//10ms脉冲下降沿
+	xF20ms						: BOOL;					//20ms脉冲下降沿
+	xF50ms						: BOOL;					//50ms脉冲下降沿
+	xF100ms						: BOOL;					//100ms脉冲下降沿
+	xF200ms						: BOOL;					//200ms脉冲下降沿
+	xF500ms						: BOOL;					//500ms脉冲下降沿
+	xF1s						: BOOL;					//1s脉冲下降沿
+	xF2s						: BOOL;					//2s脉冲下降沿
+	xF5s						: BOOL;					//5s脉冲下降沿
+	xF10s						: BOOL;					//10s脉冲下降沿
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

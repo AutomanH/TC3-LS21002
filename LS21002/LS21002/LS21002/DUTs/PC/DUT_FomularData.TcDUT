@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_FomularData" Id="{6414e849-5053-419b-8ed4-51778783f82e}">
+    <Declaration><![CDATA[TYPE DUT_FomularData :
+STRUCT
+	iRotatePosSet:INT;//电动夹爪旋转位置设定
+	iRotateSpeSet:INT;//电动夹爪旋转位置旋转速度设定
+	iRotateTorSet:INT;//电动夹爪旋转扭力设定
+    iClampWPSet:INT;//电动夹爪工作位设定
+    iClampMarginSet:INT;//电动夹爪气缸裕量设定
+	iCurrentProductModel:INT := 1 ;//当前产品型号
+	
+	iLiquidInVolumeSet:INT;//加液量
+	iLiquidOutVolumeSet:INT;//抽液量
+	iLabelStepMotPosSet:INT;//标签机旋转轴旋转角度设定
+	iCameraStepMotPosSet:INT;//相机旋转轴旋转角度设定
+	
+	Rev2:ARRAY[1..10]OF INT;
+	
+
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

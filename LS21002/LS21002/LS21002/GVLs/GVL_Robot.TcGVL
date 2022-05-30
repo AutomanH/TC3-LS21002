@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <GVL Name="GVL_Robot" Id="{567953b5-67db-4a2c-bd18-7d05a2720581}">
+    <Declaration><![CDATA[VAR_GLOBAL 
+	stToRobot1	: DUT_SysToRobot1; //
+	stFromRobot1  : DUT_SysFromRobot1; //
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

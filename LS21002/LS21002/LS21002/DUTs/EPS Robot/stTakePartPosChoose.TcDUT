@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="stTakePartPosChoose" Id="{0cd08ff2-a05d-4f8d-9547-c91a6ffda2d0}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE stTakePartPosChoose :
+(
+	enum_member := 0,
+	CardPositon_1 := 1,
+	CardPostion_2 := 2,
+	BufferPostion :=3
+)WORD;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

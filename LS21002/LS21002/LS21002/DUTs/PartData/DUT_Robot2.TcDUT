@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_Robot2" Id="{e4fca855-80db-48cc-9ba6-4b45ea2879c9}">
+    <Declaration><![CDATA[TYPE DUT_Robot2 :
+STRUCT
+		xMaterialOnOff : BOOL ;
+        stProduct :ARRAY[1..5] OF DUT_PartStatus ;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

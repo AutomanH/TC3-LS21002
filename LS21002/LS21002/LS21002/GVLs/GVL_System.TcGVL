@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <GVL Name="GVL_System" Id="{8b6bd58e-f677-4eed-8e33-f00d04db2bbd}">
+    <Declaration><![CDATA[
+VAR_GLOBAL CONSTANT
+	bOn							: BOOL:=TRUE;			//常On
+	bOff						: BOOL:=FALSE;			//常Off
+	rPai						: LREAL:=3.14159265358979323846264338327950238;
+END_VAR
+
+VAR_GLOBAL
+	stSysPulse         : ST_SysPulse ;
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

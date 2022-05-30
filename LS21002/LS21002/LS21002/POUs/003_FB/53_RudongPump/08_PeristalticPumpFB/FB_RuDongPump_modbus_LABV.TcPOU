@@ -1,0 +1,2583 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_RuDongPump_modbus_LABV" Id="{14aad237-14ca-4be3-9493-3ce42d2b48d9}" SpecialFunc="None">
+    <Declaration><![CDATA[//{attribute 'tc_no_symbol'}
+FUNCTION_BLOCK FB_RuDongPump_modbus_LABV
+VAR_INPUT
+	xExecute: BOOL;
+	xAbort: BOOL;
+	xResetRequest: BOOL;//匹配复位按钮 
+	xRunILC				:BOOL;//蠕动泵运行条件
+	dwTimeLimit: DWORD:=1;//[ms],1 => no invocation time limit
+	dwTimeOut: DWORD;//[ms],0 => no executing time limit
+	stPara       : RudongPump_Sys_Para;				
+	xNeedConfigurePara		: BOOL := TRUE;//是否需要配置参数(默认是需要进行参数配置的)	
+	stRunPara	:RudongPump_RunData;//运行参数	
+	xAutoMode    : BOOL;//0:mannal 1:auto
+	xIniting     : BOOL;//初始化过程中
+	xDeviceRunning : BOOL;//工站单循环中
+	rSpeedRatio  : REAL:=2.733;//根据泵头软管型号不同有变化
+	sHmiError : STRING;
+	xEStop : BOOL;
+	stDeviceOpe	: RudongPump_Ope;//操作按钮
+END_VAR
+VAR_OUTPUT
+	xDone: BOOL;(*完成条件满足*)
+	xBusy: BOOL;(*动作正在执行*)
+	xAborted: BOOL;(*指令被打断*)
+	xRunning	:BOOL;//蠕动泵运行中
+	eMobbusErrorID:UDINT;//modubs 报警信息
+	xRudongPump_ERROR: BOOL;(*错误条件满足*)
+	eERRORID: RudongPump_ERROR;(*错误码*)
+	xRdyCmd : BOOL;
+END_VAR
+VAR_IN_OUT
+		
+END_VAR
+VAR
+{attribute 'tc_no_symbol'}
+	eState: STATE;
+{attribute 'tc_no_symbol'}
+	_xDone: BOOL;
+{attribute 'tc_no_symbol'}
+	eCmd : RudongPump_CMD;//指令控制	
+{attribute 'tc_no_symbol'}
+	xFirstInvocation: BOOL := TRUE;	
+{attribute 'tc_no_symbol'} 
+	xTimeOut: BOOL;
+{attribute 'tc_no_symbol'}
+	xTimeLimit: BOOL;
+{attribute 'tc_no_symbol'}
+	tInvocationTimer , tOperationTimer : TON;
+{attribute 'tc_no_symbol'}
+	rFluVolumeSet   : REAL;//液量设定 0.0-99999.0 mL(0.1ml)
+{attribute 'tc_no_symbol'}
+	rRuntimeSet     : REAL;//运行时间设定 0.1-9999s(0.1s)
+{attribute 'tc_no_symbol'}
+	iCycleNumber		: INT;//重复次数
+{attribute 'tc_no_symbol'}
+	iModuleAdress		: INT;//灌装单元地址
+{attribute 'tc_no_symbol'}
+	iModuleSpeed		: REAL;//灌装单元速度
+{attribute 'tc_no_symbol'}
+	iModuleRealVolume	: REAL;//灌装实际液量	
+{attribute 'tc_no_symbol'}
+	_cmdStop  : BOOL;  
+{attribute 'tc_no_symbol'}
+	_tonTimeout , _tonCmdTimeout : TON;	
+{attribute 'tc_no_symbol'}
+  /// command execution
+  _CmdExe : BOOL;
+{attribute 'tc_no_symbol'}
+  /// detect rising edge of command execution
+  _rTrigCmdExe : R_TRIG;
+{attribute 'tc_no_symbol'}	
+  _rTrigCmdOrg   : R_TRIG;	
+{attribute 'tc_no_symbol'}
+	_diCmdState 	: DINT; 
+{attribute 'tc_no_symbol'} 
+  /// detect FltQuit rising edge
+  _rTrigFltReset      : R_TRIG; 
+{attribute 'tc_no_symbol'} 
+  _tonDelay : TON; 
+{attribute 'tc_no_symbol'}	
+	_iConnectState : INT := 0;
+{attribute 'tc_no_symbol'}	
+	_connectTon : TON;
+{attribute 'tc_no_symbol'}		
+	_xConnectError : BOOL;
+{attribute 'tc_no_symbol'}		
+	_fResetCheck : F_TRIG;
+{attribute 'tc_no_symbol'}		
+	_rManual : R_TRIG;
+{attribute 'tc_no_symbol'}		
+	_fManual : F_TRIG;
+{attribute 'tc_no_symbol'}		
+	_xModeChange : BOOL;
+{attribute 'tc_no_symbol'}		
+	i : INT;
+{attribute 'tc_no_symbol'}		
+	_tonPulse : TON;//状态读取计时定时器
+{attribute 'tc_no_symbol'}		
+  _xCheckModbusRun : BOOL;//检测modbus是否处理总
+{attribute 'tc_no_symbol'}	  
+	_xConfigureParaOK : BOOL;//需要匹配参数是OK的
+{attribute 'tc_no_symbol'}		
+	_rStopCmdTrig : R_TRIG;
+{attribute 'tc_no_symbol'}		
+	_iActRunNumber : INT ;//当前运行的次数
+{attribute 'tc_no_symbol'}		
+	_wFluVolumeSetTemp : WORD;
+{attribute 'tc_no_symbol'}		
+	_wRuntimeSetTemp : WORD;
+{attribute 'tc_no_symbol'}		
+	_wSpeedSetTemp : WORD;	
+{attribute 'tc_no_symbol'}	
+ _tonDelay1:TON;
+{attribute 'tc_no_symbol'}		
+	_rSetSpeed : REAL;
+{attribute 'tc_no_symbol'}		
+	_wModuleSpeedSetTemp:WORD;
+{attribute 'tc_no_symbol'}		
+	_wModuleRealVolumeTemp:WORD;
+{attribute 'tc_no_symbol'}		
+	_rHMIControl : R_TRIG;
+{attribute 'tc_no_symbol'}
+	_iComNGCount:INT;
+{attribute 'tc_no_symbol'}		
+	dwTest1 : DWORD ;
+{attribute 'tc_no_symbol'}		
+	_iNGCount : INT;//NG 计数
+{attribute 'tc_no_symbol'}		
+	_rOperaTrig	:ARRAY [1..15] OF R_TRIG;
+{attribute 'tc_no_symbol'}		
+	k : INT;
+{attribute 'tc_no_symbol'}		
+	_bChannelNum , _bDiagData : BYTE;
+{attribute 'tc_no_symbol'}		
+	xAutomodeFlag	:BOOL;
+{attribute 'tc_no_symbol'}		
+	diStepOld:DINT;
+{attribute 'tc_no_symbol'}			
+	st_IOData : RudongPump_IOData;
+{attribute 'tc_no_symbol'}		
+	iPumpType	:INT;
+{attribute 'tc_no_symbol'}	
+	_xHMIOpe :BOOL;//是否有手动操作，是否有自动操作	
+{attribute 'tc_no_symbol'}	
+	 _xAutoOpe : BOOL;//是否有手动操作，是否有自动操作	
+{attribute 'tc_no_symbol'}	
+	_rInit	:R_TRIG;
+{attribute 'tc_no_symbol'}		
+	_first:BOOL;
+{attribute 'tc_no_symbol'}				
+	_aWrite_VAR: FB_MBWriteRegs; 
+{attribute 'tc_no_symbol'}
+//1:泵头型号；2:软管型号；3:启停控制	4:方向控制  5:全速运行  6:设定液量  7:时间设定  8:运行模式  9:重复次数		
+//10:灌装单元地址  11:灌装单元速度  12:灌装单元启停  13:实际灌装量  14:灌装液量微调  15:恢复校准系数 			
+  _aExecute : ARRAY[1..15] OF BOOL;    
+{attribute 'tc_no_symbol'}	
+  _aQuantity : ARRAY[1..15] OF WORD:=[1,1,1,1,1,2,2,1,1,1,2,1,2,1,1];  //寄存器个数   
+{attribute 'tc_no_symbol'}	
+  _aMBAddr : ARRAY[1..15] OF WORD:=[1000,1001,1008,1009,1010,1015,1018,1020,1023,2000,2001,2003,2004,2006,2007];  //起始地址   
+{attribute 'tc_no_symbol'}		
+  _aAddr : ARRAY[1..15,1..2] OF  INT;  //存放区域  
+{attribute 'tc_no_symbol'}		
+	_iChannelIndex:INT;
+{attribute 'tc_no_symbol'}	
+	_rxState:INT;
+{attribute 'tc_no_symbol'}			
+	_xBusy:BOOL;
+END_VAR
+VAR_TEMP
+{attribute 'tc_no_symbol'}	
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[xAgain:=0;
+ConnectAction();//触发通信连接功能连接
+ACTMap();//IO Map
+IF NOT _first THEN
+	_first:=TRUE;
+ELSE
+
+//只有在运行的时候，才会检测是否有模式切换发生
+IF eState <> STATE.DORMANT
+THEN	
+	IF _rManual.Q OR _fManual.Q
+	THEN
+		_xModeChange := TRUE;//通知系统有模式切换发生
+	END_IF
+ELSE
+	_xModeChange := FALSE;//待机状态不触发模式切换
+END_IF
+
+//检测是否是初始化中，如果是的去切换模式
+_rInit(CLK:= xIniting);
+IF _rInit.Q
+THEN
+	eState := STATE.RESETING;
+END_IF	
+
+REPEAT
+	CASE eState OF
+		STATE.DORMANT:
+				HandleDormantState(xAgain=> xAgain);
+		STATE.EXECUTING:
+				HandleExecutingState(xAgain=> xAgain);
+		STATE.DONE:
+				HandleDoneState(xAgain=> xAgain);
+		STATE.INERROR:
+				HandleErrorState(xAgain=> xAgain);
+		STATE.ABORTING:
+				HandleAbortingState(xAgain=> xAgain);
+		STATE.ABORTED:
+				HandleAbortedState(xAgain=> xAgain);
+		STATE.RESETING:
+				HandleResettingState(xAgain=> xAgain);
+	END_CASE
+UNTIL (xAgain=0)
+END_REPEAT
+END_IF
+
+
+//判断是否处于当前流程的Done状态
+xDone := _xDone AND xExecute;
+//输出报错信息
+CASE eERRORID OF 	
+  RudongPump_ERROR.No_ERROR:
+		sHmiError:='No_ERROR';	
+  RudongPump_ERROR.FLT_PARA:
+		sHmiError:='FLT_PARA';
+  RudongPump_ERROR.FLT_CONNECT:
+		sHmiError:='FLT_CONNECT';
+  RudongPump_ERROR.FLT_RDYCMD:
+		sHmiError:='FLT_RDYCMD';
+	RudongPump_ERROR.FLT_CONFIGURE_PARA:
+		sHmiError:='FLT_CONFIGURE_PARA';
+	RudongPump_ERROR.FLT_FLUVOLUM_TIME_PARA:
+		sHmiError:='FLT_FLUVOLUM_TIME_PARA';  
+  RudongPump_ERROR.FLT_PUSH_TIMEOUT:
+		sHmiError:='FLT_PUSH_TIMEOUT';
+  RudongPump_ERROR.FLT_PULL_TIMEOUT:
+		sHmiError:='FLT_PULL_TIMEOUT';
+  RudongPump_ERROR.FLT_STOP_TIMEOUT:
+		sHmiError:='FLT_STOP_TIMEOUT'; 
+	RudongPump_ERROR.FLT_FULLSPEEDSTOP_TIMEOUT:
+		sHmiError:='FLT_FULLSPEEDSTOP_TIMEOUT';
+	RudongPump_ERROR.FLT_FULLSPEEDSTART_TIMEOUT:
+		sHmiError:='FLT_FULLSPEEDSTART_TIMEOUT'; 
+	RudongPump_ERROR.FLT_CMD_TIMEOUT:
+		sHmiError:='FLT_CMD_TIMEOUT';
+	RudongPump_ERROR.FLT_RUN_FALL:
+		sHmiError:='FLT_RUN_FALL';
+END_CASE
+//手动自动操作检测
+_xHMIOpe :=
+			stDeviceOpe.xConfigure_Hmi OR 
+			stDeviceOpe.xFullSpeedPull_Hmi OR 
+			stDeviceOpe.xFullSpeedPush_Hmi OR 
+			stDeviceOpe.xPull_Hmi[1] OR 
+			stDeviceOpe.xPull_Hmi[2] OR 
+			stDeviceOpe.xPull_Hmi[3] OR 
+			stDeviceOpe.xPull_Hmi[4] OR 
+			stDeviceOpe.xPull_Hmi[5] OR 			
+			stDeviceOpe.xPumpCal_Hmi OR 
+			stDeviceOpe.xPush_Hmi[1] OR 
+			stDeviceOpe.xPush_Hmi[2] OR 
+			stDeviceOpe.xPush_Hmi[3] OR 			
+			stDeviceOpe.xPush_Hmi[4] OR 			
+			stDeviceOpe.xPush_Hmi[5] OR 						
+			stDeviceOpe.xResetCalcoeffCal_Hmi OR 
+			stDeviceOpe.xStop_Hmi;
+_xAutoOpe:=	
+			stDeviceOpe.xConfigure_Auto OR 
+            stDeviceOpe.xFullSpeedPull_Auto OR 
+            stDeviceOpe.xFullSpeedPush_Auto OR 
+            stDeviceOpe.xPull_Auto[1] OR 
+            stDeviceOpe.xPull_Auto[2] OR 			
+            stDeviceOpe.xPull_Auto[3] OR 			
+            stDeviceOpe.xPull_Auto[4] OR 			
+            stDeviceOpe.xPull_Auto[5] OR 			
+            stDeviceOpe.xPumpCal_Auto OR 
+            stDeviceOpe.xPush_Auto[1] OR 
+            stDeviceOpe.xPush_Auto[2] OR 			
+            stDeviceOpe.xPush_Auto[3] OR 			
+            stDeviceOpe.xPush_Auto[4] OR 			
+            stDeviceOpe.xPush_Auto[5] OR 						
+            stDeviceOpe.xStop_Auto;]]></ST>
+    </Implementation>
+    <Folder Name="Control" Id="{15ba9826-1bd0-4ee1-b4e1-aa52f71e7593}" />
+    <Method Name="AbortAction" Id="{d51b287b-2bd6-4986-bc97-37828abfc97b}">
+      <Declaration><![CDATA[METHOD PROTECTED AbortAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+  eERRORID: RudongPump_ERROR;
+END_VAR
+
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+* Cleaning
+* => abort all running operation
+* => if an NBS.RudongPump_ERROR codition is reached, set eERRORID to a Value rather then NBS.RudongPump_ERROR.No_ERROR 
+*)
+xComplete:=1;
+eERRORID:=RudongPump_ERROR.No_ERROR;]]></ST>
+      </Implementation>
+    </Method>
+    <Action Name="ACTMap" Id="{4989f92c-1a78-4573-b220-a2503cdcf518}" FolderPath="Control\">
+      <Implementation>
+        <ST><![CDATA[
+//1,泵头类型
+	_aAddr[1,1]:= st_IOData.O_PumpType;
+//2,软管类型	
+	_aAddr[2,1] := st_IOData.O_HosePipeType;
+//3,启停控制	
+	_aAddr[3,1] := st_IOData.O_ControlSet;
+//4,方向控制	
+	_aAddr[4,1] := st_IOData.O_DirectionSet;
+//5,全速控制	
+	_aAddr[5,1] := st_IOData.O_FullSpeedControl;	
+//6,液量设定	
+	SysMemCpy(ADR(_aAddr[6,1]),ADR(st_IOData.O_FluVolumeSet),4);	
+	_wFluVolumeSetTemp := TO_WORD(_aAddr[6,1]);
+	_aAddr[6,1] := _aAddr[6,2];
+	_aAddr[6,2] := TO_INT(_wFluVolumeSetTemp);
+//7,运行时间设定	
+	SysMemCpy(ADR(_aAddr[7,1]),ADR(st_IOData.O_RuntimeSet),4);
+	_wRuntimeSetTemp := TO_WORD(_aAddr[7,1]);
+	_aAddr[7,1] := _aAddr[7,2];
+	_aAddr[7,2] := TO_INT(_wRuntimeSetTemp);	
+//8,运行模式	
+	_aAddr[8,1] := st_IOData.O_RunModeSet;
+//9,重复次数	
+	_aAddr[9,1] := st_IOData.O_CycleNumber;
+//10,灌装单元地址
+	_aAddr[10,1] := st_IOData.O_ModuleAddress;	
+//11,灌装单元速度
+	SysMemCpy(ADR(_aAddr[11,1]),ADR(st_IOData.O_ModuleSpeed),4);
+	_wModuleSpeedSetTemp := TO_WORD(_aAddr[11,1]);
+	_aAddr[11,1] := _aAddr[11,2];
+	_aAddr[11,2] := TO_INT(_wModuleSpeedSetTemp);
+//12,灌装单元启停
+	_aAddr[12,1] := st_IOData.O_ModuleStart;	
+//13,实际灌装液量
+	SysMemCpy(ADR(_aAddr[13,1]),ADR(st_IOData.O_ModuleRealVolume),4);
+	_wModuleRealVolumeTemp := TO_WORD(_aAddr[13,1]);
+	_aAddr[13,1] := _aAddr[13,2];
+	_aAddr[13,2] := TO_INT(_wModuleRealVolumeTemp);
+//14,灌装液量微调
+	_aAddr[14,1] := st_IOData.O_ModuleMicroReg;	
+//15,恢复校准系数
+	_aAddr[15,1] := st_IOData.O_ResetCalcoeff;		
+
+xRunning:=stPara.xPumpRunSignal;//运行信号
+iPumpType:=RudongPump_PumpType.LabV;//蠕动泵类型
+
+_fResetCheck(CLK:=xResetRequest);
+xRdyCmd := eState = STATE.DORMANT AND eERRORID = RudongPump_ERROR.No_ERROR;//检测是否允许指令控制(初始状态，没有报警发生)
+(**********************************检测是否有模式切换********************************)
+_rManual(CLK:=xAutoMode);
+_fManual(CLK:=xAutoMode);
+IF eState <> STATE.DORMANT//只有在运行的时候，才会检测是否有模式切换发生
+THEN
+	IF _rManual.Q OR _fManual.Q
+	THEN
+		_xModeChange := TRUE;//通知系统有模式切换发生
+	END_IF	
+END_IF
+IF eState = STATE.DORMANT//要是待机模式下，切换模式，是不会起作用的
+THEN
+	_xModeChange := FALSE;
+END_IF
+(*************************检测配置参数是否匹配成功*********************************)
+IF ( ( stRunPara.iPumpTypeSet = 0 OR stRunPara.iPumpTypeSet = 2 ) AND ( ( stRunPara.iHosePipeTypeSet >=13 AND stRunPara.iHosePipeTypeSet <=14 ) OR  
+	 ( stRunPara.iHosePipeTypeSet >= 16 AND stRunPara.iHosePipeTypeSet <= 19 ) OR  stRunPara.iHosePipeTypeSet = 25 )) OR 
+	 ( ( stRunPara.iPumpTypeSet = 1 OR stRunPara.iPumpTypeSet =3 ) AND ( stRunPara.iHosePipeTypeSet = 15 OR stRunPara.iHosePipeTypeSet = 24 ) ) OR 
+	 ( ( stRunPara.iPumpTypeSet = 4 OR stRunPara.iPumpTypeSet = 5 ) AND (stRunPara.iHosePipeTypeSet >= 101 AND stRunPara.iHosePipeTypeSet <= 105 )) OR 
+	 ( stRunPara.iPumpTypeSet = 6 AND (stRunPara.iHosePipeTypeSet = 15 OR stRunPara.iHosePipeTypeSet = 24 OR stRunPara.iHosePipeTypeSet = 35 OR stRunPara.iHosePipeTypeSet = 36)) OR 
+	 ( stRunPara.iPumpTypeSet = 7 AND ( stRunPara.iHosePipeTypeSet = 14 OR stRunPara.iHosePipeTypeSet = 16 )) OR 
+	 ( stRunPara.iPumpTypeSet = 8 AND stRunPara.iHosePipeTypeSet = 24 ) OR
+   ( stRunPara.iPumpTypeSet = 17 AND (stRunPara.iHosePipeTypeSet = 15 OR stRunPara.iHosePipeTypeSet = 24 OR stRunPara.iHosePipeTypeSet = 35 OR stRunPara.iHosePipeTypeSet = 36) )	 
+THEN
+  _xConfigureParaOK := TRUE;
+ELSE
+	_xConfigureParaOK := FALSE;
+END_IF
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Method Name="CmdCalReset" Id="{8c45ea04-985d-48f1-aced-90c305196b7b}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED CmdCalReset
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> RudongPump_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+		
+		
+	0://发送灌装系数复位指令
+		_tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的是最新的一次
+		st_IOData.O_ResetCalcoeff := 1	;	
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[15] := TRUE;//	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
+		
+	1://等待灌装启动被响应
+		_tonCmdTimeout(IN:= _aExecute[15],pt:=T#2S);
+		IF NOT _aExecute[15]//
+		THEN		
+			_tonDelay(IN:=TRUE,PT:= T#50MS);
+			IF _tonDelay.Q
+			THEN
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE); 
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF	
+		END_IF	
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF	
+
+	2://
+		xComplete := TRUE; 
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdPumpCal" Id="{6072fc47-c955-44b1-b979-f8f7adc91077}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED CmdPumpCal
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> RudongPump_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+	0://检查参数	  	
+		IF xNeedConfigurePara
+		THEN
+			_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
+			st_IOData.O_RunModeSet := 2	;//打开定时定量模式
+			IF _tonDelay.Q
+			THEN	
+				_aExecute[8] := TRUE;//启动夹紧控制数据发送	
+				//复位定时器
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(in:=FALSE);
+				_tonTimeout(in:=FALSE);
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF
+		ELSE//直接启动就好
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := 8;//切换状态
+		END_IF	
+		//检测流量转速是否在0.1rpm - 600rpm
+		IF 	rRuntimeSet = 0 
+		THEN 
+			eERRORID := RudongPump_ERROR.FLT_FLUVOLUM_TIME_PARA;		
+			_diCmdState := 999;
+		ELSE
+			_rSetSpeed := rFluVolumeSet * 60.0 / rSpeedRatio / rRuntimeSet;
+			IF _rSetSpeed >= 0.1 AND _rSetSpeed <= 600
+			THEN
+				;
+			ELSE
+				eERRORID := RudongPump_ERROR.FLT_FLUVOLUM_TIME_PARA;		
+				_diCmdState := 999;
+			END_IF
+		END_IF				
+		
+	1://等待定时定量模式被响应
+		_tonCmdTimeout(IN:= _aExecute[8],pt:=T#2S);
+		IF NOT _aExecute[8]//
+		THEN		
+			_tonDelay(IN:=TRUE,PT:= T#50MS);
+			IF _tonDelay.Q
+			THEN			
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE);    
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF	
+		END_IF	
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF
+
+
+//发送虚假定量时间		
+	2://定量时间设定		
+		_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
+		st_IOData.O_RuntimeSet := 200.0	;	//保证电机转速不会超
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[7] := TRUE;//启动夹紧控制数据发送	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
+	3://等待定量时间设定被响应
+		_tonCmdTimeout(IN:= _aExecute[7],pt:=T#2S);
+		IF NOT _aExecute[7]//
+		THEN		
+			_tonDelay(IN:=TRUE,PT:= T#50MS);
+			IF _tonDelay.Q
+			THEN			
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE);    
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF	
+		END_IF	
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF		
+		
+		
+//传递液量参数		
+	4://		
+		_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
+		st_IOData.O_FluVolumeSet := rFluVolumeSet	;	
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[6] := TRUE;//启动夹紧控制数据发送	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF	  
+	5://等待流量设定结束
+		_tonCmdTimeout(IN:= _aExecute[6],pt:=T#2S);
+		IF NOT _aExecute[6]//
+		THEN		
+			_tonDelay(IN:=TRUE,PT:= T#50MS);
+			IF _tonDelay.Q
+			THEN			
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE);    
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF	
+		END_IF	
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF
+
+//传递实际定量时间		
+	6://定量时间设定		
+		_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
+		st_IOData.O_RuntimeSet := rRuntimeSet	;	
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[7] := TRUE;//启动夹紧控制数据发送	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
+		
+	7://等待定量时间设定被响应
+		_tonCmdTimeout(IN:= _aExecute[7],pt:=T#2S);
+		IF NOT _aExecute[7]//
+		THEN		
+			_tonDelay(IN:=TRUE,PT:= T#50MS);
+			IF _tonDelay.Q
+			THEN			
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE);    
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF	
+		END_IF	
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF	
+		
+	8://方向设定		
+		_tonDelay(IN:= ( eCmd = RudongPump_CMD.Cmd_CalPump ) ,pt:=T#20MS);//保证执行的是最新的一次
+		st_IOData.O_DirectionSet := 1	;			
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[4] := TRUE;//启动夹紧控制数据发送	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
+		
+	9://等待方向设定被响应
+		_tonCmdTimeout(IN:= _aExecute[4],pt:=T#2S);
+		IF NOT _aExecute[4]//
+		THEN		
+			_diCmdState := _diCmdState +1; 
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+		END_IF	
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF	
+		
+	10://重复次数设定		
+		_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
+		st_IOData.O_CycleNumber := iCycleNumber	;	
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[9] := TRUE;//启动夹紧控制数据发送	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
+		
+	11://等待重复次数设定被响应
+		_tonCmdTimeout(IN:= _aExecute[9],pt:=T#2S);
+		IF NOT _aExecute[9]//
+		THEN		
+			_tonDelay(IN:=TRUE,PT:= T#50MS);
+			IF _tonDelay.Q
+			THEN
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE); 
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF	
+		END_IF	
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF		
+		
+	12://单元地址设定
+		_tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的是最新的一次
+		st_IOData.O_ModuleAddress := iModuleAdress	;
+		//st_IOData.O_ModuleSpeed := iModuleSpeed	;	
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[10] := TRUE;//	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
+		
+	13://等待单元地址设定被响应
+	IF iPumpType=RudongPump_PumpType.DFPluse THEN	
+		_tonCmdTimeout(IN:= _aExecute[10],pt:=T#2S);
+		IF NOT _aExecute[10]//
+		THEN		
+			_tonDelay(IN:=TRUE,PT:= T#50MS);
+			IF _tonDelay.Q
+			THEN
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE); 
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF	
+		END_IF	
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF
+	ELSE
+		_diCmdState := 15;	
+	END_IF	
+		
+	14://单元速度设定
+	IF st_IOData.O_RunModeSet =1	THEN//如果是定量模式，需要设置速度
+		_tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的是最新的一次
+		st_IOData.O_ModuleSpeed := iModuleSpeed	;	
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[11] := TRUE;//	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
+	ELSE
+		_diCmdState :=16;//如果是定时定量模式，则不需要设置速度
+	END_IF	
+	
+	15://等待单元速度设定被响应
+		_iNGCount :=0;
+		_tonCmdTimeout(IN:= _aExecute[11],pt:=T#2S);
+		IF NOT _aExecute[11]//
+		THEN		
+			_tonDelay(IN:=TRUE,PT:= T#50MS);
+			IF _tonDelay.Q
+			THEN
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE); 
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF	
+		END_IF	
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF		
+		
+	16://复位	
+		st_IOData.O_ModuleStart := 0	;
+		_aExecute[12] := FALSE;//		
+		_diCmdState := _diCmdState+1;//切换状态
+		
+	17://灌装启动
+		_tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的是最新的一次
+		st_IOData.O_ModuleStart := 1	;	
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[12] := TRUE;//	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
+		
+	18://等待灌装启动被响应
+		_tonTimeout(in:=TRUE,pt:=T#30MS); 		
+		_tonCmdTimeout(IN:= _aExecute[12],pt:=T#2S);
+		IF stPara.xPumpRunSignal//一定要检测到泵运行
+		THEN		
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_diCmdState := _diCmdState +1; 
+			_tonTimeout(in:=FALSE);	
+		END_IF			
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF
+	IF _tonCmdTimeout.Q THEN
+		_iNGCount := _iNGCount + 1;		
+		IF _iNGCount <= 3
+		THEN
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(IN:=FALSE);
+			_tonTimeout(IN:=FALSE);
+			_diCmdState := 15;//重新触发启动
+		ELSE
+			eERRORID := RudongPump_ERROR.FLT_PumpCal_TIMEOUT;					
+			_diCmdState := 999;
+		END_IF
+	 END_IF		
+		
+	19://等待接液完成
+		IF NOT stPara.xPumpRunSignal AND (stDeviceOpe.xPumpCal_Hmi OR stDeviceOpe.xPumpCal_Auto) AND NOT _xCheckModbusRun THEN
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
+		
+	20://单元实际液量设定
+		_tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的是最新的一次
+		st_IOData.O_ModuleRealVolume := iModuleRealVolume	;	
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[13] := TRUE;//	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
+		
+	21://等待单元实际液量设定被响应
+		_tonCmdTimeout(IN:= _aExecute[13],pt:=T#2S);
+		IF NOT _aExecute[13]//
+		THEN		
+			_tonDelay(IN:=TRUE,PT:= T#50MS);
+			IF _tonDelay.Q
+			THEN
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE); 
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF	
+		END_IF	
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF		
+
+	22://
+		xComplete := TRUE; 
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdRunAction" Id="{1090bb2a-e309-4347-8b84-29cc64b7938c}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED CmdRunAction
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> RudongPump_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+	0://传送力值和速度参数		  	
+		IF xNeedConfigurePara
+		THEN
+			_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
+			st_IOData.O_RunModeSet := 2	;//打开定时定量模式
+			IF _tonDelay.Q
+			THEN	
+				_aExecute[8] := TRUE;//启动夹紧控制数据发送	
+				//复位定时器
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(in:=FALSE);
+				_tonTimeout(in:=FALSE);
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF
+		ELSE//直接启动就好
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := 12;//切换状态
+		END_IF	
+		//检测流量转速是否在0.1rpm - 600rpm
+		IF 	rRuntimeSet = 0 
+		THEN 
+			eERRORID := RudongPump_ERROR.FLT_FLUVOLUM_TIME_PARA;		
+			_diCmdState := 999;
+		ELSE
+			_rSetSpeed := rFluVolumeSet * 60.0 / rSpeedRatio / rRuntimeSet;
+			IF _rSetSpeed >= 0.1 AND _rSetSpeed <= 600
+			THEN
+				;
+			ELSE
+				eERRORID := RudongPump_ERROR.FLT_FLUVOLUM_TIME_PARA;		
+				_diCmdState := 999;
+			END_IF
+		END_IF				
+		
+	1://等待定时定量模式被响应
+		_tonCmdTimeout(IN:= _aExecute[8],pt:=T#2S);
+		IF NOT _aExecute[8]//
+		THEN		
+			_tonDelay(IN:=TRUE,PT:= T#50MS);
+			IF _tonDelay.Q
+			THEN			
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE);    
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF	
+		END_IF	
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF
+
+
+//发送虚假定量时间		
+	2://定量时间设定		
+		_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
+		st_IOData.O_RuntimeSet := 200.0	;	//保证电机转速不会超
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[7] := TRUE;//启动夹紧控制数据发送	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
+	3://等待定量时间设定被响应
+		_tonCmdTimeout(IN:= _aExecute[7],pt:=T#2S);
+		IF NOT _aExecute[7]//
+		THEN		
+			_tonDelay(IN:=TRUE,PT:= T#50MS);
+			IF _tonDelay.Q
+			THEN			
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE);    
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF	
+		END_IF	
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF		
+		
+		
+//传递液量参数		
+	4://传送力值和速度参数		
+		_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
+		st_IOData.O_FluVolumeSet := rFluVolumeSet	;	
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[6] := TRUE;//启动夹紧控制数据发送	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF	  
+	5://等待流量设定结束
+		_tonCmdTimeout(IN:= _aExecute[6],pt:=T#2S);
+		IF NOT _aExecute[6]//
+		THEN		
+			_tonDelay(IN:=TRUE,PT:= T#50MS);
+			IF _tonDelay.Q
+			THEN			
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE);    
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF	
+		END_IF	
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF
+
+//传递实际定量时间		
+	6://定量时间设定		
+		_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
+		st_IOData.O_RuntimeSet := rRuntimeSet	;	
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[7] := TRUE;//启动夹紧控制数据发送	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
+		
+	7://等待定量时间设定被响应
+		_tonCmdTimeout(IN:= _aExecute[7],pt:=T#2S);
+		IF NOT _aExecute[7]//
+		THEN		
+			_tonDelay(IN:=TRUE,PT:= T#50MS);
+			IF _tonDelay.Q
+			THEN			
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE);    
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF	
+		END_IF	
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF	
+		
+	8://方向设定		
+		_tonDelay(IN:= ( eCmd = RudongPump_CMD.Cmd_Push OR eCmd = RudongPump_CMD.Cmd_Pull ) ,pt:=T#20MS);//保证执行的是最新的一次
+		IF eCmd = RudongPump_CMD.Cmd_Push
+		THEN
+			st_IOData.O_DirectionSet := 1	;			
+		END_IF
+		IF eCmd = RudongPump_CMD.Cmd_Pull 
+		THEN
+			st_IOData.O_DirectionSet := 0	;			
+		END_IF
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[4] := TRUE;//启动夹紧控制数据发送	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
+		
+	9://等待方向设定被响应
+		_tonCmdTimeout(IN:= _aExecute[4],pt:=T#2S);
+		IF NOT _aExecute[4]//
+		THEN		
+			_diCmdState := _diCmdState +1; 
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+		END_IF	
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF	
+		
+	10://重复次数设定		
+		_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
+		st_IOData.O_CycleNumber := iCycleNumber	;	
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[9] := TRUE;//启动夹紧控制数据发送	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
+		
+	11://等待重复次数设定被响应
+		_tonCmdTimeout(IN:= _aExecute[9],pt:=T#2S);
+		IF NOT _aExecute[9]//
+		THEN		
+			_tonDelay(IN:=TRUE,PT:= T#50MS);
+			IF _tonDelay.Q
+			THEN
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE); 
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF	
+		END_IF	
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF		
+		
+	12://启动设定		
+		_tonDelay(IN:= TRUE ,pt:=T#25MS);//保证执行的是最新的一次	
+		st_IOData.O_ControlSet := 1	;					
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[3] := TRUE;//启动夹紧控制数据发送	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
+		
+	13://等待启动被响应
+		_tonTimeout(in:=TRUE,pt:=T#4S); 		
+		_tonCmdTimeout(IN:= _aExecute[3],pt:=T#2S);
+		IF stPara.xPumpRunSignal//一定要检测到泵运行
+		THEN		
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_diCmdState := _diCmdState +1; 
+			_tonTimeout(in:=FALSE);	
+		END_IF			
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF
+	IF _tonTimeout.Q
+  THEN
+		_iNGCount := _iNGCount + 1;		
+		IF _iNGCount <= 3
+		THEN
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := 10;//重新触发启动
+		ELSE
+			IF eCmd = RudongPump_CMD.Cmd_Push
+			THEN
+				eERRORID := RudongPump_ERROR.FLT_PUSH_TIMEOUT;		
+			END_IF
+			IF eCmd = RudongPump_CMD.Cmd_Pull 
+			THEN
+				eERRORID := RudongPump_ERROR.FLT_PULL_TIMEOUT;			
+			END_IF			
+			_diCmdState := 999;
+		END_IF
+	 END_IF	 	
+	 
+	14://等待运行完成
+		_tonTimeout(in:=TRUE,pt:=T#30S); 	
+		//夹取成功判定
+	 	IF NOT stPara.xPumpRunSignal//电机停止
+		THEN
+			_tonCmdTimeout(in:=FALSE);
+			_tonDelay(IN:= FALSE);
+			_tonTimeout(in:=FALSE);  
+			_iActRunNumber := _iActRunNumber + 1;
+			IF _iActRunNumber >= iCycleNumber//已经到达重复次数
+			THEN 
+				_diCmdState := 100;
+				xComplete := TRUE;
+			ELSE
+				_diCmdState := 13;
+			END_IF
+		END_IF		
+		IF _tonTimeout.Q//动作超时
+		THEN
+			IF eCmd = RudongPump_CMD.Cmd_Push
+			THEN
+				eERRORID := RudongPump_ERROR.FLT_PUSH_TIMEOUT;		
+			END_IF
+			IF eCmd = RudongPump_CMD.Cmd_Pull 
+			THEN
+				eERRORID := RudongPump_ERROR.FLT_PULL_TIMEOUT;			
+			END_IF			
+			_diCmdState := 999;
+		END_IF
+		
+	15://等待下一个周期的启动
+		_tonTimeout(in:=TRUE,pt:=T#30S); 				
+		//夹取成功判定
+		IF stPara.xPumpRunSignal//一定要检测到泵运行
+		THEN		
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState - 1; 
+		END_IF	
+		IF _tonTimeout.Q//动作超时
+		THEN
+			IF eCmd = RudongPump_CMD.Cmd_Push
+			THEN
+				eERRORID := RudongPump_ERROR.FLT_PUSH_TIMEOUT;		
+			END_IF
+			IF eCmd = RudongPump_CMD.Cmd_Pull 
+			THEN
+				eERRORID := RudongPump_ERROR.FLT_PULL_TIMEOUT;			
+			END_IF			
+			_diCmdState := 999;
+		END_IF	
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Action Name="ConnectAction" Id="{0877184c-48bd-4a75-ad22-2ff42ab3aa7d}" FolderPath="Control\">
+      <Implementation>
+        <ST><![CDATA[_aWrite_VAR(
+			sIPAddr:= stPara.strSlaveIP, 
+			nTCPPort:= stPara.iSlavePort, 
+			nUnitID:= stPara.bySlaveID, 
+			nQuantity:= _aQuantity[_iChannelIndex], 
+			nMBAddr:= _aMBAddr[_iChannelIndex], 
+			cbLength:= _aQuantity[_iChannelIndex] * 2, 
+			pSrcAddr:= ADR(_aAddr[_iChannelIndex,1]), 
+			bExecute:=, 
+			tTimeout:= T#1000MS, 
+			bBusy=> , 
+			bError=> , 
+			nErrId=> );	
+
+//收发流程管控
+CASE _rxState OF 
+	0:  _aWrite_VAR.bExecute:=FALSE;
+	    _iChannelIndex:=0;
+		IF NOT _aWrite_VAR.bBusy //等待功能块触发
+		THEN
+			_rxState := _rxState + 1;
+		END_IF
+	1:
+		FOR i := 1 TO 15 BY 1//进行读取指令的轮训
+		DO
+			IF _aExecute[i]//检测有控制指令发生
+			THEN 
+			    _aWrite_VAR.bExecute:=_aExecute[i]; 
+          _iChannelIndex:=i;//触发对应的读写功能		
+				IF  _aWrite_VAR.bBusy//只要不是busy状态就代表此时没有指令被响应
+				THEN					
+					_rxState := _rxState + 1;
+				END_IF	
+			END_IF
+		END_FOR	
+		_tonDelay1(in:=FALSE);	
+    eMobbusErrorID := 0;	
+	2://数据解析	
+		FOR i := 1 TO 15 BY 1//进行通用指令轮训
+		DO
+			IF NOT _aWrite_VAR.bBusy AND NOT _aWrite_VAR.bError  AND _aExecute[i]//对应你功能指令完成
+			THEN			 
+				_iComNGCount := 0;
+				_aExecute[i] := FALSE;
+				_aWrite_VAR.bExecute:=FALSE;				
+				_rxState := 0;//等待下次触发				
+				EXIT;
+			END_IF			
+			IF _aWrite_VAR.bError AND _aExecute[i]//有错误发生()
+			THEN	
+				_iComNGCount := _iComNGCount + 1;
+				IF _iComNGCount < 3//
+        THEN	
+				   _aWrite_VAR.bExecute:=FALSE;		
+				   _tonDelay1(in:=FALSE);
+			     _rxState := _rxState + 1;
+				ELSE//					
+					 eMobbusErrorID := _aWrite_VAR.nErrid;						
+				   _aWrite_VAR.bExecute:=FALSE;					
+					 _rxState := 999;//进入错误发生状态	
+				END_IF
+				EXIT;				
+			END_IF			
+		END_FOR 
+		IF _tonDelay1.Q
+		THEN
+			_iComNGCount := _iComNGCount + 1;//错误次数加一
+			IF _iComNGCount >= 2//重发多次失败
+			THEN
+					IF _aWrite_VAR.bError 
+					THEN
+						eMobbusErrorID := _aWrite_VAR.nErrId;						
+					END_IF									
+				_rxState := 999;//进入错误发生状态
+			ELSE
+				_tonDelay1(in:=FALSE);
+			  _aWrite_VAR.bExecute:=FALSE;
+				_rxState:= _rxState + 1;	
+			END_IF
+		END_IF				
+	3://delay
+		_tonDelay1(in:=TRUE,PT:=T#60MS);
+		IF _tonDelay1.Q
+		THEN
+			_rxState := 0;
+			_tonDelay1(in:=FALSE);	
+    END_IF	
+	999://错误状态，等待复位发生
+		IF _fResetCheck.Q
+		THEN
+			FOR i:= 1 TO 15 DO
+				_aExecute[i] := FALSE;
+				_aWrite_VAR.bExecute:=FALSE;					
+			END_FOR		
+			_iComNGCount := 0;//
+			_rxState := 0;//重新开始			
+		END_IF
+	ELSE
+		;
+END_CASE
+]]></ST>
+      </Implementation>
+    </Action>
+    <Method Name="CyclicAction" Id="{dc3a5aa4-ade0-4403-bd23-adc6c41770bf}">
+      <Declaration><![CDATA[METHOD PROTECTED CyclicAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+VAR	
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xAbort=0 THEN
+    IF xFirstInvocation THEN
+    (*
+    * Staring
+    * for then first (!) invocaion,
+    * sample then input variables
+    *)			
+    _diCmdState:= 0;
+	_iNGCount := 0;
+	_iActRunNumber := 0;
+	xFirstInvocation:=0;			
+    END_IF    
+    REPEAT 				
+		  (**************************检查是否有硬件报错(检测总线是否报错)**********************************) 
+			IF _xConnectError
+			THEN
+				eERRORID := RudongPump_ERROR.FLT_CONNECT;//子站通讯报警
+			END_IF
+			//检测参数是否配置正确	
+			IF ( stPara.iType <> 1 AND stPara.iType <> 2 )//只能是modbus模式	 
+			THEN
+				eERRORID := RudongPump_ERROR.FLT_PARA;//参数配置错误
+			END_IF
+	
+			//检测停止指令是否发生
+			_rStopCmdTrig(CLK:= NOT xEStop OR (stDeviceOpe.xStop_Hmi AND NOT xAutoMode AND NOT xDeviceRunning) OR (stDeviceOpe.xStop_Auto AND (xAutoMode OR xDeviceRunning))
+													OR (stDeviceOpe.xFullSpeedStop_Hmi AND NOT xAutoMode AND NOT xDeviceRunning) OR (stDeviceOpe.xFullSpeedStop_Auto AND (xAutoMode OR xDeviceRunning)));		
+		  IF _rStopCmdTrig.Q//检测到停止指令
+			THEN
+				_diCmdState := 0;
+				eCmd := RudongPump_CMD.Cmd_Stop;
+				_tonCmdTimeout(in:=FALSE);
+				_tonDelay(IN:= FALSE);
+				_tonTimeout(in:=FALSE);
+			END_IF			
+			//检测是否有Modbus指令运行中	
+			_xCheckModbusRun := FALSE;
+			FOR i:=0 TO 14 BY 1 
+			DO 
+				_xCheckModbusRun := _aWrite_VAR.bBusy OR _aExecute[i];
+			END_FOR		
+		
+			CASE eCmd OF//判断指令类型
+				RudongPump_CMD.Cmd_Pull,RudongPump_CMD.Cmd_Push://执行夹爪指令(夹紧和松开指令)
+					CmdRunAction(xComplete=> xComplete);	
+							
+				RudongPump_CMD.Cmd_Stop,RudongPump_CMD.Cmd_FullSpeedStop://执行过程中等待停止指令(分为运行停止和全速停止)
+					mCmdStopAction(xComplete=> xComplete);
+					
+				RudongPump_CMD.Cmd_Configure://(用于配置参数)
+					mCmdConfigureAction(xComplete=> xComplete);
+					
+				RudongPump_CMD.Cmd_FullSpeedPush,RudongPump_CMD.Cmd_FullSpeedPull://全速启动控制（用于清洗和充满试管）
+					mCmdFullSpeedStartAction(xComplete=> xComplete);
+					
+				RudongPump_CMD.Cmd_CalPump:
+					CmdPumpCal(xComplete=> xComplete);
+
+				RudongPump_CMD.Cmd_CalReset:
+					CmdCalReset(xComplete=> xComplete);			
+				ELSE
+					;	
+				END_CASE		   
+      UNTIL (TRUE)
+	END_REPEAT
+END_IF
+
+IF xAbort OR xComplete OR eERRORID<>RudongPump_ERROR.No_ERROR THEN    
+    (*
+    * Cleaning
+    * => free as much allocated resources as possible
+    *)    
+    tOperationTimer(IN:=0);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleAbortedState" Id="{83189f4a-878c-4e92-a73f-7c71f0fa5118}">
+      <Declaration><![CDATA[METHOD PRIVATE FINAL HandleAbortedState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xAborted AND xResetRequest THEN
+    eState:=STATE.RESETING;
+    xAgain:=1;
+ELSE
+    xBusy:=0;
+    xAborted:=1;
+    //xResetRequest:=(xExecute=0);
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleAbortingState" Id="{2aa01fac-abb2-4535-bab1-c4a09d376b64}">
+      <Declaration><![CDATA[METHOD PRIVATE FINAL HandleAbortingState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[AbortAction(xComplete=> xComplete, eERRORID=> eERRORID);
+
+IF eERRORID<>RudongPump_ERROR.No_ERROR THEN
+    eState:=STATE.INERROR;
+    xAgain:=1;
+ELSIF xComplete THEN
+    eState:=STATE.ABORTED;
+    xAgain:=1;
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleDoneState" Id="{1b4acf60-76ef-4bbe-bd12-22872815a9eb}">
+      <Declaration><![CDATA[METHOD PRIVATE FINAL HandleDoneState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//在运行过程中要是切换模式，再运行完成之后，检测到模式的切换，就需要回到初始位置，进行下一次执行准备
+IF _xDone AND ((xExecute=0) OR ( _xModeChange AND NOT _xAutoOpe)  OR ( NOT xAutoMode AND NOT xDeviceRunning AND ( NOT _xAutoOpe OR _xHMIOpe))) THEN
+	eState:=STATE.RESETING;
+	xAgain:=1;
+ELSE
+	xBusy:=0;
+	_xDone:=1;
+	xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleDormantState" Id="{e2daee70-2faf-4b27-9718-3df3f2ff865c}">
+      <Declaration><![CDATA[METHOD PRIVATE FINAL HandleDormantState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xExecute THEN
+    xBusy:=1;
+    eState:=STATE.EXECUTING;
+    xAgain:=1;
+END_IF
+//下面两个报警一旦报警就需要发生
+IF _xConnectError 
+THEN//出现这个进行报警
+	eERRORID := RudongPump_ERROR.FLT_CONNECT;//子站通讯报警
+END_IF
+
+IF _fResetCheck.Q//清空报警
+THEN
+	eERRORID := RudongPump_ERROR.No_ERROR;
+END_IF
+IF  xAutoMode OR xDeviceRunning THEN
+	xAutomodeFlag:=TRUE;
+ELSE
+	xAutomodeFlag:=FALSE;
+END_IF
+
+
+IF eErrorID = RudongPump_ERROR.NO_ERROR 
+THEN
+	IF   xRunILC   THEN
+		FOR k:=1 TO 5 BY 1 DO
+			//PULL
+			_rOperaTrig[k](CLK:=xRunILC AND (stDeviceOpe.xPull_Hmi[k] AND NOT xAutomodeFlag) OR (stDeviceOpe.xPull_Auto[k] AND xAutomodeFlag));
+			IF _rOperaTrig[k].Q //
+			THEN
+				rFluVolumeSet	:=stRunPara.rPullFluVolume[k];
+				rRuntimeSet		:=stRunPara.rPullRuntime[k];
+				iCycleNumber	:=stRunPara.iPullCycleNumber[k];
+				eCmd 			:= RudongPump_CMD.Cmd_Pull;
+				xExecute		:= TRUE;
+			END_IF		
+			//PUSH
+			_rOperaTrig[k+5](CLK:=xRunILC AND (stDeviceOpe.xPush_Hmi[k] AND NOT xAutomodeFlag) OR (stDeviceOpe.xPush_Auto[k] AND xAutomodeFlag));
+			IF _rOperaTrig[k+5].Q 
+			THEN
+				rFluVolumeSet	:=stRunPara.rPushFluVolume[k];  
+				rRuntimeSet		:=stRunPara.rPushRuntime[k];    
+				iCycleNumber	:=stRunPara.iPushCycleNumber[k];
+				eCmd 			:= RudongPump_CMD.Cmd_Push;
+				xExecute 		:= TRUE;
+			END_IF				
+		END_FOR
+		//STOP
+		 IF(stDeviceOpe.xStop_Hmi AND  NOT xAutomodeFlag) OR NOT xEStop OR stDeviceOpe.xStop_Auto    THEN
+				eCmd := RudongPump_CMD.Cmd_Stop;
+				xExecute := TRUE;
+		 END_IF
+		//FullSpeedPull
+		IF (stDeviceOpe.xFullSpeedPull_Hmi AND  NOT xAutomodeFlag) OR (stDeviceOpe.xFullSpeedPull_Auto AND  xAutomodeFlag) THEN
+			eCmd := RudongPump_CMD.Cmd_FullSpeedPull;
+			xExecute := TRUE;
+		END_IF
+		//FullSpeedPush
+		IF (stDeviceOpe.xFullSpeedPush_Hmi AND NOT xAutomodeFlag ) OR (stDeviceOpe.xFullSpeedPush_Auto AND xAutomodeFlag) THEN	
+			eCmd := RudongPump_CMD.Cmd_FullSpeedPush;
+			xExecute := TRUE;
+		END_IF
+		//FullSpeedStop
+		 IF (stDeviceOpe.xFullSpeedStop_Hmi AND NOT xAutomodeFlag) OR (stDeviceOpe.xFullSpeedStop_Auto AND xAutomodeFlag) THEN	
+			eCmd := RudongPump_CMD.Cmd_FullSpeedStop;
+			xExecute := TRUE;
+		END_IF
+		//Configure
+		IF (stDeviceOpe.xConfigure_Hmi AND NOT xAutomodeFlag) OR (stDeviceOpe.xConfigure_Auto AND xAutomodeFlag) THEN	
+			eCmd := RudongPump_CMD.Cmd_Configure;
+			xExecute := TRUE;
+		END_IF
+		
+	END_IF		
+		//校准
+		IF stDeviceOpe.xPumpCal_Hmi OR stDeviceOpe.xPumpCal_Auto THEN
+			rFluVolumeSet		:=stRunPara.rCalFluVolume;
+			rRuntimeSet			:=stRunPara.rCalTime;
+			iCycleNumber		:=stRunPara.rCalNum;	
+			iModuleAdress		:=stRunPara.iModuleAdress;
+			iModuleSpeed		:=stRunPara.rModuleSpeed;
+			iModuleRealVolume	:=stRunPara.rModuleRealFluVolume;		
+			eCmd 				:= RudongPump_CMD.Cmd_CalPump;
+			xExecute 			:= TRUE;		
+		END_IF
+		
+		//复位校准系数为初始值
+		IF stDeviceOpe.xResetCalcoeffCal_Hmi THEN	
+			eCmd 				:= RudongPump_CMD.Cmd_CalReset;
+			xExecute 			:= TRUE;		
+		END_IF
+	
+				
+END_IF	
+	
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleErrorState" Id="{a842e883-b03e-4764-9127-38584e12b031}">
+      <Declaration><![CDATA[METHOD PRIVATE FINAL  HandleErrorState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xRudongPump_ERROR AND  (xResetRequest OR NOT xExecute) THEN
+    eState:=STATE.RESETING;
+    xAgain:=1;
+ELSE
+    xBusy:=0;
+    xRudongPump_ERROR:=1;    
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleExecutingState" Id="{1188a8d8-5b84-4c0f-845d-e51e98982ee0}">
+      <Declaration><![CDATA[METHOD PRIVATE FINAL HandleExecutingState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xAbort=0 THEN   
+    CyclicAction(xComplete=> xComplete);
+END_IF
+
+IF eERRORID<>RudongPump_ERROR.No_ERROR THEN
+    eState:=STATE.INERROR;
+    xAgain:=1;
+ELSIF xAbort THEN
+    eState:=STATE.ABORTING;
+    xAgain:=1;
+ELSIF xComplete THEN
+    eState:=STATE.DONE;
+    xAgain:=1;
+END_IF ]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleResettingState" Id="{641e8313-57bd-48fe-98cd-c925b852f0aa}">
+      <Declaration><![CDATA[METHOD PRIVATE FINAL HandleResettingState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ResetAction(xComplete=> xComplete);
+
+IF xComplete THEN
+	xExecute:=0;//清除输入指令 
+    xBusy:=0;
+    _xDone:=0;
+    xRudongPump_ERROR:=0;
+    xAborted:=0;
+    eERRORID:=RudongPump_ERROR.No_ERROR;
+    eState:=STATE.DORMANT;
+    xFirstInvocation:=1;
+    xAgain:=0;(* !!! *)
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="mCmdConfigureAction" Id="{7758a958-6746-4f74-a2d4-b4b687343547}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED mCmdConfigureAction
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+VAR
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> RudongPump_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF
+	0://使能失效操作	
+		IF _xConfigureParaOK THEN
+			st_IOData.O_PumpType := stRunPara.iPumpTypeSet;
+			_tonDelay(IN:=TRUE,PT:=T#25MS);
+			IF _tonDelay.Q//等待指令响应
+			THEN
+				_aExecute[1] := TRUE;//触发运行指令	
+				//复位定时器
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE);    
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF	
+		ELSE//输入配置参数错误
+			eERRORID := RudongPump_ERROR.FLT_CONFIGURE_PARA;	
+			diStepOld:=	_diCmdState;
+			_diCmdState := 999;
+		END_IF		  		
+
+	1://等待使能失效被响应	
+		_tonCmdTimeout(IN:= TRUE,pt:=T#2S);
+		IF NOT _aExecute[1]
+		THEN
+			_tonDelay(IN:=TRUE,PT:= T#50MS);
+			IF _tonDelay.Q
+			THEN			
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE);    
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF			
+		END_IF	
+		IF _tonCmdTimeout.Q//指令超时报错
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;	
+			diStepOld:=	_diCmdState;	
+			_diCmdState := 999;
+		END_IF	
+	2://设置软管类型		
+		st_IOData.O_HosePipeType := stRunPara.iHosePipeTypeSet;
+		_tonDelay(IN:=TRUE,PT:=T#25MS);
+		IF _tonDelay.Q//等待指令响应
+		THEN
+			_aExecute[2] := TRUE;//触发运行指令	
+			//复位定时器
+			_tonTimeout(in:=FALSE);
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(IN:= FALSE);    
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF	
+	3://等待使能失效被响应	
+		_tonCmdTimeout(IN:= TRUE,pt:=T#2S);
+		IF NOT _aExecute[2]
+		THEN
+			_tonCmdTimeout(in:=FALSE);
+			_tonDelay(IN:= FALSE);
+			_tonTimeout(in:=FALSE);  
+			_diCmdState := 100;
+			 xComplete := 1;
+		END_IF	
+		IF _tonCmdTimeout.Q//指令超时报错
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;
+			diStepOld:=	_diCmdState;		
+			_diCmdState := 999;
+		END_IF	 
+	ELSE
+		;
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="mCmdFullSpeedStartAction" Id="{016d22e7-72cd-4b4c-bb77-ab8190ca61e6}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED mCmdFullSpeedStartAction
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+VAR
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> RudongPump_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF
+	0://方向设定		
+		_tonDelay(IN:= ( eCmd = RudongPump_CMD.Cmd_FullSpeedPush OR eCmd = RudongPump_CMD.Cmd_FullSpeedPull ) ,pt:=T#20MS);//保证执行的是最新的一次
+		IF eCmd = RudongPump_CMD.Cmd_FullSpeedPush
+		THEN
+			st_IOData.O_DirectionSet := 1	;			
+		END_IF
+		IF eCmd = RudongPump_CMD.Cmd_FullSpeedPull 
+		THEN
+			st_IOData.O_DirectionSet := 0	;			
+		END_IF
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[4] := TRUE;//启动夹紧控制数据发送	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
+			
+	1://等待方向设定被响应
+		_tonCmdTimeout(IN:= _aExecute[4],pt:=T#2S);
+		IF NOT _aExecute[4]//
+		THEN		
+			_tonDelay(IN:=TRUE,PT:= T#50MS);
+			IF _tonDelay.Q
+			THEN			
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE);    
+				_diCmdState := _diCmdState+1;//切换状态
+			END_IF	
+		END_IF	
+		IF _tonCmdTimeout.Q
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF	
+	2://使能失效操作		     
+		st_IOData.O_FullSpeedControl := 1;		
+		_tonDelay(IN:=TRUE,PT:=T#25MS);
+		IF _tonDelay.Q//等待指令响应
+		THEN
+			_aExecute[5] := TRUE;//触发运行指令	
+			//复位定时器
+			_tonTimeout(in:=FALSE);
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(IN:= FALSE);    
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
+	3://等待使能失效被响应	
+		_tonCmdTimeout(IN:= TRUE,pt:=T#2S);
+		IF NOT _aExecute[5] 
+		THEN
+			_tonCmdTimeout(in:=FALSE);
+			_tonDelay(IN:= FALSE);
+			_tonTimeout(in:=FALSE);  
+			_diCmdState := 100;
+			 xComplete := 1; 
+		END_IF	
+		IF _tonCmdTimeout.Q//指令超时报错
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF		
+	ELSE
+		;
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="mCmdStopAction" Id="{3698c43b-5dbe-4986-a2b8-672d285f5304}" FolderPath="Control\">
+      <Declaration><![CDATA[METHOD PROTECTED mCmdStopAction
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+VAR
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> RudongPump_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF
+	0://使能失效操作
+		st_IOData.O_ControlSet := 0;
+		st_IOData.O_FullSpeedControl := 0;		  
+		_tonDelay(IN:=TRUE,PT:=T#25MS);
+		IF _tonDelay.Q//等待指令响应
+		THEN
+			IF eCmd = RudongPump_CMD.Cmd_Stop
+			THEN
+				_aExecute[3] := TRUE;//触发运行指令	
+			END_IF
+			IF eCmd = RudongPump_CMD.Cmd_FullSpeedStop
+			THEN
+				_aExecute[5] := TRUE;//触发运行指令	
+			END_IF
+			//复位定时器
+			_tonTimeout(in:=FALSE);
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(IN:= FALSE);    
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF			
+
+	1://等待使能失效被响应	
+		_tonCmdTimeout(IN:= TRUE,pt:=T#2S);
+		IF NOT _aExecute[3] AND  NOT _aExecute[5]
+		THEN
+			_tonCmdTimeout(in:=FALSE);
+			_diCmdState := _diCmdState +1; 
+		END_IF	
+		IF _tonCmdTimeout.Q//指令超时报错
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF	
+  2://延时100ms错开信号
+		_tonDelay(IN:= TRUE,pt:=T#100MS);//设置刷新周期
+		IF _tonDelay.Q
+		THEN			
+			_diCmdState := _diCmdState + 1;
+		END_IF		 		
+	3://等待数据接收完成		
+		_tonTimeout(in:=TRUE,pt:=T#10S);//设置超时时间	
+		IF NOT stPara.xPumpRunSignal  //代表电机已经停机
+		THEN
+			_tonCmdTimeout(in:=FALSE);
+			_tonDelay(IN:= FALSE);
+			_tonTimeout(in:=FALSE);  
+			_diCmdState := 100;
+			xComplete := 1;
+		END_IF		
+		IF _tonTimeout.Q//回原点动作超时，或者回原点报错
+		THEN
+			IF eCmd = RudongPump_CMD.Cmd_Stop
+				THEN
+					eERRORID := RudongPump_ERROR.FLT_STOP_TIMEOUT;
+				END_IF
+				IF eCmd = RudongPump_CMD.Cmd_FullSpeedStop
+				THEN
+					eERRORID := RudongPump_ERROR.FLT_FULLSPEEDSTOP_TIMEOUT;
+				END_IF			
+			_diCmdState := 999;
+		END_IF	
+	ELSE
+		;
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ResetAction" Id="{c79bad56-b380-4e0b-812d-cece49190e61}">
+      <Declaration><![CDATA[METHOD PROTECTED ResetAction
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+* Cleaning
+* => free all allocated resources
+* => reinitialize instance variables
+*)
+tOperationTimer(IN:=0);
+tInvocationTimer(IN:=0);
+
+// init command state
+_diCmdState := 0;
+_tonCmdTimeout(in:=FALSE);
+_tonDelay(IN:= FALSE);
+_tonTimeout(in:=FALSE);
+_xModeChange := FALSE;
+_rStopCmdTrig(CLK:=FALSE);
+_iNGCount := 0;
+
+//清除触发标志位
+FOR i:=1 TO 15 BY 1 
+DO 
+	_aExecute[i] := FALSE;
+	_aWrite_VAR.bExecute := FALSE;	
+END_FOR
+//清除触发状态
+FOR k:=1 TO 15 BY 1 DO
+	_rOperaTrig[k](CLK:=FALSE);
+END_FOR	
+	
+stDeviceOpe.xConfigure_Auto:= stDeviceOpe.xConfigure_Hmi:= FALSE;
+stDeviceOpe.xStop_Auto:= stDeviceOpe.xStop_Hmi:= FALSE;
+stDeviceOpe.xFullSpeedPull_Auto:= stDeviceOpe.xFullSpeedPull_Hmi:= FALSE;
+stDeviceOpe.xFullSpeedPush_Auto:= stDeviceOpe.xFullSpeedPush_Hmi:= FALSE;
+stDeviceOpe.xFullSpeedStop_Auto:= stDeviceOpe.xFullSpeedStop_Hmi:= FALSE;
+FOR k:=1 TO 5 DO
+	stDeviceOpe.xPull_Auto[k]:= stDeviceOpe.xPull_Hmi[k] := FALSE;
+	stDeviceOpe.xPush_Auto[k]:= stDeviceOpe.xPush_Hmi[k] := FALSE;
+END_FOR
+
+stDeviceOpe.xPumpCal_Auto:=stDeviceOpe.xPumpCal_Hmi:=FALSE;
+stDeviceOpe.xResetCalcoeffCal_Hmi:=FALSE;
+st_IOData.O_ModuleStart := 0	;
+xResetRequest:=FALSE;
+//复位完成
+xComplete:=1;	
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_RuDongPump_modbus_LABV">
+      <LineId Id="992" Count="0" />
+      <LineId Id="1285" Count="0" />
+      <LineId Id="994" Count="0" />
+      <LineId Id="1304" Count="0" />
+      <LineId Id="1308" Count="0" />
+      <LineId Id="1310" Count="0" />
+      <LineId Id="1309" Count="0" />
+      <LineId Id="1303" Count="0" />
+      <LineId Id="1028" Count="1" />
+      <LineId Id="1286" Count="2" />
+      <LineId Id="1036" Count="0" />
+      <LineId Id="1289" Count="1" />
+      <LineId Id="995" Count="0" />
+      <LineId Id="1305" Count="0" />
+      <LineId Id="1326" Count="4" />
+      <LineId Id="1037" Count="0" />
+      <LineId Id="1291" Count="0" />
+      <LineId Id="996" Count="18" />
+      <LineId Id="1284" Count="0" />
+      <LineId Id="1312" Count="0" />
+      <LineId Id="1311" Count="0" />
+      <LineId Id="1079" Count="0" />
+      <LineId Id="1041" Count="0" />
+      <LineId Id="1080" Count="0" />
+      <LineId Id="1042" Count="0" />
+      <LineId Id="1051" Count="0" />
+      <LineId Id="1065" Count="0" />
+      <LineId Id="1052" Count="0" />
+      <LineId Id="1066" Count="0" />
+      <LineId Id="1053" Count="0" />
+      <LineId Id="1067" Count="0" />
+      <LineId Id="1054" Count="0" />
+      <LineId Id="1068" Count="0" />
+      <LineId Id="1055" Count="0" />
+      <LineId Id="1069" Count="0" />
+      <LineId Id="1056" Count="0" />
+      <LineId Id="1070" Count="0" />
+      <LineId Id="1058" Count="0" />
+      <LineId Id="1071" Count="0" />
+      <LineId Id="1059" Count="0" />
+      <LineId Id="1072" Count="0" />
+      <LineId Id="1060" Count="0" />
+      <LineId Id="1073" Count="0" />
+      <LineId Id="1061" Count="0" />
+      <LineId Id="1074" Count="0" />
+      <LineId Id="1062" Count="0" />
+      <LineId Id="1075" Count="0" />
+      <LineId Id="1063" Count="0" />
+      <LineId Id="1076" Count="0" />
+      <LineId Id="1044" Count="0" />
+      <LineId Id="1077" Count="0" />
+      <LineId Id="1045" Count="0" />
+      <LineId Id="1263" Count="0" />
+      <LineId Id="1262" Count="0" />
+      <LineId Id="1267" Count="0" />
+      <LineId Id="1266" Count="0" />
+      <LineId Id="1268" Count="1" />
+      <LineId Id="1331" Count="3" />
+      <LineId Id="1270" Count="1" />
+      <LineId Id="1336" Count="3" />
+      <LineId Id="1272" Count="1" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="1275" Count="3" />
+      <LineId Id="1341" Count="3" />
+      <LineId Id="1279" Count="1" />
+      <LineId Id="1345" Count="3" />
+      <LineId Id="1282" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.AbortAction">
+      <LineId Id="10" Count="2" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="19" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.ACTMap">
+      <LineId Id="102" Count="0" />
+      <LineId Id="279" Count="0" />
+      <LineId Id="194" Count="0" />
+      <LineId Id="278" Count="0" />
+      <LineId Id="200" Count="0" />
+      <LineId Id="277" Count="0" />
+      <LineId Id="201" Count="0" />
+      <LineId Id="276" Count="0" />
+      <LineId Id="202" Count="0" />
+      <LineId Id="275" Count="0" />
+      <LineId Id="198" Count="0" />
+      <LineId Id="274" Count="0" />
+      <LineId Id="206" Count="0" />
+      <LineId Id="228" Count="3" />
+      <LineId Id="208" Count="0" />
+      <LineId Id="236" Count="2" />
+      <LineId Id="243" Count="0" />
+      <LineId Id="234" Count="0" />
+      <LineId Id="249" Count="1" />
+      <LineId Id="254" Count="0" />
+      <LineId Id="257" Count="1" />
+      <LineId Id="261" Count="2" />
+      <LineId Id="255" Count="0" />
+      <LineId Id="260" Count="0" />
+      <LineId Id="259" Count="0" />
+      <LineId Id="264" Count="3" />
+      <LineId Id="256" Count="0" />
+      <LineId Id="272" Count="0" />
+      <LineId Id="269" Count="0" />
+      <LineId Id="273" Count="0" />
+      <LineId Id="270" Count="0" />
+      <LineId Id="125" Count="0" />
+      <LineId Id="282" Count="0" />
+      <LineId Id="280" Count="0" />
+      <LineId Id="283" Count="0" />
+      <LineId Id="126" Count="0" />
+      <LineId Id="130" Count="14" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="209" Count="0" />
+      <LineId Id="214" Count="1" />
+      <LineId Id="217" Count="0" />
+      <LineId Id="221" Count="0" />
+      <LineId Id="218" Count="0" />
+      <LineId Id="220" Count="0" />
+      <LineId Id="248" Count="0" />
+      <LineId Id="212" Count="1" />
+      <LineId Id="222" Count="1" />
+      <LineId Id="211" Count="0" />
+      <LineId Id="285" Count="1" />
+      <LineId Id="284" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.CmdCalReset">
+      <LineId Id="241" Count="4" />
+      <LineId Id="252" Count="1" />
+      <LineId Id="936" Count="1" />
+      <LineId Id="1015" Count="13" />
+      <LineId Id="1129" Count="16" />
+      <LineId Id="1113" Count="0" />
+      <LineId Id="846" Count="0" />
+      <LineId Id="1114" Count="1" />
+      <LineId Id="344" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.CmdPumpCal">
+      <LineId Id="241" Count="4" />
+      <LineId Id="252" Count="1" />
+      <LineId Id="659" Count="0" />
+      <LineId Id="932" Count="0" />
+      <LineId Id="661" Count="0" />
+      <LineId Id="665" Count="17" />
+      <LineId Id="739" Count="0" />
+      <LineId Id="726" Count="7" />
+      <LineId Id="735" Count="3" />
+      <LineId Id="734" Count="0" />
+      <LineId Id="725" Count="0" />
+      <LineId Id="926" Count="0" />
+      <LineId Id="684" Count="3" />
+      <LineId Id="704" Count="6" />
+      <LineId Id="703" Count="0" />
+      <LineId Id="690" Count="4" />
+      <LineId Id="658" Count="0" />
+      <LineId Id="913" Count="1" />
+      <LineId Id="879" Count="0" />
+      <LineId Id="884" Count="28" />
+      <LineId Id="880" Count="3" />
+      <LineId Id="451" Count="0" />
+      <LineId Id="619" Count="9" />
+      <LineId Id="618" Count="0" />
+      <LineId Id="261" Count="0" />
+      <LineId Id="263" Count="2" />
+      <LineId Id="711" Count="6" />
+      <LineId Id="509" Count="0" />
+      <LineId Id="269" Count="5" />
+      <LineId Id="916" Count="0" />
+      <LineId Id="915" Count="0" />
+      <LineId Id="515" Count="0" />
+      <LineId Id="518" Count="9" />
+      <LineId Id="516" Count="0" />
+      <LineId Id="917" Count="0" />
+      <LineId Id="479" Count="0" />
+      <LineId Id="528" Count="2" />
+      <LineId Id="718" Count="6" />
+      <LineId Id="532" Count="5" />
+      <LineId Id="495" Count="0" />
+      <LineId Id="918" Count="0" />
+      <LineId Id="566" Count="1" />
+      <LineId Id="592" Count="0" />
+      <LineId Id="569" Count="8" />
+      <LineId Id="919" Count="0" />
+      <LineId Id="578" Count="4" />
+      <LineId Id="699" Count="1" />
+      <LineId Id="583" Count="5" />
+      <LineId Id="562" Count="0" />
+      <LineId Id="920" Count="0" />
+      <LineId Id="789" Count="11" />
+      <LineId Id="921" Count="0" />
+      <LineId Id="801" Count="16" />
+      <LineId Id="766" Count="0" />
+      <LineId Id="922" Count="0" />
+      <LineId Id="933" Count="0" />
+      <LineId Id="982" Count="1" />
+      <LineId Id="954" Count="11" />
+      <LineId Id="1116" Count="0" />
+      <LineId Id="966" Count="15" />
+      <LineId Id="934" Count="0" />
+      <LineId Id="1118" Count="1" />
+      <LineId Id="1117" Count="0" />
+      <LineId Id="935" Count="0" />
+      <LineId Id="984" Count="0" />
+      <LineId Id="1120" Count="0" />
+      <LineId Id="985" Count="0" />
+      <LineId Id="987" Count="9" />
+      <LineId Id="1121" Count="1" />
+      <LineId Id="997" Count="0" />
+      <LineId Id="1123" Count="0" />
+      <LineId Id="998" Count="0" />
+      <LineId Id="1130" Count="0" />
+      <LineId Id="999" Count="15" />
+      <LineId Id="936" Count="1" />
+      <LineId Id="1124" Count="2" />
+      <LineId Id="1128" Count="0" />
+      <LineId Id="1127" Count="0" />
+      <LineId Id="1015" Count="13" />
+      <LineId Id="1079" Count="14" />
+      <LineId Id="1095" Count="7" />
+      <LineId Id="1109" Count="0" />
+      <LineId Id="1111" Count="1" />
+      <LineId Id="938" Count="2" />
+      <LineId Id="1046" Count="3" />
+      <LineId Id="1045" Count="0" />
+      <LineId Id="1050" Count="28" />
+      <LineId Id="941" Count="0" />
+      <LineId Id="1113" Count="0" />
+      <LineId Id="846" Count="0" />
+      <LineId Id="1114" Count="1" />
+      <LineId Id="344" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.CmdRunAction">
+      <LineId Id="241" Count="4" />
+      <LineId Id="252" Count="1" />
+      <LineId Id="659" Count="0" />
+      <LineId Id="663" Count="19" />
+      <LineId Id="739" Count="0" />
+      <LineId Id="726" Count="7" />
+      <LineId Id="735" Count="3" />
+      <LineId Id="734" Count="0" />
+      <LineId Id="725" Count="0" />
+      <LineId Id="926" Count="0" />
+      <LineId Id="684" Count="3" />
+      <LineId Id="704" Count="6" />
+      <LineId Id="703" Count="0" />
+      <LineId Id="690" Count="4" />
+      <LineId Id="658" Count="0" />
+      <LineId Id="913" Count="1" />
+      <LineId Id="879" Count="0" />
+      <LineId Id="884" Count="28" />
+      <LineId Id="880" Count="3" />
+      <LineId Id="451" Count="0" />
+      <LineId Id="619" Count="9" />
+      <LineId Id="618" Count="0" />
+      <LineId Id="261" Count="0" />
+      <LineId Id="263" Count="2" />
+      <LineId Id="711" Count="6" />
+      <LineId Id="509" Count="0" />
+      <LineId Id="269" Count="5" />
+      <LineId Id="916" Count="0" />
+      <LineId Id="915" Count="0" />
+      <LineId Id="515" Count="0" />
+      <LineId Id="518" Count="9" />
+      <LineId Id="516" Count="0" />
+      <LineId Id="917" Count="0" />
+      <LineId Id="479" Count="0" />
+      <LineId Id="528" Count="2" />
+      <LineId Id="718" Count="6" />
+      <LineId Id="532" Count="5" />
+      <LineId Id="495" Count="0" />
+      <LineId Id="918" Count="0" />
+      <LineId Id="566" Count="1" />
+      <LineId Id="589" Count="1" />
+      <LineId Id="592" Count="0" />
+      <LineId Id="591" Count="0" />
+      <LineId Id="593" Count="2" />
+      <LineId Id="568" Count="9" />
+      <LineId Id="919" Count="0" />
+      <LineId Id="578" Count="4" />
+      <LineId Id="699" Count="1" />
+      <LineId Id="583" Count="5" />
+      <LineId Id="562" Count="0" />
+      <LineId Id="920" Count="0" />
+      <LineId Id="789" Count="11" />
+      <LineId Id="921" Count="0" />
+      <LineId Id="801" Count="16" />
+      <LineId Id="766" Count="0" />
+      <LineId Id="922" Count="0" />
+      <LineId Id="597" Count="1" />
+      <LineId Id="601" Count="0" />
+      <LineId Id="607" Count="7" />
+      <LineId Id="596" Count="0" />
+      <LineId Id="923" Count="0" />
+      <LineId Id="635" Count="0" />
+      <LineId Id="740" Count="0" />
+      <LineId Id="638" Count="2" />
+      <LineId Id="648" Count="1" />
+      <LineId Id="762" Count="0" />
+      <LineId Id="647" Count="0" />
+      <LineId Id="765" Count="0" />
+      <LineId Id="764" Count="0" />
+      <LineId Id="644" Count="2" />
+      <LineId Id="636" Count="0" />
+      <LineId Id="741" Count="1" />
+      <LineId Id="754" Count="2" />
+      <LineId Id="760" Count="1" />
+      <LineId Id="757" Count="1" />
+      <LineId Id="753" Count="0" />
+      <LineId Id="745" Count="7" />
+      <LineId Id="744" Count="0" />
+      <LineId Id="759" Count="0" />
+      <LineId Id="763" Count="0" />
+      <LineId Id="924" Count="0" />
+      <LineId Id="832" Count="1" />
+      <LineId Id="433" Count="0" />
+      <LineId Id="313" Count="1" />
+      <LineId Id="834" Count="9" />
+      <LineId Id="319" Count="1" />
+      <LineId Id="339" Count="1" />
+      <LineId Id="651" Count="6" />
+      <LineId Id="650" Count="0" />
+      <LineId Id="342" Count="1" />
+      <LineId Id="925" Count="0" />
+      <LineId Id="851" Count="11" />
+      <LineId Id="872" Count="6" />
+      <LineId Id="870" Count="1" />
+      <LineId Id="846" Count="0" />
+      <LineId Id="344" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.ConnectAction">
+      <LineId Id="171" Count="12" />
+      <LineId Id="203" Count="13" />
+      <LineId Id="218" Count="0" />
+      <LineId Id="223" Count="16" />
+      <LineId Id="241" Count="8" />
+      <LineId Id="251" Count="4" />
+      <LineId Id="257" Count="4" />
+      <LineId Id="263" Count="4" />
+      <LineId Id="273" Count="2" />
+      <LineId Id="277" Count="4" />
+      <LineId Id="283" Count="15" />
+      <LineId Id="300" Count="6" />
+      <LineId Id="4" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.CyclicAction">
+      <LineId Id="22" Count="0" />
+      <LineId Id="45" Count="4" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="391" Count="1" />
+      <LineId Id="426" Count="0" />
+      <LineId Id="177" Count="0" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="301" Count="0" />
+      <LineId Id="369" Count="2" />
+      <LineId Id="320" Count="0" />
+      <LineId Id="436" Count="0" />
+      <LineId Id="353" Count="0" />
+      <LineId Id="311" Count="1" />
+      <LineId Id="306" Count="0" />
+      <LineId Id="437" Count="0" />
+      <LineId Id="380" Count="1" />
+      <LineId Id="425" Count="0" />
+      <LineId Id="382" Count="1" />
+      <LineId Id="385" Count="0" />
+      <LineId Id="427" Count="0" />
+      <LineId Id="387" Count="1" />
+      <LineId Id="386" Count="0" />
+      <LineId Id="384" Count="0" />
+      <LineId Id="441" Count="4" />
+      <LineId Id="440" Count="0" />
+      <LineId Id="446" Count="0" />
+      <LineId Id="231" Count="0" />
+      <LineId Id="230" Count="0" />
+      <LineId Id="399" Count="0" />
+      <LineId Id="430" Count="0" />
+      <LineId Id="302" Count="0" />
+      <LineId Id="408" Count="0" />
+      <LineId Id="431" Count="0" />
+      <LineId Id="378" Count="0" />
+      <LineId Id="416" Count="0" />
+      <LineId Id="432" Count="0" />
+      <LineId Id="389" Count="0" />
+      <LineId Id="424" Count="0" />
+      <LineId Id="433" Count="0" />
+      <LineId Id="428" Count="1" />
+      <LineId Id="434" Count="1" />
+      <LineId Id="390" Count="0" />
+      <LineId Id="281" Count="1" />
+      <LineId Id="280" Count="0" />
+      <LineId Id="82" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="87" Count="2" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="150" Count="0" />
+      <LineId Id="85" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.HandleAbortedState">
+      <LineId Id="15" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="26" Count="1" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="29" Count="1" />
+      <LineId Id="25" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.HandleAbortingState">
+      <LineId Id="15" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="28" Count="1" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="32" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.HandleDoneState">
+      <LineId Id="21" Count="6" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="11" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.HandleDormantState">
+      <LineId Id="5" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="12" Count="1" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="16" Count="1" />
+      <LineId Id="25" Count="1" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="125" Count="4" />
+      <LineId Id="122" Count="0" />
+      <LineId Id="40" Count="1" />
+      <LineId Id="80" Count="0" />
+      <LineId Id="228" Count="0" />
+      <LineId Id="54" Count="0" />
+      <LineId Id="79" Count="0" />
+      <LineId Id="57" Count="2" />
+      <LineId Id="62" Count="2" />
+      <LineId Id="60" Count="1" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="65" Count="0" />
+      <LineId Id="71" Count="7" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="153" Count="1" />
+      <LineId Id="164" Count="0" />
+      <LineId Id="168" Count="0" />
+      <LineId Id="163" Count="0" />
+      <LineId Id="170" Count="1" />
+      <LineId Id="176" Count="1" />
+      <LineId Id="165" Count="0" />
+      <LineId Id="185" Count="1" />
+      <LineId Id="191" Count="4" />
+      <LineId Id="200" Count="4" />
+      <LineId Id="209" Count="1" />
+      <LineId Id="236" Count="0" />
+      <LineId Id="240" Count="1" />
+      <LineId Id="237" Count="1" />
+      <LineId Id="249" Count="1" />
+      <LineId Id="247" Count="0" />
+      <LineId Id="242" Count="0" />
+      <LineId Id="245" Count="1" />
+      <LineId Id="239" Count="0" />
+      <LineId Id="234" Count="1" />
+      <LineId Id="263" Count="0" />
+      <LineId Id="253" Count="1" />
+      <LineId Id="261" Count="1" />
+      <LineId Id="252" Count="0" />
+      <LineId Id="251" Count="0" />
+      <LineId Id="178" Count="0" />
+      <LineId Id="118" Count="0" />
+      <LineId Id="231" Count="0" />
+      <LineId Id="264" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.HandleErrorState">
+      <LineId Id="10" Count="5" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.HandleExecutingState">
+      <LineId Id="29" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="20" Count="1" />
+      <LineId Id="38" Count="2" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="19" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.HandleResettingState">
+      <LineId Id="5" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="16" Count="1" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="18" Count="3" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="26" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.mCmdConfigureAction">
+      <LineId Id="9" Count="4" />
+      <LineId Id="19" Count="1" />
+      <LineId Id="239" Count="0" />
+      <LineId Id="296" Count="0" />
+      <LineId Id="300" Count="9" />
+      <LineId Id="299" Count="0" />
+      <LineId Id="310" Count="1" />
+      <LineId Id="321" Count="0" />
+      <LineId Id="312" Count="0" />
+      <LineId Id="298" Count="0" />
+      <LineId Id="253" Count="5" />
+      <LineId Id="313" Count="1" />
+      <LineId Id="318" Count="2" />
+      <LineId Id="317" Count="0" />
+      <LineId Id="315" Count="0" />
+      <LineId Id="260" Count="3" />
+      <LineId Id="322" Count="0" />
+      <LineId Id="264" Count="0" />
+      <LineId Id="151" Count="0" />
+      <LineId Id="268" Count="11" />
+      <LineId Id="281" Count="3" />
+      <LineId Id="292" Count="3" />
+      <LineId Id="285" Count="0" />
+      <LineId Id="287" Count="3" />
+      <LineId Id="323" Count="0" />
+      <LineId Id="291" Count="0" />
+      <LineId Id="265" Count="0" />
+      <LineId Id="108" Count="0" />
+      <LineId Id="112" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.mCmdFullSpeedStartAction">
+      <LineId Id="9" Count="4" />
+      <LineId Id="19" Count="1" />
+      <LineId Id="323" Count="18" />
+      <LineId Id="365" Count="0" />
+      <LineId Id="342" Count="3" />
+      <LineId Id="358" Count="6" />
+      <LineId Id="349" Count="5" />
+      <LineId Id="322" Count="0" />
+      <LineId Id="239" Count="0" />
+      <LineId Id="300" Count="9" />
+      <LineId Id="299" Count="0" />
+      <LineId Id="254" Count="3" />
+      <LineId Id="318" Count="3" />
+      <LineId Id="258" Count="0" />
+      <LineId Id="260" Count="4" />
+      <LineId Id="151" Count="0" />
+      <LineId Id="108" Count="0" />
+      <LineId Id="112" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.mCmdStopAction">
+      <LineId Id="9" Count="4" />
+      <LineId Id="19" Count="1" />
+      <LineId Id="132" Count="0" />
+      <LineId Id="233" Count="1" />
+      <LineId Id="212" Count="2" />
+      <LineId Id="235" Count="1" />
+      <LineId Id="238" Count="0" />
+      <LineId Id="237" Count="0" />
+      <LineId Id="239" Count="2" />
+      <LineId Id="217" Count="4" />
+      <LineId Id="216" Count="0" />
+      <LineId Id="215" Count="0" />
+      <LineId Id="192" Count="0" />
+      <LineId Id="140" Count="11" />
+      <LineId Id="204" Count="0" />
+      <LineId Id="206" Count="2" />
+      <LineId Id="210" Count="0" />
+      <LineId Id="209" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="111" Count="0" />
+      <LineId Id="82" Count="0" />
+      <LineId Id="86" Count="0" />
+      <LineId Id="88" Count="2" />
+      <LineId Id="93" Count="0" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="87" Count="0" />
+      <LineId Id="103" Count="1" />
+      <LineId Id="243" Count="6" />
+      <LineId Id="242" Count="0" />
+      <LineId Id="107" Count="0" />
+      <LineId Id="102" Count="0" />
+      <LineId Id="108" Count="0" />
+      <LineId Id="112" Count="0" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_LABV.ResetAction">
+      <LineId Id="10" Count="2" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="18" Count="1" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="49" Count="1" />
+      <LineId Id="54" Count="1" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="65" Count="0" />
+      <LineId Id="99" Count="0" />
+      <LineId Id="57" Count="0" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="58" Count="0" />
+      <LineId Id="60" Count="0" />
+      <LineId Id="105" Count="0" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="104" Count="0" />
+      <LineId Id="101" Count="1" />
+      <LineId Id="100" Count="0" />
+      <LineId Id="103" Count="0" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="78" Count="0" />
+      <LineId Id="70" Count="2" />
+      <LineId Id="74" Count="1" />
+      <LineId Id="77" Count="0" />
+      <LineId Id="76" Count="0" />
+      <LineId Id="96" Count="1" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="85" Count="1" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="13" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>
