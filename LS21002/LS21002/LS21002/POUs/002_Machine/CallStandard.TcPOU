@@ -22,7 +22,7 @@ VAR
 	_xCalFirstCycle		 :BOOL;
 	
 	
-	i,j,k,eps,rgi,l,m,n,iIndex,t,mac,infor,iRec,q : INT ;
+	i: INT;j,k,eps,rgi,l,m,n,iIndex,t,mac,infor,iRec,q : INT ;
 	arrayMoveFalse : ARRAY[1..gc_uiAxisMoveNum] OF BOOL ;
     st_RGI_IOData : ST_RGI_14_IOData;
 	
@@ -62,11 +62,13 @@ VAR
 	tLamp1R_TRIG: R_TRIG;
 	
 	iSlavePort: INT;
+	
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[A_Input();
 ACT_Axis();
+ACT_AxisHome();
 ACT_Cylinder();
 ACT_Machine();
 ACT_Proface();
@@ -78,8 +80,11 @@ ACT_GetTime();
 ACT_Comm();
 ACT_UPS();
 ACT_Recipe();
-ACT_AxisHome();
 ACT_Z_ERG_20();
+ACT_Camera();
+ACT_PeristalticPump();
+//ACT_PeristalticPump_1();
+ACT_MT_MCK();
 ]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{423c098f-672e-4e09-b9e7-666319181834}">
@@ -299,6 +304,75 @@ END_IF
 	]]></ST>
       </Implementation>
     </Action>
+    <Action Name="ACT_Camera" Id="{3e63f2f2-e6bc-43fe-9c91-0da31a2d0746}">
+      <Implementation>
+        <ST><![CDATA[FOR  i:= 1  TO gc_uiCameraNum   BY 1  DO 
+	fbCamera[i](
+		xlInit:= , 
+		xlTrigger:= , 
+		xlTriggerHmi:= , 
+		xlLight:= TRUE, 
+		xlReady:= , 
+		xlAutoMode:=fbMachine[1].xAutoMode , 
+		xlManualMode:=fbMachine[1].xManualMode  , 
+		tlDelay:= stData.Camera[i].tDelay, 
+		xQStart=> , 
+		xQLight=> , 
+		xQCompleted=> , 
+		xQAlarm=> , 
+		xQBusy=> , 
+		xQHmiAlarm=> , 
+		ilCompleted:=sCamera_To_PLC.iCompleted[i]);
+END_FOR
+//上料工位相机光源触发
+QxCameraLight1Trigger:=fbCamera[1].xQLight	;
+//相机触发
+QxCamera1Trigger:=fbCamera[1].xQStart;
+
+
+
+//上料工位相机光源触发
+QxCameraLight1Trigger:=fbCamera[1].xQLight	;
+//相机触发
+QxCamera1Trigger:=fbCamera[1].xQStart;
+
+//光源控制器
+QxCameraLight2Trigger:=fbCamera[1].xQLight OR
+					   fbCamera[2].xQLight OR
+					   fbCamera[3].xQLight OR
+					   fbCamera[4].xQLight OR
+					   fbCamera[5].xQLight OR
+					   fbCamera[6].xQLight OR
+					   fbCamera[7].xQLight OR
+					   fbCamera[8].xQLight OR
+					   fbCamera[9].xQLight OR
+					   fbCamera[10].xQLight OR
+					   fbCamera[11].xQLight OR
+					   fbCamera[12].xQLight OR
+					   fbCamera[13].xQLight OR
+					   fbCamera[14].xQLight OR
+					   fbCamera[15].xQLight OR
+					   fbCamera[16].xQLight ;
+//相机触发
+QxCamera2Trigger	:= fbCamera[2].xQStart; 
+QxCamera3Trigger	:= fbCamera[3].xQStart; 
+QxCamera4Trigger	:= fbCamera[4].xQStart; 
+QxCamera5Trigger	:= fbCamera[5].xQStart; 
+QxCamera6Trigger	:= fbCamera[6].xQStart; 
+QxCamera7Trigger	:= fbCamera[7].xQStart; 
+QxCamera8Trigger	:= fbCamera[8].xQStart; 
+QxCamera9Trigger	:= fbCamera[9].xQStart; 
+QxCamera10Trigger   := fbCamera[10].xQStart; 
+QxCamera11Trigger   := fbCamera[11].xQStart;
+QxCamera12Trigger   := fbCamera[12].xQStart;
+QxCamera13Trigger   := fbCamera[13].xQStart;
+QxCamera14Trigger   := fbCamera[14].xQStart;
+QxCamera15Trigger   := fbCamera[15].xQStart;
+QxCamera16Trigger   := fbCamera[16].xQStart;
+QxCamera17Trigger   := fbCamera[17].xQStart;
+]]></ST>
+      </Implementation>
+    </Action>
     <Action Name="ACT_Comm" Id="{b17cb29c-5b77-4461-9112-d1cc0492c03a}">
       <Implementation>
         <ST><![CDATA[(*************************** Clock 1 Second Clock***********************************)
@@ -417,8 +491,8 @@ fbMachine[i](
   xReset:= IxResetButton OR fbProface[1].xResetHmi ,
   xPause:= IxStopButton OR fbProface[1].xPauseHmi ,
   xInit:=IxInitButton OR fbProface[1].xInitHmi ,
-  xManualMode:= IxManualMode, 
-  xAutoMode:= IxAutoMode ,	 
+  xManualMode:= (IxManualMode OR  NOT xAutoModeTest), 
+  xAutoMode:= ( IxAutoMode OR  xAutoModeTest) ,	 
 	xRunning=>  , 
 	xEmptying=> ,
 	xEStopped=> , 
@@ -539,27 +613,28 @@ fbRudongPump[11].stPara.bySlaveID:=1;
 fbRudongPump[12].stPara.strSlaveIP:='192.168.1.71';
 fbRudongPump[12].stPara.iSlavePort:=1031;
 fbRudongPump[12].stPara.bySlaveID:=1;
-
-
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.RudongPump[1].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
+stData.RudongPump[1].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
+stData.RudongPump[1].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
 
 FOR i :=1 TO gc_uiRudongPump BY 1 DO
-	fbRudongPump[i].xDeviceRunning:=fbAutoCal.xRunning;
 	fbRudongPump[i](
 	xExecute:= , 
 	xAbort:= , 
 	xResetRequest:=, 
-	xRunILC:= , 
+	xRunILC:=TRUE , 
 	dwTimeLimit:= , 
 	dwTimeOut:= , 
-	stPara:= , 
+	stPara:=, 
 	xNeedConfigurePara:= , 
 	stRunPara:=stData.RudongPump[i] , 
-	xAutoMode:= , 
+	xAutoMode:=fbMachine[1].xAutoMode , 
 	xIniting:= , 
 	xDeviceRunning:= , 
 	rSpeedRatio:= , 
 	sHmiError:= , 
-	xEStop:= fbMachine[1].xEStop, 
+	xEStop:= fbMachine[1].xEStop OR TRUE, 
 	stDeviceOpe:= , 
 	xDone=> , 
 	xBusy=> , 
@@ -570,9 +645,6 @@ FOR i :=1 TO gc_uiRudongPump BY 1 DO
 	eERRORID=> , 
 	xRdyCmd=> );
 END_FOR
-
-
-	
 IF NOT _xCalFirstCycle THEN
 	fbAutoCal.stSysPar.fbMTMCK204C:=ADR	(fbMCK204W);
 	fbAutoCal.stSysPar.fbRuDongPump:=ADR(fbRudongPump);
@@ -585,7 +657,7 @@ ELSE
 	fbAutoCal(
 		xExecute:= , 
 		xAbort:= , 
-		xEstop:= fbMachine[1].xEStop , 
+		xEstop:= fbMachine[1].xEStop OR TRUE , 
 		xDeviceRunning:= , 
 		xResetRequest:= , 
 		stDeviceOpe:= , 
@@ -603,6 +675,45 @@ ELSE
 END_IF
 
 ]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_PeristalticPump_1" Id="{99ca86de-fdd8-46b6-bc2f-8d111be106f7}">
+      <Implementation>
+        <ST><![CDATA[fbRudongPumpModbusTcp[1].stPara.strSlaveIP:='192.168.1.60';
+fbRudongPumpModbusTcp[1].stPara.nRemotePort:=1031;
+fbRudongPumpModbusTcp[1].stPara.bySlaveID:=16#01;
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.RudongPump[1].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
+stData.RudongPump[1].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
+stData.RudongPump[1].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+FOR i:=1 TO gc_uiRudongPump DO
+	fbRudongPumpModbusTcp[i].xAutoMode:=fbMachine[1].xAutoMode OR fbAutoCal.xRunning;
+	fbRudongPumpModbusTcp[i](
+	xExecute:= , 
+	xAbort:= , 
+	xResetRequest:=, 
+	xRunILC:= true, 
+	dwTimeLimit:= , 
+	dwTimeOut:= , 
+	stPara:= , 
+	xNeedConfigurePara:= , 
+	stRunPara:=stData.RudongPump[i] , 
+	xAutoMode:= , 
+	xIniting:= , 
+	xDeviceRunning:= , 
+	rSpeedRatio:= , 
+	sHmiError:= , 
+	xEStop:=fbMachine[1].xEStop or true , 
+	stDeviceOpe:= , 
+	xDone=> , 
+	xBusy=> , 
+	xError=> , 
+	xAborted=> , 
+	xRunning=> , 
+	xRudongPump_ERROR=> , 
+	eERRORID=> , 
+	xRdyCmd=> );
+END_FOR]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_Proface" Id="{c00a8f00-9a31-4dcc-a3b6-8c5d4688684b}">
@@ -1050,14 +1161,18 @@ END_FOR]]></ST>
     </Action>
     <LineIds Name="CallStandard">
       <LineId Id="273" Count="1" />
+      <LineId Id="663" Count="0" />
       <LineId Id="277" Count="0" />
       <LineId Id="280" Count="4" />
       <LineId Id="286" Count="1" />
       <LineId Id="341" Count="0" />
       <LineId Id="86" Count="0" />
       <LineId Id="400" Count="0" />
-      <LineId Id="459" Count="0" />
       <LineId Id="592" Count="0" />
+      <LineId Id="658" Count="0" />
+      <LineId Id="661" Count="0" />
+      <LineId Id="727" Count="0" />
+      <LineId Id="662" Count="0" />
       <LineId Id="528" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.A_Input">
@@ -1128,6 +1243,30 @@ END_FOR]]></ST>
       <LineId Id="897" Count="29" />
       <LineId Id="1048" Count="0" />
       <LineId Id="927" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_Camera">
+      <LineId Id="1" Count="0" />
+      <LineId Id="6" Count="12" />
+      <LineId Id="21" Count="2" />
+      <LineId Id="3" Count="0" />
+      <LineId Id="65" Count="0" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="68" Count="5" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="96" Count="1" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="98" Count="0" />
+      <LineId Id="100" Count="1" />
+      <LineId Id="103" Count="0" />
+      <LineId Id="105" Count="4" />
+      <LineId Id="113" Count="0" />
+      <LineId Id="110" Count="2" />
+      <LineId Id="104" Count="0" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="76" Count="16" />
+      <LineId Id="74" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.ACT_Comm">
       <LineId Id="2" Count="1" />
@@ -1225,18 +1364,21 @@ END_FOR]]></ST>
       <LineId Id="181" Count="0" />
       <LineId Id="186" Count="2" />
       <LineId Id="185" Count="0" />
-      <LineId Id="152" Count="0" />
+      <LineId Id="189" Count="2" />
       <LineId Id="148" Count="0" />
       <LineId Id="136" Count="0" />
-      <LineId Id="132" Count="1" />
+      <LineId Id="132" Count="0" />
       <LineId Id="71" Count="23" />
       <LineId Id="67" Count="0" />
       <LineId Id="70" Count="0" />
-      <LineId Id="69" Count="0" />
-      <LineId Id="101" Count="0" />
-      <LineId Id="104" Count="27" />
+      <LineId Id="105" Count="26" />
       <LineId Id="65" Count="1" />
       <LineId Id="19" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_PeristalticPump_1">
+      <LineId Id="189" Count="6" />
+      <LineId Id="198" Count="26" />
+      <LineId Id="227" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.ACT_Proface">
       <LineId Id="2" Count="12" />

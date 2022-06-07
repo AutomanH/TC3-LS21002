@@ -1,0 +1,1845 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_ModbusTCP" Id="{5e1eabd2-3f14-4c48-90b0-fb9a57023be7}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ModbusTCP
+VAR_INPUT
+	///参数输入	
+	stParIn: ModbusParIn;
+	///系统参数输入
+	stSysPar: Modbus_SysPar;
+	///复位操作
+	xResetRequest: BOOL;
+	///操作
+	stOpera: Modbus_Operation;
+	///指令执行
+	{attribute 'hide' := ''}
+	xExecute: BOOL;
+END_VAR
+VAR_OUTPUT
+	///完成条件满足
+	xDone: BOOL;
+	///动作正在执行
+	xBusy: BOOL;
+	///错误条件满足
+	xError: BOOL;
+	eERRORID: Modbus_ErrorCode;
+	eTCPErrorID: UDINT;
+	///MODBUS错误码
+	sModbusError: STRING;
+	///指令被打断，一般是处于急停中
+	xAborted: BOOL;
+	///代表指令准备完成
+	xRdyCmd: BOOL;
+	///用于显示的错误代码
+	sError: STRING;
+	///参数输出
+	stParOut: ModbusParOut;
+END_VAR
+VAR
+	///MODBUS TCP收发序列号
+	{attribute 'hide' := ''}
+	iModbusTCP_ComID: WORD;
+	///指令中断
+	{attribute 'hide' := ''}
+	xAbort: BOOL;
+	///接收缓存区域(byte数组)
+	{attribute 'hide' := ''}
+	_rxBuffer: ARRAY[1..MAX_PLCPRJ_RXBUFFER_SIZE] OF BYTE;
+	///执行指令
+	{attribute 'hide' := ''}
+	eCmd: Modbus_Cmd;
+	{attribute 'hide' := ''}
+	i: INT;
+	{attribute 'hide' := ''}
+	j: INT;
+	{attribute 'hide' := ''}
+	k: INT;
+	{attribute 'hide' := ''}
+	xOpe: BOOL;
+	{attribute 'hide' := ''}
+	_diCmdState: DINT;
+	{attribute 'hide' := ''}
+	_diReadParStep: DINT;
+	{attribute 'hide' := ''}
+	_fbTcpIpClient: FB_TcpIpClient;
+	///当前状态
+	{attribute 'hide' := ''}
+	eState: STATE;
+	{attribute 'hide' := ''}
+	xFirstInvocation: BOOL := TRUE;
+	{attribute 'hide' := ''}
+	xTimeOut: BOOL;
+	{attribute 'hide' := ''}
+	tOperationTimer: TON;
+	{attribute 'hide' := ''}
+	_tDelay: TON;
+	{attribute 'hide' := ''}
+	_twaitDelay: TON;
+	{attribute 'hide' := ''}
+	_first: BOOL;
+	///发送NG计数	
+	{attribute 'hide' := ''}
+	_iSendNGCount: INT;
+	{attribute 'hide' := ''}
+	_tonCmdTimeout: TON;
+	{attribute 'hide' := ''}
+	_tonDelay: TON;
+	{attribute 'hide' := ''}
+	_tonTimeout: TON;
+	{attribute 'hide' := ''}
+	_xDone: BOOL;
+END_VAR
+VAR_TEMP
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[IF NOT _first 
+THEN
+	_first := TRUE;
+ELSE
+	_fbTcpIpClient.nRemotePort := stSysPar.nRemotePort;
+	_fbTcpIpClient.sRemoteHost := stSysPar.sRemoteHost;
+	xAgain:=0;
+	_fbTcpIpClient();
+	eTCPErrorID := _fbTcpIpClient.udiErrorID;
+	xRdyCmd := ( eState = STATE.DORMANT );
+	xDone := _xDone AND xExecute;//判断是否处于当前流程的Done状态
+	REPEAT
+		CASE eState OF
+			STATE.DORMANT:
+				HandleDormantState(xAgain=> xAgain);
+			STATE.EXECUTING:
+				HandleExecutingState(xAgain=> xAgain);
+			STATE.DONE:
+				HandleDoneState(xAgain=> xAgain);
+			STATE.INERROR:
+				HandleErrorState(xAgain=> xAgain);
+			STATE.ABORTING:
+				HandleAbortingState(xAgain=> xAgain);
+			STATE.ABORTED:
+				HandleAbortedState(xAgain=> xAgain);
+			STATE.RESETING:
+				HandleResettingState(xAgain=> xAgain);
+			END_CASE
+	UNTIL (xAgain=0)
+	END_REPEAT
+END_IF
+
+
+xOpe:=
+stOpera.xReadCoilStatus OR 
+stOpera.xReadHoldingRegisters OR 
+stOpera.xReadInputRegisters OR 
+stOpera.xReadInputStatus OR 
+stOpera.xSetMultiCoil OR 
+stOpera.xSetMultiHoldingRegister OR 
+stOpera.xSetSingalCoil OR 
+stOpera.xSetSingalHoldingRegister;
+
+//错误码
+CASE eERRORID OF
+	Modbus_ErrorCode.FLT_CMD						:	sError:='FLT_CMD';
+	Modbus_ErrorCode.FLT_CMDTIMEOUT			:	sError:='FLT_CMDTIMEOUT';
+	Modbus_ErrorCode.FLT_MODBUS_ERROR		:	sError:=sModbusError;
+	Modbus_ErrorCode.FLT_NoResponse			:	sError:='FLT_NoResponse';
+	Modbus_ErrorCode.FLT_PAROVERFLOW		:	sError:='FLT_PAROVERFLOW';	
+	Modbus_ErrorCode.FLT_RECEIVE_ERROR	:	sError:='FLT_RECEIVE_ERROR';	
+	Modbus_ErrorCode.FLT_SEND_ERROR			:	sError:='FLT_SEND_ERROR';	
+	Modbus_ErrorCode.No_ERROR						:	sError:='No_ERROR';	
+END_CASE
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+]]></ST>
+    </Implementation>
+    <Method Name="AbortAction" Id="{17b42424-9523-43a5-92cd-d14bfff5befa}">
+      <Declaration><![CDATA[{attribute 'hide' := ''}
+METHOD PROTECTED AbortAction
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+* Cleaning
+* => abort all running operation
+* => if an NBS.ERROR codition is reached, set eErrorID to a Value rather then NBS.ERROR.NO_ERROR 
+*)
+xComplete:=1;
+eErrorID:=Modbus_ErrorCode.NO_ERROR;]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Cmd_ReadCoil" Id="{6353464a-9772-4be4-b019-5f8b44367a59}">
+      <Declaration><![CDATA[METHOD Cmd_ReadCoil
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF eERRORID <> Modbus_ErrorCode.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+	0://清空数据
+		_fbTcpIpClient.xEnable := FALSE;	
+		_tonDelay(IN:= TRUE,pt:=T#1MS);
+		_tonTimeout(IN:= FALSE);
+		SysMemSet( ADR(_fbTcpIpClient.aToServer ), 0, SIZEOF(_fbTcpIpClient.aToServer) );//清除发送区域
+		SysMemSet( ADR(_rxBuffer ), 0, SIZEOF(_rxBuffer) );//清除接收报告数据缓存区域
+		SysMemSet( ADR(stParOut.aRcvBuffer ), 0, SIZEOF(stParOut.aRcvBuffer) );//清除接收报告数据缓存区域		
+		SysMemSet( ADR(stParOut.aRcvCoilBuffer ), 0, SIZEOF(stParOut.aRcvCoilBuffer) );//清除接收报告数据缓存区域		
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的	
+		_fbTcpIpClient.xNeedDisConnect := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF	
+	
+	1://拼接指令
+		_fbTcpIpClient.aToServer[1] :=TO_BYTE(SHR(iModbusTCP_ComID,8));
+		_fbTcpIpClient.aToServer[2] :=TO_BYTE(iModbusTCP_ComID);
+		_fbTcpIpClient.aToServer[3] :=16#00;//		
+		_fbTcpIpClient.aToServer[4] :=16#00;//
+		_fbTcpIpClient.aToServer[5] :=16#00;//		
+		_fbTcpIpClient.aToServer[6] :=16#06;//后面发送字节数量,6个字节			
+		_fbTcpIpClient.aToServer[7] :=stSysPar.xSlaveAdr;//设备地址
+		_fbTcpIpClient.aToServer[8] :=16#01;//查询功能码01
+		_fbTcpIpClient.aToServer[9] :=TO_BYTE(SHR(stParIn.iHoldingRegisterAddress,8));
+		_fbTcpIpClient.aToServer[10] :=TO_BYTE(stParIn.iHoldingRegisterAddress);      //读取寄存器起始地址 
+		_fbTcpIpClient.aToServer[11] :=TO_BYTE(SHR(stParIn.iCoilNum,8));
+		_fbTcpIpClient.aToServer[12] :=TO_BYTE(stParIn.iCoilNum);       		//读取寄存器数量
+		_fbTcpIpClient.udiSendNumber:=12;
+		IF stParIn.iCoilNum>2000 OR stParIn.iCoilNum<1 THEN
+			eERRORID:=Modbus_ErrorCode.FLT_PAROVERFLOW	;//参数超出范围
+			_diCmdState := 999;			
+		END_IF		
+		IF _fbTcpIpClient.xRdyCmd
+		THEN
+			_diCmdState:=_diCmdState+1;
+		ELSE
+			_fbTcpIpClient.xEnable := FALSE;
+		END_IF
+		
+	2://接收数据
+		_fbTcpIpClient.xEnable 		:= TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN	
+			_iSendNgCount 					:= 0;//代表数据接收成功									
+			_rxBuffer 							:= _fbTcpIpClient.rxBuffer;							
+			_diCmdState:=_diCmdState+1;			
+		END_IF
+		//发送出错
+		IF _fbTcpIpClient.xError 
+		THEN//以太网功能报警，一般就是网络建立有问题，此时一般需要去查网络问题
+			_iSendNgCount := _iSendNgCount + 1;
+			IF _iSendNgCount <= 3//3次重发
+			THEN		
+				_tDelay(in:=TRUE,PT:=T#100MS);	
+				IF _tDelay.Q
+				THEN
+					_tDelay(in:=FALSE);
+					_diCmdState:=0;//重发
+				END_IF							
+			ELSE			
+				eERRORID:=Modbus_ErrorCode.FLT_SEND_ERROR	;//指令发送出错，可能是通信异常	
+				_diCmdState := 999;
+			END_IF						
+		END_IF			
+		
+	3://校验MODBUS返回指令
+		_tonTimeout(IN:= TRUE,pt:=T#3S);
+		IF _tonTimeout.Q THEN
+			_tonTimeout(IN:=FALSE);
+			eERRORID:=Modbus_ErrorCode.FLT_NoResponse	;//无响应
+			_diCmdState := 999;			
+		END_IF			
+		
+	//指令返回OK
+		IF 
+			_rxBuffer[1]=_fbTcpIpClient.aToServer[1] AND
+			_rxBuffer[2]=_fbTcpIpClient.aToServer[2] AND
+			_rxBuffer[3]=_fbTcpIpClient.aToServer[3] AND
+			_rxBuffer[4]=_fbTcpIpClient.aToServer[4] AND
+			_rxBuffer[7]=stSysPar.xSlaveAdr AND
+			_rxBuffer[8]=16#01//功能码
+		THEN
+			IF //如果是8的倍数
+				stParIn.iCoilNum MOD 8 =0 AND
+				_rxBuffer[5]=TO_BYTE(SHR(stParIn.iCoilNum/8+3,8)) AND
+				_rxBuffer[6]=TO_BYTE(stParIn.iCoilNum/8+3) AND
+				_rxBuffer[9]=TO_BYTE(stParIn.iCoilNum/8)
+			THEN
+				_diCmdState:=_diCmdState+1;				
+			END_IF	
+			IF //如果不是8的倍数
+				stParIn.iCoilNum MOD 8 <>0 AND
+				_rxBuffer[5]=TO_BYTE(SHR(stParIn.iCoilNum/8+4,8)) AND
+				_rxBuffer[6]=TO_BYTE(stParIn.iCoilNum/8+4) AND
+				_rxBuffer[9]=TO_BYTE(stParIn.iCoilNum/8+1) 
+			THEN
+				_diCmdState:=_diCmdState+1;				
+			END_IF			
+		END_IF
+		
+		//指令返回MODBUS错误码
+		IF 
+			_rxBuffer[1]=_fbTcpIpClient.aToServer[1] AND
+			_rxBuffer[2]=_fbTcpIpClient.aToServer[2] AND
+			_rxBuffer[3]=_fbTcpIpClient.aToServer[3] AND
+			_rxBuffer[4]=_fbTcpIpClient.aToServer[4] AND
+			_rxBuffer[5]=0 AND 
+			_rxBuffer[6]=3 AND
+			_rxBuffer[7]=_fbTcpIpClient.aToServer[7] AND
+			_rxBuffer[8]=16#81//功能码
+		THEN
+			sModbusError:=ModbusTCP_ErrorQuery(_rxBuffer[9]);//解析MODBUS错误代码
+			eERRORID:=Modbus_ErrorCode.FLT_MODBUS_ERROR	;//Modbus错误
+			_diCmdState := 999;				
+		END_IF		
+		
+		//指令返回异常,重发3次
+		IF 
+			_rxBuffer[1]<>_fbTcpIpClient.aToServer[1] OR
+			_rxBuffer[2]<>_fbTcpIpClient.aToServer[2] OR
+			_rxBuffer[3]<>0 OR
+			_rxBuffer[4]<>0 OR
+			_rxBuffer[7]<>_fbTcpIpClient.aToServer[7]
+		THEN		
+			_iSendNgCount := _iSendNgCount + 1;
+			IF _iSendNgCount <= 3//3次重发
+			THEN		
+				_tDelay(in:=TRUE,PT:=T#100MS);	
+				IF _tDelay.Q
+				THEN
+					_tDelay(in:=FALSE);
+					_diCmdState:=0;//重发
+				END_IF							
+			ELSE	
+				eERRORID:=Modbus_ErrorCode.FLT_RECEIVE_ERROR	;//接收指令错误
+				_diCmdState := 999;
+			END_IF		
+		END_IF
+		
+	4://解析数据
+		SysMemCpy(ADR(stparout.aRcvBuffer),ADR(_rxBuffer[10]),TO_INT(_rxBuffer[9]));
+		iModbusTCP_ComID:=iModbusTCP_ComID+1;
+		_diCmdState:=_diCmdState+1;	
+		
+	5://获取BOOL数据
+		FOR i:=1 TO _rxBuffer[9] BY 1 DO		
+			stparout.aRcvCoilBuffer[(i-1)*8+1]	:=stparout.aRcvBuffer[i].00;
+			stparout.aRcvCoilBuffer[(i-1)*8+2]	:=stparout.aRcvBuffer[i].01;		
+			stparout.aRcvCoilBuffer[(i-1)*8+3]	:=stparout.aRcvBuffer[i].02;
+			stparout.aRcvCoilBuffer[(i-1)*8+4]	:=stparout.aRcvBuffer[i].03;
+			stparout.aRcvCoilBuffer[(i-1)*8+5]	:=stparout.aRcvBuffer[i].04;
+			stparout.aRcvCoilBuffer[(i-1)*8+6]	:=stparout.aRcvBuffer[i].05;
+			stparout.aRcvCoilBuffer[(i-1)*8+7]	:=stparout.aRcvBuffer[i].06;
+			stparout.aRcvCoilBuffer[(i-1)*8+8]	:=stparout.aRcvBuffer[i].07;
+		END_FOR
+		xComplete:=TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Cmd_ReadHoldingRegister" Id="{bb5c27c4-03c4-49f0-9dda-05bbc4e511fb}">
+      <Declaration><![CDATA[METHOD Cmd_ReadHoldingRegister
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF eERRORID <> Modbus_ErrorCode.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+	0://清空数据
+		_fbTcpIpClient.xEnable := FALSE;	
+		_tonDelay(IN:= TRUE,pt:=T#1MS);
+		_tonTimeout(IN:= FALSE);
+		SysMemSet( ADR(_fbTcpIpClient.aToServer ), 0, SIZEOF(_fbTcpIpClient.aToServer) );//清除发送区域
+		SysMemSet( ADR(_rxBuffer ), 0, SIZEOF(_rxBuffer) );//清除接收报告数据缓存区域
+		SysMemSet( ADR(stParOut.aRcvBuffer ), 0, SIZEOF(stParOut.aRcvBuffer) );//清除接收报告数据缓存区域		
+		SysMemSet( ADR(stParOut.aRcvCoilBuffer ), 0, SIZEOF(stParOut.aRcvCoilBuffer) );//清除接收报告数据缓存区域		
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的	
+		_fbTcpIpClient.xNeedDisConnect := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF	
+	
+	1://拼接指令
+		_fbTcpIpClient.aToServer[1] :=TO_BYTE(SHR(iModbusTCP_ComID,8));
+		_fbTcpIpClient.aToServer[2] :=TO_BYTE(iModbusTCP_ComID);
+		_fbTcpIpClient.aToServer[3] :=16#00;//		
+		_fbTcpIpClient.aToServer[4] :=16#00;//
+		_fbTcpIpClient.aToServer[5] :=16#00;//		
+		_fbTcpIpClient.aToServer[6] :=16#06;//后面发送字节数量,6个字节			
+		_fbTcpIpClient.aToServer[7] :=stSysPar.xSlaveAdr;//设备地址
+		_fbTcpIpClient.aToServer[8] :=16#03;//查询功能码03
+		_fbTcpIpClient.aToServer[9] :=TO_BYTE(SHR(stParIn.iHoldingRegisterAddress,8));
+		_fbTcpIpClient.aToServer[10] :=TO_BYTE(stParIn.iHoldingRegisterAddress);      //读取寄存器起始地址 
+		_fbTcpIpClient.aToServer[11] :=TO_BYTE(SHR(stParIn.iHoldingRegisterNum,8));
+		_fbTcpIpClient.aToServer[12] :=TO_BYTE(stParIn.iHoldingRegisterNum);       		//读取寄存器数量
+		_fbTcpIpClient.udiSendNumber:=12;
+		IF stParIn.iHoldingRegisterNum>125 OR stParIn.iHoldingRegisterNum<1 THEN
+			eERRORID:=Modbus_ErrorCode.FLT_PAROVERFLOW	;//参数超出范围
+			_diCmdState := 999;			
+		END_IF		
+		IF _fbTcpIpClient.xRdyCmd
+		THEN
+			_diCmdState:=_diCmdState+1;
+		ELSE
+			_fbTcpIpClient.xEnable := FALSE;
+		END_IF
+		
+	2://接收数据
+		_fbTcpIpClient.xEnable 		:= TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN	
+			_iSendNgCount 					:= 0;//代表数据接收成功									
+			_rxBuffer 							:= _fbTcpIpClient.rxBuffer;							
+			_diCmdState:=_diCmdState+1;		
+		END_IF
+		//发送出错
+		IF _fbTcpIpClient.xError 
+		THEN//以太网功能报警，一般就是网络建立有问题，此时一般需要去查网络问题
+			_iSendNgCount := _iSendNgCount + 1;
+			IF _iSendNgCount <= 3//3次重发
+			THEN		
+				_tDelay(in:=TRUE,PT:=T#100MS);	
+				IF _tDelay.Q
+				THEN
+					_tDelay(in:=FALSE);
+					_diCmdState:=0;//重发
+				END_IF							
+			ELSE			
+				eERRORID:=Modbus_ErrorCode.FLT_SEND_ERROR	;//指令发送出错，可能是通信异常	
+				_diCmdState := 999;
+			END_IF						
+		END_IF			
+		
+	3://校验MODBUS返回指令
+		_tonTimeout(IN:= TRUE,pt:=T#3S);
+		IF _tonTimeout.Q THEN
+			_tonTimeout(IN:=FALSE);
+			eERRORID:=Modbus_ErrorCode.FLT_NoResponse	;//无响应
+			_diCmdState := 999;			
+		END_IF	
+		
+	//指令返回OK
+		IF 
+			_rxBuffer[1]=_fbTcpIpClient.aToServer[1] AND
+			_rxBuffer[2]=_fbTcpIpClient.aToServer[2] AND
+			_rxBuffer[3]=_fbTcpIpClient.aToServer[3] AND
+			_rxBuffer[4]=_fbTcpIpClient.aToServer[4] AND
+			_rxBuffer[5]=TO_BYTE(SHR((stParIn.iHoldingRegisterNum*2+3),8)) AND //数量
+			_rxBuffer[6]=TO_BYTE(stParIn.iHoldingRegisterNum*2+3) AND
+			_rxBuffer[7]=stSysPar.xSlaveAdr AND
+			_rxBuffer[8]=16#03 AND//功能码
+			_rxBuffer[9]=TO_BYTE(stParIn.iHoldingRegisterNum*2)//一次最多读取255个字节,即125个字
+		THEN
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		
+		//指令返回MODBUS错误码
+		IF 
+			_rxBuffer[1]=_fbTcpIpClient.aToServer[1] AND
+			_rxBuffer[2]=_fbTcpIpClient.aToServer[2] AND
+			_rxBuffer[3]=_fbTcpIpClient.aToServer[3] AND
+			_rxBuffer[4]=_fbTcpIpClient.aToServer[4] AND
+			_rxBuffer[5]=0 AND 
+			_rxBuffer[6]=3 AND
+			_rxBuffer[7]=_fbTcpIpClient.aToServer[7] AND
+			_rxBuffer[8]=16#83//功能码
+		THEN
+			sModbusError:=ModbusTCP_ErrorQuery(_rxBuffer[9]);//解析MODBUS错误代码
+			eERRORID:=Modbus_ErrorCode.FLT_MODBUS_ERROR	;//Modbus错误
+			_diCmdState := 999;				
+		END_IF		
+		
+		//指令返回异常,重发3次
+		IF 
+			_rxBuffer[1]<>_fbTcpIpClient.aToServer[1] OR
+			_rxBuffer[2]<>_fbTcpIpClient.aToServer[2] OR
+			_rxBuffer[3]<>0 OR
+			_rxBuffer[4]<>0 OR
+			_rxBuffer[7]<>_fbTcpIpClient.aToServer[7]
+		THEN		
+			_iSendNgCount := _iSendNgCount + 1;
+			IF _iSendNgCount <= 3//3次重发
+			THEN		
+				_tDelay(in:=TRUE,PT:=T#100MS);	
+				IF _tDelay.Q
+				THEN
+					_tDelay(in:=FALSE);
+					_diCmdState:=0;//重发
+				END_IF							
+			ELSE	
+				eERRORID:=Modbus_ErrorCode.FLT_RECEIVE_ERROR	;//接收指令错误
+				_diCmdState := 999;
+			END_IF		
+		END_IF
+		
+	4://解析数据
+		SysMemCpy(ADR(stparout.aRcvBuffer),ADR(_rxBuffer[10]),TO_INT(_rxBuffer[9]));
+		iModbusTCP_ComID:=iModbusTCP_ComID+1;
+		xComplete:=TRUE;
+
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Cmd_ReadInputCoil" Id="{dc15e452-6387-4bc1-94f7-e8837e751fe0}">
+      <Declaration><![CDATA[METHOD Cmd_ReadInputCoil
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF eERRORID <> Modbus_ErrorCode.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+	0://清空数据
+		_fbTcpIpClient.xEnable := FALSE;	
+		_tonDelay(IN:= TRUE,pt:=T#1MS);
+		_tonTimeout(IN:= FALSE);
+		SysMemSet( ADR(_fbTcpIpClient.aToServer ), 0, SIZEOF(_fbTcpIpClient.aToServer) );//清除发送区域
+		SysMemSet( ADR(_rxBuffer ), 0, SIZEOF(_rxBuffer) );//清除接收报告数据缓存区域
+		SysMemSet( ADR(stParOut.aRcvBuffer ), 0, SIZEOF(stParOut.aRcvBuffer) );//清除接收报告数据缓存区域	
+		SysMemSet( ADR(stParOut.aRcvCoilBuffer ), 0, SIZEOF(stParOut.aRcvCoilBuffer) );//清除接收报告数据缓存区域		
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的	
+		_fbTcpIpClient.xNeedDisConnect := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF	
+	
+	1://拼接指令
+		_fbTcpIpClient.aToServer[1] :=TO_BYTE(SHR(iModbusTCP_ComID,8));
+		_fbTcpIpClient.aToServer[2] :=TO_BYTE(iModbusTCP_ComID);
+		_fbTcpIpClient.aToServer[3] :=16#00;//		
+		_fbTcpIpClient.aToServer[4] :=16#00;//
+		_fbTcpIpClient.aToServer[5] :=16#00;//		
+		_fbTcpIpClient.aToServer[6] :=16#06;//后面发送字节数量,6个字节			
+		_fbTcpIpClient.aToServer[7] :=stSysPar.xSlaveAdr;//设备地址
+		_fbTcpIpClient.aToServer[8] :=16#02;//查询功能码02
+		_fbTcpIpClient.aToServer[9] :=TO_BYTE(SHR(stParIn.iHoldingRegisterAddress,8));
+		_fbTcpIpClient.aToServer[10] :=TO_BYTE(stParIn.iHoldingRegisterAddress);      //读取寄存器起始地址 
+		_fbTcpIpClient.aToServer[11] :=TO_BYTE(SHR(stParIn.iCoilNum,8));
+		_fbTcpIpClient.aToServer[12] :=TO_BYTE(stParIn.iCoilNum);       		//读取寄存器数量
+		_fbTcpIpClient.udiSendNumber:=12;
+		IF stParIn.iCoilNum>2000 OR stParIn.iCoilNum<1 THEN
+			eERRORID:=Modbus_ErrorCode.FLT_PAROVERFLOW	;//参数超出范围
+			_diCmdState := 999;			
+		END_IF		
+		IF _fbTcpIpClient.xRdyCmd
+		THEN
+			_diCmdState:=_diCmdState+1;
+		ELSE
+			_fbTcpIpClient.xEnable := FALSE;
+		END_IF
+		
+	2://接收数据
+		_fbTcpIpClient.xEnable 		:= TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN	
+			_iSendNgCount 					:= 0;//代表数据接收成功									
+			_rxBuffer 							:= _fbTcpIpClient.rxBuffer;							
+			_diCmdState:=_diCmdState+1;			
+		END_IF
+		//发送出错
+		IF _fbTcpIpClient.xError 
+		THEN//以太网功能报警，一般就是网络建立有问题，此时一般需要去查网络问题
+			_iSendNgCount := _iSendNgCount + 1;
+			IF _iSendNgCount <= 3//3次重发
+			THEN		
+				_tDelay(in:=TRUE,PT:=T#100MS);	
+				IF _tDelay.Q
+				THEN
+					_tDelay(in:=FALSE);
+					_diCmdState:=0;//重发
+				END_IF							
+			ELSE			
+				eERRORID:=Modbus_ErrorCode.FLT_SEND_ERROR	;//指令发送出错，可能是通信异常	
+				_diCmdState := 999;
+			END_IF						
+		END_IF			
+		
+	3://校验MODBUS返回指令
+		_tonTimeout(IN:= TRUE,pt:=T#3S);
+		IF _tonTimeout.Q THEN
+			_tonTimeout(IN:=FALSE);
+			eERRORID:=Modbus_ErrorCode.FLT_NoResponse	;//无响应
+			_diCmdState := 999;			
+		END_IF	
+		
+	//指令返回OK
+		IF 
+			_rxBuffer[1]=_fbTcpIpClient.aToServer[1] AND
+			_rxBuffer[2]=_fbTcpIpClient.aToServer[2] AND
+			_rxBuffer[3]=_fbTcpIpClient.aToServer[3] AND
+			_rxBuffer[4]=_fbTcpIpClient.aToServer[4] AND
+			_rxBuffer[7]=stSysPar.xSlaveAdr AND
+			_rxBuffer[8]=16#02//功能码
+		THEN
+			IF //如果是8的倍数
+				stParIn.iCoilNum MOD 8 =0 AND
+				_rxBuffer[5]=TO_BYTE(SHR(stParIn.iCoilNum/8+3,8)) AND
+				_rxBuffer[6]=TO_BYTE(stParIn.iCoilNum/8+3) AND
+				_rxBuffer[9]=TO_BYTE(stParIn.iCoilNum/8)
+			THEN
+				_diCmdState:=_diCmdState+1;				
+			END_IF	
+			IF //如果不是8的倍数
+				stParIn.iCoilNum MOD 8 <>0 AND
+				_rxBuffer[5]=TO_BYTE(SHR(stParIn.iCoilNum/8+4,8)) AND
+				_rxBuffer[6]=TO_BYTE(stParIn.iCoilNum/8+4) AND
+				_rxBuffer[9]=TO_BYTE(stParIn.iCoilNum/8+1) 
+			THEN
+				_diCmdState:=_diCmdState+1;				
+			END_IF			
+		END_IF
+		
+		//指令返回MODBUS错误码
+		IF 
+			_rxBuffer[1]=_fbTcpIpClient.aToServer[1] AND
+			_rxBuffer[2]=_fbTcpIpClient.aToServer[2] AND
+			_rxBuffer[3]=_fbTcpIpClient.aToServer[3] AND
+			_rxBuffer[4]=_fbTcpIpClient.aToServer[4] AND
+			_rxBuffer[5]=0 AND 
+			_rxBuffer[6]=3 AND
+			_rxBuffer[7]=_fbTcpIpClient.aToServer[7] AND
+			_rxBuffer[8]=16#82//功能码
+		THEN
+			sModbusError:=ModbusTCP_ErrorQuery(_rxBuffer[9]);//解析MODBUS错误代码
+			eERRORID:=Modbus_ErrorCode.FLT_MODBUS_ERROR	;//Modbus错误
+			_diCmdState := 999;				
+		END_IF		
+		
+		//指令返回异常,重发3次
+		IF 
+			_rxBuffer[1]<>_fbTcpIpClient.aToServer[1] OR
+			_rxBuffer[2]<>_fbTcpIpClient.aToServer[2] OR
+			_rxBuffer[3]<>0 OR
+			_rxBuffer[4]<>0 OR
+			_rxBuffer[7]<>_fbTcpIpClient.aToServer[7]
+		THEN		
+			_iSendNgCount := _iSendNgCount + 1;
+			IF _iSendNgCount <= 3//3次重发
+			THEN		
+				_tDelay(in:=TRUE,PT:=T#100MS);	
+				IF _tDelay.Q
+				THEN
+					_tDelay(in:=FALSE);
+					_diCmdState:=0;//重发
+				END_IF							
+			ELSE	
+				eERRORID:=Modbus_ErrorCode.FLT_RECEIVE_ERROR	;//接收指令错误
+				_diCmdState := 999;
+			END_IF		
+		END_IF
+		
+	4://解析数据
+		SysMemCpy(ADR(stparout.aRcvBuffer),ADR(_rxBuffer[10]),TO_INT(_rxBuffer[9]));
+		iModbusTCP_ComID:=iModbusTCP_ComID+1;
+		_diCmdState:=_diCmdState+1;	
+		
+	5://获取BOOL数据
+		FOR i:=1 TO _rxBuffer[9] BY 1 DO		
+			stparout.aRcvCoilBuffer[(i-1)*8+1]	:=stparout.aRcvBuffer[i].00;
+			stparout.aRcvCoilBuffer[(i-1)*8+2]	:=stparout.aRcvBuffer[i].01;		
+			stparout.aRcvCoilBuffer[(i-1)*8+3]	:=stparout.aRcvBuffer[i].02;
+			stparout.aRcvCoilBuffer[(i-1)*8+4]	:=stparout.aRcvBuffer[i].03;
+			stparout.aRcvCoilBuffer[(i-1)*8+5]	:=stparout.aRcvBuffer[i].04;
+			stparout.aRcvCoilBuffer[(i-1)*8+6]	:=stparout.aRcvBuffer[i].05;
+			stparout.aRcvCoilBuffer[(i-1)*8+7]	:=stparout.aRcvBuffer[i].06;
+			stparout.aRcvCoilBuffer[(i-1)*8+8]	:=stparout.aRcvBuffer[i].07;
+		END_FOR
+		xComplete:=TRUE;
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Cmd_ReadInputRegister" Id="{711fea61-5e33-4449-8180-197ea8c88542}">
+      <Declaration><![CDATA[METHOD Cmd_ReadInputRegister
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF eERRORID <> Modbus_ErrorCode.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+	0://清空数据
+		_fbTcpIpClient.xEnable := FALSE;	
+		_tonDelay(IN:= TRUE,pt:=T#1MS);
+		_tonTimeout(IN:= FALSE);
+		SysMemSet( ADR(_fbTcpIpClient.aToServer ), 0, SIZEOF(_fbTcpIpClient.aToServer) );//清除发送区域
+		SysMemSet( ADR(_rxBuffer ), 0, SIZEOF(_rxBuffer) );//清除接收报告数据缓存区域
+		SysMemSet( ADR(stParOut.aRcvBuffer ), 0, SIZEOF(stParOut.aRcvBuffer) );//清除接收报告数据缓存区域	
+		SysMemSet( ADR(stParOut.aRcvCoilBuffer ), 0, SIZEOF(stParOut.aRcvCoilBuffer) );//清除接收报告数据缓存区域		
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的	
+		_fbTcpIpClient.xNeedDisConnect := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF	
+	
+	1://拼接指令
+		_fbTcpIpClient.aToServer[1] :=TO_BYTE(SHR(iModbusTCP_ComID,8));
+		_fbTcpIpClient.aToServer[2] :=TO_BYTE(iModbusTCP_ComID);
+		_fbTcpIpClient.aToServer[3] :=16#00;//		
+		_fbTcpIpClient.aToServer[4] :=16#00;//
+		_fbTcpIpClient.aToServer[5] :=16#00;//		
+		_fbTcpIpClient.aToServer[6] :=16#06;//后面发送字节数量,6个字节			
+		_fbTcpIpClient.aToServer[7] :=stSysPar.xSlaveAdr;//设备地址
+		_fbTcpIpClient.aToServer[8] :=16#04;//查询功能码04
+		_fbTcpIpClient.aToServer[9] :=TO_BYTE(SHR(stParIn.iHoldingRegisterAddress,8));
+		_fbTcpIpClient.aToServer[10] :=TO_BYTE(stParIn.iHoldingRegisterAddress);      //读取寄存器起始地址 
+		_fbTcpIpClient.aToServer[11] :=TO_BYTE(SHR(stParIn.iHoldingRegisterNum,8));
+		_fbTcpIpClient.aToServer[12] :=TO_BYTE(stParIn.iHoldingRegisterNum);       		//读取寄存器数量
+		_fbTcpIpClient.udiSendNumber:=12;
+		IF stParIn.iHoldingRegisterNum>125 OR stParIn.iHoldingRegisterNum<1 THEN
+			eERRORID:=Modbus_ErrorCode.FLT_PAROVERFLOW	;//参数超出范围
+			_diCmdState := 999;			
+		END_IF		
+		IF _fbTcpIpClient.xRdyCmd
+		THEN
+			_diCmdState:=_diCmdState+1;
+		ELSE
+			_fbTcpIpClient.xEnable := FALSE;
+		END_IF
+		
+	2://接收数据
+		_fbTcpIpClient.xEnable 		:= TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN	
+			_iSendNgCount 					:= 0;//代表数据接收成功									
+			_rxBuffer 							:= _fbTcpIpClient.rxBuffer;							
+			_diCmdState:=_diCmdState+1;			
+		END_IF
+		//发送出错
+		IF _fbTcpIpClient.xError 
+		THEN//以太网功能报警，一般就是网络建立有问题，此时一般需要去查网络问题
+			_iSendNgCount := _iSendNgCount + 1;
+			IF _iSendNgCount <= 3//3次重发
+			THEN		
+				_tDelay(in:=TRUE,PT:=T#100MS);	
+				IF _tDelay.Q
+				THEN
+					_tDelay(in:=FALSE);
+					_diCmdState:=0;//重发
+				END_IF							
+			ELSE			
+				eERRORID:=Modbus_ErrorCode.FLT_SEND_ERROR	;//指令发送出错，可能是通信异常	
+				_diCmdState := 999;
+			END_IF						
+		END_IF			
+		
+	3://校验MODBUS返回指令
+		_tonTimeout(IN:= TRUE,pt:=T#3S);
+		IF _tonTimeout.Q THEN
+			_tonTimeout(IN:=FALSE);
+			eERRORID:=Modbus_ErrorCode.FLT_NoResponse	;//无响应
+			_diCmdState := 999;			
+		END_IF	
+		
+	//指令返回OK
+		IF 
+			_rxBuffer[1]=_fbTcpIpClient.aToServer[1] AND
+			_rxBuffer[2]=_fbTcpIpClient.aToServer[2] AND
+			_rxBuffer[3]=_fbTcpIpClient.aToServer[3] AND
+			_rxBuffer[4]=_fbTcpIpClient.aToServer[4] AND
+			_rxBuffer[5]=TO_BYTE(SHR((stParIn.iHoldingRegisterNum*2+3),8)) AND //数量
+			_rxBuffer[6]=TO_BYTE(stParIn.iHoldingRegisterNum*2+3) AND
+			_rxBuffer[7]=stSysPar.xSlaveAdr AND
+			_rxBuffer[8]=16#04 AND//功能码
+			_rxBuffer[9]=TO_BYTE(stParIn.iHoldingRegisterNum*2)//一次最多读取255个字节,即125个字
+		THEN
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		
+		//指令返回MODBUS错误码
+		IF 
+			_rxBuffer[1]=_fbTcpIpClient.aToServer[1] AND
+			_rxBuffer[2]=_fbTcpIpClient.aToServer[2] AND
+			_rxBuffer[3]=_fbTcpIpClient.aToServer[3] AND
+			_rxBuffer[4]=_fbTcpIpClient.aToServer[4] AND
+			_rxBuffer[5]=0 AND 
+			_rxBuffer[6]=3 AND
+			_rxBuffer[7]=_fbTcpIpClient.aToServer[7] AND
+			_rxBuffer[8]=16#84//功能码
+		THEN
+			sModbusError:=ModbusTCP_ErrorQuery(_rxBuffer[9]);//解析MODBUS错误代码
+			eERRORID:=Modbus_ErrorCode.FLT_MODBUS_ERROR	;//Modbus错误
+			_diCmdState := 999;				
+		END_IF		
+		
+		//指令返回异常,重发3次
+		IF 
+			_rxBuffer[1]<>_fbTcpIpClient.aToServer[1] OR
+			_rxBuffer[2]<>_fbTcpIpClient.aToServer[2] OR
+			_rxBuffer[3]<>0 OR
+			_rxBuffer[4]<>0 OR
+			_rxBuffer[7]<>_fbTcpIpClient.aToServer[7]
+		THEN		
+			_iSendNgCount := _iSendNgCount + 1;
+			IF _iSendNgCount <= 3//3次重发
+			THEN		
+				_tDelay(in:=TRUE,PT:=T#100MS);	
+				IF _tDelay.Q
+				THEN
+					_tDelay(in:=FALSE);
+					_diCmdState:=0;//重发
+				END_IF							
+			ELSE	
+				eERRORID:=Modbus_ErrorCode.FLT_RECEIVE_ERROR	;//接收指令错误
+				_diCmdState := 999;
+			END_IF		
+		END_IF
+		
+	4://解析数据
+		SysMemCpy(ADR(stparout.aRcvBuffer),ADR(_rxBuffer[10]),TO_INT(_rxBuffer[9]));
+		iModbusTCP_ComID:=iModbusTCP_ComID+1;
+		xComplete:=TRUE;
+
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Cmd_WriteMultiCoil" Id="{cc05e569-42f1-41b5-942e-f19983b2e7ad}">
+      <Declaration><![CDATA[METHOD Cmd_WriteMultiCoil
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF eERRORID <> Modbus_ErrorCode.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+	0://清空数据
+		_fbTcpIpClient.xEnable := FALSE;	
+		_tonDelay(IN:= TRUE,pt:=T#1MS);
+		_tonTimeout(IN:= FALSE);
+		SysMemSet( ADR(_fbTcpIpClient.aToServer ), 0, SIZEOF(_fbTcpIpClient.aToServer) );//清除发送区域
+		SysMemSet( ADR(_rxBuffer ), 0, SIZEOF(_rxBuffer) );//清除接收报告数据缓存区域
+		SysMemSet( ADR(stParOut.aRcvBuffer ), 0, SIZEOF(stParOut.aRcvBuffer) );//清除接收报告数据缓存区域	
+		SysMemSet( ADR(stParOut.aRcvCoilBuffer ), 0, SIZEOF(stParOut.aRcvCoilBuffer) );//清除接收报告数据缓存区域			
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的	
+		_fbTcpIpClient.xNeedDisConnect := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF	
+	
+	1://拼接指令
+(******************************************固定段**********************************************)
+		_fbTcpIpClient.aToServer[1] :=TO_BYTE(SHR(iModbusTCP_ComID,8));
+		_fbTcpIpClient.aToServer[2] :=TO_BYTE(iModbusTCP_ComID);
+		_fbTcpIpClient.aToServer[3] :=16#00;//		
+		_fbTcpIpClient.aToServer[4] :=16#00;//	
+		_fbTcpIpClient.aToServer[7] :=stSysPar.xSlaveAdr;//设备地址
+		_fbTcpIpClient.aToServer[8] :=16#0F;//写入单个寄存器功能码15	
+		_fbTcpIpClient.aToServer[9] :=TO_BYTE(SHR((stParIn.iCoilStartAddress),8));//起始地址高位
+		_fbTcpIpClient.aToServer[10] :=TO_BYTE(stParIn.iCoilStartAddress); //起始地址低位
+		_fbTcpIpClient.aToServer[11] :=TO_BYTE(SHR(stParIn.iCoilNum,8));//写入线圈数量高位
+		_fbTcpIpClient.aToServer[12] :=TO_BYTE(stParIn.iCoilNum);//写入线圈数量低位
+(******************************************可变段**********************************************)
+		IF stParIn.iCoilNum MOD 8 <>0 THEN	
+			_fbTcpIpClient.aToServer[13] :=TO_BYTE(stParIn.iCoilNum/8+1);	//写入字节数量
+		ELSE
+			_fbTcpIpClient.aToServer[13] :=TO_BYTE(stParIn.iCoilNum/8);	//写入字节数量
+		END_IF
+		_fbTcpIpClient.aToServer[5] :=16#00;//		
+		_fbTcpIpClient.aToServer[6] :=TO_BYTE(_fbTcpIpClient.aToServer[13]+7);//后面发送字节数量	
+		FOR i:=1 TO _fbTcpIpClient.aToServer[13] BY 1 DO
+				_fbTcpIpClient.aToServer[13+i] :=stParIn.aSendBuffer[i];
+		END_FOR
+		//发送字节长度
+		_fbTcpIpClient.udiSendNumber:=_fbTcpIpClient.aToServer[5]*255+_fbTcpIpClient.aToServer[6]+6;	
+		IF _fbTcpIpClient.xRdyCmd
+		THEN
+			_diCmdState:=_diCmdState+1;
+		ELSE
+			_fbTcpIpClient.xEnable := FALSE;
+		END_IF
+		
+	2://接收数据
+		_fbTcpIpClient.xEnable 		:= TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN	
+			_iSendNgCount 					:= 0;//代表数据接收成功									
+			_rxBuffer 							:= _fbTcpIpClient.rxBuffer;							
+			_diCmdState:=_diCmdState+1;			
+		END_IF
+		//发送出错
+		IF _fbTcpIpClient.xError 
+		THEN//以太网功能报警，一般就是网络建立有问题，此时一般需要去查网络问题
+			_iSendNgCount := _iSendNgCount + 1;
+			IF _iSendNgCount <= 3//3次重发
+			THEN		
+				_tDelay(in:=TRUE,PT:=T#100MS);	
+				IF _tDelay.Q
+				THEN
+					_tDelay(in:=FALSE);
+					_diCmdState:=0;//重发
+				END_IF							
+			ELSE			
+				eERRORID:=Modbus_ErrorCode.FLT_SEND_ERROR	;//指令发送出错，可能是通信异常	
+				_diCmdState := 999;
+			END_IF						
+		END_IF			
+		
+	3://校验MODBUS返回指令
+		_tonTimeout(IN:= TRUE,pt:=T#3S);
+		IF _tonTimeout.Q THEN
+			_tonTimeout(IN:=FALSE);
+			eERRORID:=Modbus_ErrorCode.FLT_NoResponse	;//无响应
+			_diCmdState := 999;			
+		END_IF	
+		
+	//指令返回OK
+		IF 
+			_rxBuffer[1]=_fbTcpIpClient.aToServer[1] AND
+			_rxBuffer[2]=_fbTcpIpClient.aToServer[2] AND
+			_rxBuffer[3]=_fbTcpIpClient.aToServer[3] AND
+			_rxBuffer[4]=_fbTcpIpClient.aToServer[4] AND
+			_rxBuffer[5]=_fbTcpIpClient.aToServer[5] AND
+			_rxBuffer[6]=16#06 AND
+			_rxBuffer[7]=_fbTcpIpClient.aToServer[7] AND
+			_rxBuffer[8]=_fbTcpIpClient.aToServer[8] AND
+			_rxBuffer[9]=_fbTcpIpClient.aToServer[9] AND 
+			_rxBuffer[10]=_fbTcpIpClient.aToServer[10]AND 	
+			_rxBuffer[11]=_fbTcpIpClient.aToServer[11]AND
+			_rxBuffer[12]=_fbTcpIpClient.aToServer[12]
+		THEN
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		
+		//指令返回MODBUS错误码
+		IF 
+			_rxBuffer[1]=_fbTcpIpClient.aToServer[1] AND
+			_rxBuffer[2]=_fbTcpIpClient.aToServer[2] AND
+			_rxBuffer[3]=_fbTcpIpClient.aToServer[3] AND
+			_rxBuffer[4]=_fbTcpIpClient.aToServer[4] AND
+			_rxBuffer[5]=_fbTcpIpClient.aToServer[5] AND 
+			_rxBuffer[6]=16#03 AND
+			_rxBuffer[7]=_fbTcpIpClient.aToServer[7] AND
+			_rxBuffer[8]=16#8F//功能码
+		THEN
+			sModbusError:=ModbusTCP_ErrorQuery(_rxBuffer[9]);//解析MODBUS错误代码
+			eERRORID:=Modbus_ErrorCode.FLT_MODBUS_ERROR	;//Modbus错误
+			_diCmdState := 999;				
+		END_IF		
+		
+		//指令返回异常,重发3次
+		IF 
+			_rxBuffer[1]<>_fbTcpIpClient.aToServer[1] OR
+			_rxBuffer[2]<>_fbTcpIpClient.aToServer[2] OR
+			_rxBuffer[3]<>_fbTcpIpClient.aToServer[3] OR
+			_rxBuffer[4]<>_fbTcpIpClient.aToServer[4] OR
+			_rxBuffer[7]<>_fbTcpIpClient.aToServer[7]
+		THEN		
+			_iSendNgCount := _iSendNgCount + 1;
+			IF _iSendNgCount <= 3//3次重发
+			THEN		
+				_tDelay(in:=TRUE,PT:=T#100MS);	
+				IF _tDelay.Q
+				THEN
+					_tDelay(in:=FALSE);
+					_diCmdState:=0;//重发
+				END_IF							
+			ELSE	
+				eERRORID:=Modbus_ErrorCode.FLT_RECEIVE_ERROR	;//接收指令错误
+				_diCmdState := 999;
+			END_IF		
+		END_IF
+		
+	4://解析数据
+		xComplete:=TRUE;
+
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Cmd_WriteMultiHoldingRegister" Id="{5c0cb2cc-f33a-4476-a166-4510a1c2e535}">
+      <Declaration><![CDATA[METHOD Cmd_WriteMultiHoldingRegister
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF eERRORID <> Modbus_ErrorCode.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+	0://清空数据
+		_fbTcpIpClient.xEnable := FALSE;	
+		_tonDelay(IN:= TRUE,pt:=T#1MS);
+		_tonTimeout(IN:= FALSE);
+		SysMemSet( ADR(_fbTcpIpClient.aToServer ), 0, SIZEOF(_fbTcpIpClient.aToServer) );//清除发送区域
+		SysMemSet( ADR(_rxBuffer ), 0, SIZEOF(_rxBuffer) );//清除接收报告数据缓存区域
+		SysMemSet( ADR(stParOut.aRcvBuffer ), 0, SIZEOF(stParOut.aRcvBuffer) );//清除接收报告数据缓存区域	
+		SysMemSet( ADR(stParOut.aRcvCoilBuffer ), 0, SIZEOF(stParOut.aRcvCoilBuffer) );//清除接收报告数据缓存区域			
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的	
+		_fbTcpIpClient.xNeedDisConnect := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF	
+	
+	1://拼接指令
+(******************************************固定段**********************************************)
+		_fbTcpIpClient.aToServer[1] :=TO_BYTE(SHR(iModbusTCP_ComID,8));
+		_fbTcpIpClient.aToServer[2] :=TO_BYTE(iModbusTCP_ComID);
+		_fbTcpIpClient.aToServer[3] :=16#00;//		
+		_fbTcpIpClient.aToServer[4] :=16#00;//
+		_fbTcpIpClient.aToServer[5] :=TO_BYTE(SHR(stParIn.iHoldingRegisterNum*2+7,8));//		
+		_fbTcpIpClient.aToServer[6] :=TO_BYTE(stParIn.iHoldingRegisterNum*2+7);//后面发送字节数量		
+		_fbTcpIpClient.aToServer[7] :=stSysPar.xSlaveAdr;//设备地址
+		_fbTcpIpClient.aToServer[8] :=16#10;//写入单个寄存器功能码16		
+		_fbTcpIpClient.aToServer[9] :=TO_BYTE(SHR((stParIn.iHoldingRegisterAddress),8));//起始地址高位
+		_fbTcpIpClient.aToServer[10] :=TO_BYTE(stParIn.iHoldingRegisterAddress); //起始地址低位
+		_fbTcpIpClient.aToServer[11] :=TO_BYTE(SHR(stParIn.iHoldingRegisterNum,8));//写入寄存器数量高位
+		_fbTcpIpClient.aToServer[12] :=TO_BYTE(stParIn.iHoldingRegisterNum);//写入寄存器数量低位
+(******************************************可变段**********************************************)
+		_fbTcpIpClient.aToServer[13] :=TO_BYTE(stParIn.iHoldingRegisterNum*2);	//写入字节数量
+		FOR i:=1 TO stParIn.iHoldingRegisterNum*2 DO
+			_fbTcpIpClient.aToServer[13+i] :=stParIn.aSendBuffer[i];
+			_fbTcpIpClient.aToServer[14+i] :=stParIn.aSendBuffer[i+1];
+		END_FOR
+		
+		_fbTcpIpClient.udiSendNumber:=13+stParIn.iHoldingRegisterNum*2;	
+		IF _fbTcpIpClient.xRdyCmd
+		THEN
+			_diCmdState:=_diCmdState+1;
+		ELSE
+			_fbTcpIpClient.xEnable := FALSE;
+		END_IF
+		
+	2://接收数据
+		_fbTcpIpClient.xEnable 		:= TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN	
+			_iSendNgCount 					:= 0;//代表数据接收成功									
+			_rxBuffer 							:= _fbTcpIpClient.rxBuffer;							
+			_diCmdState:=_diCmdState+1;			
+		END_IF
+		//发送出错
+		IF _fbTcpIpClient.xError 
+		THEN//以太网功能报警，一般就是网络建立有问题，此时一般需要去查网络问题
+			_iSendNgCount := _iSendNgCount + 1;
+			IF _iSendNgCount <= 3//3次重发
+			THEN		
+				_tDelay(in:=TRUE,PT:=T#100MS);	
+				IF _tDelay.Q
+				THEN
+					_tDelay(in:=FALSE);
+					_diCmdState:=0;//重发
+				END_IF							
+			ELSE			
+				eERRORID:=Modbus_ErrorCode.FLT_SEND_ERROR	;//指令发送出错，可能是通信异常	
+				_diCmdState := 999;
+			END_IF						
+		END_IF			
+		
+	3://校验MODBUS返回指令
+		_tonTimeout(IN:= TRUE,pt:=T#3S);
+		IF _tonTimeout.Q THEN
+			_tonTimeout(IN:=FALSE);
+			eERRORID:=Modbus_ErrorCode.FLT_NoResponse	;//无响应
+			_diCmdState := 999;			
+		END_IF	
+		
+	//指令返回OK
+		IF 
+			_rxBuffer[1]=_fbTcpIpClient.aToServer[1] AND
+			_rxBuffer[2]=_fbTcpIpClient.aToServer[2] AND
+			_rxBuffer[3]=_fbTcpIpClient.aToServer[3] AND
+			_rxBuffer[4]=_fbTcpIpClient.aToServer[4] AND
+			_rxBuffer[5]=_fbTcpIpClient.aToServer[5] AND
+			_rxBuffer[6]=16#06 AND
+			_rxBuffer[7]=_fbTcpIpClient.aToServer[7] AND
+			_rxBuffer[8]=_fbTcpIpClient.aToServer[8] AND
+			_rxBuffer[9]=_fbTcpIpClient.aToServer[9] AND 
+			_rxBuffer[10]=_fbTcpIpClient.aToServer[10]AND 	
+			_rxBuffer[11]=_fbTcpIpClient.aToServer[11]AND
+			_rxBuffer[12]=_fbTcpIpClient.aToServer[12]
+		THEN
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		
+		//指令返回MODBUS错误码
+		IF 
+			_rxBuffer[1]=_fbTcpIpClient.aToServer[1] AND
+			_rxBuffer[2]=_fbTcpIpClient.aToServer[2] AND
+			_rxBuffer[3]=_fbTcpIpClient.aToServer[3] AND
+			_rxBuffer[4]=_fbTcpIpClient.aToServer[4] AND
+			_rxBuffer[5]=_fbTcpIpClient.aToServer[5] AND 
+			_rxBuffer[6]=16#03 AND
+			_rxBuffer[7]=_fbTcpIpClient.aToServer[7] AND
+			_rxBuffer[8]=16#90//功能码
+		THEN
+			sModbusError:=ModbusTCP_ErrorQuery(_rxBuffer[9]);//解析MODBUS错误代码
+			eERRORID:=Modbus_ErrorCode.FLT_MODBUS_ERROR	;//Modbus错误
+			_diCmdState := 999;				
+		END_IF		
+		
+		//指令返回异常,重发3次
+		IF 
+			_rxBuffer[1]<>_fbTcpIpClient.aToServer[1] OR
+			_rxBuffer[2]<>_fbTcpIpClient.aToServer[2] OR
+			_rxBuffer[3]<>_fbTcpIpClient.aToServer[3] OR
+			_rxBuffer[4]<>_fbTcpIpClient.aToServer[4] OR
+			_rxBuffer[7]<>_fbTcpIpClient.aToServer[7]
+		THEN		
+			_iSendNgCount := _iSendNgCount + 1;
+			IF _iSendNgCount <= 3//3次重发
+			THEN		
+				_tDelay(in:=TRUE,PT:=T#100MS);	
+				IF _tDelay.Q
+				THEN
+					_tDelay(in:=FALSE);
+					_diCmdState:=0;//重发
+				END_IF							
+			ELSE	
+				eERRORID:=Modbus_ErrorCode.FLT_RECEIVE_ERROR	;//接收指令错误
+				_diCmdState := 999;
+			END_IF		
+		END_IF
+		
+	4://解析数据
+		SysMemCpy(ADR(stparout.aRcvBuffer),ADR(_fbTcpIpClient.aToServer[14]),stParIn.iHoldingRegisterNum*2);
+		xComplete:=TRUE;
+
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Cmd_WriteSingleCoil" Id="{c0ab1ed1-2d42-40cd-ad8e-7ef3af871613}">
+      <Declaration><![CDATA[METHOD Cmd_WriteSingleCoil
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF eERRORID <> Modbus_ErrorCode.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+	0://清空数据
+		_fbTcpIpClient.xEnable := FALSE;	
+		_tonDelay(IN:= TRUE,pt:=T#1MS);
+		_tonTimeout(IN:= FALSE);
+		SysMemSet( ADR(_fbTcpIpClient.aToServer ), 0, SIZEOF(_fbTcpIpClient.aToServer) );//清除发送区域
+		SysMemSet( ADR(_rxBuffer ), 0, SIZEOF(_rxBuffer) );//清除接收报告数据缓存区域
+		SysMemSet( ADR(stParOut.aRcvBuffer ), 0, SIZEOF(stParOut.aRcvBuffer) );//清除接收报告数据缓存区域	
+		SysMemSet( ADR(stParOut.aRcvCoilBuffer ), 0, SIZEOF(stParOut.aRcvCoilBuffer) );//清除接收报告数据缓存区域			
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的	
+		_fbTcpIpClient.xNeedDisConnect := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF	
+	
+	1://拼接指令
+		_fbTcpIpClient.aToServer[1] :=TO_BYTE(SHR(iModbusTCP_ComID,8));
+		_fbTcpIpClient.aToServer[2] :=TO_BYTE(iModbusTCP_ComID);
+		_fbTcpIpClient.aToServer[3] :=16#00;//		
+		_fbTcpIpClient.aToServer[4] :=16#00;//
+		_fbTcpIpClient.aToServer[5] :=16#00;//		
+		_fbTcpIpClient.aToServer[6] :=16#06;//后面发送字节数量,6个字节			
+		_fbTcpIpClient.aToServer[7] :=stSysPar.xSlaveAdr;//设备地址
+		_fbTcpIpClient.aToServer[8] :=16#05;//写入单个寄存器功能码06
+		_fbTcpIpClient.aToServer[9] :=TO_BYTE(SHR(stParIn.iCoilStartAddress,8));
+		_fbTcpIpClient.aToServer[10] :=TO_BYTE(stParIn.iCoilStartAddress);   //起始地址 
+		IF stParIn.aSendBuffer[1]<>0 THEN
+			_fbTcpIpClient.aToServer[11] :=16#FF;//写入寄存器值,固定格式
+		ELSE
+			_fbTcpIpClient.aToServer[11] :=16#00;//写入寄存器值,固定格式
+		END_IF		
+		_fbTcpIpClient.aToServer[12] :=16#00;
+		_fbTcpIpClient.udiSendNumber:=12;	
+		IF _fbTcpIpClient.xRdyCmd
+		THEN
+			_diCmdState:=_diCmdState+1;
+		ELSE
+			_fbTcpIpClient.xEnable := FALSE;
+		END_IF
+		
+	2://接收数据
+		_fbTcpIpClient.xEnable 		:= TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN	
+			_iSendNgCount 					:= 0;//代表数据接收成功									
+			_rxBuffer 							:= _fbTcpIpClient.rxBuffer;							
+			_diCmdState:=_diCmdState+1;			
+		END_IF
+		//发送出错
+		IF _fbTcpIpClient.xError 
+		THEN//以太网功能报警，一般就是网络建立有问题，此时一般需要去查网络问题
+			_iSendNgCount := _iSendNgCount + 1;
+			IF _iSendNgCount <= 3//3次重发
+			THEN		
+				_tDelay(in:=TRUE,PT:=T#100MS);	
+				IF _tDelay.Q
+				THEN
+					_tDelay(in:=FALSE);
+					_diCmdState:=0;//重发
+				END_IF							
+			ELSE			
+				eERRORID:=Modbus_ErrorCode.FLT_SEND_ERROR	;//指令发送出错，可能是通信异常	
+				_diCmdState := 999;
+			END_IF						
+		END_IF			
+		
+	3://校验MODBUS返回指令
+		_tonTimeout(IN:= TRUE,pt:=T#3S);
+		IF _tonTimeout.Q THEN
+			_tonTimeout(IN:=FALSE);
+			eERRORID:=Modbus_ErrorCode.FLT_NoResponse	;//无响应
+			_diCmdState := 999;			
+		END_IF	
+		
+	//指令返回OK
+		IF 
+			_rxBuffer[1]=_fbTcpIpClient.aToServer[1] AND
+			_rxBuffer[2]=_fbTcpIpClient.aToServer[2] AND
+			_rxBuffer[3]=_fbTcpIpClient.aToServer[3] AND
+			_rxBuffer[4]=_fbTcpIpClient.aToServer[4] AND
+			_rxBuffer[5]=_fbTcpIpClient.aToServer[5] AND
+			_rxBuffer[6]=_fbTcpIpClient.aToServer[6] AND
+			_rxBuffer[7]=_fbTcpIpClient.aToServer[7] AND
+			_rxBuffer[8]=_fbTcpIpClient.aToServer[8] AND
+			_rxBuffer[9]=_fbTcpIpClient.aToServer[9] AND 
+			_rxBuffer[10]=_fbTcpIpClient.aToServer[10]AND 	
+			_rxBuffer[11]=_fbTcpIpClient.aToServer[11]AND
+			_rxBuffer[12]=_fbTcpIpClient.aToServer[12]
+		THEN
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		
+		//指令返回MODBUS错误码
+		IF 
+			_rxBuffer[1]=_fbTcpIpClient.aToServer[1] AND
+			_rxBuffer[2]=_fbTcpIpClient.aToServer[2] AND
+			_rxBuffer[3]=_fbTcpIpClient.aToServer[3] AND
+			_rxBuffer[4]=_fbTcpIpClient.aToServer[4] AND
+			_rxBuffer[5]=_fbTcpIpClient.aToServer[5] AND 
+			_rxBuffer[6]=16#03 AND
+			_rxBuffer[7]=_fbTcpIpClient.aToServer[7] AND
+			_rxBuffer[8]=16#85//功能码
+		THEN
+			sModbusError:=ModbusTCP_ErrorQuery(_rxBuffer[9]);//解析MODBUS错误代码
+			eERRORID:=Modbus_ErrorCode.FLT_MODBUS_ERROR	;//Modbus错误
+			_diCmdState := 999;				
+		END_IF		
+		
+		//指令返回异常,重发3次
+		IF 
+			_rxBuffer[1]<>_fbTcpIpClient.aToServer[1] OR
+			_rxBuffer[2]<>_fbTcpIpClient.aToServer[2] OR
+			_rxBuffer[3]<>_fbTcpIpClient.aToServer[3] OR
+			_rxBuffer[4]<>_fbTcpIpClient.aToServer[4] OR
+			_rxBuffer[7]<>_fbTcpIpClient.aToServer[7]
+		THEN		
+			_iSendNgCount := _iSendNgCount + 1;
+			IF _iSendNgCount <= 3//3次重发
+			THEN		
+				_tDelay(in:=TRUE,PT:=T#100MS);	
+				IF _tDelay.Q
+				THEN
+					_tDelay(in:=FALSE);
+					_diCmdState:=0;//重发
+				END_IF							
+			ELSE	
+				eERRORID:=Modbus_ErrorCode.FLT_RECEIVE_ERROR	;//接收指令错误
+				_diCmdState := 999;
+			END_IF		
+		END_IF
+		
+	4://解析数据
+		iModbusTCP_ComID:=iModbusTCP_ComID+1;
+		xComplete:=TRUE;
+
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="Cmd_WriteSingleHoldingRegister" Id="{01a55706-c3ed-4edc-bd54-b92e45592d7f}">
+      <Declaration><![CDATA[METHOD Cmd_WriteSingleHoldingRegister
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF eERRORID <> Modbus_ErrorCode.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+	0://清空数据
+		_fbTcpIpClient.xEnable := FALSE;	
+		_tonDelay(IN:= TRUE,pt:=T#1MS);
+		_tonTimeout(IN:= FALSE);
+		SysMemSet( ADR(_fbTcpIpClient.aToServer ), 0, SIZEOF(_fbTcpIpClient.aToServer) );//清除发送区域
+		SysMemSet( ADR(_rxBuffer ), 0, SIZEOF(_rxBuffer) );//清除接收报告数据缓存区域
+		SysMemSet( ADR(stParOut.aRcvBuffer ), 0, SIZEOF(stParOut.aRcvBuffer) );//清除接收报告数据缓存区域	
+		SysMemSet( ADR(stParOut.aRcvCoilBuffer ), 0, SIZEOF(stParOut.aRcvCoilBuffer) );//清除接收报告数据缓存区域			
+		_fbTcpIpClient.xNeedReceive := TRUE;//默认都是需要有收发交互的	
+		_fbTcpIpClient.xNeedDisConnect := TRUE;//默认都是需要有收发交互的		
+		IF _tonDelay.Q THEN
+			_tonDelay(IN:= FALSE,pt:=T#20MS);
+			_diCmdState:=_diCmdState+1;	
+		END_IF	
+	
+	1://拼接指令
+		_fbTcpIpClient.aToServer[1] :=TO_BYTE(SHR(iModbusTCP_ComID,8));
+		_fbTcpIpClient.aToServer[2] :=TO_BYTE(iModbusTCP_ComID);
+		_fbTcpIpClient.aToServer[3] :=16#00;//		
+		_fbTcpIpClient.aToServer[4] :=16#00;//
+		_fbTcpIpClient.aToServer[5] :=16#00;//		
+		_fbTcpIpClient.aToServer[6] :=16#06;//后面发送字节数量,6个字节			
+		_fbTcpIpClient.aToServer[7] :=stSysPar.xSlaveAdr;//设备地址
+		_fbTcpIpClient.aToServer[8] :=16#06;//写入单个寄存器功能码06
+		_fbTcpIpClient.aToServer[9] :=TO_BYTE(SHR(stParIn.iHoldingRegisterAddress,8));
+		_fbTcpIpClient.aToServer[10] :=TO_BYTE(stParIn.iHoldingRegisterAddress);      //读取寄存器起始地址 
+		_fbTcpIpClient.aToServer[11] :=stParIn.aSendBuffer[1];
+		_fbTcpIpClient.aToServer[12] :=stParIn.aSendBuffer[2];//写入寄存器值
+		_fbTcpIpClient.udiSendNumber:=12;	
+		IF _fbTcpIpClient.xRdyCmd
+		THEN
+			_diCmdState:=_diCmdState+1;
+		ELSE
+			_fbTcpIpClient.xEnable := FALSE;
+		END_IF
+		
+	2://接收数据
+		_fbTcpIpClient.xEnable 		:= TRUE;	
+		IF _fbTcpIpClient.xDone//接收成功
+		THEN	
+			_iSendNgCount 					:= 0;//代表数据接收成功									
+			_rxBuffer 							:= _fbTcpIpClient.rxBuffer;							
+			_diCmdState:=_diCmdState+1;			
+		END_IF
+		//发送出错
+		IF _fbTcpIpClient.xError 
+		THEN//以太网功能报警，一般就是网络建立有问题，此时一般需要去查网络问题
+			_iSendNgCount := _iSendNgCount + 1;
+			IF _iSendNgCount <= 3//3次重发
+			THEN		
+				_tDelay(in:=TRUE,PT:=T#100MS);	
+				IF _tDelay.Q
+				THEN
+					_tDelay(in:=FALSE);
+					_diCmdState:=0;//重发
+				END_IF							
+			ELSE			
+				eERRORID:=Modbus_ErrorCode.FLT_SEND_ERROR	;//指令发送出错，可能是通信异常	
+				_diCmdState := 999;
+			END_IF						
+		END_IF			
+		
+	3://校验MODBUS返回指令
+		_tonTimeout(IN:= TRUE,pt:=T#3S);
+		IF _tonTimeout.Q THEN
+			_tonTimeout(IN:=FALSE);
+			eERRORID:=Modbus_ErrorCode.FLT_NoResponse	;//无响应
+			_diCmdState := 999;			
+		END_IF	
+		
+	//指令返回OK
+		IF 
+			_rxBuffer[1]=_fbTcpIpClient.aToServer[1] AND
+			_rxBuffer[2]=_fbTcpIpClient.aToServer[2] AND
+			_rxBuffer[3]=_fbTcpIpClient.aToServer[3] AND
+			_rxBuffer[4]=_fbTcpIpClient.aToServer[4] AND
+			_rxBuffer[5]=_fbTcpIpClient.aToServer[5] AND
+			_rxBuffer[6]=_fbTcpIpClient.aToServer[6] AND
+			_rxBuffer[7]=_fbTcpIpClient.aToServer[7] AND
+			_rxBuffer[8]=_fbTcpIpClient.aToServer[8] AND
+			_rxBuffer[9]=_fbTcpIpClient.aToServer[9] AND 
+			_rxBuffer[10]=_fbTcpIpClient.aToServer[10]AND 	
+			_rxBuffer[11]=_fbTcpIpClient.aToServer[11]AND
+			_rxBuffer[12]=_fbTcpIpClient.aToServer[12]
+		THEN
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		
+		//指令返回MODBUS错误码
+		IF 
+			_rxBuffer[1]=_fbTcpIpClient.aToServer[1] AND
+			_rxBuffer[2]=_fbTcpIpClient.aToServer[2] AND
+			_rxBuffer[3]=_fbTcpIpClient.aToServer[3] AND
+			_rxBuffer[4]=_fbTcpIpClient.aToServer[4] AND
+			_rxBuffer[5]=_fbTcpIpClient.aToServer[5] AND 
+			_rxBuffer[6]=16#03 AND
+			_rxBuffer[7]=_fbTcpIpClient.aToServer[7] AND
+			_rxBuffer[8]=16#86//功能码
+		THEN
+			sModbusError:=ModbusTCP_ErrorQuery(_rxBuffer[9]);//解析MODBUS错误代码
+			eERRORID:=Modbus_ErrorCode.FLT_MODBUS_ERROR	;//Modbus错误
+			_diCmdState := 999;				
+		END_IF		
+		
+		//指令返回异常,重发3次
+		IF 
+			_rxBuffer[1]<>_fbTcpIpClient.aToServer[1] OR
+			_rxBuffer[2]<>_fbTcpIpClient.aToServer[2] OR
+			_rxBuffer[3]<>_fbTcpIpClient.aToServer[3] OR
+			_rxBuffer[4]<>_fbTcpIpClient.aToServer[4] OR
+			_rxBuffer[7]<>_fbTcpIpClient.aToServer[7]
+		THEN		
+			_iSendNgCount := _iSendNgCount + 1;
+			IF _iSendNgCount <= 3//3次重发
+			THEN		
+				_tDelay(in:=TRUE,PT:=T#100MS);	
+				IF _tDelay.Q
+				THEN
+					_tDelay(in:=FALSE);
+					_diCmdState:=0;//重发
+				END_IF							
+			ELSE	
+				eERRORID:=Modbus_ErrorCode.FLT_RECEIVE_ERROR	;//接收指令错误
+				_diCmdState := 999;
+			END_IF		
+		END_IF
+		
+	4://解析数据
+		SysMemCpy(ADR(stparout.aRcvBuffer),ADR(_rxBuffer[11]),2);
+		iModbusTCP_ComID:=iModbusTCP_ComID+1;
+		xComplete:=TRUE;
+
+
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CyclicAction" Id="{089fbb32-0bbc-48b2-aebe-34ae5771259f}">
+      <Declaration><![CDATA[{attribute 'hide' := ''}
+METHOD PROTECTED CyclicAction
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xAbort=0 THEN
+    IF xFirstInvocation THEN
+    (*
+    * Staring
+    * for then first (!) invocaion,
+    * sample then input variables
+    *)			
+      _diCmdState:= 0;
+			_iSendNgCount := 0;
+			xFirstInvocation:=0;			
+    END_IF  
+		REPEAT
+			//	
+			IF stSysPar.xSlaveAdr=0 THEN
+				_fbTcpIpClient.xNeedReceive:=FALSE;//广播模式不需要返回数据
+			ELSE
+				_fbTcpIpClient.xNeedReceive:=TRUE;//非广播模式需要返回数据
+			END_IF
+
+
+			CASE eCmd OF//判断指令类型
+				Modbus_Cmd.ReadCoilStatus://读取线圈,01
+						Cmd_ReadCoil(xComplete=> xComplete);	
+
+				Modbus_Cmd.ReadInputStatus://读取线圈,02
+						Cmd_ReadInputCoil(xComplete=> xComplete);
+			
+				Modbus_Cmd.ReadHoldingRegisters://读取保持寄存器,03
+						Cmd_ReadHoldingRegister(xComplete=> xComplete);
+
+				Modbus_Cmd.ReadInputRegisters://读取保持寄存器,04
+						Cmd_ReadInputRegister(xComplete=> xComplete);
+	
+				Modbus_Cmd.SetSingalCoil://写入单个线圈,05
+						Cmd_WriteSingleCoil(xComplete=> xComplete);	
+					
+				Modbus_Cmd.SetSingalHoldingRegister://写入单个保持寄存器,06
+						Cmd_WriteSingleHoldingRegister(xComplete=> xComplete);
+
+				Modbus_Cmd.SetMultiCoil://写入多个线圈,15
+						Cmd_WriteMultiCoil(xComplete=> xComplete);
+						
+				Modbus_Cmd.SetMultiHoldingRegister://写入多个保持寄存器,16
+						Cmd_WriteMultiHoldingRegister(xComplete=> xComplete);
+						
+				ELSE
+					;	
+				END_CASE		   
+      UNTIL (TRUE)
+	END_REPEAT
+END_IF
+
+IF xAbort OR xComplete OR eERRORID<>Modbus_ErrorCode.No_ERROR THEN    
+    (*
+    * Cleaning
+    * => free as much allocated resources as possible
+    *)    
+    tOperationTimer(IN:=0);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleAbortedState" Id="{c3fb6bbf-afdd-4675-abf4-a017a7b0cbe0}">
+      <Declaration><![CDATA[{attribute 'hide' := ''}
+METHOD PRIVATE FINAL HandleAbortedState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xAborted AND xResetRequest THEN
+    eState:=STATE.RESETING;
+    xAgain:=1;
+ELSE
+    xBusy:=0;
+    xAborted:=1;
+    //xResetRequest:=(xExecute=0);
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleAbortingState" Id="{642ed1c3-2c1f-426a-8cd7-ff5ef5b7e53b}">
+      <Declaration><![CDATA[{attribute 'hide' := ''}
+METHOD PRIVATE FINAL HandleAbortingState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[AbortAction(xComplete=> xComplete);
+
+IF eErrorID<>Modbus_ErrorCode.NO_ERROR THEN
+    eState:=STATE.INERROR;
+    xAgain:=1;
+ELSIF xComplete THEN
+    eState:=STATE.ABORTED;
+    xAgain:=1;
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleDoneState" Id="{02af00b7-f6b5-42c9-bddc-059a4f50a317}">
+      <Declaration><![CDATA[{attribute 'hide' := ''}
+METHOD PRIVATE FINAL  HandleDoneState
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//在运行过程中要是切换模式，再运行完成之后，检测到模式的切换，就需要回到初始位置，进行下一次执行准备
+IF _xDone AND xExecute=0 THEN
+	eState:=STATE.RESETING;
+	xAgain:=1;
+ELSE
+	xBusy:=0;
+	_xDone:=1;
+	//xResetRequest:=(xExecute=0);
+	xAgain:=0;(* !!! *)
+	IF _xDone AND xExecute AND NOT xOpe THEN
+		xExecute:=0;
+	END_IF	
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleDormantState" Id="{1641993f-c5fb-4126-93e8-7397f798b700}">
+      <Declaration><![CDATA[{attribute 'hide' := ''}
+METHOD PRIVATE FINAL  HandleDormantState
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xExecute THEN
+    xBusy:=1;
+    eState:=STATE.EXECUTING;
+    xAgain:=1;
+END_IF
+
+//读取线圈,01
+	IF stOpera.xReadCoilStatus
+	THEN
+		eCmd := Modbus_Cmd.ReadCoilStatus;
+		xExecute := TRUE;
+	END_IF
+
+//读取输入线圈,02
+	IF stOpera.xReadInputStatus
+	THEN
+		eCmd := Modbus_Cmd.ReadInputStatus;
+		xExecute := TRUE;
+	END_IF
+	
+//读取保持寄存器,03
+	IF stOpera.xReadHoldingRegisters
+	THEN
+		eCmd := Modbus_Cmd.ReadHoldingRegisters;
+		xExecute := TRUE;
+	END_IF	
+
+//读取输入寄存器,04
+	IF stOpera.xReadInputRegisters
+	THEN
+		eCmd := Modbus_Cmd.ReadInputRegisters;
+		xExecute := TRUE;
+	END_IF
+		
+//写入单个线圈,05
+	IF stOpera.xSetSingalCoil
+	THEN
+		eCmd := Modbus_Cmd.SetSingalCoil;
+		xExecute := TRUE;
+	END_IF
+	
+//写入单个保持寄存器,06
+	IF stOpera.xSetSingalHoldingRegister
+	THEN
+		eCmd := Modbus_Cmd.SetSingalHoldingRegister;
+		xExecute := TRUE;
+	END_IF
+
+//写入多个线圈,15
+	IF stOpera.xSetMultiCoil
+	THEN
+		eCmd := Modbus_Cmd.SetMultiCoil;
+		xExecute := TRUE;
+	END_IF
+	
+//写入多个保持寄存器,16
+	IF stOpera.xSetMultiHoldingRegister
+	THEN
+		eCmd := Modbus_Cmd.SetMultiHoldingRegister;
+		xExecute := TRUE;
+	END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleErrorState" Id="{a9958dd1-1aae-4c5a-90f0-ca54d41e1e76}">
+      <Declaration><![CDATA[{attribute 'hide' := ''}
+METHOD PRIVATE FINAL  HandleErrorState
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xError AND  (xResetRequest OR NOT xExecute) THEN
+    eState:=STATE.RESETING;
+    xAgain:=1;
+ELSE
+    xBusy:=0;
+    xError:=1;    
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleExecutingState" Id="{758e17d4-f2ea-4557-8f21-e4efe49a47c0}">
+      <Declaration><![CDATA[{attribute 'hide' := ''}
+METHOD PRIVATE FINAL  HandleExecutingState
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[
+IF xAbort=0 THEN   
+    CyclicAction(xComplete=> xComplete);
+END_IF
+
+IF eErrorID<>Modbus_ErrorCode.NO_ERROR THEN
+    eState:=STATE.INERROR;
+    xAgain:=1;
+ELSIF xAbort THEN
+    eState:=STATE.ABORTING;
+    xAgain:=1;
+ELSIF xComplete THEN
+    eState:=STATE.DONE;
+    xAgain:=1;
+END_IF ]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleResettingState" Id="{9238c363-9f44-4018-8ab1-f122a63742fd}">
+      <Declaration><![CDATA[{attribute 'hide' := ''}
+METHOD  PRIVATE FINAL  HandleResettingState
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ResetAction(xComplete=> xComplete);
+
+IF xComplete THEN
+		xExecute:=0;//清除输入指令 
+    xBusy:=0;
+    _xDone:=0;
+    xError:=0;
+
+    eErrorID:=Modbus_ErrorCode.NO_ERROR;
+	eTCPErrorID := 0;
+    eState:=STATE.DORMANT;
+    xFirstInvocation:=1;//保证初始化信号
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ResetAction" Id="{de61fca0-7336-460d-90e2-3093d89bcb65}">
+      <Declaration><![CDATA[{attribute 'hide' := ''}
+METHOD PROTECTED ResetAction
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+* Cleaning
+* => free all allocated resources
+* => reinitialize instance variables
+*)
+tOperationTimer(IN:=0);
+_tDelay(IN:=FALSE);
+_tonTimeout(IN:= FALSE);
+_xDone	:=FALSE;
+_iSendNGCount := 0;
+_fbTcpIpClient(xEnable:=FALSE);//将tcpip功能初始化、
+sModbusError:='';
+xComplete:=1;	
+//复位操作标志
+stOpera.xReadCoilStatus:=
+stOpera.xReadHoldingRegisters:=
+stOpera.xReadInputRegisters:=
+stOpera.xReadInputStatus:=
+stOpera.xSetMultiCoil:=
+stOpera.xSetMultiHoldingRegister:=
+stOpera.xSetSingalCoil:=
+stOpera.xSetSingalHoldingRegister:=FALSE;]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_ModbusTCP">
+      <LineId Id="3" Count="71" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.AbortAction">
+      <LineId Id="3" Count="5" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.Cmd_ReadCoil">
+      <LineId Id="3" Count="147" />
+      <LineId Id="171" Count="0" />
+      <LineId Id="152" Count="14" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.Cmd_ReadHoldingRegister">
+      <LineId Id="3" Count="139" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.Cmd_ReadInputCoil">
+      <LineId Id="3" Count="163" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.Cmd_ReadInputRegister">
+      <LineId Id="3" Count="139" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.Cmd_WriteMultiCoil">
+      <LineId Id="3" Count="147" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.Cmd_WriteMultiHoldingRegister">
+      <LineId Id="3" Count="145" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.Cmd_WriteSingleCoil">
+      <LineId Id="3" Count="141" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.Cmd_WriteSingleHoldingRegister">
+      <LineId Id="3" Count="138" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.CyclicAction">
+      <LineId Id="3" Count="57" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.HandleAbortedState">
+      <LineId Id="3" Count="7" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.HandleAbortingState">
+      <LineId Id="3" Count="8" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.HandleDoneState">
+      <LineId Id="3" Count="11" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.HandleDormantState">
+      <LineId Id="3" Count="59" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.HandleErrorState">
+      <LineId Id="3" Count="6" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.HandleExecutingState">
+      <LineId Id="3" Count="13" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.HandleResettingState">
+      <LineId Id="3" Count="12" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ModbusTCP.ResetAction">
+      <LineId Id="3" Count="20" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

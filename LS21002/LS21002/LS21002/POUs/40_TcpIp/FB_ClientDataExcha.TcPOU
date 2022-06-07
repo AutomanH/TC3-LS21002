@@ -170,11 +170,11 @@ REPEAT
 				eDataExchaStep := DATAEXCHA_STATE_RECEIVE_WAIT;
 				fbDisconnectTON(IN:=FALSE);       
 			END_IF
+			
 		DATAEXCHA_STATE_RECEIVE_WAIT:	
 			_ton(IN:= NOT _ton.Q, PT:= T#20MS, Q=> , ET=> );
 			fbSocketReceive(bExecute := _ton.Q,
-                      nRecBytes=>cbReceived);	
-      fbSocketReceive(bExecute := FALSE);				
+                      nRecBytes=>cbReceived);					
 			IF NOT fbSocketReceive.bBusy THEN
 				IF NOT fbSocketReceive.bError THEN 						
 					IF cbReceived < 255 AND cbReceived > 0 THEN(* no overflow *)
@@ -184,7 +184,7 @@ REPEAT
 						SysMemSet( ADR(rxBuffer), 0, SIZEOF(rxBuffer));	
 						SysMemCpy( ADR( rxBuffer ), ADR( _rxBufferTemp ), cbReceived );//进行数据迁移
 						SysMemCpy( ADR( sFromServer ), ADR( _rxBufferTemp ), cbReceived );(* copy the received string to the output variable (inclusive the end delimiter) *)								
-						eDataExchaStep := DATAEXCHA_STATE_IDLE;		
+						eDataExchaStep := DATAEXCHA_STATE_IDLE;
 						xComplete := 1;
 					END_IF
 					IF cbReceived >= 255(* there is no more free read buffer space => the answer string should be terminated *)	
@@ -381,160 +381,45 @@ xComplete := 1;]]></ST>
       </Implementation>
     </Method>
     <LineIds Name="FB_ClientDataExcha">
-      <LineId Id="33" Count="0" />
-      <LineId Id="210" Count="0" />
-      <LineId Id="34" Count="8" />
-      <LineId Id="105" Count="2" />
-      <LineId Id="44" Count="1" />
-      <LineId Id="119" Count="0" />
-      <LineId Id="47" Count="1" />
-      <LineId Id="269" Count="0" />
-      <LineId Id="9" Count="0" />
+      <LineId Id="3" Count="19" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_ClientDataExcha.AbortAction">
-      <LineId Id="10" Count="2" />
-      <LineId Id="20" Count="0" />
-      <LineId Id="5" Count="0" />
-      <LineId Id="13" Count="0" />
-      <LineId Id="19" Count="0" />
+      <LineId Id="3" Count="5" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_ClientDataExcha.CyclicAction">
-      <LineId Id="22" Count="0" />
-      <LineId Id="45" Count="4" />
-      <LineId Id="52" Count="0" />
-      <LineId Id="277" Count="0" />
-      <LineId Id="177" Count="0" />
-      <LineId Id="61" Count="0" />
-      <LineId Id="438" Count="0" />
-      <LineId Id="278" Count="0" />
-      <LineId Id="280" Count="0" />
-      <LineId Id="285" Count="3" />
-      <LineId Id="361" Count="0" />
-      <LineId Id="488" Count="0" />
-      <LineId Id="292" Count="0" />
-      <LineId Id="381" Count="0" />
-      <LineId Id="418" Count="0" />
-      <LineId Id="382" Count="0" />
-      <LineId Id="380" Count="0" />
-      <LineId Id="297" Count="2" />
-      <LineId Id="384" Count="0" />
-      <LineId Id="302" Count="0" />
-      <LineId Id="385" Count="0" />
-      <LineId Id="364" Count="1" />
-      <LineId Id="454" Count="0" />
-      <LineId Id="368" Count="0" />
-      <LineId Id="366" Count="0" />
-      <LineId Id="370" Count="0" />
-      <LineId Id="372" Count="0" />
-      <LineId Id="371" Count="0" />
-      <LineId Id="367" Count="0" />
-      <LineId Id="406" Count="1" />
-      <LineId Id="305" Count="0" />
-      <LineId Id="310" Count="0" />
-      <LineId Id="312" Count="2" />
-      <LineId Id="377" Count="0" />
-      <LineId Id="452" Count="0" />
-      <LineId Id="447" Count="3" />
-      <LineId Id="417" Count="0" />
-      <LineId Id="453" Count="0" />
-      <LineId Id="455" Count="0" />
-      <LineId Id="457" Count="1" />
-      <LineId Id="319" Count="0" />
-      <LineId Id="322" Count="0" />
-      <LineId Id="469" Count="0" />
-      <LineId Id="446" Count="0" />
-      <LineId Id="451" Count="0" />
-      <LineId Id="470" Count="0" />
-      <LineId Id="421" Count="0" />
-      <LineId Id="391" Count="0" />
-      <LineId Id="331" Count="3" />
-      <LineId Id="373" Count="1" />
-      <LineId Id="335" Count="0" />
-      <LineId Id="338" Count="0" />
-      <LineId Id="362" Count="0" />
-      <LineId Id="471" Count="0" />
-      <LineId Id="339" Count="0" />
-      <LineId Id="472" Count="0" />
-      <LineId Id="340" Count="0" />
-      <LineId Id="342" Count="0" />
-      <LineId Id="404" Count="1" />
-      <LineId Id="392" Count="0" />
-      <LineId Id="473" Count="0" />
-      <LineId Id="475" Count="3" />
-      <LineId Id="474" Count="0" />
-      <LineId Id="359" Count="1" />
-      <LineId Id="160" Count="0" />
-      <LineId Id="82" Count="0" />
-      <LineId Id="363" Count="0" />
-      <LineId Id="83" Count="0" />
-      <LineId Id="21" Count="0" />
-      <LineId Id="87" Count="2" />
-      <LineId Id="84" Count="0" />
-      <LineId Id="150" Count="0" />
-      <LineId Id="85" Count="0" />
+      <LineId Id="3" Count="62" />
+      <LineId Id="67" Count="36" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_ClientDataExcha.HandleAbortingState">
-      <LineId Id="15" Count="0" />
-      <LineId Id="25" Count="0" />
-      <LineId Id="24" Count="0" />
-      <LineId Id="26" Count="0" />
-      <LineId Id="30" Count="0" />
-      <LineId Id="28" Count="1" />
-      <LineId Id="31" Count="0" />
-      <LineId Id="27" Count="0" />
+      <LineId Id="3" Count="7" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_ClientDataExcha.HandleDoneState">
-      <LineId Id="5" Count="0" />
-      <LineId Id="10" Count="0" />
-      <LineId Id="12" Count="5" />
-      <LineId Id="11" Count="0" />
+      <LineId Id="3" Count="7" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_ClientDataExcha.HandleDormantState">
-      <LineId Id="5" Count="0" />
-      <LineId Id="9" Count="0" />
-      <LineId Id="12" Count="1" />
-      <LineId Id="10" Count="0" />
+      <LineId Id="3" Count="3" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_ClientDataExcha.HandleErrorState">
-      <LineId Id="10" Count="5" />
-      <LineId Id="17" Count="0" />
-      <LineId Id="5" Count="0" />
+      <LineId Id="3" Count="6" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_ClientDataExcha.HandleExecutingState">
-      <LineId Id="29" Count="0" />
-      <LineId Id="33" Count="0" />
-      <LineId Id="31" Count="0" />
-      <LineId Id="41" Count="0" />
-      <LineId Id="16" Count="0" />
-      <LineId Id="20" Count="1" />
-      <LineId Id="38" Count="2" />
-      <LineId Id="22" Count="0" />
-      <LineId Id="25" Count="0" />
-      <LineId Id="23" Count="0" />
-      <LineId Id="19" Count="0" />
+      <LineId Id="3" Count="12" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_ClientDataExcha.HandleResettingState">
-      <LineId Id="5" Count="0" />
-      <LineId Id="13" Count="0" />
-      <LineId Id="12" Count="0" />
-      <LineId Id="25" Count="0" />
-      <LineId Id="14" Count="0" />
-      <LineId Id="16" Count="1" />
-      <LineId Id="24" Count="0" />
-      <LineId Id="18" Count="3" />
-      <LineId Id="15" Count="0" />
+      <LineId Id="3" Count="11" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_ClientDataExcha.ResetAction">
-      <LineId Id="10" Count="2" />
-      <LineId Id="15" Count="0" />
-      <LineId Id="18" Count="1" />
-      <LineId Id="17" Count="0" />
-      <LineId Id="22" Count="0" />
-      <LineId Id="43" Count="0" />
-      <LineId Id="45" Count="0" />
-      <LineId Id="44" Count="0" />
-      <LineId Id="46" Count="0" />
-      <LineId Id="13" Count="0" />
+      <LineId Id="3" Count="11" />
+      <LineId Id="2" Count="0" />
     </LineIds>
   </POU>
 </TcPlcObject>

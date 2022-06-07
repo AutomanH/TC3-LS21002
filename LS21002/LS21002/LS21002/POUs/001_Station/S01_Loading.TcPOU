@@ -19,7 +19,8 @@ VAR
 	//电动夹爪
 		fbClamp_1:	 REFERENCE TO FB_ERG_20_Modbus:=fbERG_20_Modbus[1];
 		fbClamp_2:	 REFERENCE TO FB_ERG_20_Modbus:=fbERG_20_Modbus[2];
-
+	//相机
+		 Camera   : 	 REFERENCE TO FB_Camera:=fbCamera[1]; 
 	//延时
 	arTonDelay :ARRAY[1..20] OF TON;
 	//返回值
@@ -42,9 +43,7 @@ VAR
 	xFlowLineReadySensor: ARRAY[1..4] OF BOOL;//链板线准备传感器
 	xFlowLineReachedSensor: ARRAY[1..4] OF BOOL;//链板线到位传感器
 	_FirstFlag: BOOL;
-	xCameraLightContorl: BOOL;//光源控制
-	xCameraTrigger: BOOL;//相机触发
-	xCameraCompleted: BOOL;//相机完成信号
+	
 
 	// 程序循环
 	bCounter: BYTE;
@@ -59,6 +58,10 @@ VAR
 	iClearProcessStep: INT;
 	// //首次循环
 	_FirstCycle: ARRAY[1..10] of bool;
+	// 夹爪1旋转完成
+	_Clamp1RotateCompleted: BOOL;
+	// 夹爪2旋转完成
+	_Clamp2RotateCompleted: BOOL;
 END_VAR
 
 ]]></Declaration>
@@ -102,12 +105,10 @@ xFlowLineReachedSensor[1]:=IxS01Sensor1Reached;
 xFlowLineReachedSensor[2]:=IxS01Sensor2Reached;	
 xFlowLineReachedSensor[3]:=IxS02Sensor1Reached;	
 xFlowLineReachedSensor[4]:=IxS02Sensor2Reached;	
-
-//相机拍照结果
-xCameraCompleted:=(sCamera_TO_Plc.iCompleted[1] =1);
 //上料工位传感器
 xLoadingReachedSensor[1]:=IxS01Sensor1Reached;
 xLoadingReachedSensor[2]:=IxS01Sensor2Reached;
+
 ]]></ST>
       </Implementation>
     </Action>
@@ -189,16 +190,16 @@ CASE station.iStepAuto OF
 			station.iStepAuto:= 10;
 		END_IF
 	10://复位
-			xCameraTrigger:=FALSE;
-			xCameraLightContorl:=FALSE;
+			Camera.xlInit:=TRUE;
 			MEMSET(ADR(arMainlineFixtureData[arCurFixtureNumStation[1]]),0,SIZEOF(arMainlineFixtureData[arCurFixtureNumStation[1]]));
 			MEMSET(ADR(arMainlineFixtureData[arCurFixtureNumStation[2]]),0,SIZEOF(arMainlineFixtureData[arCurFixtureNumStation[2]]));
-			MEMSET(ADR(sCamera_TO_Plc.iS01Reuslt),0,SIZEOF(sCamera_TO_Plc.iS01Reuslt));
-			station.iStepAuto:= 25;
-  	25://此处开始处理上料流程
+			station.iStepAuto:= 20;
+  	20://此处开始处理上料流程
 		station.iStepAuto:= 30;
 	30://Restore_after_Estop_Process1-拍照流程
-			IF tsModuleProcess[1].xProcessNotStarted AND NOT  tsModuleProcess[1].xProcessStarted THEN
+			IF  axBypassSignal[1] OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=110 ;
+			ELSIF tsModuleProcess[1].xProcessNotStarted AND NOT  tsModuleProcess[1].xProcessStarted THEN
 					station.iStepAuto :=40 ; (*process not started*)
 			ELSIF  tsModuleProcess[1].xProcessStarted AND NOT  tsModuleProcess[1].xProcessCompleted THEN
 				 station.iStepAuto :=40 ;(*process started*)
@@ -206,7 +207,7 @@ CASE station.iStepAuto OF
 					station.iStepAuto := 100 ;(*process completed*)
 			ELSIF tsModuleProcess[1].xQDataCompleted THEN
 					station.iStepAuto :=110 ;(*Qdata completed *)
-			ELSE
+			ELSE    
 					station.iStepAuto :=40; 
 			END_IF
 	40://等待链板线准备信号
@@ -217,29 +218,28 @@ CASE station.iStepAuto OF
 	50://清除链板线一行的取料信号
 		xTakeBoxCompleted:=FALSE;
 		station.iStepAuto:=60;
-	60://Y轴去拍照位置并打开光源
-		xCameraLightContorl:=TRUE;
+	60://Y轴去拍照位置
 		fbYAxisMove.xMoveAuto[2]:=TRUE;
 		IF  fbYAxisMove.xMoveInPos[2] THEN
 		  	 station.iStepAuto:=70;	
 		END_IF
 	70://相机触发
 		tsModuleProcess[1].xProcessStarted:=TRUE;
-		xCameraTrigger:=TRUE;
-		 station.iStepAuto:=80;
-			
-	80://等待相机完成信号
-		IF xCameraCompleted THEN
-				tsModuleProcess[1].xProcessCompleted:=TRUE;
-				xCameraTrigger:=FALSE;
-				xCameraLightContorl:=FALSE;
-				station.iStepAuto:=100;
+			Camera.xlTrigger:=TRUE;
+			IF    Camera.xQBusy THEN
+				Camera.xlTrigger:=FALSE;
+				station.iStepAuto:=80;	
+			END_IF
+	80://等待相机完成
+		IF  NOT Camera.xQBusy THEN
+			station.iStepAuto:=100;		
 		END_IF
+		tsModuleProcess[1].xProcessCompleted:=TRUE;
 	100://查看相机结果，判断是否料反
 		(*位置1*)		
 		_AlarmDisable:=FALSE;
 		FOR  i:=1 TO 4 BY 1 DO
-			IF 	  sCamera_TO_Plc.iS01Reuslt[i] =3 THEN
+			IF 	  sCamera_TO_Plc.iS01Result[i] =3 THEN
 					station.iStepAuto:=101;
 					EXIT;
 			ELSIF	i =4 THEN
@@ -248,16 +248,16 @@ CASE station.iStepAuto OF
 		END_FOR
 	101://报警,人工处理后重新拍照
 		IF  NOT  _AlarmDisable THEN
-					IF   sCamera_TO_Plc.iS01Reuslt[1] =3 (*料反*) THEN
+					IF   sCamera_TO_Plc.iS01Result[1] =3 (*料反*) THEN
 						station.adwAlarm[1].01:=TRUE ;//S01链板线上料位置1相机检测到深孔板放反，请检查
 					END_IF
-					IF   sCamera_TO_Plc.iS01Reuslt[2] =3 (*料反*) THEN
+					IF   sCamera_TO_Plc.iS01Result[2] =3 (*料反*) THEN
 						station.adwAlarm[1].02:=TRUE ;//S01链板线上料位置2相机检测到深孔板放反，请检查
 					END_IF	
-					IF   sCamera_TO_Plc.iS01Reuslt[3] =3 (*料反*) THEN
+					IF   sCamera_TO_Plc.iS01Result[3] =3 (*料反*) THEN
  						station.adwAlarm[1].03:= TRUE;//S01链板线上料位置3相机检测到深孔板放反，请检查
 					END_IF
-					IF    sCamera_TO_Plc.iS01Reuslt[4] =3 (*料反*) THEN
+					IF    sCamera_TO_Plc.iS01Result[4] =3 (*料反*) THEN
  						station.adwAlarm[1].04:= TRUE;//S01链板线上料位置4相机检测到深孔板放反，请检查
 					END_IF
 								
@@ -268,9 +268,11 @@ CASE station.iStepAuto OF
 			tsModuleProcess[1].xQDataCompleted:=TRUE;
 			station.iStepAuto:=150;
 
-///预留复检步骤
+///预留复检步骤120-150
 	150://Restore_after_Estop_Process2 取孔板流程1
-			IF tsModuleProcess[2].xProcessNotStarted AND NOT  tsModuleProcess[2].xProcessStarted THEN
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=160; 
+			ELSIF tsModuleProcess[2].xProcessNotStarted AND NOT  tsModuleProcess[2].xProcessStarted THEN
 					station.iStepAuto :=190 ; (*process not started*)
 			ELSIF  tsModuleProcess[2].xProcessStarted AND NOT  tsModuleProcess[2].xProcessCompleted THEN
 				 station.iStepAuto :=185 ;(*process started*)
@@ -286,7 +288,9 @@ CASE station.iStepAuto OF
 		END_IF
 		station.iStepAuto :=170; 	
 	170:////Restore_after_Estop_Process2 取孔板流程2
-			IF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=180; 
+			ELSIF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
 					station.iStepAuto :=190 ; (*process not started*)
 			ELSIF  tsModuleProcess[3].xProcessStarted AND NOT  tsModuleProcess[3].xProcessCompleted THEN
 				 station.iStepAuto :=185 ;(*process started*)
@@ -336,8 +340,6 @@ CASE station.iStepAuto OF
 				 station.iStepAuto:=200;	
 			END_IF
 		END_IF
-	
-			
 	200://Z轴气缸下降
 		fbVTCCyl_1.xAuto:=TRUE;
 		fbVTCCyl_2.xAuto:=TRUE;
@@ -375,38 +377,76 @@ CASE station.iStepAuto OF
 				fbVTCCyl_2.xAuto:=FALSE;
 			IF  fbVTCCyl_1.xHP_Delay AND 
 				fbVTCCyl_2.xHP_Delay THEN
-				 station.iStepAuto:=230;		
+				 station.iStepAuto:=225;		
 			END_IF
-	230://Restore_after_Estop_Process4 翻转孔板流程
-			IF tsModuleProcess[4].xProcessNotStarted AND NOT  tsModuleProcess[4].xProcessStarted THEN
-					station.iStepAuto :=240 ; (*process not started*)
+	225://判断流程
+			IF bCounter =1 THEN
+				 station.iStepAuto:=230;	
+			ELSIF bCounter =2 THEN
+				 station.iStepAuto:=235;	
+			END_IF
+	230://Restore_after_Estop_Process4 翻转孔板流程1
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=236; 
+			ELSIF tsModuleProcess[4].xProcessNotStarted AND NOT  tsModuleProcess[4].xProcessStarted THEN
+					station.iStepAuto :=236 ; (*process not started*)
 			ELSIF  tsModuleProcess[4].xProcessStarted AND NOT  tsModuleProcess[4].xProcessCompleted THEN
-				 station.iStepAuto :=250;(*process started*)
+				 station.iStepAuto :=236;(*process started*)
 			ELSIF  tsModuleProcess[4].xProcessCompleted AND NOT tsModuleProcess[4].xQDataCompleted  THEN
 					station.iStepAuto :=260 ;(*process completed*)
 			ELSE
-					station.iStepAuto :=240; 
+					station.iStepAuto :=236; 
 			END_IF
+	235://Restore_after_Estop_Process5翻转孔板流程2
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=236; 
+			ELSIF tsModuleProcess[5].xProcessNotStarted AND NOT  tsModuleProcess[5].xProcessStarted THEN
+					station.iStepAuto :=236 ; (*process not started*)
+			ELSIF  tsModuleProcess[5].xProcessStarted AND NOT  tsModuleProcess[5].xProcessCompleted THEN
+				 station.iStepAuto :=236;(*process started*)
+			ELSIF  tsModuleProcess[5].xProcessCompleted AND NOT tsModuleProcess[5].xQDataCompleted  THEN
+					station.iStepAuto :=260 ;(*process completed*)
+			ELSE
+					station.iStepAuto :=236; 
+			END_IF
+	236://判断夹爪1是否有过调整
+			IF  NOT _Clamp1RotateCompleted AND NOT _Clamp2RotateCompleted THEN
+				station.iStepAuto:=240;
+			ELSIF _Clamp1RotateCompleted AND NOT _Clamp2RotateCompleted THEN
+				station.iStepAuto:=250;
+			ELSIF  _Clamp1RotateCompleted AND  _Clamp2RotateCompleted THEN
+				station.iStepAuto:=260;	
+			END_IF
+			
 	240://根据相机结果判断是否需要旋转矫正-夹爪1
+			IF bCounter =1 THEN
 				tsModuleProcess[4].xProcessNotStarted :=TRUE;
-				IF  (sCamera_TO_Plc.iS01Reuslt[1] =1 (*OK*) AND bCounter=2) OR
-					 (sCamera_TO_Plc.iS01Reuslt[2] =1 (*OK*) AND bCounter=1)  THEN
+				tsModuleProcess[4].xProcessStarted :=TRUE;
+			ELSIF bCounter =2 THEN
+				tsModuleProcess[5].xProcessNotStarted :=TRUE;
+				tsModuleProcess[5].xProcessStarted :=TRUE;
+			END_IF
+				IF  (sCamera_TO_Plc.iS01Result[1] =1 (*OK*) AND bCounter=2) OR
+					 (sCamera_TO_Plc.iS01Result[2] =1 (*OK*) AND bCounter=1) OR axBypassSignal[1] OR fbmachine[1].xTryRun THEN
+					 	_Clamp1RotateCompleted:=TRUE;
 						station.iStepAuto:=250;			
-				ELSIF  (sCamera_To_Plc.iS01Reuslt[1] =2(*角度反*) AND bCounter =2 ) OR
-						(sCamera_To_Plc.iS01Reuslt[2] =2(*角度反*) AND bCounter =1 ) THEN	
+				ELSIF  (sCamera_To_Plc.iS01Result[1] =2(*角度反*) AND bCounter =2 ) OR
+						(sCamera_To_Plc.iS01Result[2] =2(*角度反*) AND bCounter =1 ) THEN	
 							fbClamp_1.aRotateClampControl[1]:=TRUE ;
 							 IF (fbClamp_1.xDone OR (fbClamp_1.xClosecoverFailure AND fbmachine[1].xTryRun)) THEN						
 									fbClamp_1.xExecute :=FALSE ;
+									_Clamp1RotateCompleted:=TRUE;
 									station.iStepAuto:= 250;
 							END_IF			
 				END_IF	
+	
 	250:////根据相机结果判断是否需要旋转矫正-夹爪2
 				tsModuleProcess[4].xProcessStarted :=TRUE;
-				IF  (sCamera_TO_Plc.iS01Reuslt[3] =1 (*OK*) AND bCounter=2) OR
-					 (sCamera_TO_Plc.iS01Reuslt[4] =1 (*OK*) AND bCounter=1)  THEN
+				IF  (sCamera_TO_Plc.iS01Result[3] =1 (*OK*) AND bCounter=2) OR
+					 (sCamera_TO_Plc.iS01Result[4] =1 (*OK*) AND bCounter=1) OR  axBypassSignal[1] OR fbmachine[1].xTryRun THEN
 						station.iStepAuto:=260;		
-				ELSIF  (sCamera_To_Plc.iS01Reuslt[3] =2(*角度反*) AND bCounter =2 ) OR
-						(sCamera_To_Plc.iS01Reuslt[4] =2(*角度反*) AND bCounter =1 ) THEN
+				ELSIF  (sCamera_To_Plc.iS01Result[3] =2(*角度反*) AND bCounter =2 ) OR
+						(sCamera_To_Plc.iS01Result[4] =2(*角度反*) AND bCounter =1 ) THEN
 						fbClamp_2.aRotateClampControl[1]:=TRUE ;
 						 IF (fbClamp_2.xDone OR (fbClamp_2.xClosecoverFailure AND fbmachine[1].xTryRun)) THEN			
 									fbClamp_2.xExecute :=FALSE ;
@@ -414,7 +454,11 @@ CASE station.iStepAuto OF
 							END_IF		
 				END_IF	
 	260://夹爪矫正完成
-			 tsModuleProcess[4].xProcessCompleted:=TRUE;
+			IF  bCounter =1 THEN
+				tsModuleProcess[4].xProcessCompleted:=TRUE;
+			ELSIF bCounter =2 THEN
+				tsModuleProcess[5].xProcessCompleted:=TRUE;
+			END_IF
 			station.iStepAuto:=265;
 	265://检查是否允许放料
 			IF  NOT  xLoadingReachedSensor[1]  AND
@@ -424,29 +468,32 @@ CASE station.iStepAuto OF
 					station.iStepAuto:=270;
 					_FirstCycle[4]:=TRUE;
 			END_IF
-	270://Restore_after_Estop_Process5 孔板放料流程1
-			IF tsModuleProcess[5].xProcessNotStarted AND NOT  tsModuleProcess[5].xProcessStarted THEN
-					station.iStepAuto :=300 ; (*process not started*)
-			ELSIF  tsModuleProcess[5].xProcessStarted AND NOT  tsModuleProcess[5].xProcessCompleted THEN
-				 station.iStepAuto :=300;(*process started*)
-			ELSIF  tsModuleProcess[5].xProcessCompleted AND NOT tsModuleProcess[5].xQDataCompleted  THEN
-					station.iStepAuto :=330;(*process completed*)
-			ELSE
-					station.iStepAuto :=280; 
-			END_IF		
-	280://X轴放料开始循环计数  =2
+	270://X轴放料开始循环计数  =2
 			IF ( bXCounter >2) OR NOT _FirstCycle[2] THEN
 		 		bXCounter:=1;
 				_FirstCycle[2]:=TRUE;
 			END_IF
-			station.iStepAuto :=290;
-			
-	290://Restore_after_Estop_Process6 孔板放料流程2
-			IF tsModuleProcess[6].xProcessNotStarted AND NOT  tsModuleProcess[6].xProcessStarted THEN
-					station.iStepAuto :=300; (*process not started*)
+			station.iStepAuto :=280;
+	280://Restore_after_Estop_Process6 孔板放料流程1
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=300; 
+			ELSIF tsModuleProcess[6].xProcessNotStarted AND NOT  tsModuleProcess[6].xProcessStarted THEN
+					station.iStepAuto :=300 ; (*process not started*)
 			ELSIF  tsModuleProcess[6].xProcessStarted AND NOT  tsModuleProcess[6].xProcessCompleted THEN
 				 station.iStepAuto :=300;(*process started*)
 			ELSIF  tsModuleProcess[6].xProcessCompleted AND NOT tsModuleProcess[6].xQDataCompleted  THEN
+					station.iStepAuto :=330;(*process completed*)
+			ELSE
+					station.iStepAuto :=300; 
+			END_IF		
+	290://Restore_after_Estop_Process7 孔板放料流程2
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=300; 
+			ELSIF tsModuleProcess[7].xProcessNotStarted AND NOT  tsModuleProcess[7].xProcessStarted THEN
+					station.iStepAuto :=300; (*process not started*)
+			ELSIF  tsModuleProcess[7].xProcessStarted AND NOT  tsModuleProcess[7].xProcessCompleted THEN
+				 station.iStepAuto :=300;(*process started*)
+			ELSIF  tsModuleProcess[7].xProcessCompleted AND NOT tsModuleProcess[7].xQDataCompleted  THEN
 					station.iStepAuto :=330 ;(*process completed*)
 			ELSE
 					station.iStepAuto :=300; 
@@ -454,7 +501,7 @@ CASE station.iStepAuto OF
 
 	300://X轴去放料位置	
 			IF   bXCounter=1 THEN
-					tsModuleProcess[5].xProcessNotStarted:=TRUE;
+					tsModuleProcess[6].xProcessNotStarted:=TRUE;
 					fbXAxisMove.xMoveAuto[4]:=TRUE;
 					fbYAxisMove.xMoveAuto[4]:=TRUE;
 					IF fbXAxisMove.xMoveInPos[4] AND 
@@ -463,7 +510,7 @@ CASE station.iStepAuto OF
 					END_IF				
 				
 			ELSIF	 bXCounter=2 THEN
-					tsModuleProcess[6].xProcessNotStarted:=TRUE;
+					tsModuleProcess[7].xProcessNotStarted:=TRUE;
 					fbXAxisMove.xMoveAuto[5]:=TRUE;
 					fbYAxisMove.xMoveAuto[4]:=TRUE;
 					IF fbXAxisMove.xMoveInPos[5] AND 
@@ -486,14 +533,14 @@ CASE station.iStepAuto OF
 			END_IF
 	320://电动夹爪松开
 			IF   bXCounter=1 THEN
-						tsModuleProcess[5].xProcessStarted:=TRUE;
+						tsModuleProcess[6].xProcessStarted:=TRUE;
 						fbClamp_1.aReleaseControl[1]:=TRUE;
 						IF fbClamp_1.xDone THEN
 							fbClamp_1.xExecute:=FALSE;
 							 station.iStepAuto:=330;	
 						END_IF				
 			ELSIF	 bXCounter=2 THEN
-						tsModuleProcess[6].xProcessStarted:=TRUE;
+						tsModuleProcess[7].xProcessStarted:=TRUE;
 						fbClamp_2.aReleaseControl[1]:=TRUE;
 						IF fbClamp_2.xDone THEN
 							fbClamp_2.xExecute:=FALSE;
@@ -504,14 +551,14 @@ CASE station.iStepAuto OF
 	330://传感器检测
 			IF   bXCounter=1 THEN
 						arClampHavePart[1]:=FALSE;//夹爪1有产品标志位
-						tsModuleProcess[5].xProcessCompleted:=TRUE;
+						tsModuleProcess[6].xProcessCompleted:=TRUE;
 						IF   xLoadingReachedSensor[1] THEN
 							station.iStepAuto:=340;	
 						END_IF
 					
 				ELSIF	 bXCounter=2 THEN
 						arClampHavePart[2]:=FALSE;//夹爪2有产品标志位
-						tsModuleProcess[6].xProcessCompleted:=TRUE;
+						tsModuleProcess[7].xProcessCompleted:=TRUE;
 						IF   xLoadingReachedSensor[2] THEN
 							station.iStepAuto:=340;	
 						END_IF
@@ -573,20 +620,22 @@ CASE station.iStepAuto OF
 		END_IF
 		station.iStepAuto:=500;
 		
-	500://Restore_after_Estop_Process7 数据传输流程
-			IF tsModuleProcess[7].xProcessNotStarted AND NOT  tsModuleProcess[7].xProcessStarted THEN
+	500://Restore_after_Estop_Process8 数据传输流程
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=999; 
+			ELSIF tsModuleProcess[8].xProcessNotStarted AND NOT  tsModuleProcess[8].xProcessStarted THEN
 					station.iStepAuto :=510; (*process not started*)
-			ELSIF  tsModuleProcess[7].xProcessStarted AND NOT  tsModuleProcess[7].xProcessCompleted THEN
+			ELSIF  tsModuleProcess[8].xProcessStarted AND NOT  tsModuleProcess[8].xProcessCompleted THEN
 				 station.iStepAuto :=510;(*process started*)
-			ELSIF  tsModuleProcess[7].xProcessCompleted AND NOT tsModuleProcess[7].xQDataCompleted  THEN
+			ELSIF  tsModuleProcess[8].xProcessCompleted AND NOT tsModuleProcess[8].xQDataCompleted  THEN
 					station.iStepAuto :=550 ;(*process completed*)
 			ELSE
 					station.iStepAuto :=510; 
 			END_IF		
 		
 	510://任务成功
-		tsModuleProcess[7].xProcessNotStarted:=TRUE;
-		tsModuleProcess[7].xProcessStarted:=TRUE;
+		tsModuleProcess[8].xProcessNotStarted:=TRUE;
+		tsModuleProcess[8].xProcessStarted:=TRUE;
 		
 		arProcessDataStation[1].xMaterialOnOff:=TRUE;
 		arProcessDataStation[2].xMaterialOnOff:=TRUE;
@@ -609,7 +658,9 @@ CASE station.iStepAuto OF
 			FOR i:=1 TO gc_ModuleProNo BY 1 DO
 				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
 			END_FOR
-			tsModuleProcess[7].xProcessCompleted:=TRUE;
+			tsModuleProcess[8].xProcessCompleted:=TRUE;
+			_Clamp1RotateCompleted:=FALSE;
+			_Clamp2RotateCompleted:=FALSE;
 			station.iStepAuto:= 999;
 	999://----Single Run Finish----
 			
@@ -617,78 +668,8 @@ CASE station.iStepAuto OF
 		station.xSingleRunFlag:=FALSE;
 		station.xCycleEnable:=FALSE;	
 	//	station.xDone:=TRUE;
-	ELSE
-		;	
-END_CASE
-
-END_IF
-
-
-]]></ST>
-      </Implementation>
-    </Action>
-    <Action Name="FlowInit" Id="{737815c3-3d44-47dd-9c07-561ee528fd92}">
-      <Implementation>
-        <ST><![CDATA[IF NOT station.xIniting THEN
-  station.iStepInit:=0;    
-
-ELSE
-//--------------------------------------------初始化步序----------------------------------
-CASE station.iStepInit OF	
- 0://  
-  	IF station.xIniting THEN	
-  	  station.iStepInit:=10;	
-  	END_IF	
-10://复位数据
-    station.iStepInit := 20;
-	xCameraTrigger:=FALSE;	
-	xCameraLightContorl:=FALSE;
-20://Z轴上升
-	 fbVTCCyl_1.xinit := TRUE; 
-	 fbVTCCyl_2.xInit:=TRUE;
-	IF fbVTCCyl_1.xHP_Delay AND fbVTCCyl_2.xHP_Delay  THEN
-    		station.iStepInit:=40;	
-	END_IF		
-40://电动夹爪初始化
-		IF    NOT    arClampHavePart[1]  THEN
-				fbClamp_1.xInitControl:=TRUE ;
-		END_IF
-		IF    NOT    arClampHavePart[2]  THEN
-				 fbClamp_2.xInitControl:=TRUE ;
-		END_IF
-		 IF  (fbClamp_1.xDone OR  arClampHavePart[1] )   AND 
-			 (fbClamp_2.xDone OR  arClampHavePart[2] ) THEN 
-			fbClamp_1.xExecute :=FALSE;
-			fbClamp_2.xExecute:=FALSE;
-			station.iStepInit:=60;
-		 END_IF		
-60: //伺服上电
-  	 fbXAxisMove.xPowerInit := TRUE ;
-	 fbYAxisMove.xPowerInit := TRUE ;
-	IF fbXAxisMove.xPowerOn AND   fbYAxisMove.xPowerOn THEN 
-    	station.iStepInit:=70;	
-	END_IF
-70://伺服去待机位置
-		fbXAxisMove.xMoveAuto[1]:=TRUE;
-		fbYAxisMove.xMoveAuto[1]:=TRUE;
-		IF fbXAxisMove.xMoveInPos[1] AND fbYAxisMove.xMoveInPos[1]  THEN
-			station.iStepInit:=100;	
-		END_IF
-100://
-       station.iStepInit:=999;	
-
-999://初始化完成	
-	station.iStepInit:=0;
-	station.xInitDone:=TRUE;  
-END_CASE
-END_IF
-]]></ST>
-      </Implementation>
-    </Action>
-    <Action Name="FlowLine" Id="{d9cd48cb-8724-4429-9be0-d854b4e35faa}">
-      <Implementation>
-        <ST><![CDATA[CASE bFlowLineStep OF
-	
+(**************************************链板线程序********************************************)
+CASE bFlowLineStep OF
 0://启动
  	IF (station.xRunning OR xFlowLineReadyCmd ) AND NOT _FirstFlag  THEN
 			bFlowLineStep:=20;
@@ -762,14 +743,79 @@ IF  station.xRunning THEN
 END_IF
 IF  fbmachine[1].xEmptyDone THEN
 	_Firstflag:=FALSE;
-END_IF]]></ST>
+END_IF
+
+
+	ELSE
+		;	
+END_CASE
+
+END_IF
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="FlowInit" Id="{737815c3-3d44-47dd-9c07-561ee528fd92}">
+      <Implementation>
+        <ST><![CDATA[IF NOT station.xIniting THEN
+  station.iStepInit:=0;    
+
+ELSE
+//--------------------------------------------初始化步序----------------------------------
+CASE station.iStepInit OF	
+ 0://  
+  	IF station.xIniting THEN	
+  	  station.iStepInit:=10;	
+  	END_IF	
+10://复位数据
+    station.iStepInit := 20;
+	Camera.xlInit:=TRUE;
+20://Z轴上升
+	 fbVTCCyl_1.xinit := TRUE; 
+	 fbVTCCyl_2.xInit:=TRUE;
+	IF fbVTCCyl_1.xHP_Delay AND fbVTCCyl_2.xHP_Delay  THEN
+    		station.iStepInit:=40;	
+	END_IF		
+40://电动夹爪初始化
+		IF    NOT    arClampHavePart[1]  THEN
+				fbClamp_1.xInitControl:=TRUE ;
+		END_IF
+		IF    NOT    arClampHavePart[2]  THEN
+				 fbClamp_2.xInitControl:=TRUE ;
+		END_IF
+		 IF  (fbClamp_1.xDone OR  arClampHavePart[1] )   AND 
+			 (fbClamp_2.xDone OR  arClampHavePart[2] ) THEN 
+			fbClamp_1.xExecute :=FALSE;
+			fbClamp_2.xExecute:=FALSE;
+			station.iStepInit:=60;
+		 END_IF		
+60: //伺服上电
+  	 fbXAxisMove.xPowerInit := TRUE ;
+	 fbYAxisMove.xPowerInit := TRUE ;
+	IF fbXAxisMove.xPowerOn AND   fbYAxisMove.xPowerOn THEN 
+    	station.iStepInit:=70;	
+	END_IF
+70://伺服去待机位置
+		fbXAxisMove.xMoveAuto[1]:=TRUE;
+		fbYAxisMove.xMoveAuto[1]:=TRUE;
+		IF fbXAxisMove.xMoveInPos[1] AND fbYAxisMove.xMoveInPos[1]  THEN
+			station.iStepInit:=100;	
+		END_IF
+100://
+       station.iStepInit:=999;	
+
+999://初始化完成	
+	station.iStepInit:=0;
+	station.xInitDone:=TRUE;  
+END_CASE
+END_IF
+]]></ST>
       </Implementation>
     </Action>
     <Action Name="General" Id="{853ea6bd-bb20-473d-996d-ff4ed10c4144}">
       <Implementation>
         <ST><![CDATA[
- 
-
  ]]></ST>
       </Implementation>
     </Action>
@@ -809,8 +855,9 @@ fbYAxisMove.xMoveILC[3]	:=
 fbYAxisMove.xMoveILC[4]	:= 		
 fbYAxisMove.xMoveILC[5]	:= 	fbVTCCyl_1.xHP_Sensor	AND 	fbVTCCyl_2.xHP_Sensor	;
 ///电动夹爪
-fbERG_20_Modbus[1].xDeviceRunning:=TRUE;
-fbERG_20_Modbus[2].xDeviceRunning:=TRUE;
+fbERG_20_Modbus[1].xDeviceRunning:=
+fbERG_20_Modbus[2].xDeviceRunning:=station.xSingleRunning;
+
 ]]></ST>
       </Implementation>
     </Action>
@@ -887,11 +934,9 @@ QxS01VTCCyl_1HP	:=	fbVTCCyl_1.xHP_Valve	;
 QxS01VTCCyl_2WP	:=	fbVTCCyl_2.xWP_Valve	;
 QxS01VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
 //链板线启动
-QxFlowLineStart:= xFlowLineStart;
-//上料工位相机光源触发
-QxCameraLight1Trigger:=xCameraLightContorl;
-//相机触发
-QxCamera1Trigger:= xCameraTrigger ;]]></ST>
+QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
+
+]]></ST>
       </Implementation>
     </Action>
     <LineIds Name="S01_Loading">
@@ -906,10 +951,10 @@ QxCamera1Trigger:= xCameraTrigger ;]]></ST>
       <LineId Id="75" Count="1" />
       <LineId Id="74" Count="0" />
       <LineId Id="77" Count="7" />
-      <LineId Id="12" Count="1" />
-      <LineId Id="92" Count="1" />
+      <LineId Id="93" Count="0" />
       <LineId Id="96" Count="0" />
       <LineId Id="87" Count="0" />
+      <LineId Id="103" Count="0" />
       <LineId Id="98" Count="0" />
     </LineIds>
     <LineIds Name="S01_Loading.Alarm">
@@ -932,14 +977,14 @@ QxCamera1Trigger:= xCameraTrigger ;]]></ST>
       <LineId Id="1335" Count="17" />
       <LineId Id="1573" Count="0" />
       <LineId Id="1943" Count="0" />
-      <LineId Id="2001" Count="0" />
       <LineId Id="1667" Count="0" />
       <LineId Id="1821" Count="0" />
-      <LineId Id="2002" Count="0" />
       <LineId Id="1711" Count="0" />
       <LineId Id="1672" Count="0" />
       <LineId Id="1876" Count="0" />
       <LineId Id="1894" Count="0" />
+      <LineId Id="3059" Count="0" />
+      <LineId Id="3062" Count="0" />
       <LineId Id="2401" Count="10" />
       <LineId Id="1880" Count="0" />
       <LineId Id="2434" Count="0" />
@@ -948,20 +993,17 @@ QxCamera1Trigger:= xCameraTrigger ;]]></ST>
       <LineId Id="1909" Count="0" />
       <LineId Id="1881" Count="0" />
       <LineId Id="1913" Count="2" />
-      <LineId Id="1934" Count="0" />
       <LineId Id="1932" Count="0" />
       <LineId Id="1917" Count="2" />
       <LineId Id="1887" Count="0" />
       <LineId Id="2435" Count="0" />
-      <LineId Id="1935" Count="0" />
-      <LineId Id="1937" Count="0" />
-      <LineId Id="1929" Count="0" />
+      <LineId Id="2887" Count="3" />
+      <LineId Id="2885" Count="0" />
       <LineId Id="1931" Count="0" />
-      <LineId Id="1938" Count="0" />
-      <LineId Id="2436" Count="0" />
-      <LineId Id="2317" Count="0" />
-      <LineId Id="2314" Count="1" />
-      <LineId Id="1940" Count="0" />
+      <LineId Id="2877" Count="0" />
+      <LineId Id="2882" Count="0" />
+      <LineId Id="2881" Count="0" />
+      <LineId Id="2883" Count="0" />
       <LineId Id="1888" Count="0" />
       <LineId Id="2042" Count="0" />
       <LineId Id="2324" Count="0" />
@@ -982,7 +1024,9 @@ QxCamera1Trigger:= xCameraTrigger ;]]></ST>
       <LineId Id="2437" Count="2" />
       <LineId Id="2052" Count="1" />
       <LineId Id="2441" Count="0" />
-      <LineId Id="2443" Count="5" />
+      <LineId Id="3068" Count="0" />
+      <LineId Id="3071" Count="1" />
+      <LineId Id="2444" Count="4" />
       <LineId Id="2451" Count="1" />
       <LineId Id="2442" Count="0" />
       <LineId Id="2819" Count="2" />
@@ -990,6 +1034,7 @@ QxCamera1Trigger:= xCameraTrigger ;]]></ST>
       <LineId Id="2818" Count="0" />
       <LineId Id="2822" Count="0" />
       <LineId Id="2464" Count="0" />
+      <LineId Id="3073" Count="1" />
       <LineId Id="2454" Count="5" />
       <LineId Id="2462" Count="1" />
       <LineId Id="2453" Count="0" />
@@ -1011,8 +1056,6 @@ QxCamera1Trigger:= xCameraTrigger ;]]></ST>
       <LineId Id="2219" Count="4" />
       <LineId Id="2217" Count="0" />
       <LineId Id="2216" Count="0" />
-      <LineId Id="2218" Count="0" />
-      <LineId Id="2215" Count="0" />
       <LineId Id="2061" Count="3" />
       <LineId Id="2067" Count="1" />
       <LineId Id="2066" Count="0" />
@@ -1035,16 +1078,36 @@ QxCamera1Trigger:= xCameraTrigger ;]]></ST>
       <LineId Id="2488" Count="0" />
       <LineId Id="2098" Count="4" />
       <LineId Id="2097" Count="0" />
-      <LineId Id="2524" Count="9" />
+      <LineId Id="2983" Count="1" />
+      <LineId Id="2987" Count="2" />
+      <LineId Id="2986" Count="0" />
+      <LineId Id="2524" Count="0" />
+      <LineId Id="3075" Count="1" />
+      <LineId Id="2525" Count="8" />
+      <LineId Id="2991" Count="0" />
+      <LineId Id="3077" Count="1" />
+      <LineId Id="2992" Count="7" />
+      <LineId Id="2990" Count="0" />
+      <LineId Id="3040" Count="6" />
+      <LineId Id="3039" Count="0" />
+      <LineId Id="3047" Count="0" />
       <LineId Id="2014" Count="0" />
-      <LineId Id="2545" Count="0" />
+      <LineId Id="3007" Count="1" />
+      <LineId Id="3014" Count="0" />
+      <LineId Id="3010" Count="1" />
+      <LineId Id="3015" Count="0" />
+      <LineId Id="3009" Count="0" />
       <LineId Id="2192" Count="0" />
       <LineId Id="2172" Count="0" />
+      <LineId Id="3020" Count="0" />
       <LineId Id="2120" Count="0" />
       <LineId Id="2138" Count="0" />
       <LineId Id="2173" Count="0" />
-      <LineId Id="2159" Count="4" />
+      <LineId Id="2159" Count="2" />
+      <LineId Id="3019" Count="0" />
+      <LineId Id="2162" Count="1" />
       <LineId Id="2139" Count="0" />
+      <LineId Id="3030" Count="0" />
       <LineId Id="2191" Count="0" />
       <LineId Id="2546" Count="0" />
       <LineId Id="2174" Count="2" />
@@ -1053,7 +1116,9 @@ QxCamera1Trigger:= xCameraTrigger ;]]></ST>
       <LineId Id="2188" Count="0" />
       <LineId Id="2207" Count="0" />
       <LineId Id="2143" Count="0" />
-      <LineId Id="2209" Count="0" />
+      <LineId Id="3000" Count="1" />
+      <LineId Id="3003" Count="1" />
+      <LineId Id="3002" Count="0" />
       <LineId Id="2211" Count="0" />
       <LineId Id="2832" Count="0" />
       <LineId Id="2836" Count="0" />
@@ -1062,15 +1127,15 @@ QxCamera1Trigger:= xCameraTrigger ;]]></ST>
       <LineId Id="2842" Count="0" />
       <LineId Id="2856" Count="0" />
       <LineId Id="2838" Count="0" />
+      <LineId Id="3053" Count="4" />
+      <LineId Id="3052" Count="0" />
       <LineId Id="2549" Count="0" />
+      <LineId Id="3079" Count="1" />
       <LineId Id="2557" Count="7" />
       <LineId Id="2556" Count="0" />
-      <LineId Id="2824" Count="2" />
-      <LineId Id="2831" Count="0" />
-      <LineId Id="2827" Count="0" />
-      <LineId Id="2823" Count="0" />
-      <LineId Id="2550" Count="0" />
-      <LineId Id="2565" Count="9" />
+      <LineId Id="2565" Count="0" />
+      <LineId Id="3081" Count="1" />
+      <LineId Id="2566" Count="8" />
       <LineId Id="2578" Count="0" />
       <LineId Id="2592" Count="0" />
       <LineId Id="2599" Count="0" />
@@ -1153,7 +1218,9 @@ QxCamera1Trigger:= xCameraTrigger ;]]></ST>
       <LineId Id="2288" Count="0" />
       <LineId Id="2310" Count="0" />
       <LineId Id="2761" Count="0" />
-      <LineId Id="2746" Count="8" />
+      <LineId Id="2746" Count="0" />
+      <LineId Id="3083" Count="1" />
+      <LineId Id="2747" Count="7" />
       <LineId Id="2745" Count="0" />
       <LineId Id="2740" Count="0" />
       <LineId Id="1636" Count="0" />
@@ -1175,9 +1242,14 @@ QxCamera1Trigger:= xCameraTrigger ;]]></ST>
       <LineId Id="2853" Count="1" />
       <LineId Id="2852" Count="0" />
       <LineId Id="2760" Count="0" />
+      <LineId Id="3050" Count="1" />
       <LineId Id="1806" Count="0" />
       <LineId Id="1395" Count="4" />
       <LineId Id="2297" Count="0" />
+      <LineId Id="2901" Count="0" />
+      <LineId Id="2909" Count="73" />
+      <LineId Id="2908" Count="0" />
+      <LineId Id="2906" Count="1" />
       <LineId Id="1401" Count="4" />
       <LineId Id="1410" Count="1" />
       <LineId Id="1105" Count="0" />
@@ -1186,8 +1258,7 @@ QxCamera1Trigger:= xCameraTrigger ;]]></ST>
       <LineId Id="437" Count="1" />
       <LineId Id="440" Count="8" />
       <LineId Id="450" Count="0" />
-      <LineId Id="599" Count="0" />
-      <LineId Id="553" Count="0" />
+      <LineId Id="611" Count="0" />
       <LineId Id="532" Count="0" />
       <LineId Id="547" Count="0" />
       <LineId Id="551" Count="0" />
@@ -1216,59 +1287,8 @@ QxCamera1Trigger:= xCameraTrigger ;]]></ST>
       <LineId Id="466" Count="4" />
       <LineId Id="436" Count="0" />
     </LineIds>
-    <LineIds Name="S01_Loading.FlowLine">
-      <LineId Id="2" Count="0" />
-      <LineId Id="12" Count="2" />
-      <LineId Id="18" Count="0" />
-      <LineId Id="74" Count="0" />
-      <LineId Id="71" Count="0" />
-      <LineId Id="73" Count="0" />
-      <LineId Id="17" Count="0" />
-      <LineId Id="36" Count="1" />
-      <LineId Id="15" Count="0" />
-      <LineId Id="137" Count="0" />
-      <LineId Id="25" Count="0" />
-      <LineId Id="28" Count="1" />
-      <LineId Id="39" Count="0" />
-      <LineId Id="30" Count="0" />
-      <LineId Id="27" Count="0" />
-      <LineId Id="35" Count="0" />
-      <LineId Id="138" Count="3" />
-      <LineId Id="77" Count="0" />
-      <LineId Id="142" Count="0" />
-      <LineId Id="83" Count="4" />
-      <LineId Id="89" Count="0" />
-      <LineId Id="82" Count="0" />
-      <LineId Id="143" Count="2" />
-      <LineId Id="56" Count="0" />
-      <LineId Id="62" Count="0" />
-      <LineId Id="58" Count="0" />
-      <LineId Id="61" Count="0" />
-      <LineId Id="60" Count="0" />
-      <LineId Id="63" Count="0" />
-      <LineId Id="67" Count="2" />
-      <LineId Id="64" Count="1" />
-      <LineId Id="57" Count="0" />
-      <LineId Id="31" Count="0" />
-      <LineId Id="50" Count="1" />
-      <LineId Id="53" Count="0" />
-      <LineId Id="99" Count="0" />
-      <LineId Id="104" Count="0" />
-      <LineId Id="103" Count="0" />
-      <LineId Id="101" Count="0" />
-      <LineId Id="120" Count="0" />
-      <LineId Id="123" Count="9" />
-      <LineId Id="9" Count="0" />
-      <LineId Id="136" Count="0" />
-      <LineId Id="98" Count="0" />
-      <LineId Id="97" Count="0" />
-      <LineId Id="134" Count="1" />
-      <LineId Id="92" Count="0" />
-      <LineId Id="96" Count="0" />
-      <LineId Id="95" Count="0" />
-    </LineIds>
     <LineIds Name="S01_Loading.General">
-      <LineId Id="599" Count="2" />
+      <LineId Id="601" Count="0" />
       <LineId Id="509" Count="0" />
     </LineIds>
     <LineIds Name="S01_Loading.ILC">
@@ -1280,7 +1300,10 @@ QxCamera1Trigger:= xCameraTrigger ;]]></ST>
       <LineId Id="324" Count="5" />
       <LineId Id="332" Count="5" />
       <LineId Id="262" Count="0" />
-      <LineId Id="339" Count="2" />
+      <LineId Id="345" Count="0" />
+      <LineId Id="347" Count="0" />
+      <LineId Id="344" Count="0" />
+      <LineId Id="341" Count="0" />
     </LineIds>
     <LineIds Name="S01_Loading.TipAuto">
       <LineId Id="121" Count="0" />
@@ -1316,8 +1339,8 @@ QxCamera1Trigger:= xCameraTrigger ;]]></ST>
       <LineId Id="2" Count="0" />
       <LineId Id="32" Count="12" />
       <LineId Id="16" Count="0" />
-      <LineId Id="49" Count="2" />
       <LineId Id="47" Count="0" />
+      <LineId Id="52" Count="0" />
     </LineIds>
   </POU>
 </TcPlcObject>

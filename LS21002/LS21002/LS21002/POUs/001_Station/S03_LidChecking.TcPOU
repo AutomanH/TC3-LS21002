@@ -18,6 +18,7 @@ VAR
 	fbXAxisMove	 :REFERENCE TO FB_Axis:=fbAxis[6];	//	相机检测工位X轴伺服
 	fbYAxisMove	 :REFERENCE TO FB_Axis:=fbAxis[7];	//	相机检测工位Y轴伺服
 	fbZAxisMove	 :REFERENCE TO FB_Axis:=fbAxis[8];	//	相机检测工位Z轴伺服
+	//相机
 
 	
 		//延时
@@ -28,11 +29,7 @@ VAR
 	arProcessDataStation : ARRAY [1..5] OF DUT_MainlineFixture;
 	
 	i,j: INT;
-	//相机触发
-	arCameraTrigger:ARRAY[1..16] OF BOOL;
 	
-	// 光源控制器控制
-	xCameraLightContorl: BOOL;
 	// 循环计数
 	bCounter: BYTE;
 	// 临时变量
@@ -42,8 +39,6 @@ VAR
 	bXCounter: BYTE;
 	// Y轴伺服循环次数
 	bYCounter: BYTE;
-	// 相机光源控制
-	xCameraLightControl: BOOL;
 	// 结束时循环次数
 	bEndCounter: INT;
 	//相机检测工位检测结果
@@ -143,7 +138,7 @@ THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
 	station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
-ELSIF station.xRunning  (*OR  bLocalStatus[2]=stWorkstatus.Started*)
+ELSIF station.xRunning  
 THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
 CASE station.iStepAuto OF	  
@@ -164,21 +159,33 @@ CASE station.iStepAuto OF
 		THEN
 			station.xCycleEnable:=TRUE;
 			station.xDone:= FALSE;  
-			station.iStepAuto:= 10;
+			station.iStepAuto:= 5;
 		END_IF		
-		
+	 5://复位数据
+			
+		station.iStepAuto:= 10;
 	 10: //判断产品是否到该工位
-		IF  fbMachine[1].xTryRun OR station.xSingleRunning THEN
-			station.iStepAuto:= 20;
+		IF  station.xSingleRunning THEN
+			station.iStepAuto:= 11;
+		ELSIF fbMachine[1].xTryRun THEN
+			IF NOT _FirstCycle[6] THEN
+					bCounter:=1;
+					bEndCounter:=0;
+				_FirstCycle[6]:=TRUE;
+			END_IF
+			station.iStepAuto:= 11;
 		ELSE
 			IF   	 NOT  arMainlineFixtureData[arCurFixtureNumStation[5]].xMaterialOnOff AND
 					 NOT arMainlineFixtureData[arCurFixtureNumStation[6]].xMaterialOnOff  AND 
 					 NOT arMainlineFixtureData[arCurFixtureNumStation[7]].xMaterialOnOff AND 
 					NOT	arMainlineFixtureData[arCurFixtureNumStation[8]].xMaterialOnOff AND
 					NOT arMainlineFixtureData[arCurFixtureNumStation[9]].xMaterialOnOff  THEN
-							station.iStepAuto:= 999;
+							bCounter:=0;
+							bEndCounter :=0;
 							_FirstCycle[1]:=FALSE;
 							_FirstCycle[2]:=FALSE;
+							_FirstCycle[6]:=FALSE;
+							station.iStepAuto:= 999;
 						
 			ELSIF	 arMainlineFixtureData[arCurFixtureNumStation[5]].xMaterialOnOff AND    
 				    arMainlineFixtureData[arCurFixtureNumStation[6]].xMaterialOnOff (* AND 
@@ -190,7 +197,7 @@ CASE station.iStepAuto OF
 							bEndCounter :=0;
 							_FirstCycle[1]:=TRUE;
 					END_IF
-					station.iStepAuto:= 20;
+					station.iStepAuto:= 11;
 			ELSIF   NOT arMainlineFixtureData[arCurFixtureNumStation[5]].xMaterialOnOff AND    
 				    NOT arMainlineFixtureData[arCurFixtureNumStation[6]].xMaterialOnOff  AND 
 						arMainlineFixtureData[arCurFixtureNumStation[7]].xMaterialOnOff AND 
@@ -201,11 +208,20 @@ CASE station.iStepAuto OF
 							bCounter:=0;
 							_FirstCycle[2]:=TRUE;
 					END_IF
-					station.iStepAuto:= 20;
+					station.iStepAuto:= 11;
 			END_IF
 		END_IF
+	11://手动NOK按钮
+			IF   arManualNOKHmiButton[3]  AND NOT station.xSingleRunning THEN
+				station.iStepAuto:= 280;
+			ELSE	
+				station.iStepAuto:= 20;
+			END_IF
+			
 	20:////Restore_after_Estop_Process1 上载数据流程
-			IF tsModuleProcess[1].xProcessNotStarted AND NOT  tsModuleProcess[1].xProcessStarted THEN
+			IF   station.xSingleRunning OR  fbMachine[1].xTryRun THEN
+				    station.iStepAuto :=40;
+			ELSIF tsModuleProcess[1].xProcessNotStarted AND NOT  tsModuleProcess[1].xProcessStarted THEN
 					station.iStepAuto :=21; (*process not started*)
 			ELSIF  tsModuleProcess[1].xProcessStarted AND NOT  tsModuleProcess[1].xProcessCompleted THEN
 				 station.iStepAuto := 21;(*process started*)
@@ -218,7 +234,6 @@ CASE station.iStepAuto OF
 			END_IF	
 	21://
 				tsModuleProcess[1].xProcessNotStarted:=TRUE;
-				
 				station.iStepAuto:= 30;
 	30://上载产品数据
 			tsModuleProcess[1].xProcessStarted	:=TRUE;
@@ -234,10 +249,18 @@ CASE station.iStepAuto OF
 				MEMCPY(ADR(arProcessDataStation[5]),ADR(arMainlineFixtureData[arCurFixtureNumStation[9]]),SIZEOF(arMainlineFixtureData[arCurFixtureNumStation[9]]))	;
 			END_IF
 			tsModuleProcess[1].xProcessCompleted:=TRUE;
-				station.iStepAuto:= 40;
+			station.iStepAuto:= 40;
 	/////产品流程开始	
-		40:////Restore_after_Estop_Process2 X轴位置1拍照流程
-			IF tsModuleProcess[2].xProcessNotStarted AND NOT  tsModuleProcess[2].xProcessStarted THEN
+		40://设定X轴循环次数=2
+			IF  bXCounter>2 OR  NOT _FirstCycle[3]  THEN
+				 bXCounter:=1;
+				 _FirstCycle[3]:=TRUE;
+			END_IF
+			station.iStepAuto:= 45;		
+		45:////Restore_after_Estop_Process2 X轴位置1拍照流程
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=70; 
+			ELSIF tsModuleProcess[2].xProcessNotStarted AND NOT  tsModuleProcess[2].xProcessStarted THEN
 					station.iStepAuto :=70; (*process not started*)
 			ELSIF  tsModuleProcess[2].xProcessStarted AND NOT  tsModuleProcess[2].xProcessCompleted THEN
 				 station.iStepAuto := 70;(*process started*)
@@ -246,10 +269,12 @@ CASE station.iStepAuto OF
 			ELSIF tsModuleProcess[2].xQDataCompleted THEN
 					station.iStepAuto :=200;(*Qdata completed *)
 			ELSE
-					station.iStepAuto :=60; 
+					station.iStepAuto :=70; 
 			END_IF	
 		50:////Restore_after_Estop_Process3 X轴位置2拍照流程
-			IF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=70; 
+			ELSIF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
 					station.iStepAuto :=70; (*process not started*)
 			ELSIF  tsModuleProcess[3].xProcessStarted AND NOT  tsModuleProcess[3].xProcessCompleted THEN
 				 station.iStepAuto := 70;(*process started*)
@@ -260,12 +285,7 @@ CASE station.iStepAuto OF
 			ELSE
 					station.iStepAuto :=70; 
 			END_IF	
-		60://设定X轴循环次数=2
-			IF  bXCounter>2 OR  NOT _FirstCycle[3]  THEN
-				 bXCounter:=1;
-				 _FirstCycle[3]:=TRUE;
-			END_IF
-			station.iStepAuto:= 70;		
+	
 		70://流程未开始
 				IF    bXCounter =1 THEN
 					 tsModuleProcess[2].xProcessNotStarted :=TRUE;
@@ -311,7 +331,7 @@ CASE station.iStepAuto OF
 		90://Z轴下降
 			fbZAxisMove.xMoveAuto[2]:=TRUE;
 			IF  fbXAxisMove.xMoveInPos[2] THEN
-					station.iStepAuto:= 95;
+				station.iStepAuto:= 95;
 			END_IF			 
 		95://X轴移动到拍照位置1/2
 			IF  bXCounter =1 THEN
@@ -348,14 +368,12 @@ CASE station.iStepAuto OF
 					station.iStepAuto:= 120;
 				END_IF
 			END_IF
-		120://清除相机结果及完成信号
-				MEMSET(ADR(arCameraTrigger),0,SIZEOF(arCameraTrigger));
-				MEMSET(ADR(sCamera_TO_Plc.iS03Result),0,SIZEOF(sCamera_TO_Plc.iS03Result));
-				MEMSET(ADR(sCamera_TO_Plc.iS03Completed),0,SIZEOF(sCamera_TO_Plc.iS03Completed));
-				station.iStepAuto :=130;
-		130://打开相机光源
-				xCameraLightContorl:=TRUE;
-				station.iStepAuto :=140;
+		120://屏蔽拍照
+			IF axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
+ 					station.iStepAuto:= 150;	
+			ELSE
+					station.iStepAuto:= 140;		
+			END_IF
 		140://触发拍照
 			(*开始循环*)
 			IF  bXCounter =1 THEN
@@ -365,82 +383,107 @@ CASE station.iStepAuto OF
 			END_IF
 			IF   bCounter =1  (*17.18位置有产品*)  THEN
 					IF  bXCounter =1 THEN
-							FOR i:=1 TO  8 BY 1 DO
-								arCameraTrigger[i]:=TRUE;
+							FOR i:=2 TO  9 BY 1 DO
+								fbCamera[i].xlTrigger:=TRUE;
 							END_FOR
 					ELSIF bXCounter =2 THEN
-							FOR i:=1 TO  4 BY 1 DO
-								arCameraTrigger[i]:=TRUE;
+							FOR i:=2 TO  5 BY 1 DO
+								fbCamera[i].xlTrigger:=TRUE;
 							END_FOR
 					END_IF
 			ELSIF  bCounter=2  THEN
 					IF  bXCounter =1 THEN
-								FOR i:=1 TO 16 BY 1 DO
-									arCameraTrigger[i]:=TRUE;
+								FOR i:=2 TO 17 BY 1 DO
+									fbCamera[i].xlTrigger:=TRUE;
 								END_FOR
 					ELSIF   bXCounter =2 THEN
-								FOR i:=1 TO 12 BY 1 DO
-									arCameraTrigger[i]:=TRUE;
+								FOR i:=2 TO 13 BY 1 DO
+									fbCamera[i].xlTrigger:=TRUE;
 								END_FOR	
 					END_IF
 			ELSIF   bCounter=3 THEN
-					FOR i:=1 TO 16 BY 1 DO
-						arCameraTrigger[i]:=TRUE;
+					FOR i:=2 TO 17 BY 1 DO
+						fbCamera[i].xlTrigger:=TRUE;
 					END_FOR
 			END_IF
 			(*结束循环*)
 			IF   bEndCounter =1 (*17.18位置无产品*)  THEN
 					IF  bXCounter =1 THEN
-								FOR i:=5 TO  16 BY 1 DO
-									arCameraTrigger[i]:=TRUE;
+								FOR i:=6 TO  17 BY 1 DO
+									fbCamera[i].xlTrigger:=TRUE;
 								END_FOR
 					ELSIF bXCounter =2 THEN
-								FOR i:=1 TO  16 BY 1 DO
-									arCameraTrigger[i]:=TRUE;
+								FOR i:=2 TO  17 BY 1 DO
+									fbCamera[i].xlTrigger:=TRUE;
 								END_FOR
 					END_IF
 			ELSIF  bEndCounter =2 THEN
 					IF bXCounter =2 THEN
-							FOR i:=13 TO  16 BY 1 DO
-									arCameraTrigger[i]:=TRUE;
+							FOR i:=14 TO  17 BY 1 DO
+									fbCamera[i].xlTrigger:=TRUE;
 							END_FOR	
 					END_IF
 			END_IF
-			station.iStepAuto:=150;
+			FOR i:=2 TO 17 BY 1 DO
+				IF  fbCamera[i].xQBusy  THEN
+					fbCamera[i].xlTrigger:=FALSE;
+					station.iStepAuto:=150;
+				END_IF
+			END_FOR
 		150://检查相机完成信号并储存
 		(*开始循环*)
 			 IF   bCounter =1 (*17.18位置有产品*)  THEN	
 				  	IF  bXCounter =1 THEN
+							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
+								
+											arCameraResult[1,3,bYCounter]:=1;	
+											arCameraResult[1,3,6+bYCounter]:=1;	
+											arCameraResult[1,1,3+bYCounter]:=1;
+											arCameraResult[1,1,9+bYCounter]:=1;
+											arCameraResult[2,4,bYCounter]:=1;
+											arCameraResult[2,4,6+bYCounter]:=1;
+											arCameraResult[2,2,3+bYCounter]:=1;
+											arCameraResult[2,2,9+bYCounter]:=1;	
+											station.iStepAuto:=160;
+							ELSE
 								FOR i:=1 TO  8 BY 1 DO
-									IF  sCamera_TO_Plc.iCompleted[i]<> 1 THEN	
-											EXIT;
-									ELSE
-											IF  i =1 THEN
-												arCameraResult[1,3,bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											ELSIF i =2 THEN
-												arCameraResult[1,3,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											ELSIF i =3 THEN
-												arCameraResult[1,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =4 THEN
-												arCameraResult[1,1,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =5 THEN
-												arCameraResult[2,4,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =6 THEN
-												arCameraResult[2,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =7 THEN
-												arCameraResult[2,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =8 THEN
-												arCameraResult[2,2,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											END_IF	
-									END_IF
-									IF   i =8 THEN
-										station.iStepAuto:=160;
-									END_IF
+										IF  fbCamera[i].xQBusy THEN	
+												EXIT;
+										ELSE
+												IF  i =1 THEN
+													arCameraResult[1,3,bYCounter]:=sCamera_To_Plc.iS03Result[i];	
+												ELSIF i =2 THEN
+													arCameraResult[1,3,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
+												ELSIF i =3 THEN
+													arCameraResult[1,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												ELSIF i =4 THEN
+													arCameraResult[1,1,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												ELSIF i =5 THEN
+													arCameraResult[2,4,bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												ELSIF i =6 THEN
+													arCameraResult[2,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												ELSIF i =7 THEN
+													arCameraResult[2,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												ELSIF i =8 THEN
+													arCameraResult[2,2,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
+												END_IF	
+										END_IF
+										IF   i =8 THEN
+											station.iStepAuto:=160;
+										END_IF
 								END_FOR
-											
+							END_IF
+				
 				 	ELSIF   bXCounter =2 THEN
+							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
+											arCameraResult[2,3,bYCounter]:=1;	
+											arCameraResult[2,3,6+bYCounter]:=1;	
+											arCameraResult[2,1,3+bYCounter]:=1;
+											arCameraResult[2,1,9+bYCounter]:=1;
+											station.iStepAuto:=160;
+							ELSE
 								FOR i:=1 TO 4 BY 1	DO
-										IF  sCamera_TO_Plc.iCompleted[i]<> 1 THEN	
+										IF  fbCamera[i].xQBusy THEN	
 											EXIT;
 										ELSE
 											IF  i =1 THEN
@@ -457,11 +500,33 @@ CASE station.iStepAuto OF
 											station.iStepAuto:=160;
 										END_IF
 								END_FOR
+							END_IF
+							
 					END_IF		
 			ELSIF  bCounter=2 THEN
 					IF bXCounter =1 THEN
+							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
+									
+												arCameraResult[1,3,bYCounter]:=1;	
+												arCameraResult[1,3,6+bYCounter]:=1;	
+												arCameraResult[1,1,3+bYCounter]:=1;
+												arCameraResult[1,1,9+bYCounter]:=1;
+												arCameraResult[2,4,bYCounter]:=1;
+												arCameraResult[2,4,6+bYCounter]:=1;
+												arCameraResult[2,2,3+bYCounter]:=1;
+												arCameraResult[2,2,9+bYCounter]:=1;	
+												arCameraResult[3,3,3+bYCounter]:=1;	
+												arCameraResult[3,3,9+bYCounter]:=1;	
+												arCameraResult[3,1,bYCounter]:= 1;
+												arCameraResult[3,1,6+bYCounter]:=1;
+												arCameraResult[4,4,3+bYCounter]:=1;
+												arCameraResult[4,4,9+bYCounter]:=1;
+												arCameraResult[4,2,3+bYCounter]:=1;
+												arCameraResult[4,2,6+bYCounter]:=1;	
+												station.iStepAuto:=160;
+							ELSE
 								FOR i:=1 TO  16 BY 1 DO
-									IF  sCamera_TO_Plc.iCompleted[i]<> 1 THEN	
+									IF  fbCamera[i].xQBusy THEN	
 											EXIT;
 									ELSE
 											IF  i =1 THEN
@@ -502,9 +567,26 @@ CASE station.iStepAuto OF
 											station.iStepAuto:=160;
 									END_IF
 								END_FOR	
+							END_IF
+							
 					ELSIF bXCounter =2 THEN
+							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
+											arCameraResult[2,3,bYCounter]:=1;	
+											arCameraResult[2,3,6+bYCounter]:=1;	
+											arCameraResult[2,1,3+bYCounter]:=1;
+											arCameraResult[2,1,9+bYCounter]:=1;
+											arCameraResult[3,4,bYCounter]:=1;
+											arCameraResult[3,4,6+bYCounter]:=1;
+											arCameraResult[3,2,3+bYCounter]:=1;
+											arCameraResult[3,2,9+bYCounter]:=1;	
+											arCameraResult[4,3,3+bYCounter]:=1;	
+											arCameraResult[4,3,9+bYCounter]:=1;	
+											arCameraResult[4,1,bYCounter]:=1;
+											arCameraResult[4,1,6+bYCounter]:=1;
+											station.iStepAuto:=160;
+							ELSE
 								FOR i:=1 TO  12 BY 1 DO
-									IF  sCamera_TO_Plc.iCompleted[i]<> 1 THEN	
+									IF  fbCamera[i].xQBusy THEN	
 											EXIT;
 									ELSE
 											IF  i =1 THEN
@@ -537,55 +619,97 @@ CASE station.iStepAuto OF
 										station.iStepAuto:=160;
 									END_IF	
 								END_FOR	
+							END_IF
 					END_IF
 				
 			ELSIF  bCounter =3 THEN
 					IF bXCounter =1 THEN
+							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
+								
+											arCameraResult[1,3,bYCounter]:=	1;	
+											arCameraResult[1,3,6+bYCounter]:=1;	
+											arCameraResult[1,1,3+bYCounter]:=1;
+											arCameraResult[1,1,9+bYCounter]:=1;
+											arCameraResult[2,4,bYCounter]:=1;
+											arCameraResult[2,4,6+bYCounter]:=1;
+											arCameraResult[2,2,3+bYCounter]:=1;
+											arCameraResult[2,2,9+bYCounter]:=1;	
+											arCameraResult[3,3,3+bYCounter]:=1;	
+											arCameraResult[3,3,9+bYCounter]:=1;	
+											arCameraResult[3,1,bYCounter]:=1;
+											arCameraResult[3,1,6+bYCounter]:=1;
+											arCameraResult[4,4,3+bYCounter]:=1;
+											arCameraResult[4,4,9+bYCounter]:=1;
+											arCameraResult[4,2,3+bYCounter]:=1;
+											arCameraResult[4,2,6+bYCounter]:=1;	
+											station.iStepAuto:=160;
+							ELSE
 								FOR i:=1 TO  16 BY 1 DO
-									IF  sCamera_TO_Plc.iCompleted[i]<> 1 THEN	
-											EXIT;
-									ELSE
-											IF  i =1 THEN
-												arCameraResult[1,3,bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											ELSIF i =2 THEN   
-												arCameraResult[1,3,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											ELSIF i =3 THEN    
-												arCameraResult[1,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =4 THEN    
-												arCameraResult[1,1,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =5 THEN     
-												arCameraResult[2,4,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =6 THEN    
-												arCameraResult[2,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =7 THEN     
-												arCameraResult[2,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =8 THEN     
-												arCameraResult[2,2,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											ELSIF i =9 THEN     
-												arCameraResult[3,3,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											ELSIF i =10 THEN    
-												arCameraResult[3,3,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											ELSIF i =11 THEN    
-												arCameraResult[3,1,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =12 THEN    
-												arCameraResult[3,1,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =13 THEN    
-												arCameraResult[4,4,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =14 THEN    
-												arCameraResult[4,4,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =15 THEN    
-												arCameraResult[4,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =16 THEN   
-												arCameraResult[4,2,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											END_IF	
-									END_IF	
-									IF  i =16 THEN 
-										station.iStepAuto:=160;
-									END_IF
+										IF  fbCamera[i].xQBusy THEN	
+												EXIT;
+										ELSE
+												IF  i =1 THEN
+													arCameraResult[1,3,bYCounter]:=sCamera_To_Plc.iS03Result[i];	
+												ELSIF i =2 THEN   
+													arCameraResult[1,3,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
+												ELSIF i =3 THEN    
+													arCameraResult[1,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												ELSIF i =4 THEN    
+													arCameraResult[1,1,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												ELSIF i =5 THEN     
+													arCameraResult[2,4,bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												ELSIF i =6 THEN    
+													arCameraResult[2,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												ELSIF i =7 THEN     
+													arCameraResult[2,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												ELSIF i =8 THEN     
+													arCameraResult[2,2,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
+												ELSIF i =9 THEN     
+													arCameraResult[3,3,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
+												ELSIF i =10 THEN    
+													arCameraResult[3,3,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
+												ELSIF i =11 THEN    
+													arCameraResult[3,1,bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												ELSIF i =12 THEN    
+													arCameraResult[3,1,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												ELSIF i =13 THEN    
+													arCameraResult[4,4,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												ELSIF i =14 THEN    
+													arCameraResult[4,4,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												ELSIF i =15 THEN    
+													arCameraResult[4,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												ELSIF i =16 THEN   
+													arCameraResult[4,2,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
+												END_IF	
+										END_IF	
+										IF  i =16 THEN 
+											station.iStepAuto:=160;
+										END_IF
 								END_FOR	
+							END_IF
 					ELSIF bXCounter =2 THEN
+							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
+								
+												arCameraResult[2,3,bYCounter]:=1;	
+											arCameraResult[2,3,6+bYCounter]:=1;	
+											arCameraResult[2,1,3+bYCounter]:=1;
+											arCameraResult[2,1,9+bYCounter]:=1;
+											arCameraResult[3,4,bYCounter]:=1;
+											arCameraResult[3,4,6+bYCounter]:=1;
+											arCameraResult[3,2,3+bYCounter]:=1;
+											arCameraResult[3,2,9+bYCounter]:=1;	
+											arCameraResult[4,3,3+bYCounter]:=1;	
+											arCameraResult[4,3,9+bYCounter]:=1;	
+											arCameraResult[4,1,bYCounter]:=1;
+											arCameraResult[4,1,6+bYCounter]:=1;
+											arCameraResult[5,4,3+bYCounter]:=1;
+											arCameraResult[5,4,9+bYCounter]:=1;
+											arCameraResult[5,2,3+bYCounter]:=1;
+											arCameraResult[5,2,6+bYCounter]:=1;	
+											station.iStepAuto:=160;
+							ELSE
 								FOR i:=1 TO  12 BY 1 DO
-									IF  sCamera_TO_Plc.iCompleted[i]<> 1 THEN	
+									IF fbCamera[i].xQBusy THEN	
 											EXIT;
 									ELSE
 											IF  i =1 THEN
@@ -626,15 +750,26 @@ CASE station.iStepAuto OF
 										station.iStepAuto:=160;	
 									END_IF
 								END_FOR	
+							END_IF
 					END_IF
-			
 			END_IF
 			
 		(*结束循环*)
 			 IF   bEndCounter =1 (*17.18位置无产品*)  THEN	
 				  	IF  bXCounter =1 THEN
+							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
+											arCameraResult[3,3,3+bYCounter]:=1;
+											arCameraResult[3,3,9+bYCounter]:=1;
+											arCameraResult[3,1,bYCounter]:=1;
+											arCameraResult[3,1,3+bYCounter]:=1;                 
+											arCameraResult[4,4,3+bYCounter]:=1;	
+											arCameraResult[4,4,9+bYCounter]:=1;
+											arCameraResult[4,2,bYCounter]:=1;
+											arCameraResult[4,2,6+bYCounter]:=1;
+											station.iStepAuto:=160;
+							ELSE
 								FOR i:=9 TO  16 BY 1 DO
-									IF  sCamera_TO_Plc.iCompleted[i]<> 1 THEN	
+									IF  fbCamera[i].xQBusy THEN	
 											EXIT;
 									ELSE
 											IF i =9 THEN
@@ -659,9 +794,27 @@ CASE station.iStepAuto OF
 											station.iStepAuto:=160;	
 									END_IF
 								END_FOR	
+							END_IF
+							
 				 	ELSIF   bXCounter =2 THEN
+							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
+							
+											arCameraResult[3,4,bYCounter]:=1;	
+											arCameraResult[3,4,6+bYCounter]:=1;	
+											arCameraResult[3,2,3+bYCounter]:=1;
+											arCameraResult[3,2,9+bYCounter]:=1;
+											arCameraResult[4,3,3+bYCounter]:=1;	
+											arCameraResult[4,3,8+bYCounter]:=1;	
+											arCameraResult[4,1,bYCounter]:=1;
+											arCameraResult[4,1,6+bYCounter]:=1;		
+											arCameraResult[5,4,3+bYCounter]:=1;	
+											arCameraResult[5,4,9+bYCounter]:=1;	
+											arCameraResult[5,2,bYCounter]:=1;
+											arCameraResult[5,2,6+bYCounter]:=1;
+											station.iStepAuto:=160;
+							ELSE
 								FOR i:=5 TO 16 BY 1	DO
-										IF  sCamera_TO_Plc.iCompleted[i]<> 1 THEN	
+										IF  fbCamera[i].xQBusy THEN	
 											EXIT;
 										ELSE
 											IF  i =5 THEN
@@ -693,13 +846,22 @@ CASE station.iStepAuto OF
 										IF i =16 THEN
 											station.iStepAuto:=160;
 										END_IF
-	
 								END_FOR
+							END_IF
+							
 						END_IF		
 			ELSIF  bEndCounter=2 THEN
 					IF bXCounter =2 THEN
+							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
+								
+												arCameraResult[5,4,3+bYCounter]:=1;	
+												arCameraResult[5,4,9+bYCounter]:=1;	
+												arCameraResult[5,4,bYCounter]:=1;
+												arCameraResult[5,4,6+bYCounter]:=1;
+												station.iStepAuto:=160;
+							ELSE
 								FOR i:=13 TO  16 BY 1 DO
-									IF  sCamera_TO_Plc.iCompleted[i]<> 1 THEN	
+									IF  fbCamera[i].xQBusy THEN	
 											EXIT;
 									ELSE
 											IF  i =13 THEN
@@ -716,13 +878,11 @@ CASE station.iStepAuto OF
 										station.iStepAuto:=160;
 									END_IF	
 								END_FOR	
+							END_IF
 					END_IF
-				
 			END_IF	
-		160://关闭光源
-				xCameraLightContorl:=FALSE;
-				station.iStepAuto:=170;
-		170://Y循环+1
+			
+		160://Y循环+1
 			bYCounter :=bYCounter +1 ;
 			station.iStepAuto:=180;
 			
@@ -786,15 +946,10 @@ CASE station.iStepAuto OF
 				fbYAxisMove.xMoveInPos[1] THEN
 					station.iStepAuto:= 260;
 			END_IF
-		260://单循环
-				IF     station.xSingleRunning THEN
-						station.iStepAuto:=360;
-				ELSE
-						station.iStepAuto:=265;
-				END_IF
-				
-		265:////Restore_after_Estop_Process4 数据传输流程
-			IF tsModuleProcess[4].xProcessNotStarted AND NOT  tsModuleProcess[4].xProcessStarted THEN
+		260:////Restore_after_Estop_Process4 数据传输流程
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=999;
+			ELSIF tsModuleProcess[4].xProcessNotStarted AND NOT  tsModuleProcess[4].xProcessStarted THEN
 					station.iStepAuto :=270; (*process not started*)
 			ELSIF  tsModuleProcess[4].xProcessStarted AND NOT  tsModuleProcess[4].xProcessCompleted THEN
 				 station.iStepAuto := 275;(*process started*)
@@ -812,7 +967,8 @@ CASE station.iStepAuto OF
 		275://储存结果
 			tsModuleProcess[4].xProcessStarted:=TRUE;
 			FOR i:=1 TO 5 BY 1 DO
-				MEMCPY(ADR(arProcessDataStation[i].stProcessData.arCameraResult),ADR(arCameraResult[i,1,1]),SIZEOF(arProcessDataStation[i].stProcessData.arCameraResult));
+				MEMCPY(ADR(arProcessDataStation[i].stProcessData.arCameraResult),ADR(arCameraResult[i,1,1]),
+				SIZEOF(arProcessDataStation[i].stProcessData.arCameraResult));
 			END_FOR
 			station.iStepAuto:=280;
 		280://汇总结果【4】
@@ -876,9 +1032,10 @@ CASE station.iStepAuto OF
 				bCounter :=3;
 			END_IF
 			station.iStepAuto:=999;
+		
 	////产品流程结束
 	999://----Single Run Finish----
-			
+		arManualNOKHmiButton[3]:=FALSE;
 		station.iStepAuto :=0;
 		IF NOT station.xSingleContinuousRun THEN
 			station.xSingleRunFlag:=FALSE;
@@ -908,8 +1065,9 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
-	xCameraLightContorl:=FALSE;
-	MEMSET(ADR(arCameraTrigger),0,SIZEOF(arCameraTrigger));
+	FOR i:=2 TO 17 BY 1 DO
+		fbCamera[i].xlInit:=TRUE;
+	END_FOR
 	station.iStepInit :=20;
 	 
 20://伺服上电
@@ -988,7 +1146,8 @@ CASE bClearProcessStep OF
 	
 END_CASE
 
-]]></ST>
+(*******************拍照结果放到HMI中**********************)
+MEMCPY(ADR(arCameraResultHmi),ADR(arCameraResult),SIZEOF(arCameraResultHmi));]]></ST>
       </Implementation>
     </Action>
     <Action Name="ILC" Id="{b7f5a1ac-a880-4cb0-819a-4a4442b7778e}">
@@ -1129,25 +1288,7 @@ QxS03HOZAdjustCyl_7WP	:=	fbHOZAdjustCyl_7.xWP_Valve	;
 QxS03HOZAdjustCyl_7HP	:=	fbHOZAdjustCyl_7.xHP_Valve	;
 QxS03HOZAdjustCyl_8WP	:=	fbHOZAdjustCyl_8.xWP_Valve	;
 QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
-//相机触发
-QxCamera2Trigger	:= arCameraTrigger[1];
-QxCamera3Trigger	:= arCameraTrigger[2];
-QxCamera4Trigger	:= arCameraTrigger[3];
-QxCamera5Trigger	:= arCameraTrigger[4];
-QxCamera6Trigger	:= arCameraTrigger[5];
-QxCamera7Trigger	:= arCameraTrigger[6];
-QxCamera8Trigger	:= arCameraTrigger[7];
-QxCamera9Trigger	:= arCameraTrigger[8];
-QxCamera10Trigger   := arCameraTrigger[9];
-QxCamera11Trigger   := arCameraTrigger[10];
-QxCamera12Trigger   := arCameraTrigger[11];
-QxCamera13Trigger   := arCameraTrigger[12];
-QxCamera14Trigger   := arCameraTrigger[13];
-QxCamera15Trigger   := arCameraTrigger[14];
-QxCamera16Trigger   := arCameraTrigger[15];
-QxCamera17Trigger   := arCameraTrigger[16];
-//光源控制器
-QxCameraLight2Trigger:=xCameraLightContorl;
+
 ]]></ST>
       </Implementation>
     </Action>
@@ -1179,14 +1320,22 @@ QxCameraLight2Trigger:=xCameraLightContorl;
       <LineId Id="1253" Count="0" />
       <LineId Id="1161" Count="4" />
       <LineId Id="1167" Count="17" />
+      <LineId Id="3236" Count="1" />
       <LineId Id="1890" Count="0" />
-      <LineId Id="1536" Count="3" />
+      <LineId Id="1536" Count="2" />
+      <LineId Id="3695" Count="2" />
+      <LineId Id="3720" Count="0" />
+      <LineId Id="3699" Count="0" />
+      <LineId Id="3698" Count="0" />
+      <LineId Id="3722" Count="0" />
+      <LineId Id="1539" Count="0" />
       <LineId Id="1546" Count="0" />
       <LineId Id="1717" Count="2" />
       <LineId Id="1721" Count="0" />
-      <LineId Id="1723" Count="0" />
+      <LineId Id="3703" Count="1" />
       <LineId Id="1733" Count="0" />
       <LineId Id="2217" Count="0" />
+      <LineId Id="3706" Count="1" />
       <LineId Id="2216" Count="0" />
       <LineId Id="1724" Count="0" />
       <LineId Id="2201" Count="3" />
@@ -1202,10 +1351,18 @@ QxCameraLight2Trigger:=xCameraLightContorl;
       <LineId Id="2207" Count="0" />
       <LineId Id="1548" Count="0" />
       <LineId Id="1550" Count="0" />
-      <LineId Id="2961" Count="10" />
+      <LineId Id="3234" Count="0" />
+      <LineId Id="3239" Count="0" />
+      <LineId Id="3242" Count="1" />
+      <LineId Id="3240" Count="1" />
+      <LineId Id="3245" Count="0" />
+      <LineId Id="2961" Count="0" />
+      <LineId Id="3252" Count="2" />
+      <LineId Id="2963" Count="8" />
       <LineId Id="2952" Count="0" />
       <LineId Id="2959" Count="0" />
-      <LineId Id="2972" Count="2" />
+      <LineId Id="2972" Count="0" />
+      <LineId Id="2974" Count="0" />
       <LineId Id="1715" Count="0" />
       <LineId Id="3211" Count="0" />
       <LineId Id="2726" Count="0" />
@@ -1219,13 +1376,16 @@ QxCameraLight2Trigger:=xCameraLightContorl;
       <LineId Id="2976" Count="0" />
       <LineId Id="1750" Count="0" />
       <LineId Id="1552" Count="0" />
-      <LineId Id="2990" Count="10" />
+      <LineId Id="3256" Count="4" />
+      <LineId Id="3255" Count="0" />
+      <LineId Id="2990" Count="0" />
+      <LineId Id="3275" Count="1" />
+      <LineId Id="2991" Count="9" />
       <LineId Id="2986" Count="0" />
-      <LineId Id="3013" Count="10" />
+      <LineId Id="3013" Count="0" />
+      <LineId Id="3277" Count="1" />
+      <LineId Id="3014" Count="9" />
       <LineId Id="3012" Count="0" />
-      <LineId Id="3155" Count="2" />
-      <LineId Id="3215" Count="0" />
-      <LineId Id="3158" Count="0" />
       <LineId Id="3149" Count="0" />
       <LineId Id="3003" Count="0" />
       <LineId Id="3006" Count="0" />
@@ -1260,10 +1420,11 @@ QxCameraLight2Trigger:=xCameraLightContorl;
       <LineId Id="1796" Count="2" />
       <LineId Id="1789" Count="0" />
       <LineId Id="1785" Count="0" />
-      <LineId Id="1876" Count="0" />
-      <LineId Id="1878" Count="1" />
-      <LineId Id="1877" Count="0" />
-      <LineId Id="1947" Count="3" />
+      <LineId Id="3261" Count="1" />
+      <LineId Id="3266" Count="0" />
+      <LineId Id="3268" Count="0" />
+      <LineId Id="3280" Count="0" />
+      <LineId Id="3264" Count="0" />
       <LineId Id="1556" Count="0" />
       <LineId Id="2511" Count="0" />
       <LineId Id="3024" Count="0" />
@@ -1298,89 +1459,174 @@ QxCameraLight2Trigger:=xCameraLightContorl;
       <LineId Id="2508" Count="0" />
       <LineId Id="2500" Count="0" />
       <LineId Id="2451" Count="0" />
-      <LineId Id="1834" Count="0" />
+      <LineId Id="3222" Count="0" />
+      <LineId Id="3225" Count="2" />
+      <LineId Id="3231" Count="0" />
+      <LineId Id="3224" Count="0" />
       <LineId Id="1558" Count="0" />
       <LineId Id="2517" Count="0" />
       <LineId Id="1840" Count="0" />
       <LineId Id="1894" Count="0" />
-      <LineId Id="1915" Count="1" />
-      <LineId Id="1918" Count="1" />
-      <LineId Id="3050" Count="15" />
-      <LineId Id="3049" Count="0" />
-      <LineId Id="3048" Count="0" />
-      <LineId Id="3066" Count="0" />
-      <LineId Id="3068" Count="1" />
+      <LineId Id="3282" Count="0" />
       <LineId Id="3046" Count="0" />
+      <LineId Id="3314" Count="0" />
+      <LineId Id="3637" Count="0" />
+      <LineId Id="3317" Count="0" />
+      <LineId Id="3319" Count="0" />
+      <LineId Id="3321" Count="0" />
+      <LineId Id="3323" Count="0" />
+      <LineId Id="3325" Count="0" />
+      <LineId Id="3327" Count="0" />
+      <LineId Id="3685" Count="0" />
+      <LineId Id="3283" Count="0" />
+      <LineId Id="3286" Count="24" />
+      <LineId Id="3284" Count="0" />
       <LineId Id="1969" Count="0" />
+      <LineId Id="3285" Count="0" />
       <LineId Id="1921" Count="0" />
-      <LineId Id="1979" Count="0" />
-      <LineId Id="1984" Count="0" />
-      <LineId Id="1986" Count="9" />
-      <LineId Id="2004" Count="0" />
-      <LineId Id="1980" Count="0" />
-      <LineId Id="3071" Count="0" />
-      <LineId Id="3074" Count="0" />
-      <LineId Id="3073" Count="0" />
-      <LineId Id="1981" Count="0" />
+      <LineId Id="3329" Count="0" />
+      <LineId Id="3357" Count="1" />
+      <LineId Id="3360" Count="0" />
+      <LineId Id="3362" Count="0" />
+      <LineId Id="3687" Count="0" />
+      <LineId Id="3330" Count="0" />
+      <LineId Id="3334" Count="16" />
+      <LineId Id="3331" Count="2" />
       <LineId Id="2007" Count="0" />
       <LineId Id="1844" Count="0" />
       <LineId Id="2009" Count="0" />
-      <LineId Id="2025" Count="1" />
-      <LineId Id="2028" Count="17" />
-      <LineId Id="2057" Count="14" />
-      <LineId Id="2051" Count="1" />
-      <LineId Id="2047" Count="0" />
-      <LineId Id="3075" Count="2" />
-      <LineId Id="2014" Count="0" />
+      <LineId Id="3369" Count="0" />
+      <LineId Id="3419" Count="2" />
+      <LineId Id="3423" Count="0" />
+      <LineId Id="3425" Count="0" />
+      <LineId Id="3427" Count="0" />
+      <LineId Id="3429" Count="0" />
+      <LineId Id="3431" Count="0" />
+      <LineId Id="3433" Count="0" />
+      <LineId Id="3435" Count="0" />
+      <LineId Id="3437" Count="0" />
+      <LineId Id="3439" Count="0" />
+      <LineId Id="3441" Count="0" />
+      <LineId Id="3443" Count="0" />
+      <LineId Id="3445" Count="0" />
+      <LineId Id="3447" Count="0" />
+      <LineId Id="3449" Count="0" />
+      <LineId Id="3688" Count="0" />
+      <LineId Id="3370" Count="0" />
+      <LineId Id="3374" Count="40" />
+      <LineId Id="3371" Count="2" />
       <LineId Id="2016" Count="0" />
-      <LineId Id="2074" Count="1" />
-      <LineId Id="2077" Count="25" />
-      <LineId Id="2111" Count="1" />
-      <LineId Id="3078" Count="2" />
-      <LineId Id="2017" Count="0" />
+      <LineId Id="3456" Count="0" />
+      <LineId Id="2079" Count="0" />
+      <LineId Id="2081" Count="0" />
+      <LineId Id="2083" Count="0" />
+      <LineId Id="2085" Count="0" />
+      <LineId Id="2087" Count="0" />
+      <LineId Id="2089" Count="0" />
+      <LineId Id="2091" Count="0" />
+      <LineId Id="2093" Count="0" />
+      <LineId Id="2095" Count="0" />
+      <LineId Id="2097" Count="0" />
+      <LineId Id="2099" Count="0" />
+      <LineId Id="2101" Count="0" />
+      <LineId Id="3689" Count="0" />
+      <LineId Id="3457" Count="0" />
+      <LineId Id="3461" Count="32" />
+      <LineId Id="3458" Count="1" />
       <LineId Id="2011" Count="0" />
       <LineId Id="1847" Count="0" />
       <LineId Id="2114" Count="0" />
-      <LineId Id="2117" Count="2" />
-      <LineId Id="2121" Count="35" />
-      <LineId Id="3081" Count="2" />
-      <LineId Id="2157" Count="3" />
-      <LineId Id="2162" Count="25" />
-      <LineId Id="2192" Count="6" />
-      <LineId Id="2191" Count="0" />
-      <LineId Id="2188" Count="1" />
-      <LineId Id="3084" Count="2" />
-      <LineId Id="2190" Count="0" />
+      <LineId Id="2117" Count="0" />
+      <LineId Id="3494" Count="0" />
+      <LineId Id="2122" Count="1" />
+      <LineId Id="2125" Count="0" />
+      <LineId Id="2127" Count="0" />
+      <LineId Id="2129" Count="0" />
+      <LineId Id="2131" Count="0" />
+      <LineId Id="2133" Count="0" />
+      <LineId Id="2135" Count="0" />
+      <LineId Id="2137" Count="0" />
+      <LineId Id="2139" Count="0" />
+      <LineId Id="2141" Count="0" />
+      <LineId Id="2143" Count="0" />
+      <LineId Id="2145" Count="0" />
+      <LineId Id="3638" Count="0" />
+      <LineId Id="2149" Count="0" />
+      <LineId Id="2151" Count="0" />
+      <LineId Id="2153" Count="0" />
+      <LineId Id="3690" Count="0" />
+      <LineId Id="3495" Count="0" />
+      <LineId Id="3498" Count="40" />
+      <LineId Id="3496" Count="1" />
+      <LineId Id="2158" Count="0" />
+      <LineId Id="3539" Count="0" />
+      <LineId Id="2164" Count="2" />
+      <LineId Id="2168" Count="0" />
+      <LineId Id="2170" Count="0" />
+      <LineId Id="2172" Count="0" />
+      <LineId Id="2174" Count="0" />
+      <LineId Id="2176" Count="0" />
+      <LineId Id="3639" Count="0" />
+      <LineId Id="2180" Count="0" />
+      <LineId Id="2182" Count="0" />
+      <LineId Id="2184" Count="0" />
+      <LineId Id="2186" Count="0" />
+      <LineId Id="2192" Count="0" />
+      <LineId Id="2194" Count="0" />
+      <LineId Id="2196" Count="0" />
+      <LineId Id="2198" Count="0" />
+      <LineId Id="3691" Count="0" />
+      <LineId Id="3540" Count="0" />
+      <LineId Id="3545" Count="40" />
+      <LineId Id="3543" Count="0" />
+      <LineId Id="3541" Count="0" />
       <LineId Id="2116" Count="0" />
-      <LineId Id="2450" Count="0" />
       <LineId Id="1848" Count="0" />
       <LineId Id="2515" Count="1" />
-      <LineId Id="2244" Count="3" />
-      <LineId Id="2249" Count="1" />
-      <LineId Id="2259" Count="7" />
-      <LineId Id="2531" Count="7" />
-      <LineId Id="2267" Count="1" />
-      <LineId Id="3088" Count="2" />
-      <LineId Id="2269" Count="3" />
-      <LineId Id="2274" Count="9" />
-      <LineId Id="2556" Count="6" />
-      <LineId Id="2545" Count="0" />
-      <LineId Id="2564" Count="6" />
-      <LineId Id="2563" Count="0" />
-      <LineId Id="2284" Count="1" />
-      <LineId Id="3092" Count="0" />
-      <LineId Id="3096" Count="0" />
-      <LineId Id="3093" Count="1" />
-      <LineId Id="2286" Count="2" />
-      <LineId Id="2330" Count="2" />
-      <LineId Id="2334" Count="9" />
-      <LineId Id="2360" Count="1" />
-      <LineId Id="3098" Count="1" />
-      <LineId Id="3097" Count="0" />
-      <LineId Id="2362" Count="2" />
+      <LineId Id="2244" Count="1" />
+      <LineId Id="3586" Count="0" />
+      <LineId Id="2260" Count="1" />
+      <LineId Id="2263" Count="0" />
+      <LineId Id="2265" Count="0" />
+      <LineId Id="2531" Count="0" />
+      <LineId Id="2533" Count="0" />
+      <LineId Id="2535" Count="0" />
+      <LineId Id="2537" Count="0" />
+      <LineId Id="3692" Count="0" />
+      <LineId Id="3587" Count="0" />
+      <LineId Id="3591" Count="24" />
+      <LineId Id="3588" Count="2" />
+      <LineId Id="2270" Count="0" />
+      <LineId Id="3641" Count="0" />
+      <LineId Id="2275" Count="1" />
+      <LineId Id="2278" Count="0" />
+      <LineId Id="2280" Count="0" />
+      <LineId Id="2282" Count="0" />
+      <LineId Id="2556" Count="0" />
+      <LineId Id="2558" Count="0" />
+      <LineId Id="2560" Count="0" />
+      <LineId Id="2562" Count="0" />
+      <LineId Id="2564" Count="0" />
+      <LineId Id="2566" Count="0" />
+      <LineId Id="2568" Count="0" />
+      <LineId Id="2570" Count="0" />
+      <LineId Id="3693" Count="0" />
+      <LineId Id="3642" Count="0" />
+      <LineId Id="3646" Count="32" />
+      <LineId Id="3643" Count="2" />
+      <LineId Id="2287" Count="1" />
+      <LineId Id="2330" Count="0" />
+      <LineId Id="3616" Count="0" />
+      <LineId Id="2336" Count="2" />
+      <LineId Id="2340" Count="0" />
+      <LineId Id="2342" Count="0" />
+      <LineId Id="3694" Count="0" />
+      <LineId Id="2362" Count="0" />
+      <LineId Id="3620" Count="16" />
+      <LineId Id="3618" Count="1" />
+      <LineId Id="2363" Count="0" />
       <LineId Id="2228" Count="0" />
-      <LineId Id="2946" Count="1" />
-      <LineId Id="2949" Count="0" />
+      <LineId Id="3233" Count="0" />
       <LineId Id="1892" Count="0" />
       <LineId Id="2586" Count="4" />
       <LineId Id="2593" Count="0" />
@@ -1411,18 +1657,20 @@ QxCameraLight2Trigger:=xCameraLightContorl;
       <LineId Id="1567" Count="0" />
       <LineId Id="2646" Count="0" />
       <LineId Id="2649" Count="1" />
-      <LineId Id="2930" Count="2" />
-      <LineId Id="2935" Count="1" />
-      <LineId Id="2933" Count="0" />
-      <LineId Id="3127" Count="0" />
-      <LineId Id="3132" Count="10" />
+      <LineId Id="3132" Count="0" />
+      <LineId Id="3270" Count="0" />
+      <LineId Id="3273" Count="0" />
+      <LineId Id="3272" Count="0" />
+      <LineId Id="3134" Count="8" />
       <LineId Id="3128" Count="0" />
       <LineId Id="3130" Count="0" />
       <LineId Id="3144" Count="1" />
       <LineId Id="3131" Count="0" />
       <LineId Id="2713" Count="0" />
       <LineId Id="3143" Count="0" />
-      <LineId Id="2714" Count="2" />
+      <LineId Id="2714" Count="1" />
+      <LineId Id="3274" Count="0" />
+      <LineId Id="2716" Count="0" />
       <LineId Id="2712" Count="0" />
       <LineId Id="2808" Count="7" />
       <LineId Id="3118" Count="0" />
@@ -1454,6 +1702,7 @@ QxCameraLight2Trigger:=xCameraLightContorl;
       <LineId Id="2708" Count="1" />
       <LineId Id="1573" Count="0" />
       <LineId Id="3148" Count="0" />
+      <LineId Id="3251" Count="0" />
       <LineId Id="1577" Count="0" />
       <LineId Id="1212" Count="2" />
       <LineId Id="1453" Count="2" />
@@ -1464,7 +1713,7 @@ QxCameraLight2Trigger:=xCameraLightContorl;
     <LineIds Name="S03_LidChecking.FlowInit">
       <LineId Id="437" Count="9" />
       <LineId Id="475" Count="0" />
-      <LineId Id="467" Count="0" />
+      <LineId Id="530" Count="1" />
       <LineId Id="472" Count="0" />
       <LineId Id="470" Count="0" />
       <LineId Id="482" Count="10" />
@@ -1487,6 +1736,7 @@ QxCameraLight2Trigger:=xCameraLightContorl;
     <LineIds Name="S03_LidChecking.General">
       <LineId Id="382" Count="21" />
       <LineId Id="381" Count="0" />
+      <LineId Id="404" Count="0" />
     </LineIds>
     <LineIds Name="S03_LidChecking.ILC">
       <LineId Id="234" Count="4" />
@@ -1526,8 +1776,7 @@ QxCameraLight2Trigger:=xCameraLightContorl;
     <LineIds Name="S03_LidChecking.Z_Output">
       <LineId Id="2" Count="0" />
       <LineId Id="37" Count="15" />
-      <LineId Id="20" Count="0" />
-      <LineId Id="53" Count="18" />
+      <LineId Id="70" Count="1" />
     </LineIds>
   </POU>
 </TcPlcObject>

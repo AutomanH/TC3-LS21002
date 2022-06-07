@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="RudongPump_CMD_1" Id="{4870034f-5648-4566-8507-c2f93e1aec06}">
+    <Declaration><![CDATA[{attribute 'qualified_only' := ''}
+{attribute 'strict' := ''}
+TYPE RudongPump_CMD_1 :
+(
+	Nodef,
+	///配置指令（泵头和软管指令）
+	Cmd_Configure,
+	///注液指令
+	Cmd_Push,
+	///吸液指令 
+	Cmd_Pull,
+	///停止指令
+	Cmd_Stop,
+	///全速启动
+	Cmd_FullSpeedPush,
+	///全速启动
+	Cmd_FullSpeedPull,
+	///全速停止
+	Cmd_FullSpeedStop,
+	///校准泵头
+	Cmd_CalPump,
+	///校准泵头
+	Cmd_CalReset,
+	///校准参数写入
+	Cmd_CalParWrite
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="Modbus_SysPar" Id="{7d62b610-fc7c-4849-9849-5432eb77fec3}">
+    <Declaration><![CDATA[TYPE Modbus_SysPar :
+STRUCT
+	sRemoteHost: T_IPv4Addr;
+	nRemotePort: UINT := 4008;
+	///从站通信地址	
+	xSlaveAdr: BYTE := 16#1;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

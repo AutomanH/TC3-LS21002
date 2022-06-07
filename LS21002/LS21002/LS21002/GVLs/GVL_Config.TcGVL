@@ -13,6 +13,7 @@
 	gc_uiRGI_14_Number                	 	: INT :=1 ;  //大寰电动夹爪（旋转+夹紧）
 	gc_uiHITBOT_Number						: INT :=2;//惠灵电动夹爪(旋转+夹持）
 	gc_uiTURINRobot_Num             	    : INT :=1 ;   //图灵机械手
+	gc_uiCameraNum							: INT:= 18;//相机个数
 	gc_uiRudongPump							:INT := 12;//蠕动泵控制器个数
 	gc_MainLineFixtureNumber				:INT:=40;//主流线的位置数
 	gc_MainLineAxisPositionOffset			:REAL:=36;//主流线位置偏移

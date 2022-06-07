@@ -162,7 +162,6 @@ CASE station.iStepAuto OF
 			ELSIF  ABS(stData.Axis[15].rMovePosition[3])+0.1>=ABS(stData.Axis[15].rMovePosition[2]) AND 
 				   ABS(stData.Axis[15].rMovePosition[3])-0.1<=ABS(stData.Axis[15].rMovePosition[2]) THEN
 				     station.iStepAuto:=100;(*伺服需要移动*)
-				
 			END_IF
 	100://数据更新 位置
 		tsModuleProcess[1].xProcessStarted:=TRUE;
@@ -511,7 +510,6 @@ END_IF
       <LineId Id="1543" Count="0" />
       <LineId Id="1545" Count="1" />
       <LineId Id="1550" Count="1" />
-      <LineId Id="1549" Count="0" />
       <LineId Id="1540" Count="0" />
       <LineId Id="1492" Count="0" />
       <LineId Id="1517" Count="0" />

@@ -1,0 +1,25 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_ModbusAddress" Id="{88bb2727-26ec-4ead-bea8-7404b43605c1}">
+    <Declaration><![CDATA[TYPE ST_ModbusAddress :
+STRUCT
+	
+iPumpType_Address								:INT;
+iHosePipeType_Address						:INT;
+iFluVolumeSet_Address						:INT;
+iRuntimeSet_Address							:INT;
+iIntervalTime_Address						:INT;
+iCycleNumber_Address						:INT;
+iBackAngle_Address							:INT;
+iMoveDirection_Address					:INT;
+iStartStop_Address							:INT;
+iFullSpeedStartStop_Address			:INT;
+iModuleAddress_Address					:INT;
+iModuleStartStop_Address				:INT;
+iModuleRealFluVolumeSet_Address	:INT;
+iRecoveryCalCoefficient_Address	:INT;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

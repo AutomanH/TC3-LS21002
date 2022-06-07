@@ -159,7 +159,9 @@ CASE station.iStepAuto OF
 			END_IF
 		END_IF
 	20:////Restore_after_Estop_Process1 上载数据流程
-			IF tsModuleProcess[1].xProcessNotStarted AND NOT  tsModuleProcess[1].xProcessStarted THEN
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=40; 
+			ELSIF tsModuleProcess[1].xProcessNotStarted AND NOT  tsModuleProcess[1].xProcessStarted THEN
 					station.iStepAuto :=30; (*process not started*)
 			ELSIF  tsModuleProcess[1].xProcessStarted AND NOT  tsModuleProcess[1].xProcessCompleted THEN
 				 station.iStepAuto := 30;(*process started*)
@@ -187,7 +189,9 @@ CASE station.iStepAuto OF
 		END_IF
 		station.iStepAuto:= 50;
 	50:////Restore_after_Estop_Process2 机械手第一次取料流程
-			IF tsModuleProcess[2].xProcessNotStarted AND NOT  tsModuleProcess[2].xProcessStarted THEN
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=70; 
+			ELSIF tsModuleProcess[2].xProcessNotStarted AND NOT  tsModuleProcess[2].xProcessStarted THEN
 					station.iStepAuto :=70; (*process not started*)
 			ELSIF  tsModuleProcess[2].xProcessStarted AND NOT  tsModuleProcess[2].xProcessCompleted THEN
 				 station.iStepAuto := 70;(*process started*)
@@ -199,7 +203,9 @@ CASE station.iStepAuto OF
 					station.iStepAuto :=70; 
 			END_IF	
 	60:////Restore_after_Estop_Process3 机械手第二次取料流程
-			IF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=70; 
+			ELSIF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
 					station.iStepAuto :=70; (*process not started*)
 			ELSIF  tsModuleProcess[3].xProcessStarted AND NOT  tsModuleProcess[3].xProcessCompleted THEN
 				 station.iStepAuto := 70;(*process started*)
@@ -216,7 +222,6 @@ CASE station.iStepAuto OF
 			ELSIF bRobCounter =2 THEN
 				tsModuleProcess[3].xProcessNotStarted:=TRUE;	
 			END_IF
-			
 			stToRobot1.iTakePartPosChoose :=BYTE_TO_WORD(bRobCounter); 
 			stToRobot1.iMoveMode := CmdRobot1.Cmd_TakePart ;//切换程序
 			stToRobot1.xStepRunPermit := TRUE ;
@@ -289,7 +294,9 @@ CASE station.iStepAuto OF
 	105:
 		IF  bRobCounter =1 THEN
 			////Restore_after_Estop_Process4 机械手第一次放料流程
-			IF tsModuleProcess[4].xProcessNotStarted AND NOT  tsModuleProcess[4].xProcessStarted THEN
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=110; 
+			ELSIF tsModuleProcess[4].xProcessNotStarted AND NOT  tsModuleProcess[4].xProcessStarted THEN
 					station.iStepAuto :=110; (*process not started*)
 			ELSIF  tsModuleProcess[4].xProcessStarted AND NOT  tsModuleProcess[4].xProcessCompleted THEN
 				 station.iStepAuto := 110;(*process started*)
@@ -302,7 +309,9 @@ CASE station.iStepAuto OF
 			END_IF	
 		ELSIF  bRobCounter =2 THEN
 			////Restore_after_Estop_Process5 机械手第二次放料流程
-			IF tsModuleProcess[5].xProcessNotStarted AND NOT  tsModuleProcess[5].xProcessStarted THEN
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=110; 
+			ELSIF tsModuleProcess[5].xProcessNotStarted AND NOT  tsModuleProcess[5].xProcessStarted THEN
 					station.iStepAuto :=110; (*process not started*)
 			ELSIF  tsModuleProcess[5].xProcessStarted AND NOT  tsModuleProcess[5].xProcessCompleted THEN
 				 station.iStepAuto := 110;(*process started*)
@@ -387,7 +396,9 @@ CASE station.iStepAuto OF
 					station.iStepAuto :=300; 
 			END_IF
 	200:////Restore_after_Estop_Process6 机械手第三次取料流程
-			IF tsModuleProcess[6].xProcessNotStarted AND NOT  tsModuleProcess[6].xProcessStarted THEN
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=210; 
+			ELSIF tsModuleProcess[6].xProcessNotStarted AND NOT  tsModuleProcess[6].xProcessStarted THEN
 					station.iStepAuto :=210; (*process not started*)
 			ELSIF  tsModuleProcess[6].xProcessStarted AND NOT  tsModuleProcess[6].xProcessCompleted THEN
 				 station.iStepAuto := 210;(*process started*)
@@ -613,7 +624,8 @@ station.xCanRun :=TRUE ;
 fbNGStepMotor.xRunILC := TRUE;
 fbNGStepMotor.xMoveILC[1] :=TRUE;
 //大寰夹爪
-fbClamp.xDeviceRunning:=true;]]></ST>
+fbClamp.xDeviceRunning:=station.xSingleRunning;
+]]></ST>
       </Implementation>
     </Action>
     <Action Name="TipAuto" Id="{45dca0ed-9b2c-437e-bcbb-5402a732053c}">
@@ -694,7 +706,20 @@ END_IF
       <LineId Id="40" Count="0" />
     </LineIds>
     <LineIds Name="S07_BoxCarrying.FlowAuto">
-      <LineId Id="2830" Count="420" />
+      <LineId Id="2830" Count="44" />
+      <LineId Id="3251" Count="1" />
+      <LineId Id="2875" Count="27" />
+      <LineId Id="3253" Count="1" />
+      <LineId Id="2903" Count="11" />
+      <LineId Id="3255" Count="1" />
+      <LineId Id="2915" Count="16" />
+      <LineId Id="2933" Count="71" />
+      <LineId Id="3257" Count="1" />
+      <LineId Id="3005" Count="12" />
+      <LineId Id="3259" Count="1" />
+      <LineId Id="3018" Count="84" />
+      <LineId Id="3261" Count="1" />
+      <LineId Id="3103" Count="147" />
       <LineId Id="1224" Count="0" />
     </LineIds>
     <LineIds Name="S07_BoxCarrying.FlowInit">
@@ -721,7 +746,7 @@ END_IF
       <LineId Id="307" Count="0" />
       <LineId Id="290" Count="0" />
       <LineId Id="326" Count="1" />
-      <LineId Id="329" Count="1" />
+      <LineId Id="329" Count="2" />
     </LineIds>
     <LineIds Name="S07_BoxCarrying.TipAuto">
       <LineId Id="118" Count="0" />

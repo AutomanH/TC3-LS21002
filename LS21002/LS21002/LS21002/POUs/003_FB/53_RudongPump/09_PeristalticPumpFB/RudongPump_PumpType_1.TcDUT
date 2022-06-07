@@ -1,0 +1,31 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="RudongPump_PumpType_1" Id="{2f815d7c-1bc0-408e-9a72-d2a325ff8e3f}">
+    <Declaration><![CDATA[///保定申辰蠕动泵类型选择
+TYPE RudongPump_PumpType_1 :
+(
+	///LabV系列
+	LabV := 1,
+	///0.1-150rpm
+	LabF1 := 2,
+	///0.1-350rpm	
+	LabF3 := 3,
+	///0.1-600rpm	
+	LabF4 := 4,
+	///F系列
+	F := 5,
+	///M系列
+	M := 6,
+	///V系列
+	V := 7,
+	///BT_D系列	
+	BT_D := 8,
+	///PDS系列	,五位蠕动泵	
+	PDS := 9,
+	///DFPluse系列
+	DFPluse := 10
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="Modbus_ErrorCode" Id="{a54bf92e-b200-4cfc-9034-8f20052d9a4a}">
+    <Declaration><![CDATA[{attribute 'qualified_only' := ''}
+{attribute 'strict' := ''}
+TYPE Modbus_ErrorCode :
+(
+	No_ERROR := 0,
+	///无效指令
+	FLT_CMD := 1,
+	///指令发送错误
+	FLT_SEND_ERROR := 2,
+	///指令接收错误
+	FLT_RECEIVE_ERROR := 3,
+	///执行超时错误
+	FLT_CMDTIMEOUT := 4,
+	///参数溢出错误
+	FLT_PAROVERFLOW := 5,
+	///MODBUS错误
+	FLT_MODBUS_ERROR := 6,
+	///无响应
+	FLT_NoResponse := 7
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

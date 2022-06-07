@@ -1,0 +1,29 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="Modbus_Cmd" Id="{1715b5dc-834b-4a83-8790-ed4c35057119}">
+    <Declaration><![CDATA[{attribute 'qualified_only' := ''}
+{attribute 'strict' := ''}
+TYPE Modbus_Cmd :
+(
+	Null := 0,
+	///功能码01，(0X)
+	ReadCoilStatus := 1,
+	///功能码02，(1X)
+	ReadInputStatus := 2,
+	///功能码03，(4X)
+	ReadHoldingRegisters := 3,
+	///功能码04，(3X)
+	ReadInputRegisters := 4,
+	///强制单线圈05
+	SetSingalCoil := 5,
+	///预置单寄存器
+	SetSingalHoldingRegister := 6,
+	///强制多线圈
+	SetMultiCoil := 15,
+	///预置多寄存器			
+	SetMultiHoldingRegister := 16
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

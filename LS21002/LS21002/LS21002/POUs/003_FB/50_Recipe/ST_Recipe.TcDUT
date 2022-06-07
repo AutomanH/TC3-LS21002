@@ -10,6 +10,8 @@ STRUCT
 	Thermostat					:ARRAY[1..gc_uiPXF5Num] OF ST_Thermostat;
 	ERG20						:ARRAY[1..gc_uiHITBOT_Number] OF ST_Huiling_Pers_Para;
 	TURIN						:ARRAY[1..gc_uiTURINRobot_Num] OF ST_TURINROBOT_Data;
+	Camera						:ARRAY[1..gc_uiCameraNum] OF ST_CameraPara;
+   	TimeS						:ARRAY[1..10] OF TIME;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

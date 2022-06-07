@@ -11,6 +11,24 @@
 			</ArrayInfo>
 		</DataType>
 		<DataType>
+			<Name GUID="{18071995-0000-0000-0000-000000000041}" TcBaseType="true" HideSubItems="true" CName="AmsNetId">AMSNETID</Name>
+			<BitSize>48</BitSize>
+			<BaseType GUID="{18071995-0000-0000-0000-000000000001}">BYTE</BaseType>
+			<ArrayInfo>
+				<LBound>0</LBound>
+				<Elements>6</Elements>
+			</ArrayInfo>
+			<Format>
+				<Printf>%d.%d.%d.%d.%d.%d</Printf>
+				<Parameter>[0]</Parameter>
+				<Parameter>[1]</Parameter>
+				<Parameter>[2]</Parameter>
+				<Parameter>[3]</Parameter>
+				<Parameter>[4]</Parameter>
+				<Parameter>[5]</Parameter>
+			</Format>
+		</DataType>
+		<DataType>
 			<Name GUID="{CBC83B73-B816-4597-A9E5-2B03263CA131}" Namespace="MC" TcBaseType="true" HideType="true" IecDeclaration="DWORD;">NCTOPLC_AXIS_REF_STATE</Name>
 			<BitSize>32</BitSize>
 			<SubItem>
@@ -804,24 +822,6 @@ External Setpoint Generation:
 			</ArrayInfo>
 		</DataType>
 		<DataType>
-			<Name GUID="{18071995-0000-0000-0000-000000000041}" TcBaseType="true" HideSubItems="true" CName="AmsNetId">AMSNETID</Name>
-			<BitSize>48</BitSize>
-			<BaseType GUID="{18071995-0000-0000-0000-000000000001}">BYTE</BaseType>
-			<ArrayInfo>
-				<LBound>0</LBound>
-				<Elements>6</Elements>
-			</ArrayInfo>
-			<Format>
-				<Printf>%d.%d.%d.%d.%d.%d</Printf>
-				<Parameter>[0]</Parameter>
-				<Parameter>[1]</Parameter>
-				<Parameter>[2]</Parameter>
-				<Parameter>[3]</Parameter>
-				<Parameter>[4]</Parameter>
-				<Parameter>[5]</Parameter>
-			</Format>
-		</DataType>
-		<DataType>
 			<Name GUID="{F39BF48F-658D-9C24-3630-0A4317E0DE71}" AutoDeleteType="true">EL1889</Name>
 			<BitSize>16</BitSize>
 			<SubItem>
@@ -842,16 +842,6 @@ External Setpoint Generation:
 			</ArrayInfo>
 		</DataType>
 		<DataType>
-			<Name GUID="{947A9DCD-67EC-7506-32AF-03B935E0DE83}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..2] OF EL1889</Name>
-			<Comment><![CDATA[输入]]></Comment>
-			<BitSize>32</BitSize>
-			<BaseType GUID="{F39BF48F-658D-9C24-3630-0A4317E0DE71}">EL1889</BaseType>
-			<ArrayInfo>
-				<LBound>1</LBound>
-				<Elements>2</Elements>
-			</ArrayInfo>
-		</DataType>
-		<DataType>
 			<Name GUID="{5B71B567-A56A-4C34-02E8-93B84554BF86}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..6] OF EL1889</Name>
 			<Comment><![CDATA[输入]]></Comment>
 			<BitSize>96</BitSize>
@@ -859,6 +849,16 @@ External Setpoint Generation:
 			<ArrayInfo>
 				<LBound>1</LBound>
 				<Elements>6</Elements>
+			</ArrayInfo>
+		</DataType>
+		<DataType>
+			<Name GUID="{947A9DCD-67EC-7506-32AF-03B935E0DE83}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..2] OF EL1889</Name>
+			<Comment><![CDATA[输入]]></Comment>
+			<BitSize>32</BitSize>
+			<BaseType GUID="{F39BF48F-658D-9C24-3630-0A4317E0DE71}">EL1889</BaseType>
+			<ArrayInfo>
+				<LBound>1</LBound>
+				<Elements>2</Elements>
 			</ArrayInfo>
 		</DataType>
 		<DataType>
@@ -1112,6 +1112,7 @@ External Setpoint Generation:
 			<Licenses>
 				<Target BkhfOrder="00857789">
 					<ManualSelect>{BF78CFC7-2E63-42C3-8C07-BB6C346BFB8B}</ManualSelect>
+					<ManualSelect>{3EBB9639-5FF3-42B6-8847-35C70DC013C8}</ManualSelect>
 					<ManualSelect>{6952449D-F68C-49A2-ADE4-8639D85B33A4}</ManualSelect>
 					<ManualSelect>{8C57D0A8-BD63-4554-BAE1-E9C797EF0D0E}</ManualSelect>
 				</Target>
@@ -1136,6 +1137,11 @@ External Setpoint Generation:
 						<Var>
 							<Name>CallStandard.nctrl2</Name>
 							<Type GUID="{4AD7B44C-F27A-D32C-68EE-E0B2F85758B9}">ARRAY [1..19] OF USINT</Type>
+						</Var>
+						<Var>
+							<Name>GVL_Standard.sDeviceNetId</Name>
+							<Comment><![CDATA[设备的ethercat地址]]></Comment>
+							<Type GUID="{18071995-0000-0000-0000-000000000041}">AMSNETID</Type>
 						</Var>
 						<Var>
 							<Name>GVL_Standard.Axis[1].NcToPlc</Name>
@@ -1219,19 +1225,9 @@ External Setpoint Generation:
 							<Type GUID="{FEB96C23-0E04-CC01-F84E-3246D8F89D97}">ARRAY [1..100] OF BOOL</Type>
 						</Var>
 						<Var>
-							<Name>GVL_Standard.sDeviceNetId</Name>
-							<Comment><![CDATA[设备的ethercat地址]]></Comment>
-							<Type GUID="{18071995-0000-0000-0000-000000000041}">AMSNETID</Type>
-						</Var>
-						<Var>
 							<Name>IO.ET03_Input</Name>
 							<Comment><![CDATA[输入]]></Comment>
 							<Type GUID="{2B7A2230-DE77-F7FC-2DC2-3E43EB484FB2}">ARRAY [1..1] OF EL1889</Type>
-						</Var>
-						<Var>
-							<Name>IO.ET04_Input</Name>
-							<Comment><![CDATA[输入]]></Comment>
-							<Type GUID="{947A9DCD-67EC-7506-32AF-03B935E0DE83}">ARRAY [1..2] OF EL1889</Type>
 						</Var>
 						<Var>
 							<Name>IO.ET01_Input</Name>
@@ -1242,6 +1238,11 @@ External Setpoint Generation:
 							<Name>IO.ET02_Input</Name>
 							<Comment><![CDATA[输入]]></Comment>
 							<Type GUID="{5B71B567-A56A-4C34-02E8-93B84554BF86}">ARRAY [1..6] OF EL1889</Type>
+						</Var>
+						<Var>
+							<Name>IO.ET04_Input</Name>
+							<Comment><![CDATA[输入]]></Comment>
+							<Type GUID="{947A9DCD-67EC-7506-32AF-03B935E0DE83}">ARRAY [1..2] OF EL1889</Type>
 						</Var>
 						<Var>
 							<Name>IO.arEtherCATWcState</Name>

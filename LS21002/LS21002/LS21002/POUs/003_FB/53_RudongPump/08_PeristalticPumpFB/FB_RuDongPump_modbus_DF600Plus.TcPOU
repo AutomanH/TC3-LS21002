@@ -1,6 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
-  <POU Name="FB_RuDongPump_modbus_DF600Plus" Id="{04e89579-e804-4d8b-adb6-c381d6425191}" SpecialFunc="None">
+  <POU Name="FB_RuDongPump_modbus_DF600Plus" Id="{70ef0f96-18cb-4cce-a37b-0f3afec1b2fe}" SpecialFunc="None">
     <Declaration><![CDATA[//{attribute 'tc_no_symbol'}
 FUNCTION_BLOCK FB_RuDongPump_modbus_DF600Plus
 VAR_INPUT
@@ -20,6 +20,7 @@ VAR_INPUT
 	sHmiError : STRING;
 	xEStop : BOOL;
 	stDeviceOpe	: RudongPump_Ope;//操作按钮
+	stModbusAddress:ST_ModbusAddress;
 END_VAR
 VAR_OUTPUT
 	xDone: BOOL;(*完成条件满足*)
@@ -64,6 +65,8 @@ VAR
 	iModuleSpeed		: REAL;//灌装单元速度
 {attribute 'tc_no_symbol'}
 	iModuleRealVolume	: REAL;//灌装实际液量	
+{attribute 'tc_no_symbol'}	
+	iBackAngle	:INT;
 {attribute 'tc_no_symbol'}
 	_cmdStop  : BOOL;  
 {attribute 'tc_no_symbol'}
@@ -186,6 +189,7 @@ END_VAR
       <ST><![CDATA[xAgain:=0;
 ConnectAction();//触发通信连接功能连接
 ACTMap();//IO Map
+//ACT_GetModbusAdr();
 IF NOT _first THEN
 	_first:=TRUE;
 ELSE
@@ -296,7 +300,6 @@ _xAutoOpe:=
             stDeviceOpe.xPush_Auto[5] OR 						
             stDeviceOpe.xStop_Auto;]]></ST>
     </Implementation>
-    <Folder Name="Control" Id="{f288bbab-43af-4bc5-b4d0-00641aa14ef0}" />
     <Method Name="AbortAction" Id="{88779326-c726-4390-bf0a-611489faa5fc}">
       <Declaration><![CDATA[METHOD PROTECTED AbortAction
 VAR_INPUT
@@ -317,7 +320,70 @@ xComplete:=1;
 eERRORID:=RudongPump_ERROR.No_ERROR;]]></ST>
       </Implementation>
     </Method>
-    <Action Name="ACT_PumpPar" Id="{b8445706-fe3b-4b23-8926-358f63af5f99}" FolderPath="Control\">
+    <Action Name="ACT_GetModbusAdr" Id="{c9433dc9-e601-4aab-b89d-5f1571c6f58d}">
+      <Implementation>
+        <ST><![CDATA[//
+(*************************检测配置参数是否匹配成功*********************************)
+IF stRunPara.iPumpType=RudongPump_PumpType.DFPluse THEN//DF600Plus/KF300系列
+	_aMBAddr[1]:= 	stModbusAddress.iPumpType_Address									:=1000;
+	_aMBAddr[2]:= 	stModbusAddress.iHosePipeType_Address							:=1001;	
+	_aMBAddr[6]:=		stModbusAddress.iFluVolumeSet_Address							:=1002;
+	_aMBAddr[7]:=		stModbusAddress.iRuntimeSet_Address								:=1004;
+	//_aMBAddr[5]:=		stModbusAddress.iIntervalTime_Address							:=1006;
+	_aMBAddr[9]:=		stModbusAddress.iCycleNumber_Address							:=1008;
+	_aMBAddr[8]:=		stModbusAddress.iBackAngle_Address								:=1009;
+	_aMBAddr[4]:=		stModbusAddress.iMoveDirection_Address						:=1010;
+	_aMBAddr[3]:=		stModbusAddress.iStartStop_Address								:=1011;
+	_aMBAddr[5]:=		stModbusAddress.iFullSpeedStartStop_Address				:=1012;
+	_aMBAddr[10]:=	stModbusAddress.iModuleAddress_Address						:=2000;
+	_aMBAddr[12]:=	stModbusAddress.iModuleStartStop_Address					:=2003;
+	_aMBAddr[13]:=	stModbusAddress.iModuleRealFluVolumeSet_Address		:=2004;
+	_aMBAddr[15]:=	stModbusAddress.iRecoveryCalCoefficient_Address		:=2007;	
+
+ELSIF stRunPara.iPumpType=RudongPump_PumpType.F OR 
+			stRunPara.iPumpType=RudongPump_PumpType.LabF1 OR
+			stRunPara.iPumpType=RudongPump_PumpType.LabF3 OR
+			stRunPara.iPumpType=RudongPump_PumpType.LabF4
+THEN
+	_aMBAddr[1]:= stModbusAddress.iPumpType_Address:=1000;
+	_aMBAddr[2]:= stModbusAddress.iHosePipeType_Address:=1001;	
+	_aMBAddr[6]:=	stModbusAddress.iFluVolumeSet_Address:=1015;
+	_aMBAddr[7]:=	stModbusAddress.iRuntimeSet_Address:=1018;
+	//_aMBAddr[5]:=	stModbusAddress.iIntervalTime_Address:=1021;
+	_aMBAddr[9]:=	stModbusAddress.iCycleNumber_Address:=1023;
+	_aMBAddr[8]:=	stModbusAddress.iBackAngle_Address:=1007;
+	_aMBAddr[4]:=	stModbusAddress.iMoveDirection_Address:=1009;
+	_aMBAddr[3]:=	stModbusAddress.iStartStop_Address:=1008;
+	_aMBAddr[5]:=	stModbusAddress.iFullSpeedStartStop_Address:=1010;
+	_aMBAddr[10]:=stModbusAddress.iModuleAddress_Address:=0;//等于0表示不写入
+	_aMBAddr[12]:=stModbusAddress.iModuleStartStop_Address:=2003;
+	_aMBAddr[13]:=stModbusAddress.iModuleRealFluVolumeSet_Address:=2004;
+	_aMBAddr[15]:=stModbusAddress.iRecoveryCalCoefficient_Address:=2006;	
+
+ELSIF stRunPara.iPumpType=RudongPump_PumpType.V THEN
+	_aMBAddr[1]:= stModbusAddress.iPumpType_Address:=1000;
+	_aMBAddr[2]:= stModbusAddress.iHosePipeType_Address:=1001;	
+	_aMBAddr[6]:=	stModbusAddress.iFluVolumeSet_Address:=1015;
+	_aMBAddr[7]:=	stModbusAddress.iRuntimeSet_Address:=1018;
+	//_aMBAddr[5]:=	stModbusAddress.iIntervalTime_Address:=1021;
+	_aMBAddr[9]:=	stModbusAddress.iCycleNumber_Address:=1023;
+	_aMBAddr[8]:=	stModbusAddress.iBackAngle_Address:=1007;
+	_aMBAddr[4]:=	stModbusAddress.iMoveDirection_Address:=1009;
+	_aMBAddr[3]:=	stModbusAddress.iStartStop_Address:=1008;
+	_aMBAddr[5]:=	stModbusAddress.iFullSpeedStartStop_Address:=1010;
+	_aMBAddr[10]:=stModbusAddress.iModuleAddress_Address:=0;//等于0表示不写入
+	_aMBAddr[12]:=stModbusAddress.iModuleStartStop_Address:=2003;
+	_aMBAddr[13]:=stModbusAddress.iModuleRealFluVolumeSet_Address:=2004;
+	_aMBAddr[15]:=stModbusAddress.iRecoveryCalCoefficient_Address:=2006;
+
+
+END_IF
+
+_aMBAddr[16]:=stModbusAddress.iStartStop_Address;
+_aMBAddr[17]:=stModbusAddress.iModuleStartStop_Address;]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_PumpPar" Id="{b8445706-fe3b-4b23-8926-358f63af5f99}">
       <Implementation>
         <ST><![CDATA[//
 (*************************检测配置参数是否匹配成功*********************************)
@@ -332,7 +398,7 @@ IF stRunPara.iPumpType=RudongPump_PumpType.DFPluse THEN
 				ELSE
 					iMinRunTime:=	rFluVolumeSet*1000/135;
 				END_IF
-				iMaxRunTime:=	rFluVolumeSet/0.45;//最大流量(0.45微升/秒,0.0024ml/min)	
+				iMaxRunTime:=	(rFluVolumeSet/0.45)*0.2;//最大流量(0.45微升/秒,0.0024ml/min)	
 			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P14 THEN//14#软管
 				st_IOData.O_HosePipeType:=14;
 				IF rFluVolumeSet*1000/570<0.1 THEN
@@ -340,7 +406,7 @@ IF stRunPara.iPumpType=RudongPump_PumpType.DFPluse THEN
 				ELSE
 					iMinRunTime:=	rFluVolumeSet*1000/135;
 				END_IF
-				iMaxRunTime:=	rFluVolumeSet/1.9;	
+				iMaxRunTime:=	(rFluVolumeSet/1.9)*0.2;	
 			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P19 THEN//19#软管
 				st_IOData.O_HosePipeType:=19;
 				IF rFluVolumeSet*1000/1240<0.1 THEN
@@ -348,7 +414,7 @@ IF stRunPara.iPumpType=RudongPump_PumpType.DFPluse THEN
 				ELSE
 					iMinRunTime:=	rFluVolumeSet*1000/1240;
 				END_IF
-				iMaxRunTime:=	rFluVolumeSet*1000/4.13;		
+				iMaxRunTime:=	(rFluVolumeSet*1000/4.13)*0.2;		
 			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P16 THEN//16#软管
 				st_IOData.O_HosePipeType:=16;
 				IF rFluVolumeSet*1000/1880<0.1 THEN
@@ -356,7 +422,7 @@ IF stRunPara.iPumpType=RudongPump_PumpType.DFPluse THEN
 				ELSE
 					iMinRunTime:=	rFluVolumeSet*1000/1880;
 				END_IF
-				iMaxRunTime:=	rFluVolumeSet*1000/6.28;	
+				iMaxRunTime:=	(rFluVolumeSet*1000/6.28)*0.2;	
 			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P25 THEN//25#软管
 				st_IOData.O_HosePipeType:=25;
 				IF rFluVolumeSet*1000/3100<0.1 THEN
@@ -364,7 +430,7 @@ IF stRunPara.iPumpType=RudongPump_PumpType.DFPluse THEN
 				ELSE
 					iMinRunTime:=	rFluVolumeSet*1000/3100;
 				END_IF
-				iMaxRunTime:=	rFluVolumeSet*1000/10.33;			
+				iMaxRunTime:=	(rFluVolumeSet*1000/10.33)*0.2;			
 		ELSE
 				eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;		
 		END_IF
@@ -378,7 +444,7 @@ IF stRunPara.iPumpType=RudongPump_PumpType.DFPluse THEN
 				ELSE
 					iMinRunTime:=	rFluVolumeSet*1000/4000;
 				END_IF
-				iMaxRunTime:=	rFluVolumeSet*1000/13.33;		
+				iMaxRunTime:=	(rFluVolumeSet*1000/13.33)*0.2;		
 			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P17 THEN//17#软管
 				st_IOData.O_HosePipeType:=17;
 				IF rFluVolumeSet*1000/15000<0.1 THEN
@@ -386,7 +452,7 @@ IF stRunPara.iPumpType=RudongPump_PumpType.DFPluse THEN
 				ELSE
 					iMinRunTime:=	rFluVolumeSet*1000/15000;
 				END_IF
-				iMaxRunTime:=	rFluVolumeSet*1000/50;	
+				iMaxRunTime:=	(rFluVolumeSet*1000/50)*0.2;	
 			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P25 THEN//25#软管
 				st_IOData.O_HosePipeType:=25;
 				IF rFluVolumeSet*1000/8000<0.1 THEN
@@ -394,7 +460,7 @@ IF stRunPara.iPumpType=RudongPump_PumpType.DFPluse THEN
 				ELSE
 					iMinRunTime:=	rFluVolumeSet*1000/8000;
 				END_IF
-				iMaxRunTime:=	rFluVolumeSet*1000/26.66;			
+				iMaxRunTime:=	(rFluVolumeSet*1000/26.66)*0.2;			
 		ELSE
 				eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;		
 		END_IF
@@ -598,7 +664,7 @@ END_IF
 ]]></ST>
       </Implementation>
     </Action>
-    <Action Name="ACTMap" Id="{0a024eec-4c90-4be8-918f-6b5fb3d594c7}" FolderPath="Control\">
+    <Action Name="ACTMap" Id="{0a024eec-4c90-4be8-918f-6b5fb3d594c7}">
       <Implementation>
         <ST><![CDATA[//进行数据刷新(判断疏浚地址是否有效)
 
@@ -617,18 +683,14 @@ END_IF
 	_wFluVolumeSetTemp := TO_WORD(_aAddr[6,1]);
 	_aAddr[6,1] := _aAddr[6,2];
 	_aAddr[6,2] := TO_INT(_wFluVolumeSetTemp);
-//7,运行时间设定	
-	SysMemCpy(ADR(_aAddr[7,1]),ADR(st_IOData.O_RuntimeSet),4);
-	_wRuntimeSetTemp := TO_WORD(_aAddr[7,1]);
-	_aAddr[7,1] := _aAddr[7,2];
-	_aAddr[7,2] := TO_INT(_wRuntimeSetTemp);	
-//8,运行模式	
-	_aAddr[8,1]:=st_IOData.O_RunModeSet;
+
+//8,回吸角度	
+	_aAddr[8,1]:=st_IOData.O_BackAngle;    /////////
 //9,重复次数	
 	_aAddr[9,1]:=st_IOData.O_CycleNumber;
 //10,灌装单元地址
 	_aAddr[10,1]:=st_IOData.O_ModuleAddress;	
-//11,灌装单元速度
+//11,灌装单元速度____________________
 	SysMemCpy(ADR(_aAddr[11,1]),ADR(st_IOData.O_ModuleSpeed),4);
 	_wModuleSpeedSetTemp := TO_WORD(_aAddr[11,1]);
 	_aAddr[11,1] := _aAddr[11,2];
@@ -640,11 +702,11 @@ END_IF
 	_wModuleRealVolumeTemp := TO_WORD(_aAddr[13,1]);
 	_aAddr[13,1] := _aAddr[13,2];
 	_aAddr[13,2] := TO_INT(_wModuleRealVolumeTemp);		
-//14,灌装液量微调
+//14,灌装液量微调__________________
 	_aAddr[14,1]:=st_IOData.O_ModuleMicroReg;	
 //15,恢复校准系数
 	_aAddr[15,1]:=st_IOData.O_ResetCalcoeff;
-//16,Run信号
+//16,Run信号______________
 	SysMemCpy(ADR(st_IOData.I_RunSignal),ADR(_aAddr[16,1]),2);	
 //17,校准信号
 	SysMemCpy(ADR(st_IOData.I_CalSignal),ADR(_aAddr[17,1]),2);
@@ -679,7 +741,7 @@ END_IF
 ]]></ST>
       </Implementation>
     </Action>
-    <Method Name="CmdCalParWrite" Id="{22a52990-8fab-4416-91fd-48f0ed263656}" FolderPath="Control\">
+    <Method Name="CmdCalParWrite" Id="{22a52990-8fab-4416-91fd-48f0ed263656}">
       <Declaration><![CDATA[METHOD PROTECTED CmdCalParWrite
 VAR_OUTPUT
 	xComplete: BOOL;
@@ -734,7 +796,7 @@ CASE _diCmdState OF
 END_CASE]]></ST>
       </Implementation>
     </Method>
-    <Method Name="CmdCalReset" Id="{54f3d661-2c61-42db-881b-5c98f4c536cb}" FolderPath="Control\">
+    <Method Name="CmdCalReset" Id="{54f3d661-2c61-42db-881b-5c98f4c536cb}">
       <Declaration><![CDATA[METHOD PROTECTED CmdCalReset
 VAR_OUTPUT
 	xComplete: BOOL;
@@ -783,7 +845,7 @@ CASE _diCmdState OF
 END_CASE]]></ST>
       </Implementation>
     </Method>
-    <Method Name="CmdPumpCal" Id="{1900013e-b42f-4581-9805-77d73d2b46b0}" FolderPath="Control\">
+    <Method Name="CmdPumpCal" Id="{1900013e-b42f-4581-9805-77d73d2b46b0}">
       <Declaration><![CDATA[METHOD PROTECTED CmdPumpCal
 VAR_OUTPUT
 	xComplete: BOOL;
@@ -831,14 +893,11 @@ CASE _diCmdState OF
 				_diCmdState := 999;
 			END_IF
 		END_IF						
-	1://等待定时定量模式被响应
-		IF NOT _aExecute[8]//
-		THEN				
-				_tonTimeout(in:=FALSE);
-				_tonDelay(IN:=FALSE);
-				_tonCmdTimeout(IN:= FALSE);    
-				_diCmdState := _diCmdState+1;//切换状态
-		END_IF	
+	1://等待定时定量模式被响应			
+		_tonTimeout(in:=FALSE);
+		_tonDelay(IN:=FALSE);
+		_tonCmdTimeout(IN:= FALSE);    
+		_diCmdState := _diCmdState+1;//切换状态	
 		IF _rxstate=999
 		THEN
 			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
@@ -1199,7 +1258,7 @@ CASE _diCmdState OF
 END_CASE]]></ST>
       </Implementation>
     </Method>
-    <Method Name="CmdRunAction" Id="{474ef5c0-7aa8-40b2-bfe1-3a2632249b7c}" FolderPath="Control\">
+    <Method Name="CmdRunAction" Id="{474ef5c0-7aa8-40b2-bfe1-3a2632249b7c}">
       <Declaration><![CDATA[METHOD PROTECTED CmdRunAction
 VAR_OUTPUT
 	xComplete: BOOL;
@@ -1216,11 +1275,10 @@ CASE _diCmdState OF
 	0://传送力值和速度参数	  	
 		IF xNeedConfigurePara
 		THEN
-			_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
+			_tonDelay(IN:= TRUE,pt:=T#100MS);//保证执行的是最新的一次
 			//st_IOData.O_RunModeSet := 2	;//打开定时定量模式
 			IF _tonDelay.Q
 			THEN	
-				//stPara.pCtlSignal[7] := TRUE;//启动夹紧控制数据发送	
 				//复位定时器
 				_tonDelay(IN:=FALSE);
 				_tonCmdTimeout(in:=FALSE);
@@ -1251,17 +1309,14 @@ CASE _diCmdState OF
 		END_IF				
 		
 	1://等待定时定量模式被响应
-		IF NOT _aExecute[8]//
-		THEN	
-			_tonDelay(IN:=TRUE,PT:= T#50MS);
-			IF _tonDelay.Q
-			THEN			
-				_tonTimeout(in:=FALSE);
-				_tonDelay(IN:=FALSE);
-				_tonCmdTimeout(IN:= FALSE);    
-				_diCmdState := _diCmdState+1;//切换状态
-			END_IF	   	
-		END_IF	
+		_tonDelay(IN:=TRUE,PT:= T#50MS);
+		IF _tonDelay.Q
+		THEN			
+			_tonTimeout(in:=FALSE);
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(IN:= FALSE);    
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF	   		
 		IF _rxState=999
 		THEN
 			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
@@ -1269,9 +1324,13 @@ CASE _diCmdState OF
 		END_IF		
 
 //发送虚假定量时间		
-	2://定量时间设定		
-		_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
-		st_IOData.O_RuntimeSet := iMaxRunTime-1	;	//保证电机转速不会超
+	2://定量时间设定	
+		st_IOData.O_RuntimeSet :=iMaxRunTime-1	;	//保证电机转速不会超
+	  SysMemCpy(ADR(_aAddr[7,1]),ADR(st_IOData.O_RuntimeSet),4);
+	  _wRuntimeSetTemp := TO_WORD(_aAddr[7,1]);
+	  _aAddr[7,1] := _aAddr[7,2];
+	  _aAddr[7,2] := TO_INT(_wRuntimeSetTemp);		
+		_tonDelay(IN:= TRUE,pt:=T#30MS);//保证执行的是最新的一次
 		IF _tonDelay.Q
 		THEN	
 			_aExecute[7] := TRUE;//启动夹紧控制数据发送	
@@ -1301,7 +1360,7 @@ CASE _diCmdState OF
 		
 //传递液量参数		
 	4://传送力值和速度参数		
-		_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
+		_tonDelay(IN:= TRUE,pt:=T#30MS);//保证执行的是最新的一次
 		st_IOData.O_FluVolumeSet := rFluVolumeSet	;	
 		IF _tonDelay.Q
 		THEN	
@@ -1331,9 +1390,13 @@ CASE _diCmdState OF
 		END_IF
 
 //传递实际定量时间		
-	6://定量时间设定		
-		_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
+	6://定量时间设定	
 		st_IOData.O_RuntimeSet := rRuntimeSet	;	
+	  SysMemCpy(ADR(_aAddr[7,1]),ADR(st_IOData.O_RuntimeSet),4);
+	  _wRuntimeSetTemp := TO_WORD(_aAddr[7,1]);
+	  _aAddr[7,1] := _aAddr[7,2];
+	  _aAddr[7,2] := TO_INT(_wRuntimeSetTemp);		
+		_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
 		IF _tonDelay.Q
 		THEN	
 			_aExecute[7] := TRUE;//启动夹紧控制数据发送	
@@ -1425,9 +1488,41 @@ CASE _diCmdState OF
 		THEN
 			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
 			_diCmdState := 999;
-		END_IF		
+		END_IF	
+
+	12://回吸角度		
+		_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
+		st_IOData.O_BackAngle := iBackAngle	;	
+		IF _tonDelay.Q
+		THEN	
+			_aExecute[8] := TRUE;//启动夹紧控制数据发送	
+			//复位定时器
+			_tonDelay(IN:=FALSE);
+			_tonCmdTimeout(in:=FALSE);
+			_tonTimeout(in:=FALSE);
+			_diCmdState := _diCmdState+1;//切换状态
+		END_IF
 		
-	12://启动设定		
+	13://等待回吸角度设定响应
+		IF NOT _aExecute[8]//
+		THEN	
+			_tonDelay(IN:=TRUE,PT:= T#50MS);
+			IF _tonDelay.Q
+			THEN	
+				_tonTimeout(in:=FALSE);
+				_tonDelay(IN:=FALSE);
+				_tonCmdTimeout(IN:= FALSE); 
+				_diCmdState :=  _diCmdState+1;//切换状态
+			END_IF					
+		END_IF	
+		IF _rxState=999
+		THEN
+			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+			_diCmdState := 999;
+		END_IF	
+	
+		
+	14://启动设定		
 		_tonDelay(IN:= TRUE ,pt:=T#25MS);//保证执行的是最新的一次	
 		st_IOData.O_ControlSet := 1	;					
 		IF _tonDelay.Q
@@ -1440,7 +1535,7 @@ CASE _diCmdState OF
 			_diCmdState := _diCmdState+1;//切换状态
 		END_IF
 	
-	13://等待启动被响应			
+	15://等待启动被响应			
 		IF  NOT _aExecute[3] THEN
 			_tonDelay(IN:= TRUE ,pt:=T#100MS);//等待蠕动泵运行
 			IF _tonDelay.Q
@@ -1456,20 +1551,24 @@ CASE _diCmdState OF
 			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
 			_diCmdState := 999;
 		END_IF			
-	14://读取运行状态
+	16://读取运行状态
 		_tonCmdTimeout(in:=FALSE);
-		_tonDelay(IN:=FALSE); 
-		_tonTimeout(in:=TRUE,pt:=T#10S);//设置超时时间 
-		_aExecute[16] := TRUE;//触发读取反馈数据  
+		_tonDelay(IN:=TRUE,PT:=T#25MS); 
+		_tonTimeout(in:=TRUE,pt:=T#10S);//设置超时时间
+    IF  _tonDelay.Q THEN
+		_aExecute[16] := TRUE;//触发读取反馈数据 
+    END_IF 
 		_diCmdState := _diCmdState +1; 	 
-	15://等待状态响应
+	17://等待状态响应
 		_tonTimeout(in:=TRUE,pt:=T#10S); 
 	  //进行数据刷新  
 	  IF NOT _aExecute[16] //等待读取数据完成
 	  THEN
-	    _tonDelay(IN:= TRUE,pt:=T#40MS);//设置刷新周期	  
+	    _tonDelay(IN:= TRUE,pt:=T#1.2S);//设置刷新周期	  
 	    //松开成功判定
-	    IF st_IOData.I_RunSignal = 0
+			//16,Run信号______________
+	    SysMemCpy(ADR(st_IOData.I_RunSignal),ADR(_aAddr[16,1]),2);
+	    IF st_IOData.I_RunSignal = 0 
 	    THEN
 				_tonCmdTimeout(in:=FALSE);
 				_tonDelay(IN:= FALSE);
@@ -1477,9 +1576,11 @@ CASE _diCmdState OF
 				_diCmdState := 100;
 				xComplete := TRUE;
 	    END_IF 	  
-			IF _tonDelay.Q
+			IF _tonDelay.Q			 
 			THEN
-				 _diCmdState := _diCmdState - 1;//回到上一步重新进行状态刷新
+			   _aExecute[16] := FALSE;//触发读取反馈数据 
+				 _aRead_VAR.bExecute:=FALSE;
+				 _diCmdState:=_diCmdState-1;//回到上一步重新进行状态刷新
 			END_IF
 			IF _rxState=999//
 			THEN
@@ -1504,7 +1605,7 @@ CASE _diCmdState OF
 END_CASE]]></ST>
       </Implementation>
     </Method>
-    <Action Name="ConnectAction" Id="{5d2f7d0a-9c5b-4bf9-84dd-2f610001d93f}" FolderPath="Control\">
+    <Action Name="ConnectAction" Id="{5d2f7d0a-9c5b-4bf9-84dd-2f610001d93f}">
       <Implementation>
         <ST><![CDATA[CASE _iChannelIndex OF 
 	1..15:	
@@ -1541,27 +1642,28 @@ END_CASE]]></ST>
 	;	
 END_CASE	
 
+
+
 //收发流程管控
 CASE _rxState OF 
 	0:  _aWrite_VAR.bExecute:=_aRead_VAR.bExecute:=FALSE;
 	    _iChannelIndex:=0;
-		IF NOT _xBusy //等待功能块触发
-		THEN
 			_rxState := _rxState + 1;
-		END_IF
 	1:
+		ACT_GetModbusAdr();
 		FOR i := 1 TO 17 BY 1//进行读取指令的轮训
 		DO
 			IF _aExecute[i]//检测有控制指令发生
 			THEN
+			   _iChannelIndex:=i;//触发对应的读写功能
+				 _aWrite_VAR.nMBAddr:=_aMBAddr[_iChannelIndex]; 
 			   IF _iChannelIndex<16 THEN  
 			    _aWrite_VAR.bExecute:=_aExecute[i];
 				 END_IF
 			   IF _iChannelIndex>15 THEN  
 			    _aRead_VAR.bExecute:=_aExecute[i];
-				 END_IF			 
-          _iChannelIndex:=i;//触发对应的读写功能		
-				IF  _xBusy//只要不是busy状态就代表此时没有指令被响应
+				 END_IF			          		
+				IF  _xBusy //只要不是busy状态就代表此时没有指令被响应
 				THEN					
 					_rxState := _rxState + 1;
 				END_IF	
@@ -1572,7 +1674,7 @@ CASE _rxState OF
 	2://数据解析	
 		FOR i := 1 TO 17 BY 1//进行通用指令轮训
 		DO
-			IF NOT _xBusy AND NOT _xError  AND _aExecute[i]//对应你功能指令完成
+			IF NOT _xBusy  AND _aExecute[i]//对应你功能指令完成
 			THEN			 
 				_iComNGCount := 0;
 				_aExecute[i] := FALSE;
@@ -1644,6 +1746,8 @@ CASE _rxState OF
 	ELSE
 		;
 END_CASE
+
+
 ]]></ST>
       </Implementation>
     </Action>
@@ -1691,7 +1795,7 @@ END_VAR]]></Declaration>
 				_tonCmdTimeout(in:=FALSE);
 				_tonDelay(IN:= FALSE);
 				_tonTimeout(in:=FALSE);
-				FOR i:=1 TO 15 BY 1 
+				FOR i:=1 TO 17 BY 1 
 				DO 
 					_aExecute[i] := FALSE;
 					//TCPChannel.xExecute := FALSE;					
@@ -1851,6 +1955,7 @@ THEN
 				rFluVolumeSet	:=stRunPara.rPullFluVolume[k];
 				rRuntimeSet		:=stRunPara.rPullRuntime[k];
 				iCycleNumber	:=stRunPara.iPullCycleNumber[k];
+				iBackAngle		:=stRunPara.iPullBackAngle[k];
 				eCmd 			:= RudongPump_CMD.Cmd_Pull;
 				xExecute		:= TRUE;
 			END_IF		
@@ -1861,6 +1966,7 @@ THEN
 				rFluVolumeSet	:=stRunPara.rPushFluVolume[k];  
 				rRuntimeSet		:=stRunPara.rPushRuntime[k];    
 				iCycleNumber	:=stRunPara.iPushCycleNumber[k];
+				iBackAngle		:=stRunPara.iPushBackAngle[k];
 				eCmd 			:= RudongPump_CMD.Cmd_Push;
 				xExecute 		:= TRUE;
 			END_IF				
@@ -1995,7 +2101,7 @@ END_IF
 ]]></ST>
       </Implementation>
     </Method>
-    <Method Name="JudgePar" Id="{0814cde9-9449-4e1b-8282-3520f878c414}" FolderPath="Control\">
+    <Method Name="JudgePar" Id="{0814cde9-9449-4e1b-8282-3520f878c414}">
       <Declaration><![CDATA[METHOD JudgePar : RudongPump_ERROR
 VAR_OUTPUT
 	eERRORID: RudongPump_ERROR;(*错误码*)
@@ -2004,7 +2110,7 @@ END_VAR]]></Declaration>
         <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
-    <Method Name="mCmdConfigureAction" Id="{f4f08faa-c21f-4b04-92d7-e6013f185091}" FolderPath="Control\">
+    <Method Name="mCmdConfigureAction" Id="{f4f08faa-c21f-4b04-92d7-e6013f185091}">
       <Declaration><![CDATA[METHOD PROTECTED mCmdConfigureAction
 VAR_OUTPUT
 	xComplete: BOOL;
@@ -2082,7 +2188,7 @@ CASE _diCmdState OF
 END_CASE]]></ST>
       </Implementation>
     </Method>
-    <Method Name="mCmdFullSpeedStartAction" Id="{34a7ae41-1986-4389-854e-22ab41bf8e00}" FolderPath="Control\">
+    <Method Name="mCmdFullSpeedStartAction" Id="{34a7ae41-1986-4389-854e-22ab41bf8e00}">
       <Declaration><![CDATA[METHOD PROTECTED mCmdFullSpeedStartAction
 VAR_OUTPUT
 	xComplete: BOOL;
@@ -2165,7 +2271,7 @@ CASE _diCmdState OF
 END_CASE]]></ST>
       </Implementation>
     </Method>
-    <Method Name="mCmdStopAction" Id="{b12ebfac-7c90-42e2-8a25-f496f99d1828}" FolderPath="Control\">
+    <Method Name="mCmdStopAction" Id="{b12ebfac-7c90-42e2-8a25-f496f99d1828}">
       <Declaration><![CDATA[METHOD PROTECTED mCmdStopAction
 VAR_OUTPUT
 	xComplete: BOOL;
@@ -2319,793 +2425,124 @@ xComplete:=1;
       </Implementation>
     </Method>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus">
-      <LineId Id="992" Count="0" />
-      <LineId Id="1285" Count="0" />
-      <LineId Id="994" Count="0" />
-      <LineId Id="1304" Count="0" />
-      <LineId Id="1308" Count="0" />
-      <LineId Id="1310" Count="0" />
-      <LineId Id="1309" Count="0" />
-      <LineId Id="1303" Count="0" />
-      <LineId Id="1028" Count="1" />
-      <LineId Id="1286" Count="2" />
-      <LineId Id="1036" Count="0" />
-      <LineId Id="1289" Count="1" />
-      <LineId Id="995" Count="0" />
-      <LineId Id="1305" Count="0" />
-      <LineId Id="1326" Count="4" />
-      <LineId Id="1037" Count="0" />
-      <LineId Id="1291" Count="0" />
-      <LineId Id="996" Count="18" />
-      <LineId Id="1284" Count="0" />
-      <LineId Id="1312" Count="0" />
-      <LineId Id="1311" Count="0" />
-      <LineId Id="1079" Count="0" />
-      <LineId Id="1041" Count="0" />
-      <LineId Id="1080" Count="0" />
-      <LineId Id="1042" Count="0" />
-      <LineId Id="1051" Count="0" />
-      <LineId Id="1065" Count="0" />
-      <LineId Id="1052" Count="0" />
-      <LineId Id="1066" Count="0" />
-      <LineId Id="1053" Count="0" />
-      <LineId Id="1067" Count="0" />
-      <LineId Id="1054" Count="0" />
-      <LineId Id="1068" Count="0" />
-      <LineId Id="1055" Count="0" />
-      <LineId Id="1069" Count="0" />
-      <LineId Id="1056" Count="0" />
-      <LineId Id="1070" Count="0" />
-      <LineId Id="1058" Count="0" />
-      <LineId Id="1071" Count="0" />
-      <LineId Id="1059" Count="0" />
-      <LineId Id="1072" Count="0" />
-      <LineId Id="1060" Count="0" />
-      <LineId Id="1073" Count="0" />
-      <LineId Id="1061" Count="0" />
-      <LineId Id="1074" Count="0" />
-      <LineId Id="1062" Count="0" />
-      <LineId Id="1075" Count="0" />
-      <LineId Id="1063" Count="0" />
-      <LineId Id="1076" Count="0" />
-      <LineId Id="1044" Count="0" />
-      <LineId Id="1077" Count="0" />
-      <LineId Id="1045" Count="0" />
-      <LineId Id="1263" Count="0" />
-      <LineId Id="1262" Count="0" />
-      <LineId Id="1267" Count="0" />
-      <LineId Id="1266" Count="0" />
-      <LineId Id="1268" Count="1" />
-      <LineId Id="1331" Count="3" />
-      <LineId Id="1270" Count="1" />
-      <LineId Id="1336" Count="3" />
-      <LineId Id="1272" Count="1" />
-      <LineId Id="9" Count="0" />
-      <LineId Id="1275" Count="3" />
-      <LineId Id="1341" Count="3" />
-      <LineId Id="1279" Count="1" />
-      <LineId Id="1345" Count="3" />
-      <LineId Id="1282" Count="0" />
+      <LineId Id="3" Count="111" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.AbortAction">
-      <LineId Id="10" Count="2" />
-      <LineId Id="20" Count="0" />
-      <LineId Id="5" Count="0" />
-      <LineId Id="13" Count="0" />
-      <LineId Id="19" Count="0" />
+      <LineId Id="3" Count="5" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_modbus_DF600Plus.ACT_GetModbusAdr">
+      <LineId Id="2" Count="57" />
+      <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.ACT_PumpPar">
-      <LineId Id="325" Count="275" />
-      <LineId Id="21" Count="0" />
+      <LineId Id="2" Count="275" />
+      <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.ACTMap">
-      <LineId Id="91" Count="0" />
-      <LineId Id="102" Count="0" />
-      <LineId Id="279" Count="0" />
-      <LineId Id="194" Count="0" />
-      <LineId Id="278" Count="0" />
-      <LineId Id="200" Count="0" />
-      <LineId Id="277" Count="0" />
-      <LineId Id="201" Count="0" />
-      <LineId Id="276" Count="0" />
-      <LineId Id="202" Count="0" />
-      <LineId Id="275" Count="0" />
-      <LineId Id="198" Count="0" />
-      <LineId Id="274" Count="0" />
-      <LineId Id="206" Count="0" />
-      <LineId Id="228" Count="3" />
-      <LineId Id="208" Count="0" />
-      <LineId Id="236" Count="2" />
-      <LineId Id="243" Count="0" />
-      <LineId Id="234" Count="0" />
-      <LineId Id="249" Count="1" />
-      <LineId Id="254" Count="0" />
-      <LineId Id="257" Count="1" />
-      <LineId Id="261" Count="2" />
-      <LineId Id="255" Count="0" />
-      <LineId Id="260" Count="0" />
-      <LineId Id="259" Count="0" />
-      <LineId Id="264" Count="3" />
-      <LineId Id="256" Count="0" />
-      <LineId Id="272" Count="0" />
-      <LineId Id="269" Count="0" />
-      <LineId Id="273" Count="0" />
-      <LineId Id="270" Count="0" />
-      <LineId Id="285" Count="0" />
-      <LineId Id="299" Count="0" />
-      <LineId Id="288" Count="0" />
-      <LineId Id="300" Count="0" />
-      <LineId Id="286" Count="1" />
-      <LineId Id="125" Count="0" />
-      <LineId Id="282" Count="0" />
-      <LineId Id="280" Count="0" />
-      <LineId Id="126" Count="0" />
-      <LineId Id="130" Count="0" />
-      <LineId Id="302" Count="3" />
-      <LineId Id="301" Count="0" />
-      <LineId Id="289" Count="1" />
-      <LineId Id="131" Count="13" />
-      <LineId Id="211" Count="0" />
+      <LineId Id="2" Count="16" />
+      <LineId Id="23" Count="54" />
+      <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.CmdCalParWrite">
-      <LineId Id="241" Count="4" />
-      <LineId Id="252" Count="1" />
-      <LineId Id="1216" Count="0" />
-      <LineId Id="1045" Count="0" />
-      <LineId Id="1218" Count="2" />
-      <LineId Id="1051" Count="0" />
-      <LineId Id="1199" Count="0" />
-      <LineId Id="1054" Count="0" />
-      <LineId Id="1212" Count="3" />
-      <LineId Id="1210" Count="0" />
-      <LineId Id="1201" Count="2" />
-      <LineId Id="1200" Count="0" />
-      <LineId Id="1217" Count="0" />
-      <LineId Id="1061" Count="1" />
-      <LineId Id="1064" Count="1" />
-      <LineId Id="1069" Count="3" />
-      <LineId Id="1074" Count="4" />
-      <LineId Id="941" Count="0" />
-      <LineId Id="1113" Count="0" />
-      <LineId Id="846" Count="0" />
-      <LineId Id="1114" Count="1" />
-      <LineId Id="344" Count="1" />
-      <LineId Id="5" Count="0" />
+      <LineId Id="3" Count="44" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.CmdCalReset">
-      <LineId Id="241" Count="4" />
-      <LineId Id="252" Count="1" />
-      <LineId Id="1015" Count="0" />
-      <LineId Id="1146" Count="0" />
-      <LineId Id="1017" Count="11" />
-      <LineId Id="1151" Count="0" />
-      <LineId Id="1131" Count="0" />
-      <LineId Id="1149" Count="0" />
-      <LineId Id="1136" Count="0" />
-      <LineId Id="1148" Count="0" />
-      <LineId Id="1138" Count="0" />
-      <LineId Id="1140" Count="5" />
-      <LineId Id="1113" Count="0" />
-      <LineId Id="846" Count="0" />
-      <LineId Id="1114" Count="1" />
-      <LineId Id="344" Count="1" />
-      <LineId Id="5" Count="0" />
+      <LineId Id="3" Count="38" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.CmdPumpCal">
-      <LineId Id="241" Count="4" />
-      <LineId Id="252" Count="1" />
-      <LineId Id="659" Count="0" />
-      <LineId Id="932" Count="0" />
-      <LineId Id="661" Count="0" />
-      <LineId Id="665" Count="0" />
-      <LineId Id="667" Count="1" />
-      <LineId Id="670" Count="12" />
-      <LineId Id="739" Count="0" />
-      <LineId Id="726" Count="7" />
-      <LineId Id="735" Count="3" />
-      <LineId Id="734" Count="0" />
-      <LineId Id="725" Count="0" />
-      <LineId Id="684" Count="0" />
-      <LineId Id="686" Count="1" />
-      <LineId Id="707" Count="3" />
-      <LineId Id="690" Count="4" />
-      <LineId Id="658" Count="0" />
-      <LineId Id="879" Count="0" />
-      <LineId Id="884" Count="12" />
-      <LineId Id="898" Count="1" />
-      <LineId Id="1219" Count="1" />
-      <LineId Id="1218" Count="0" />
-      <LineId Id="903" Count="3" />
-      <LineId Id="1221" Count="0" />
-      <LineId Id="908" Count="4" />
-      <LineId Id="880" Count="3" />
-      <LineId Id="451" Count="0" />
-      <LineId Id="619" Count="9" />
-      <LineId Id="618" Count="0" />
-      <LineId Id="261" Count="0" />
-      <LineId Id="264" Count="1" />
-      <LineId Id="1223" Count="1" />
-      <LineId Id="1222" Count="0" />
-      <LineId Id="714" Count="3" />
-      <LineId Id="1225" Count="0" />
-      <LineId Id="269" Count="5" />
-      <LineId Id="916" Count="0" />
-      <LineId Id="915" Count="0" />
-      <LineId Id="515" Count="0" />
-      <LineId Id="518" Count="9" />
-      <LineId Id="516" Count="0" />
-      <LineId Id="917" Count="0" />
-      <LineId Id="479" Count="0" />
-      <LineId Id="529" Count="1" />
-      <LineId Id="1227" Count="1" />
-      <LineId Id="1226" Count="0" />
-      <LineId Id="721" Count="3" />
-      <LineId Id="1229" Count="0" />
-      <LineId Id="533" Count="4" />
-      <LineId Id="495" Count="0" />
-      <LineId Id="918" Count="0" />
-      <LineId Id="566" Count="1" />
-      <LineId Id="592" Count="0" />
-      <LineId Id="569" Count="8" />
-      <LineId Id="919" Count="0" />
-      <LineId Id="578" Count="0" />
-      <LineId Id="580" Count="2" />
-      <LineId Id="699" Count="1" />
-      <LineId Id="583" Count="5" />
-      <LineId Id="562" Count="0" />
-      <LineId Id="920" Count="0" />
-      <LineId Id="789" Count="11" />
-      <LineId Id="921" Count="0" />
-      <LineId Id="801" Count="0" />
-      <LineId Id="803" Count="1" />
-      <LineId Id="1231" Count="1" />
-      <LineId Id="1230" Count="0" />
-      <LineId Id="808" Count="3" />
-      <LineId Id="1233" Count="0" />
-      <LineId Id="813" Count="4" />
-      <LineId Id="766" Count="0" />
-      <LineId Id="922" Count="0" />
-      <LineId Id="933" Count="0" />
-      <LineId Id="982" Count="1" />
-      <LineId Id="954" Count="11" />
-      <LineId Id="1116" Count="0" />
-      <LineId Id="967" Count="1" />
-      <LineId Id="1235" Count="1" />
-      <LineId Id="1234" Count="0" />
-      <LineId Id="972" Count="3" />
-      <LineId Id="1237" Count="0" />
-      <LineId Id="977" Count="4" />
-      <LineId Id="934" Count="0" />
-      <LineId Id="1118" Count="1" />
-      <LineId Id="1117" Count="0" />
-      <LineId Id="935" Count="0" />
-      <LineId Id="984" Count="0" />
-      <LineId Id="1120" Count="0" />
-      <LineId Id="985" Count="0" />
-      <LineId Id="987" Count="9" />
-      <LineId Id="1121" Count="1" />
-      <LineId Id="997" Count="0" />
-      <LineId Id="1123" Count="0" />
-      <LineId Id="998" Count="0" />
-      <LineId Id="1130" Count="0" />
-      <LineId Id="1000" Count="1" />
-      <LineId Id="1005" Count="3" />
-      <LineId Id="1010" Count="4" />
-      <LineId Id="936" Count="1" />
-      <LineId Id="1124" Count="2" />
-      <LineId Id="1128" Count="0" />
-      <LineId Id="1127" Count="0" />
-      <LineId Id="1015" Count="12" />
-      <LineId Id="1137" Count="0" />
-      <LineId Id="1144" Count="9" />
-      <LineId Id="1210" Count="3" />
-      <LineId Id="1197" Count="0" />
-      <LineId Id="1154" Count="5" />
-      <LineId Id="1198" Count="0" />
-      <LineId Id="1160" Count="1" />
-      <LineId Id="1163" Count="10" />
-      <LineId Id="1175" Count="21" />
-      <LineId Id="938" Count="2" />
-      <LineId Id="1046" Count="1" />
-      <LineId Id="1204" Count="1" />
-      <LineId Id="1048" Count="1" />
-      <LineId Id="1045" Count="0" />
-      <LineId Id="1050" Count="3" />
-      <LineId Id="1199" Count="0" />
-      <LineId Id="1054" Count="0" />
-      <LineId Id="1201" Count="2" />
-      <LineId Id="1200" Count="0" />
-      <LineId Id="1055" Count="23" />
-      <LineId Id="941" Count="0" />
-      <LineId Id="1113" Count="0" />
-      <LineId Id="846" Count="0" />
-      <LineId Id="1206" Count="0" />
-      <LineId Id="1114" Count="0" />
-      <LineId Id="1208" Count="1" />
-      <LineId Id="1115" Count="0" />
-      <LineId Id="1207" Count="0" />
-      <LineId Id="344" Count="1" />
-      <LineId Id="5" Count="0" />
+      <LineId Id="3" Count="402" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.CmdRunAction">
-      <LineId Id="241" Count="4" />
-      <LineId Id="252" Count="1" />
-      <LineId Id="659" Count="0" />
-      <LineId Id="663" Count="2" />
-      <LineId Id="933" Count="0" />
-      <LineId Id="667" Count="1" />
-      <LineId Id="932" Count="0" />
-      <LineId Id="670" Count="10" />
-      <LineId Id="953" Count="0" />
-      <LineId Id="682" Count="0" />
-      <LineId Id="739" Count="0" />
-      <LineId Id="726" Count="7" />
-      <LineId Id="735" Count="3" />
-      <LineId Id="734" Count="0" />
-      <LineId Id="934" Count="2" />
-      <LineId Id="938" Count="1" />
-      <LineId Id="1178" Count="1" />
-      <LineId Id="1177" Count="0" />
-      <LineId Id="943" Count="3" />
-      <LineId Id="1180" Count="0" />
-      <LineId Id="948" Count="4" />
-      <LineId Id="725" Count="0" />
-      <LineId Id="1124" Count="0" />
-      <LineId Id="1137" Count="13" />
-      <LineId Id="1152" Count="1" />
-      <LineId Id="1182" Count="1" />
-      <LineId Id="1181" Count="0" />
-      <LineId Id="1157" Count="3" />
-      <LineId Id="1184" Count="0" />
-      <LineId Id="1162" Count="4" />
-      <LineId Id="1125" Count="0" />
-      <LineId Id="882" Count="1" />
-      <LineId Id="451" Count="0" />
-      <LineId Id="619" Count="9" />
-      <LineId Id="618" Count="0" />
-      <LineId Id="261" Count="0" />
-      <LineId Id="264" Count="1" />
-      <LineId Id="1186" Count="1" />
-      <LineId Id="1185" Count="0" />
-      <LineId Id="714" Count="3" />
-      <LineId Id="1188" Count="0" />
-      <LineId Id="269" Count="5" />
-      <LineId Id="916" Count="0" />
-      <LineId Id="915" Count="0" />
-      <LineId Id="515" Count="0" />
-      <LineId Id="518" Count="9" />
-      <LineId Id="516" Count="0" />
-      <LineId Id="917" Count="0" />
-      <LineId Id="479" Count="0" />
-      <LineId Id="529" Count="1" />
-      <LineId Id="1190" Count="1" />
-      <LineId Id="1189" Count="0" />
-      <LineId Id="721" Count="2" />
-      <LineId Id="1172" Count="0" />
-      <LineId Id="1192" Count="0" />
-      <LineId Id="533" Count="4" />
-      <LineId Id="495" Count="0" />
-      <LineId Id="918" Count="0" />
-      <LineId Id="566" Count="1" />
-      <LineId Id="589" Count="1" />
-      <LineId Id="592" Count="0" />
-      <LineId Id="591" Count="0" />
-      <LineId Id="593" Count="2" />
-      <LineId Id="568" Count="9" />
-      <LineId Id="919" Count="0" />
-      <LineId Id="578" Count="0" />
-      <LineId Id="580" Count="2" />
-      <LineId Id="699" Count="1" />
-      <LineId Id="583" Count="5" />
-      <LineId Id="562" Count="0" />
-      <LineId Id="920" Count="0" />
-      <LineId Id="789" Count="11" />
-      <LineId Id="921" Count="0" />
-      <LineId Id="801" Count="0" />
-      <LineId Id="803" Count="1" />
-      <LineId Id="1194" Count="1" />
-      <LineId Id="1193" Count="0" />
-      <LineId Id="808" Count="3" />
-      <LineId Id="1196" Count="0" />
-      <LineId Id="813" Count="4" />
-      <LineId Id="766" Count="0" />
-      <LineId Id="922" Count="0" />
-      <LineId Id="597" Count="1" />
-      <LineId Id="601" Count="0" />
-      <LineId Id="607" Count="7" />
-      <LineId Id="596" Count="0" />
-      <LineId Id="923" Count="0" />
-      <LineId Id="635" Count="0" />
-      <LineId Id="966" Count="0" />
-      <LineId Id="1039" Count="0" />
-      <LineId Id="1041" Count="1" />
-      <LineId Id="1046" Count="1" />
-      <LineId Id="1045" Count="0" />
-      <LineId Id="1044" Count="0" />
-      <LineId Id="1043" Count="0" />
-      <LineId Id="763" Count="0" />
-      <LineId Id="1168" Count="3" />
-      <LineId Id="1167" Count="0" />
-      <LineId Id="954" Count="0" />
-      <LineId Id="1048" Count="3" />
-      <LineId Id="982" Count="0" />
-      <LineId Id="976" Count="0" />
-      <LineId Id="1061" Count="0" />
-      <LineId Id="1063" Count="3" />
-      <LineId Id="1076" Count="0" />
-      <LineId Id="1079" Count="7" />
-      <LineId Id="1102" Count="3" />
-      <LineId Id="1107" Count="6" />
-      <LineId Id="1116" Count="6" />
-      <LineId Id="1114" Count="1" />
-      <LineId Id="1060" Count="0" />
-      <LineId Id="1123" Count="0" />
-      <LineId Id="344" Count="1" />
-      <LineId Id="5" Count="0" />
+      <LineId Id="3" Count="13" />
+      <LineId Id="18" Count="45" />
+      <LineId Id="341" Count="0" />
+      <LineId Id="334" Count="2" />
+      <LineId Id="332" Count="0" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="66" Count="58" />
+      <LineId Id="342" Count="4" />
+      <LineId Id="125" Count="1" />
+      <LineId Id="128" Count="157" />
+      <LineId Id="353" Count="0" />
+      <LineId Id="286" Count="0" />
+      <LineId Id="354" Count="0" />
+      <LineId Id="287" Count="7" />
+      <LineId Id="347" Count="1" />
+      <LineId Id="295" Count="9" />
+      <LineId Id="355" Count="1" />
+      <LineId Id="305" Count="21" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.ConnectAction">
-      <LineId Id="166" Count="0" />
-      <LineId Id="440" Count="0" />
-      <LineId Id="405" Count="11" />
-      <LineId Id="404" Count="0" />
-      <LineId Id="389" Count="0" />
-      <LineId Id="391" Count="12" />
-      <LineId Id="390" Count="0" />
-      <LineId Id="509" Count="0" />
-      <LineId Id="522" Count="0" />
-      <LineId Id="510" Count="0" />
-      <LineId Id="433" Count="0" />
-      <LineId Id="442" Count="0" />
-      <LineId Id="181" Count="2" />
-      <LineId Id="501" Count="0" />
-      <LineId Id="201" Count="8" />
-      <LineId Id="512" Count="0" />
-      <LineId Id="503" Count="0" />
-      <LineId Id="513" Count="0" />
-      <LineId Id="515" Count="1" />
-      <LineId Id="514" Count="0" />
-      <LineId Id="441" Count="0" />
-      <LineId Id="210" Count="1" />
-      <LineId Id="213" Count="3" />
-      <LineId Id="502" Count="0" />
-      <LineId Id="230" Count="1" />
-      <LineId Id="233" Count="4" />
-      <LineId Id="507" Count="0" />
-      <LineId Id="504" Count="0" />
-      <LineId Id="517" Count="0" />
-      <LineId Id="240" Count="7" />
-      <LineId Id="519" Count="0" />
-      <LineId Id="506" Count="0" />
-      <LineId Id="254" Count="3" />
-      <LineId Id="520" Count="0" />
-      <LineId Id="258" Count="5" />
-      <LineId Id="524" Count="4" />
-      <LineId Id="558" Count="0" />
-      <LineId Id="532" Count="3" />
-      <LineId Id="537" Count="0" />
-      <LineId Id="549" Count="3" />
-      <LineId Id="557" Count="0" />
-      <LineId Id="539" Count="2" />
-      <LineId Id="555" Count="0" />
-      <LineId Id="544" Count="0" />
-      <LineId Id="546" Count="1" />
-      <LineId Id="523" Count="0" />
-      <LineId Id="335" Count="4" />
-      <LineId Id="341" Count="4" />
-      <LineId Id="347" Count="0" />
-      <LineId Id="349" Count="0" />
-      <LineId Id="521" Count="0" />
-      <LineId Id="508" Count="0" />
-      <LineId Id="350" Count="0" />
-      <LineId Id="357" Count="0" />
-      <LineId Id="365" Count="0" />
-      <LineId Id="358" Count="3" />
-      <LineId Id="4" Count="0" />
+      <LineId Id="183" Count="32" />
+      <LineId Id="180" Count="2" />
+      <LineId Id="36" Count="4" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="143" Count="0" />
+      <LineId Id="46" Count="3" />
+      <LineId Id="141" Count="1" />
+      <LineId Id="50" Count="5" />
+      <LineId Id="57" Count="82" />
+      <LineId Id="145" Count="0" />
+      <LineId Id="179" Count="0" />
+      <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.CyclicAction">
-      <LineId Id="22" Count="0" />
-      <LineId Id="45" Count="4" />
-      <LineId Id="52" Count="0" />
-      <LineId Id="391" Count="1" />
-      <LineId Id="426" Count="0" />
-      <LineId Id="177" Count="0" />
-      <LineId Id="61" Count="0" />
-      <LineId Id="210" Count="0" />
-      <LineId Id="301" Count="0" />
-      <LineId Id="369" Count="2" />
-      <LineId Id="320" Count="0" />
-      <LineId Id="436" Count="0" />
-      <LineId Id="353" Count="0" />
-      <LineId Id="311" Count="1" />
-      <LineId Id="306" Count="0" />
-      <LineId Id="437" Count="0" />
-      <LineId Id="380" Count="1" />
-      <LineId Id="425" Count="0" />
-      <LineId Id="382" Count="1" />
-      <LineId Id="385" Count="0" />
-      <LineId Id="427" Count="0" />
-      <LineId Id="387" Count="1" />
-      <LineId Id="386" Count="0" />
-      <LineId Id="448" Count="2" />
-      <LineId Id="456" Count="0" />
-      <LineId Id="447" Count="0" />
-      <LineId Id="384" Count="0" />
-      <LineId Id="441" Count="1" />
-      <LineId Id="457" Count="0" />
-      <LineId Id="445" Count="1" />
-      <LineId Id="469" Count="0" />
-      <LineId Id="465" Count="0" />
-      <LineId Id="467" Count="0" />
-      <LineId Id="455" Count="0" />
-      <LineId Id="231" Count="0" />
-      <LineId Id="230" Count="0" />
-      <LineId Id="399" Count="0" />
-      <LineId Id="430" Count="0" />
-      <LineId Id="302" Count="0" />
-      <LineId Id="408" Count="0" />
-      <LineId Id="431" Count="0" />
-      <LineId Id="378" Count="0" />
-      <LineId Id="416" Count="0" />
-      <LineId Id="432" Count="0" />
-      <LineId Id="389" Count="0" />
-      <LineId Id="424" Count="0" />
-      <LineId Id="433" Count="0" />
-      <LineId Id="428" Count="1" />
-      <LineId Id="434" Count="1" />
-      <LineId Id="390" Count="0" />
-      <LineId Id="452" Count="1" />
-      <LineId Id="451" Count="0" />
-      <LineId Id="281" Count="1" />
-      <LineId Id="280" Count="0" />
-      <LineId Id="82" Count="0" />
-      <LineId Id="74" Count="0" />
-      <LineId Id="44" Count="0" />
-      <LineId Id="83" Count="0" />
-      <LineId Id="21" Count="0" />
-      <LineId Id="87" Count="2" />
-      <LineId Id="84" Count="0" />
-      <LineId Id="150" Count="0" />
-      <LineId Id="85" Count="0" />
+      <LineId Id="3" Count="82" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.HandleAbortedState">
-      <LineId Id="15" Count="0" />
-      <LineId Id="24" Count="0" />
-      <LineId Id="28" Count="0" />
-      <LineId Id="26" Count="1" />
-      <LineId Id="31" Count="0" />
-      <LineId Id="29" Count="1" />
-      <LineId Id="25" Count="0" />
+      <LineId Id="3" Count="7" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.HandleAbortingState">
-      <LineId Id="15" Count="0" />
-      <LineId Id="25" Count="0" />
-      <LineId Id="24" Count="0" />
-      <LineId Id="26" Count="0" />
-      <LineId Id="30" Count="0" />
-      <LineId Id="28" Count="1" />
-      <LineId Id="31" Count="0" />
-      <LineId Id="27" Count="0" />
-      <LineId Id="33" Count="0" />
-      <LineId Id="32" Count="0" />
+      <LineId Id="3" Count="9" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.HandleDoneState">
-      <LineId Id="21" Count="6" />
-      <LineId Id="29" Count="0" />
-      <LineId Id="11" Count="0" />
+      <LineId Id="3" Count="7" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.HandleDormantState">
-      <LineId Id="5" Count="0" />
-      <LineId Id="9" Count="0" />
-      <LineId Id="12" Count="1" />
-      <LineId Id="10" Count="0" />
-      <LineId Id="23" Count="0" />
-      <LineId Id="15" Count="0" />
-      <LineId Id="22" Count="0" />
-      <LineId Id="16" Count="1" />
-      <LineId Id="25" Count="1" />
-      <LineId Id="24" Count="0" />
-      <LineId Id="28" Count="0" />
-      <LineId Id="27" Count="0" />
-      <LineId Id="125" Count="4" />
-      <LineId Id="122" Count="0" />
-      <LineId Id="40" Count="1" />
-      <LineId Id="80" Count="0" />
-      <LineId Id="228" Count="0" />
-      <LineId Id="54" Count="0" />
-      <LineId Id="79" Count="0" />
-      <LineId Id="57" Count="2" />
-      <LineId Id="62" Count="2" />
-      <LineId Id="60" Count="1" />
-      <LineId Id="55" Count="0" />
-      <LineId Id="65" Count="0" />
-      <LineId Id="71" Count="7" />
-      <LineId Id="66" Count="0" />
-      <LineId Id="56" Count="0" />
-      <LineId Id="153" Count="1" />
-      <LineId Id="164" Count="0" />
-      <LineId Id="168" Count="0" />
-      <LineId Id="163" Count="0" />
-      <LineId Id="170" Count="1" />
-      <LineId Id="176" Count="1" />
-      <LineId Id="165" Count="0" />
-      <LineId Id="185" Count="1" />
-      <LineId Id="191" Count="4" />
-      <LineId Id="200" Count="4" />
-      <LineId Id="209" Count="1" />
-      <LineId Id="236" Count="0" />
-      <LineId Id="240" Count="1" />
-      <LineId Id="237" Count="1" />
-      <LineId Id="249" Count="1" />
-      <LineId Id="247" Count="0" />
-      <LineId Id="242" Count="0" />
-      <LineId Id="245" Count="0" />
-      <LineId Id="239" Count="0" />
-      <LineId Id="234" Count="1" />
-      <LineId Id="263" Count="0" />
-      <LineId Id="253" Count="1" />
-      <LineId Id="261" Count="1" />
-      <LineId Id="252" Count="0" />
-      <LineId Id="251" Count="0" />
-      <LineId Id="265" Count="2" />
-      <LineId Id="270" Count="0" />
-      <LineId Id="268" Count="0" />
-      <LineId Id="178" Count="0" />
-      <LineId Id="269" Count="0" />
-      <LineId Id="118" Count="0" />
-      <LineId Id="231" Count="0" />
-      <LineId Id="264" Count="0" />
+      <LineId Id="3" Count="101" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.HandleErrorState">
-      <LineId Id="10" Count="5" />
-      <LineId Id="17" Count="0" />
-      <LineId Id="5" Count="0" />
+      <LineId Id="3" Count="6" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.HandleExecutingState">
-      <LineId Id="29" Count="0" />
-      <LineId Id="33" Count="0" />
-      <LineId Id="31" Count="0" />
-      <LineId Id="41" Count="0" />
-      <LineId Id="16" Count="0" />
-      <LineId Id="20" Count="1" />
-      <LineId Id="38" Count="2" />
-      <LineId Id="22" Count="0" />
-      <LineId Id="25" Count="0" />
-      <LineId Id="23" Count="0" />
-      <LineId Id="19" Count="0" />
+      <LineId Id="3" Count="12" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.HandleResettingState">
-      <LineId Id="5" Count="0" />
-      <LineId Id="13" Count="0" />
-      <LineId Id="12" Count="0" />
-      <LineId Id="25" Count="0" />
-      <LineId Id="14" Count="0" />
-      <LineId Id="16" Count="1" />
-      <LineId Id="24" Count="0" />
-      <LineId Id="18" Count="3" />
-      <LineId Id="15" Count="0" />
-      <LineId Id="26" Count="0" />
+      <LineId Id="3" Count="12" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.JudgePar">
-      <LineId Id="5" Count="0" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.mCmdConfigureAction">
-      <LineId Id="9" Count="4" />
-      <LineId Id="19" Count="1" />
-      <LineId Id="239" Count="0" />
-      <LineId Id="300" Count="9" />
-      <LineId Id="299" Count="0" />
-      <LineId Id="253" Count="1" />
-      <LineId Id="256" Count="2" />
-      <LineId Id="313" Count="1" />
-      <LineId Id="318" Count="2" />
-      <LineId Id="317" Count="0" />
-      <LineId Id="315" Count="0" />
-      <LineId Id="260" Count="3" />
-      <LineId Id="322" Count="0" />
-      <LineId Id="264" Count="0" />
-      <LineId Id="151" Count="0" />
-      <LineId Id="268" Count="11" />
-      <LineId Id="281" Count="0" />
-      <LineId Id="283" Count="1" />
-      <LineId Id="292" Count="3" />
-      <LineId Id="285" Count="0" />
-      <LineId Id="287" Count="3" />
-      <LineId Id="323" Count="0" />
-      <LineId Id="291" Count="0" />
-      <LineId Id="265" Count="0" />
-      <LineId Id="108" Count="0" />
-      <LineId Id="112" Count="0" />
-      <LineId Id="5" Count="0" />
+      <LineId Id="3" Count="66" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.mCmdFullSpeedStartAction">
-      <LineId Id="9" Count="4" />
-      <LineId Id="19" Count="1" />
-      <LineId Id="323" Count="18" />
-      <LineId Id="365" Count="0" />
-      <LineId Id="342" Count="0" />
-      <LineId Id="344" Count="1" />
-      <LineId Id="358" Count="6" />
-      <LineId Id="349" Count="5" />
-      <LineId Id="322" Count="0" />
-      <LineId Id="239" Count="0" />
-      <LineId Id="300" Count="9" />
-      <LineId Id="299" Count="0" />
-      <LineId Id="254" Count="0" />
-      <LineId Id="256" Count="1" />
-      <LineId Id="318" Count="3" />
-      <LineId Id="258" Count="0" />
-      <LineId Id="260" Count="4" />
-      <LineId Id="151" Count="0" />
-      <LineId Id="108" Count="0" />
-      <LineId Id="112" Count="0" />
-      <LineId Id="5" Count="0" />
+      <LineId Id="3" Count="71" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.mCmdStopAction">
-      <LineId Id="9" Count="4" />
-      <LineId Id="19" Count="1" />
-      <LineId Id="132" Count="0" />
-      <LineId Id="233" Count="1" />
-      <LineId Id="212" Count="2" />
-      <LineId Id="235" Count="1" />
-      <LineId Id="238" Count="0" />
-      <LineId Id="237" Count="0" />
-      <LineId Id="239" Count="2" />
-      <LineId Id="217" Count="4" />
-      <LineId Id="216" Count="0" />
-      <LineId Id="215" Count="0" />
-      <LineId Id="192" Count="0" />
-      <LineId Id="140" Count="0" />
-      <LineId Id="142" Count="9" />
-      <LineId Id="204" Count="0" />
-      <LineId Id="206" Count="2" />
-      <LineId Id="210" Count="0" />
-      <LineId Id="209" Count="0" />
-      <LineId Id="251" Count="7" />
-      <LineId Id="260" Count="23" />
-      <LineId Id="291" Count="2" />
-      <LineId Id="250" Count="0" />
-      <LineId Id="108" Count="0" />
-      <LineId Id="112" Count="0" />
-      <LineId Id="5" Count="0" />
+      <LineId Id="3" Count="82" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.ResetAction">
-      <LineId Id="10" Count="2" />
-      <LineId Id="15" Count="0" />
-      <LineId Id="18" Count="1" />
-      <LineId Id="17" Count="0" />
-      <LineId Id="46" Count="0" />
-      <LineId Id="49" Count="1" />
-      <LineId Id="54" Count="1" />
-      <LineId Id="47" Count="0" />
-      <LineId Id="61" Count="0" />
-      <LineId Id="63" Count="0" />
-      <LineId Id="65" Count="0" />
-      <LineId Id="99" Count="0" />
-      <LineId Id="57" Count="0" />
-      <LineId Id="64" Count="0" />
-      <LineId Id="58" Count="0" />
-      <LineId Id="105" Count="0" />
-      <LineId Id="112" Count="0" />
-      <LineId Id="60" Count="0" />
-      <LineId Id="59" Count="0" />
-      <LineId Id="104" Count="0" />
-      <LineId Id="101" Count="1" />
-      <LineId Id="100" Count="0" />
-      <LineId Id="103" Count="0" />
-      <LineId Id="67" Count="0" />
-      <LineId Id="78" Count="0" />
-      <LineId Id="70" Count="2" />
-      <LineId Id="74" Count="1" />
-      <LineId Id="77" Count="0" />
-      <LineId Id="76" Count="0" />
-      <LineId Id="96" Count="1" />
-      <LineId Id="119" Count="0" />
-      <LineId Id="83" Count="0" />
-      <LineId Id="85" Count="1" />
-      <LineId Id="81" Count="0" />
-      <LineId Id="45" Count="0" />
-      <LineId Id="22" Count="0" />
-      <LineId Id="13" Count="0" />
+      <LineId Id="3" Count="46" />
+      <LineId Id="2" Count="0" />
     </LineIds>
   </POU>
 </TcPlcObject>

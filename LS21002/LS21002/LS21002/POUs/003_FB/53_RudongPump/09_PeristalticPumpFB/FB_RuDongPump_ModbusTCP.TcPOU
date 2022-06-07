@@ -1,0 +1,1882 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_RuDongPump_ModbusTCP" Id="{90cc3ce7-f506-4a47-a812-e121dc342172}" SpecialFunc="None">
+    <Declaration><![CDATA[///{attribute 'hide'}
+FUNCTION_BLOCK FB_RuDongPump_ModbusTCP
+VAR_INPUT
+	xExecute: BOOL;
+	xAbort: BOOL;
+	///匹配复位按钮 
+	xResetRequest: BOOL;
+	///蠕动泵运行条件
+	xRunILC: BOOL;
+	///[ms],1 => no invocation time limit
+	dwTimeLimit: DWORD := 1;
+	///[ms],0 => no executing time limit
+	dwTimeOut: DWORD;
+	stPara: RudongPump_Sys_Para_1;
+	///是否需要配置参数(默认是需要进行参数配置的)	
+	xNeedConfigurePara: BOOL := TRUE;
+	///运行参数	
+	stRunPara: RudongPump_RunData;
+	///0:mannal 1:auto
+	xAutoMode: BOOL;
+	///初始化过程中
+	xIniting: BOOL;
+	///工站单循环中
+	xDeviceRunning: BOOL;
+	///根据泵头软管型号不同有变化
+	rSpeedRatio: REAL := 2.733;
+	sHmiError: STRING;
+	xEStop: BOOL;
+	///操作按钮
+	stDeviceOpe: RudongPump_Ope_1;
+END_VAR
+VAR_OUTPUT
+	///完成条件满足
+	xDone: BOOL;
+	///动作正在执行
+	xBusy: BOOL;
+	///报警中
+	xError: BOOL;
+	///指令被打断
+	xAborted: BOOL;
+	///蠕动泵运行中
+	xRunning: BOOL;
+	///错误条件满足
+	xRudongPump_ERROR: BOOL;
+	///错误码
+	eERRORID: RudongPump_ERROR;
+	xRdyCmd: BOOL;
+	///最大运行时间,单位s
+	iMaxRunTime: REAL;
+	///最小运行时间,单位s
+	iMinRunTime: REAL;
+END_VAR
+VAR
+	{attribute 'hide' := ''}
+	stModbusAddress: RuDongPump_ModbusAddress;
+	{attribute 'hide' := ''}
+	_pDataControl: POINTER TO BYTE;
+	{attribute 'hide' := ''}
+	eState: STATE;
+	{attribute 'hide' := ''}
+	_fbModbusTCP: FB_ModbusTCP;
+	{attribute 'hide' := ''}
+	_xDone: BOOL;
+	///指令控制	
+	{attribute 'hide' := ''}
+	eCmd: RudongPump_CMD;
+	{attribute 'hide' := ''}
+	xFirstInvocation: BOOL := TRUE;
+	{attribute 'hide' := ''}
+	xTimeOut: BOOL;
+	{attribute 'hide' := ''}
+	xTimeLimit: BOOL;
+	{attribute 'hide' := ''}
+	tInvocationTimer: TON;
+	tOperationTimer: TON;
+	///液量设定 0.0-99999.0 mL(0.1ml)
+	{attribute 'hide' := ''}
+	rFluVolumeSet: REAL;
+	///运行时间设定 0.1-9999s(0.1s)
+	{attribute 'hide' := ''}
+	rRuntimeSet: REAL;
+	///重复次数
+	{attribute 'hide' := ''}
+	iCycleNumber: INT;
+	///灌装单元地址
+	{attribute 'hide' := ''}
+	iModuleAdress: INT;
+	///灌装单元速度
+	{attribute 'hide' := ''}
+	iModuleSpeed: REAL;
+	///灌装实际液量	
+	{attribute 'hide' := ''}
+	iModuleRealVolume: REAL;
+	{attribute 'hide' := ''}
+	_cmdStop: BOOL;
+	{attribute 'hide' := ''}
+	_tonTimeout: TON;
+	_tonCmdTimeout: TON;
+	/// command execution
+	{attribute 'hide' := ''}
+	_CmdExe: BOOL;
+	/// detect rising edge of command execution
+	{attribute 'hide' := ''}
+	_rTrigCmdExe: R_TRIG;
+	{attribute 'hide' := ''}
+	_rTrigCmdOrg: R_TRIG;
+	{attribute 'hide' := ''}
+	_diCmdState: DINT;
+	/// detect FltQuit rising edge
+	{attribute 'hide' := ''}
+	_rTrigFltReset: R_TRIG;
+	{attribute 'hide' := ''}
+	_tonDelay: TON;
+	///	_fbGET_MODBUSTCP_SLAVE_DIAGNOSE_RTU : SysHC_ModbusRtuSlaveDiagnose;//modbusTCP子站诊断函数
+	///_fbGET_MODBUSTCP_SLAVE_DIAGNOSE_TCP : GET_MODBUSTCP_SLAVE_DIAGNOSE;//modbusTCP子站诊断函数
+	{attribute 'hide' := ''}
+	_iConnectState: INT := 0;
+	{attribute 'hide' := ''}
+	_connectTon: TON;
+	{attribute 'hide' := ''}
+	_xConnectError: BOOL;
+	{attribute 'hide' := ''}
+	_fResetCheck: F_TRIG;
+	{attribute 'hide' := ''}
+	_rManual: R_TRIG;
+	{attribute 'hide' := ''}
+	_fManual: F_TRIG;
+	{attribute 'hide' := ''}
+	_xModeChange: BOOL;
+	{attribute 'hide' := ''}
+	i: INT;
+	///状态读取计时定时器
+	{attribute 'hide' := ''}
+	_tonPulse: TON;
+	///检测modbus是否处理总
+	{attribute 'hide' := ''}
+	_xCheckModbusRun: BOOL;
+	///需要匹配参数是OK的
+	{attribute 'hide' := ''}
+	_xConfigureParaOK: BOOL;
+	{attribute 'hide' := ''}
+	_rStopCmdTrig: R_TRIG;
+	///当前运行的次数
+	{attribute 'hide' := ''}
+	_iActRunNumber: INT;
+	{attribute 'hide' := ''}
+	_wFluVolumeSetTemp: WORD;
+	{attribute 'hide' := ''}
+	_wRuntimeSetTemp: WORD;
+	{attribute 'hide' := ''}
+	_wSpeedSetTemp: WORD;
+	{attribute 'hide' := ''}
+	_rSetSpeed: REAL;
+	{attribute 'hide' := ''}
+	_wModuleSpeedSetTemp: WORD;
+	{attribute 'hide' := ''}
+	_wModuleRealVolumeTemp: WORD;
+	{attribute 'hide' := ''}
+	_rHMIControl: R_TRIG;
+	{attribute 'hide' := ''}
+	dwTest1: DWORD;
+	///NG 计数
+	{attribute 'hide' := ''}
+	_iNGCount: INT;
+	{attribute 'hide' := ''}
+	_rOperaTrig: ARRAY[1..15] OF R_TRIG;
+	{attribute 'hide' := ''}
+	k: INT;
+	{attribute 'hide' := ''}
+	_bChannelNum: BYTE;
+	_bDiagData: BYTE;
+	{attribute 'hide' := ''}
+	xAutomodeFlag: BOOL;
+	{attribute 'hide' := ''}
+	diStepOld: DINT;
+	{attribute 'hide' := ''}
+	st_IOData: RudongPump_IOData_1;
+	{attribute 'hide' := ''}
+	iPumpType: INT;
+	///是否有手动操作，是否有自动操作	
+	{attribute 'hide' := ''}
+	_xHMIOpe: BOOL;
+	///是否有手动操作，是否有自动操作	
+	{attribute 'hide' := ''}
+	_xAutoOpe: BOOL;
+	{attribute 'hide' := ''}
+	_rInit: R_TRIG;
+	{attribute 'hide' := ''}
+	_first: BOOL;
+END_VAR
+VAR_TEMP
+	{attribute 'hide' := ''}
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[xAgain:=0;
+//ConnectAction();//触发通信连接功能连接
+ACTMap();//IO Map
+IF NOT _first THEN
+	_first:=TRUE;
+ELSE
+
+//只有在运行的时候，才会检测是否有模式切换发生
+IF eState <> STATE.DORMANT
+THEN	
+	IF _rManual.Q OR _fManual.Q
+	THEN
+		_xModeChange := TRUE;//通知系统有模式切换发生
+	END_IF
+ELSE
+	_xModeChange := FALSE;//待机状态不触发模式切换
+END_IF
+
+//检测是否是初始化中，如果是的去切换模式
+_rInit(CLK:= xIniting);
+IF _rInit.Q
+THEN
+	eState := STATE.RESETING;
+END_IF	
+
+REPEAT
+	CASE eState OF
+		STATE.DORMANT:
+				HandleDormantState(xAgain=> xAgain);
+		STATE.EXECUTING:
+				HandleExecutingState(xAgain=> xAgain);
+		STATE.DONE:
+				HandleDoneState(xAgain=> xAgain);
+		STATE.INERROR:
+				HandleErrorState(xAgain=> xAgain);
+		STATE.ABORTING:
+				HandleAbortingState(xAgain=> xAgain);
+		STATE.ABORTED:
+				HandleAbortedState(xAgain=> xAgain);
+		STATE.RESETING:
+				HandleResettingState(xAgain=> xAgain);
+	END_CASE
+UNTIL (xAgain=0)
+END_REPEAT
+END_IF
+
+
+//判断是否处于当前流程的Done状态
+xDone := _xDone AND xExecute;
+//输出报错信息
+CASE eERRORID OF 	
+  RudongPump_ERROR.No_ERROR:
+		sHmiError:='No_ERROR';	
+  RudongPump_ERROR.FLT_PARA:
+		sHmiError:='FLT_PARA';
+  RudongPump_ERROR.FLT_CONNECT:
+		sHmiError:='FLT_CONNECT';
+  RudongPump_ERROR.FLT_RDYCMD:
+		sHmiError:='FLT_RDYCMD';
+	RudongPump_ERROR.FLT_CONFIGURE_PARA:
+		sHmiError:='FLT_CONFIGURE_PARA';
+	RudongPump_ERROR.FLT_FLUVOLUM_TIME_PARA:
+		sHmiError:='FLT_FLUVOLUM_TIME_PARA';  
+  RudongPump_ERROR.FLT_PUSH_TIMEOUT:
+		sHmiError:='FLT_PUSH_TIMEOUT';
+  RudongPump_ERROR.FLT_PULL_TIMEOUT:
+		sHmiError:='FLT_PULL_TIMEOUT';
+  RudongPump_ERROR.FLT_STOP_TIMEOUT:
+		sHmiError:='FLT_STOP_TIMEOUT'; 
+	RudongPump_ERROR.FLT_FULLSPEEDSTOP_TIMEOUT:
+		sHmiError:='FLT_FULLSPEEDSTOP_TIMEOUT';
+	RudongPump_ERROR.FLT_FULLSPEEDSTART_TIMEOUT:
+		sHmiError:='FLT_FULLSPEEDSTART_TIMEOUT'; 
+	RudongPump_ERROR.FLT_CMD_TIMEOUT:
+		sHmiError:='FLT_CMD_TIMEOUT';
+	RudongPump_ERROR.FLT_RUN_FALL:
+		sHmiError:='FLT_RUN_FALL';
+	RudongPump_ERROR.FLT_Mobdus:
+		sHmiError:=_fbModbusTCP.sError;		
+		
+END_CASE
+//手动自动操作检测
+_xHMIOpe :=
+			stDeviceOpe.xConfigure_Hmi OR 
+			stDeviceOpe.xFullSpeedPull_Hmi OR 
+			stDeviceOpe.xFullSpeedPush_Hmi OR 
+			stDeviceOpe.xPull_Hmi[1] OR 
+			stDeviceOpe.xPull_Hmi[2] OR 
+			stDeviceOpe.xPull_Hmi[3] OR 
+			stDeviceOpe.xPull_Hmi[4] OR 
+			stDeviceOpe.xPull_Hmi[5] OR 			
+			stDeviceOpe.xPumpCal_Hmi OR 
+			stDeviceOpe.xPush_Hmi[1] OR 
+			stDeviceOpe.xPush_Hmi[2] OR 
+			stDeviceOpe.xPush_Hmi[3] OR 			
+			stDeviceOpe.xPush_Hmi[4] OR 			
+			stDeviceOpe.xPush_Hmi[5] OR 						
+			stDeviceOpe.xResetCalcoeffCal_Hmi OR 
+			stDeviceOpe.xStop_Hmi;
+_xAutoOpe:=	
+			stDeviceOpe.xConfigure_Auto OR 
+            stDeviceOpe.xFullSpeedPull_Auto OR 
+            stDeviceOpe.xFullSpeedPush_Auto OR 
+            stDeviceOpe.xPull_Auto[1] OR 
+            stDeviceOpe.xPull_Auto[2] OR 			
+            stDeviceOpe.xPull_Auto[3] OR 			
+            stDeviceOpe.xPull_Auto[4] OR 			
+            stDeviceOpe.xPull_Auto[5] OR 			
+            stDeviceOpe.xPumpCal_Auto OR 
+            stDeviceOpe.xPush_Auto[1] OR 
+            stDeviceOpe.xPush_Auto[2] OR 			
+            stDeviceOpe.xPush_Auto[3] OR 			
+            stDeviceOpe.xPush_Auto[4] OR 			
+            stDeviceOpe.xPush_Auto[5] OR 						
+            stDeviceOpe.xStop_Auto;]]></ST>
+    </Implementation>
+    <Method Name="AbortAction" Id="{ab1d1139-4288-4da0-a826-c6d4ef500bd3}">
+      <Declaration><![CDATA[METHOD PROTECTED AbortAction
+VAR_OUTPUT
+	xComplete: BOOL;
+	eERRORID: RudongPump_ERROR;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+* Cleaning
+* => abort all running operation
+* => if an NBS.RudongPump_ERROR codition is reached, set eERRORID to a Value rather then NBS.RudongPump_ERROR.No_ERROR 
+*)
+xComplete:=1;
+eERRORID:=RudongPump_ERROR.No_ERROR;]]></ST>
+      </Implementation>
+    </Method>
+    <Action Name="ACT_GetModbusAddress" Id="{b123d9a3-2ca4-4b68-92e4-44205e26f6e0}">
+      <Implementation>
+        <ST><![CDATA[//
+(*************************检测配置参数是否匹配成功*********************************)
+IF stRunPara.iPumpType=RudongPump_PumpType.DFPluse THEN//DF600Plus/KF300系列
+	stModbusAddress.iPumpType_Address:=1000;
+	stModbusAddress.iHosePipeType_Address:=1001;	
+	stModbusAddress.iFluVolumeSet_Address:=1002;
+	stModbusAddress.iRuntimeSet_Address:=1004;
+	stModbusAddress.iIntervalTime_Address:=1006;
+	stModbusAddress.iCycleNumber_Address:=1008;
+	stModbusAddress.iBackAngle_Address:=1009;
+	stModbusAddress.iMoveDirection_Address:=1010;
+	stModbusAddress.iStartStop_Address:=1011;
+	stModbusAddress.iFullSpeedStartStop_Address:=1012;
+	stModbusAddress.iModuleAddress_Address:=2000;
+	stModbusAddress.iModuleStartStop_Address:=2003;
+	stModbusAddress.iModuleRealFluVolumeSet_Address:=2004;
+	stModbusAddress.iRecoveryCalCoefficient_Address:=2007;	
+
+ELSIF stRunPara.iPumpType=RudongPump_PumpType.F OR 
+			stRunPara.iPumpType=RudongPump_PumpType.LabF1 OR
+			stRunPara.iPumpType=RudongPump_PumpType.LabF3 OR
+			stRunPara.iPumpType=RudongPump_PumpType.LabF4
+THEN
+	stModbusAddress.iPumpType_Address:=1000;
+	stModbusAddress.iHosePipeType_Address:=1001;	
+	stModbusAddress.iFluVolumeSet_Address:=1015;
+	stModbusAddress.iRuntimeSet_Address:=1018;
+	stModbusAddress.iIntervalTime_Address:=1021;
+	stModbusAddress.iCycleNumber_Address:=1023;
+	stModbusAddress.iBackAngle_Address:=1007;
+	stModbusAddress.iMoveDirection_Address:=1009;
+	stModbusAddress.iStartStop_Address:=1008;
+	stModbusAddress.iFullSpeedStartStop_Address:=1010;
+	stModbusAddress.iModuleAddress_Address:=0;//等于0表示不写入
+	stModbusAddress.iModuleStartStop_Address:=2003;
+	stModbusAddress.iModuleRealFluVolumeSet_Address:=2004;
+	stModbusAddress.iRecoveryCalCoefficient_Address:=2006;	
+
+ELSIF stRunPara.iPumpType=RudongPump_PumpType.V THEN
+	stModbusAddress.iPumpType_Address:=1000;
+	stModbusAddress.iHosePipeType_Address:=1001;	
+	stModbusAddress.iFluVolumeSet_Address:=1015;
+	stModbusAddress.iRuntimeSet_Address:=1018;
+	stModbusAddress.iIntervalTime_Address:=1021;
+	stModbusAddress.iCycleNumber_Address:=1023;
+	stModbusAddress.iBackAngle_Address:=1007;
+	stModbusAddress.iMoveDirection_Address:=1009;
+	stModbusAddress.iStartStop_Address:=1008;
+	stModbusAddress.iFullSpeedStartStop_Address:=1010;
+	stModbusAddress.iModuleAddress_Address:=0;//等于0表示不写入
+	stModbusAddress.iModuleStartStop_Address:=2003;
+	stModbusAddress.iModuleRealFluVolumeSet_Address:=2004;
+	stModbusAddress.iRecoveryCalCoefficient_Address:=2006;
+
+	
+	
+END_IF
+
+
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
+										
+										
+										
+										
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_PumpPar" Id="{1011df67-79e3-45a9-a8be-8b1bdd3c0ba5}">
+      <Implementation>
+        <ST><![CDATA[//
+(*************************检测配置参数是否匹配成功*********************************)
+IF stRunPara.iPumpType=RudongPump_PumpType.DFPluse THEN
+	//MiniPump泵头
+	IF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.MiniPump01 THEN
+		st_IOData.O_PumpType:=0;//泵头值为0
+			IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P13 THEN//13#软管
+				st_IOData.O_HosePipeType:=13;//软管类型值13
+				IF rFluVolumeSet*1000/135<0.1 THEN
+					iMinRunTime:=	0.1;
+				ELSE
+					iMinRunTime:=	(rFluVolumeSet*1000/135)*0.2+iMinRunTime;
+				END_IF
+				iMaxRunTime:=	rFluVolumeSet/0.45;//最大流量(0.45微升/秒,0.0024ml/min)	
+			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P14 THEN//14#软管
+				st_IOData.O_HosePipeType:=14;
+				IF rFluVolumeSet*1000/570<0.1 THEN
+					iMinRunTime:=	0.1;
+				ELSE
+					iMinRunTime:=	rFluVolumeSet*1000/135;
+				END_IF
+				iMaxRunTime:=	(rFluVolumeSet/1.9)*0.2+iMinRunTime;	
+			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P19 THEN//19#软管
+				st_IOData.O_HosePipeType:=19;
+				IF rFluVolumeSet*1000/1240<0.1 THEN
+					iMinRunTime:=	0.1;
+				ELSE
+					iMinRunTime:=	rFluVolumeSet*1000/1240;
+				END_IF
+				iMaxRunTime:=	(rFluVolumeSet*1000/4.13)*0.1+iMinRunTime;		
+			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P16 THEN//16#软管
+				st_IOData.O_HosePipeType:=16;
+				IF rFluVolumeSet*1000/1880<0.1 THEN
+					iMinRunTime:=	0.1;
+				ELSE
+					iMinRunTime:=	rFluVolumeSet*1000/1880;
+				END_IF
+				iMaxRunTime:=	(rFluVolumeSet*1000/6.28)*0.2+iMinRunTime;	
+			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P25 THEN//25#软管
+				st_IOData.O_HosePipeType:=25;
+				IF rFluVolumeSet*1000/3100<0.1 THEN
+					iMinRunTime:=	0.1;
+				ELSE
+					iMinRunTime:=	rFluVolumeSet*1000/3100;
+				END_IF
+				iMaxRunTime:=	(rFluVolumeSet*1000/10.33)*0.2+iMinRunTime;			
+		ELSE
+				eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;		
+		END_IF
+	//UD15
+	ELSIF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.UD15 THEN
+		st_IOData.O_PumpType:=1;//泵头值为0
+			IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P16 THEN//16#软管
+				st_IOData.O_HosePipeType:=16;
+				IF rFluVolumeSet*1000/4000<0.1 THEN
+					iMinRunTime:=	0.1;
+				ELSE
+					iMinRunTime:=	rFluVolumeSet*1000/4000;
+				END_IF
+				iMaxRunTime:=	(rFluVolumeSet*1000/13.33)*0.2+iMinRunTime;		
+			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P17 THEN//17#软管
+				st_IOData.O_HosePipeType:=17;
+				IF rFluVolumeSet*1000/15000<0.1 THEN
+					iMinRunTime:=	0.1;
+				ELSE
+					iMinRunTime:=	rFluVolumeSet*1000/15000;
+				END_IF
+				iMaxRunTime:=	(rFluVolumeSet*1000/50)*0.2+iMinRunTime;	
+			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P25 THEN//25#软管
+				st_IOData.O_HosePipeType:=25;
+				IF rFluVolumeSet*1000/8000<0.1 THEN
+					iMinRunTime:=	0.1;
+				ELSE
+					iMinRunTime:=	rFluVolumeSet*1000/8000;
+				END_IF
+				iMaxRunTime:=	(rFluVolumeSet*1000/26.66)*0.2+iMinRunTime;			
+		ELSE
+				eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;		
+		END_IF
+
+	END_IF
+ELSE
+		eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;
+END_IF
+
+
+(*
+//MiniPump01泵头
+IF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.MiniPump01 THEN
+		IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P13 THEN//13#软管
+			iMinRunTime:=	(rFluVolumeSet/8)*60;//最大流量(135微升/秒,8.28ml/min)
+			iMaxRunTime:=	(rFluVolumeSet/0.45)*60;//最大流量(0.45微升/秒,0.0024ml/min)	
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P14 THEN//14#软管
+			iMinRunTime:=	(rFluVolumeSet/33)*60;
+			iMaxRunTime:=	(rFluVolumeSet/1.9)*60;
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P19 THEN//19#软管
+			iMinRunTime:=	(rFluVolumeSet/77)*60;
+			iMaxRunTime:=	(rFluVolumeSet/4.13)*60;	
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P16 THEN//16#软管
+			iMinRunTime:=	(rFluVolumeSet/114)*60;
+			iMaxRunTime:=	(rFluVolumeSet/6.28)*60;	
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P25 THEN//25#软管
+			iMinRunTime:=	(rFluVolumeSet/190)*60;
+			iMaxRunTime:=	(rFluVolumeSet/10.33)*60;		
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P1_1 THEN//1x1#软管
+			iMinRunTime:=	(rFluVolumeSet/15)*60;
+			iMaxRunTime:=	(rFluVolumeSet/4.5)*60;	
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P2_1 THEN//2x1#软管
+			iMinRunTime:=	(rFluVolumeSet/54)*60;
+			iMaxRunTime:=	(rFluVolumeSet/4.5)*60;		
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P2_5_1 THEN//2.5x1#软管
+			iMinRunTime:=	(rFluVolumeSet/76)*60;
+			iMaxRunTime:=	(rFluVolumeSet/5)*60;		
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P3_1 THEN//3x1#软管
+			iMinRunTime:=	(rFluVolumeSet/108)*60;
+			iMaxRunTime:=	(rFluVolumeSet/5)*60;
+	ELSE
+			eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;		
+	END_IF		
+	
+//MiniPump02泵头
+ELSIF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.MiniPump02 THEN
+	IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P1_1 THEN//1x1#软管
+		iMinRunTime:=	(rFluVolumeSet/15.01)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.005)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P2_1 THEN//2x1#软管
+		iMinRunTime:=	(rFluVolumeSet/54.63)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.018)*60;		
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P2_5_1 THEN//2.5x1#软管
+		iMinRunTime:=	(rFluVolumeSet/76.84)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0256)*60;
+	ELSE
+			eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;						
+	END_IF	
+
+//HandyPump01泵头
+ELSIF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.HandyPump01 THEN
+	IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P13 THEN//13#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/10)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0033)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P14 THEN//14#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/56)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0187)*60;		
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P19 THEN//19#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/111)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0371)*60;
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P16 THEN//16#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/190)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0636)*60;		
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P25 THEN//25#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/365)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.1219)*60;
+	ELSE
+			eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;						
+	END_IF
+
+//HandyPump02泵头
+ELSIF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.HandyPump02 THEN
+	IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P13 THEN//13#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/10)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0033)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P14 THEN//14#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/56)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0187)*60;		
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P19 THEN//19#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/111)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0371)*60;
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P16 THEN//16#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/190)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0636)*60;	
+	ELSE
+			eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;							
+	END_IF
+
+//EasyPumpI_III泵头,单通道
+ELSIF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.EasyPumpI_III THEN
+	IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P13 THEN//13#软管
+		iMinRunTime:=	(rFluVolumeSet/32)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0053)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P14 THEN//14#软管
+		iMinRunTime:=	(rFluVolumeSet/162)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.027)*60;		
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P19 THEN//19#软管
+		iMinRunTime:=	(rFluVolumeSet/330)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.055)*60;
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P16 THEN//16#软管
+		iMinRunTime:=	(rFluVolumeSet/560)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.093)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P25 THEN//25#软管
+		iMinRunTime:=	(rFluVolumeSet/1180)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.197)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P17 THEN//17#软管
+		iMinRunTime:=	(rFluVolumeSet/2000)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.333)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P18 THEN//18#软管
+		iMinRunTime:=	(rFluVolumeSet/2580)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.430)*60;	
+	ELSE
+			eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;							
+	END_IF
+
+//EasyPumpII_IV泵头,单通道
+ELSIF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.EasyPumpII_IV THEN
+	IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P15 THEN//15#软管
+		iMinRunTime:=	(rFluVolumeSet/1080)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0180)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P24 THEN//24#软管
+		iMinRunTime:=	(rFluVolumeSet/1640)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.273)*60;		
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P35 THEN//35#软管
+		iMinRunTime:=	(rFluVolumeSet/2300)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.383)*60;
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P36 THEN//36#软管
+		iMinRunTime:=	(rFluVolumeSet/3100)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.517)*60;	
+	ELSE
+			eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;							
+	END_IF
+
+//EasyPumpV_VI泵头,双通道
+ELSIF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.EasyPumpV_VI THEN
+		IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P13 THEN//13#软管
+		iMinRunTime:=	(rFluVolumeSet/32)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0053)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P14 THEN//14#软管
+		iMinRunTime:=	(rFluVolumeSet/162)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0027)*60;		
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P19 THEN//19#软管
+		iMinRunTime:=	(rFluVolumeSet/330)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0055)*60;
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P16 THEN//16#软管
+		iMinRunTime:=	(rFluVolumeSet/560)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.093)*60;		
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P25 THEN//25#软管
+		iMinRunTime:=	(rFluVolumeSet/1180)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.197)*60;
+	ELSE
+			eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;							
+	END_IF
+	
+END_IF
+
+
+END_IF
+
+*)
+		
+
+
+//参数超出范围报错	
+IF rFluVolumeSet<>0 THEN
+	IF rRuntimeSet<iMinRunTime OR rRuntimeSet>iMaxRunTime OR  iMaxRunTime<iMinRunTime THEN
+		eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;
+	END_IF
+END_IF	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+
+										
+										
+										
+										
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACTMap" Id="{3fa511cc-4e67-410d-8cf2-41e4192878ce}">
+      <Implementation>
+        <ST><![CDATA[ACT_GetModbusAddress();
+_fResetCheck(CLK:=xResetRequest);
+xRdyCmd := eState = STATE.DORMANT AND eERRORID = RudongPump_ERROR.No_ERROR;//检测是否允许指令控制(初始状态，没有报警发生)
+xDone:=_xDone AND xExecute;
+xError:=eState=STATE.INERROR;//报错发生
+(**********************************检测是否有模式切换********************************)
+_rManual(CLK:=xAutoMode);
+_fManual(CLK:=xAutoMode);
+IF eState <> STATE.DORMANT//只有在运行的时候，才会检测是否有模式切换发生
+THEN
+	IF _rManual.Q OR _fManual.Q
+	THEN
+		_xModeChange := TRUE;//通知系统有模式切换发生
+	END_IF	
+END_IF
+IF eState = STATE.DORMANT//要是待机模式下，切换模式，是不会起作用的
+THEN
+	_xModeChange := FALSE;
+END_IF
+
+
+////
+//调用MODBUS TCP功能
+_fbModbusTCP.stSysPar.sRemoteHost:=stPara.strSlaveIP;//'192.168.1.20';
+_fbModbusTCP.stSysPar.nRemotePort:=stPara.nRemotePort;
+_fbModbusTCP.stSysPar.xSlaveAdr:=stPara.bySlaveID;
+_fbModbusTCP(
+	stParIn:= , 
+	stSysPar:= , 
+	xResetRequest:=xResetRequest , 
+	stOpera:= , 
+	xDone=> , 
+	xBusy=> , 
+	xError=> , 
+	eERRORID=> , 
+	eTCPErrorID=> , 	
+	sModbusError=> , 
+	xRdyCmd=> , 
+	sError=> , 
+	stParOut=> );]]></ST>
+      </Implementation>
+    </Action>
+    <Method Name="CmdCalParWrite" Id="{23239129-65cd-451e-9986-c57bc07c6cdb}">
+      <Declaration><![CDATA[METHOD PROTECTED CmdCalParWrite
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> RudongPump_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+
+	0://清空缓冲区
+		SysMemSet(ADR(_fbModbusTCP.stParIn.aSendBuffer),0,SIZEOF(_fbModbusTCP.stParIn.aSendBuffer));		
+		IF _fbModbusTCP.xRdyCmd THEN
+			_diCmdState:=_diCmdState+1;
+		ELSE
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF
+		
+	1://单元实际液量设定
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iModuleRealFluVolumeSet_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=2;	
+		_pDataControl:=ADR(iModuleRealVolume);	
+ 		_fbModbusTCP.stParIn.aSendBuffer[1]:=	_pDataControl[3];
+ 		_fbModbusTCP.stParIn.aSendBuffer[2]:=	_pDataControl[2];		
+ 		_fbModbusTCP.stParIn.aSendBuffer[3]:=	_pDataControl[1];		
+ 		_fbModbusTCP.stParIn.aSendBuffer[4]:=	_pDataControl[0];		
+		_fbModbusTCP.stOpera.xSetMultiHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF
+		
+	2://
+		xComplete := TRUE; 
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdCalReset" Id="{cb421e69-d8fc-4f41-bbf3-b5339ab1a863}">
+      <Declaration><![CDATA[METHOD PROTECTED CmdCalReset
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> RudongPump_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+		
+	0://清空缓冲区
+		SysMemSet(ADR(_fbModbusTCP.stParIn.aSendBuffer),0,SIZEOF(_fbModbusTCP.stParIn.aSendBuffer));		
+		IF _fbModbusTCP.xRdyCmd THEN
+			_diCmdState:=_diCmdState+1;
+		ELSE
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF
+		
+	1://发送灌装系数复位指令
+ 		_fbModbusTCP.stParIn.aSendBuffer[1]:=16#00;
+ 		_fbModbusTCP.stParIn.aSendBuffer[2]:=16#01;		
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iRecoveryCalCoefficient_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;		 	
+		_fbModbusTCP.stOpera.xSetSingalHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF
+
+	2://
+		xComplete := TRUE; 
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdPumpCal" Id="{b9f332da-5e35-43fe-ba36-8cea81df0c2b}">
+      <Declaration><![CDATA[METHOD PROTECTED CmdPumpCal
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> RudongPump_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+	0://清空缓冲区
+		SysMemSet(ADR(_fbModbusTCP.stParIn.aSendBuffer),0,SIZEOF(_fbModbusTCP.stParIn.aSendBuffer));		
+		IF _fbModbusTCP.xRdyCmd THEN
+			_diCmdState:=_diCmdState+1;
+		ELSE
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF
+	
+	 1://发送灌装液量,1002,REAL
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iFluVolumeSet_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=2;	
+		_pDataControl:=ADR(rFluVolumeSet);	
+ 		_fbModbusTCP.stParIn.aSendBuffer[1]:=	_pDataControl[3];
+ 		_fbModbusTCP.stParIn.aSendBuffer[2]:=	_pDataControl[2];		
+ 		_fbModbusTCP.stParIn.aSendBuffer[3]:=	_pDataControl[1];		
+ 		_fbModbusTCP.stParIn.aSendBuffer[4]:=	_pDataControl[0];		
+		_fbModbusTCP.stOpera.xSetMultiHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF		
+	
+	 2://发送灌装时间,1004,REAL
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iRuntimeSet_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=2;
+		rRuntimeSet			:=stRunPara.rCalTime;
+		_pDataControl:=ADR(rRuntimeSet);	
+ 		_fbModbusTCP.stParIn.aSendBuffer[1]:=	_pDataControl[3];
+ 		_fbModbusTCP.stParIn.aSendBuffer[2]:=	_pDataControl[2];		
+ 		_fbModbusTCP.stParIn.aSendBuffer[3]:=	_pDataControl[1];		
+ 		_fbModbusTCP.stParIn.aSendBuffer[4]:=	_pDataControl[0];		
+		_fbModbusTCP.stOpera.xSetMultiHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF
+
+	 3://发送灌装方向,1010,UINT
+		IF eCmd = RudongPump_CMD.Cmd_Push OR eCmd = RudongPump_CMD.Cmd_CalPump
+		THEN
+			_fbModbusTCP.stParIn.aSendBuffer[1]:=16#00;
+			_fbModbusTCP.stParIn.aSendBuffer[2]:=16#01;		
+		END_IF
+		IF eCmd = RudongPump_CMD.Cmd_Pull 
+		THEN
+			_fbModbusTCP.stParIn.aSendBuffer[1]:=16#00;
+			_fbModbusTCP.stParIn.aSendBuffer[2]:=16#00;			
+		END_IF		
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iMoveDirection_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;			 	
+		_fbModbusTCP.stOpera.xSetSingalHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF		
+
+	4://发送重复次数,1008,UINT
+		_pDataControl:=ADR(iCycleNumber);	
+ 		_fbModbusTCP.stParIn.aSendBuffer[1]:=_pDataControl[1];
+ 		_fbModbusTCP.stParIn.aSendBuffer[2]:=_pDataControl[0];		
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iCycleNumber_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;		 	
+		_fbModbusTCP.stOpera.xSetSingalHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF	
+		
+	5://单元地址设定,2000,UINT
+		_pDataControl:=ADR(iModuleAdress);	
+ 		_fbModbusTCP.stParIn.aSendBuffer[1]:=_pDataControl[1];
+ 		_fbModbusTCP.stParIn.aSendBuffer[2]:=_pDataControl[0];		
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iModuleAddress_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;		
+		IF  _fbModbusTCP.stParIn.iHoldingRegisterAddress<>0 THEN	
+			_fbModbusTCP.stOpera.xSetSingalHoldingRegister:=TRUE;
+			IF _fbModbusTCP.xDone THEN
+				_fbModbusTCP.xExecute:=FALSE;
+				_diCmdState:=_diCmdState+1;
+			END_IF
+			IF _fbModbusTCP.xError THEN
+				eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+				_diCmdState:=999;
+			END_IF
+		ELSE
+			_diCmdState:=_diCmdState+1;//地址为0 则跳过设置
+		END_IF
+		
+	6://灌装启动,2003,UINT	
+ 		_fbModbusTCP.stParIn.aSendBuffer[1]:=16#00;
+ 		_fbModbusTCP.stParIn.aSendBuffer[2]:=16#01;		
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iModuleStartStop_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;		 	
+		_fbModbusTCP.stOpera.xSetSingalHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF
+
+	7://查询蠕动泵运行状态,2003,UINT
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iModuleStartStop_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;		 	
+		_fbModbusTCP.stOpera.xReadHoldingRegisters:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF			
+		
+	8://判断运行状态,并延时
+		IF _fbModbusTCP.stParOut.aRcvBuffer[1]=0 AND _fbModbusTCP.stParOut.aRcvBuffer[2]=0 THEN
+			xComplete:=TRUE;
+		ELSE
+			xRunning:=TRUE;
+			_tonDelay(IN:=TRUE,PT:=T#0.5S);
+			IF _tonDelay.Q THEN
+				_tonDelay(IN:=FALSE);
+				_diCmdState:=7;
+			END_IF
+		END_IF
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CmdRunAction" Id="{9f02a8e8-125f-491b-9e28-236bf7b4cc2d}">
+      <Declaration><![CDATA[METHOD PROTECTED CmdRunAction
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> RudongPump_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF	
+	0://清空缓冲区
+		SysMemSet(ADR(_fbModbusTCP.stParIn.aSendBuffer),0,SIZEOF(_fbModbusTCP.stParIn.aSendBuffer));		
+		IF _fbModbusTCP.xRdyCmd THEN
+			IF xNeedConfigurePara THEN
+				_diCmdState:=_diCmdState+1;
+			ELSE
+				_diCmdState:=6;//如果不需要配置则直接启动
+			END_IF			
+		ELSE
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF
+
+	 1://发送虚假灌装时间,1004,REAL
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iRuntimeSet_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=2;
+		_pDataControl:=ADR(iMaxRunTime);	
+ 		_fbModbusTCP.stParIn.aSendBuffer[1]:=	_pDataControl[3];
+ 		_fbModbusTCP.stParIn.aSendBuffer[2]:=	_pDataControl[2];		
+ 		_fbModbusTCP.stParIn.aSendBuffer[3]:=	_pDataControl[1];		
+ 		_fbModbusTCP.stParIn.aSendBuffer[4]:=	_pDataControl[0];		
+		_fbModbusTCP.stOpera.xSetMultiHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF		
+		
+	 2://发送灌装液量,1002,REAL
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iFluVolumeSet_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=2;	
+		_pDataControl:=ADR(rFluVolumeSet);	
+ 		_fbModbusTCP.stParIn.aSendBuffer[1]:=	_pDataControl[3];
+ 		_fbModbusTCP.stParIn.aSendBuffer[2]:=	_pDataControl[2];		
+ 		_fbModbusTCP.stParIn.aSendBuffer[3]:=	_pDataControl[1];		
+ 		_fbModbusTCP.stParIn.aSendBuffer[4]:=	_pDataControl[0];		
+		_fbModbusTCP.stOpera.xSetMultiHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF			
+
+	 3://发送实际灌装时间,1004,REAL
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iRuntimeSet_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=2;
+		_pDataControl:=ADR(rRuntimeSet);	
+ 		_fbModbusTCP.stParIn.aSendBuffer[1]:=	_pDataControl[3];
+ 		_fbModbusTCP.stParIn.aSendBuffer[2]:=	_pDataControl[2];		
+ 		_fbModbusTCP.stParIn.aSendBuffer[3]:=	_pDataControl[1];		
+ 		_fbModbusTCP.stParIn.aSendBuffer[4]:=	_pDataControl[0];		
+		_fbModbusTCP.stOpera.xSetMultiHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF
+		
+	 4://发送灌装方向,1010,UINT
+		IF eCmd = RudongPump_CMD.Cmd_Push
+		THEN
+			_fbModbusTCP.stParIn.aSendBuffer[1]:=16#00;
+			_fbModbusTCP.stParIn.aSendBuffer[2]:=16#01;		
+		END_IF
+		IF eCmd = RudongPump_CMD.Cmd_Pull 
+		THEN
+			_fbModbusTCP.stParIn.aSendBuffer[1]:=16#00;
+			_fbModbusTCP.stParIn.aSendBuffer[2]:=16#00;			
+		END_IF		
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iMoveDirection_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;			 	
+		_fbModbusTCP.stOpera.xSetSingalHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF		
+
+	5://发送重复次数,1008,UINT
+		_pDataControl:=ADR(iCycleNumber);	
+ 		_fbModbusTCP.stParIn.aSendBuffer[1]:=_pDataControl[1];
+ 		_fbModbusTCP.stParIn.aSendBuffer[2]:=_pDataControl[0];		
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iCycleNumber_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;		 	
+		_fbModbusTCP.stOpera.xSetSingalHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF
+
+	6://发送启动,1011,UINT
+		_fbModbusTCP.stParIn.aSendBuffer[1]:=16#00;
+		_fbModbusTCP.stParIn.aSendBuffer[2]:=16#01;	
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iStartStop_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;		 	
+		_fbModbusTCP.stOpera.xSetSingalHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF
+	7://查询蠕动泵运行状态,1011,UINT
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iStartStop_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;		 	
+		_fbModbusTCP.stOpera.xReadHoldingRegisters:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF			
+		
+	8://判断运行状态,并延时
+		IF _fbModbusTCP.stParOut.aRcvBuffer[1]=0 AND _fbModbusTCP.stParOut.aRcvBuffer[2]=0 THEN
+			xComplete:=TRUE;
+		ELSE
+			xRunning:=TRUE;
+			_tonDelay(IN:=TRUE,PT:=T#1S);
+			IF _tonDelay.Q THEN
+				_tonDelay(IN:=FALSE);
+				_diCmdState:=7;
+			END_IF
+		END_IF
+	
+	
+		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="CyclicAction" Id="{0698956a-1847-4e95-8425-b3fb78b5a203}">
+      <Declaration><![CDATA[METHOD PROTECTED CyclicAction
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xAbort=0 THEN
+    IF xFirstInvocation THEN
+    (*
+    * Staring
+    * for then first (!) invocaion,
+    * sample then input variables
+    *)			
+    _diCmdState:= 0;
+		_iNGCount := 0;
+		_iActRunNumber := 0;
+		xFirstInvocation:=0;			
+    END_IF    
+    REPEAT 				
+		  (**************************检查是否有硬件报错(检测总线是否报错)**********************************) 
+			IF _xConnectError
+			THEN
+				eERRORID := RudongPump_ERROR.FLT_CONNECT;//子站通讯报警
+			END_IF
+		
+	
+			//检测停止指令是否发生
+			_rStopCmdTrig(CLK:= NOT xEStop OR (stDeviceOpe.xStop_Hmi AND NOT xAutoMode AND NOT xDeviceRunning) OR (stDeviceOpe.xStop_Auto AND (xAutoMode OR xDeviceRunning))
+													OR (stDeviceOpe.xFullSpeedStop_Hmi AND NOT xAutoMode AND NOT xDeviceRunning) OR (stDeviceOpe.xFullSpeedStop_Auto AND (xAutoMode OR xDeviceRunning)));		
+		  IF _rStopCmdTrig.Q//检测到停止指令
+			THEN
+				_diCmdState := 0;
+				eCmd := RudongPump_CMD.Cmd_Stop;
+				_tonCmdTimeout(in:=FALSE);
+				_tonDelay(IN:= FALSE);
+				_tonTimeout(in:=FALSE);
+			END_IF
+			
+			ACT_PumpPar();//检查参数	
+			
+			
+			CASE eCmd OF//判断指令类型
+				RudongPump_CMD.Cmd_Pull,RudongPump_CMD.Cmd_Push://执行夹爪指令(夹紧和松开指令)
+					CmdRunAction(xComplete=> xComplete);	
+							
+				RudongPump_CMD.Cmd_Stop,RudongPump_CMD.Cmd_FullSpeedStop://执行过程中等待停止指令(分为运行停止和全速停止)
+					mCmdStopAction(xComplete=> xComplete);
+					
+				RudongPump_CMD.Cmd_Configure://(用于配置参数)
+					mCmdConfigureAction(xComplete=> xComplete);
+					
+				RudongPump_CMD.Cmd_FullSpeedPush,RudongPump_CMD.Cmd_FullSpeedPull://全速启动控制（用于清洗和充满试管）
+					mCmdFullSpeedStartAction(xComplete=> xComplete);
+					
+				RudongPump_CMD.Cmd_CalPump:
+					CmdPumpCal(xComplete=> xComplete);
+
+				RudongPump_CMD.Cmd_CalReset:
+					CmdCalReset(xComplete=> xComplete);		
+
+				RudongPump_CMD.Cmd_CalParWrite:
+					CmdCalParWrite(xComplete=> xComplete);		
+				ELSE
+					;	
+				END_CASE		   
+      UNTIL (TRUE)
+	END_REPEAT
+END_IF
+
+IF xAbort OR xComplete OR eERRORID<>RudongPump_ERROR.No_ERROR THEN    
+    (*
+    * Cleaning
+    * => free as much allocated resources as possible
+    *)    
+    tOperationTimer(IN:=0);
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleAbortedState" Id="{a6b6f28f-3c5c-420c-8def-4ef189ba27fc}">
+      <Declaration><![CDATA[METHOD PRIVATE FINAL HandleAbortedState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xAborted AND xResetRequest THEN
+    eState:=STATE.RESETING;
+    xAgain:=1;
+ELSE
+    xBusy:=0;
+    xAborted:=1;
+    //xResetRequest:=(xExecute=0);
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleAbortingState" Id="{9f8091ec-651d-4c0c-b73a-7200988dd698}">
+      <Declaration><![CDATA[METHOD PRIVATE FINAL HandleAbortingState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[AbortAction(xComplete=> xComplete, eERRORID=> eERRORID);
+
+IF eERRORID<>RudongPump_ERROR.No_ERROR THEN
+    eState:=STATE.INERROR;
+    xAgain:=1;
+ELSIF xComplete THEN
+    eState:=STATE.ABORTED;
+    xAgain:=1;
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleDoneState" Id="{e7348624-e5c1-4862-b74e-bdfed4900b07}">
+      <Declaration><![CDATA[METHOD PRIVATE FINAL HandleDoneState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[//在运行过程中要是切换模式，再运行完成之后，检测到模式的切换，就需要回到初始位置，进行下一次执行准备
+IF _xDone AND ((xExecute=0) OR ( _xModeChange AND NOT _xAutoOpe)  OR ( NOT xAutoMode AND NOT xDeviceRunning AND ( NOT _xAutoOpe OR _xHMIOpe))) THEN
+	eState:=STATE.RESETING;
+	xAgain:=1;
+ELSE
+	xBusy:=0;
+	_xDone:=1;
+	xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleDormantState" Id="{e5fbce3d-0b6f-4433-bea3-d046c86ac137}">
+      <Declaration><![CDATA[METHOD PRIVATE FINAL HandleDormantState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xExecute THEN
+    xBusy:=1;
+    eState:=STATE.EXECUTING;
+    xAgain:=1;
+END_IF
+//下面两个报警一旦报警就需要发生
+IF _xConnectError 
+THEN//出现这个进行报警
+	eERRORID := RudongPump_ERROR.FLT_CONNECT;//子站通讯报警
+END_IF
+
+IF _fResetCheck.Q//清空报警
+THEN
+	eERRORID := RudongPump_ERROR.No_ERROR;
+END_IF
+IF  xAutoMode OR xDeviceRunning THEN
+	xAutomodeFlag:=TRUE;
+ELSE
+	xAutomodeFlag:=FALSE;
+END_IF
+
+
+IF eErrorID = RudongPump_ERROR.NO_ERROR 
+THEN
+	IF   xRunILC   THEN
+		FOR k:=1 TO 5 BY 1 DO
+			//PULL
+			_rOperaTrig[k](CLK:=xRunILC AND (stDeviceOpe.xPull_Hmi[k] AND NOT xAutomodeFlag) OR (stDeviceOpe.xPull_Auto[k] AND xAutomodeFlag));
+			IF _rOperaTrig[k].Q //
+			THEN
+				rFluVolumeSet	:=stRunPara.rPullFluVolume[k];
+				rRuntimeSet		:=stRunPara.rPullRuntime[k];
+				iCycleNumber	:=stRunPara.iPullCycleNumber[k];
+				eCmd 			:= RudongPump_CMD.Cmd_Pull;
+				xExecute		:= TRUE;
+			END_IF		
+			//PUSH
+			_rOperaTrig[k+5](CLK:=xRunILC AND (stDeviceOpe.xPush_Hmi[k] AND NOT xAutomodeFlag) OR (stDeviceOpe.xPush_Auto[k] AND xAutomodeFlag));
+			IF _rOperaTrig[k+5].Q 
+			THEN
+				rFluVolumeSet	:=stRunPara.rPushFluVolume[k];  
+				rRuntimeSet		:=stRunPara.rPushRuntime[k];    
+				iCycleNumber	:=stRunPara.iPushCycleNumber[k];
+				eCmd 			:= RudongPump_CMD.Cmd_Push;
+				xExecute 		:= TRUE;
+			END_IF				
+		END_FOR
+		//STOP
+		 IF(stDeviceOpe.xStop_Hmi AND  NOT xAutomodeFlag) OR NOT xEStop OR stDeviceOpe.xStop_Auto    THEN
+				eCmd := RudongPump_CMD.Cmd_Stop;
+				xExecute := TRUE;
+		 END_IF
+		//FullSpeedPull
+		IF (stDeviceOpe.xFullSpeedPull_Hmi AND  NOT xAutomodeFlag) OR (stDeviceOpe.xFullSpeedPull_Auto AND  xAutomodeFlag) THEN
+			eCmd := RudongPump_CMD.Cmd_FullSpeedPull;
+			xExecute := TRUE;
+		END_IF
+		//FullSpeedPush
+		IF (stDeviceOpe.xFullSpeedPush_Hmi AND NOT xAutomodeFlag ) OR (stDeviceOpe.xFullSpeedPush_Auto AND xAutomodeFlag) THEN	
+			eCmd := RudongPump_CMD.Cmd_FullSpeedPush;
+			xExecute := TRUE;
+		END_IF
+		//FullSpeedStop
+		 IF (stDeviceOpe.xFullSpeedStop_Hmi AND NOT xAutomodeFlag) OR (stDeviceOpe.xFullSpeedStop_Auto AND xAutomodeFlag) THEN	
+			eCmd := RudongPump_CMD.Cmd_FullSpeedStop;
+			xExecute := TRUE;
+		END_IF
+		//Configure
+		IF (stDeviceOpe.xConfigure_Hmi AND NOT xAutomodeFlag) OR (stDeviceOpe.xConfigure_Auto AND xAutomodeFlag) THEN	
+			eCmd := RudongPump_CMD.Cmd_Configure;
+			xExecute := TRUE;
+		END_IF
+		
+	END_IF		
+		//校准
+		IF stDeviceOpe.xPumpCal_Hmi OR stDeviceOpe.xPumpCal_Auto THEN
+			rFluVolumeSet		:=stRunPara.rCalFluVolume;
+			rRuntimeSet			:=stRunPara.rCalTime;
+			iCycleNumber		:=stRunPara.rCalNum;	
+			iModuleAdress		:=stRunPara.iModuleAdress;
+			iModuleSpeed		:=stRunPara.rModuleSpeed;		
+			eCmd 				:= RudongPump_CMD.Cmd_CalPump;
+			xExecute 			:= TRUE;		
+		END_IF
+		
+		//复位校准系数为初始值
+		IF stDeviceOpe.xResetCalcoeffCal_Hmi THEN	
+			eCmd 				:= RudongPump_CMD.Cmd_CalReset;
+			xExecute 			:= TRUE;		
+		END_IF
+	
+		//校准参数写入
+		IF stDeviceOpe.xCalParWrite_Hmi OR stDeviceOpe.xCalParWrite_Auto THEN	
+			eCmd 								:= RudongPump_CMD.Cmd_CalParWrite;
+			iModuleRealVolume		:=stRunPara.rModuleRealFluVolume;					
+			xExecute 						:= TRUE;		
+		END_IF	
+			
+END_IF	
+	
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleErrorState" Id="{f26f128f-5c60-43d3-ae89-6c8cfbeb956c}">
+      <Declaration><![CDATA[METHOD PRIVATE FINAL  HandleErrorState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xRudongPump_ERROR AND  (xResetRequest OR NOT xExecute) THEN
+    eState:=STATE.RESETING;
+    xAgain:=1;
+ELSE
+    xBusy:=0;
+    xRudongPump_ERROR:=1;    
+    xAgain:=0;(* !!! *)
+END_IF]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleExecutingState" Id="{831a6878-3e46-4ce0-9810-bf89b51dd11f}">
+      <Declaration><![CDATA[METHOD PRIVATE FINAL HandleExecutingState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+	xComplete: BOOL;
+END_VAR]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[IF xAbort=0 THEN   
+    CyclicAction(xComplete=> xComplete);
+END_IF
+
+IF eERRORID<>RudongPump_ERROR.No_ERROR THEN
+    eState:=STATE.INERROR;
+    xAgain:=1;
+ELSIF xAbort THEN
+    eState:=STATE.ABORTING;
+    xAgain:=1;
+ELSIF xComplete THEN
+    eState:=STATE.DONE;
+    xAgain:=1;
+END_IF ]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="HandleResettingState" Id="{166dd958-01ee-4416-80c1-f3fb404257f3}">
+      <Declaration><![CDATA[METHOD PRIVATE FINAL HandleResettingState
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+	xAgain: BOOL;
+END_VAR
+VAR
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[ResetAction(xComplete=> xComplete);
+
+IF xComplete THEN
+	xExecute:=0;//清除输入指令 
+    xBusy:=0;
+    _xDone:=0;
+    xRudongPump_ERROR:=0;
+    xAborted:=0;
+    eERRORID:=RudongPump_ERROR.No_ERROR;
+    eState:=STATE.DORMANT;
+    xFirstInvocation:=1;
+    xAgain:=0;(* !!! *)
+END_IF
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="mCmdConfigureAction" Id="{b520ca86-e4a9-4ab4-86b6-8d6bbcc818d0}">
+      <Declaration><![CDATA[METHOD PROTECTED mCmdConfigureAction
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> RudongPump_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF
+
+	0://清空缓冲区
+		SysMemSet(ADR(_fbModbusTCP.stParIn.aSendBuffer),0,SIZEOF(_fbModbusTCP.stParIn.aSendBuffer));		
+		IF _fbModbusTCP.xRdyCmd THEN
+			_diCmdState:=_diCmdState+1;
+		ELSE
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF
+		
+	 1://发送泵头编号,1000,UINT
+		_pDataControl:=ADR(st_IOData.O_PumpType);	
+ 		_fbModbusTCP.stParIn.aSendBuffer[1]:=_pDataControl[1];
+ 		_fbModbusTCP.stParIn.aSendBuffer[2]:=_pDataControl[0];		
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iPumpType_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;		 	
+		_fbModbusTCP.stOpera.xSetSingalHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF
+
+	 2://发送软管编号,1001,UINT
+		_pDataControl:=ADR(st_IOData.O_HosePipeType);	
+ 		_fbModbusTCP.stParIn.aSendBuffer[1]:=_pDataControl[1];
+ 		_fbModbusTCP.stParIn.aSendBuffer[2]:=_pDataControl[0];		
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iHosePipeType_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;		 	
+		_fbModbusTCP.stOpera.xSetSingalHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF
+
+	3://
+		xComplete:=TRUE;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	ELSE
+		;
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="mCmdFullSpeedStartAction" Id="{0778b9a8-388d-4faa-ac5c-85f903d23599}">
+      <Declaration><![CDATA[METHOD PROTECTED mCmdFullSpeedStartAction
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> RudongPump_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF
+	0://清空缓冲区
+		SysMemSet(ADR(_fbModbusTCP.stParIn.aSendBuffer),0,SIZEOF(_fbModbusTCP.stParIn.aSendBuffer));		
+		IF _fbModbusTCP.xRdyCmd THEN
+			_diCmdState:=_diCmdState+1;
+		ELSE
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF
+
+	 1://发送灌装方向,1010,UINT
+		IF eCmd = RudongPump_CMD.Cmd_FullSpeedPush
+		THEN
+			_fbModbusTCP.stParIn.aSendBuffer[1]:=16#00;
+			_fbModbusTCP.stParIn.aSendBuffer[2]:=16#01;		
+		END_IF
+		IF eCmd = RudongPump_CMD.Cmd_FullSpeedPull 
+		THEN
+			_fbModbusTCP.stParIn.aSendBuffer[1]:=16#00;
+			_fbModbusTCP.stParIn.aSendBuffer[2]:=16#00;			
+		END_IF		
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iMoveDirection_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;			 	
+		_fbModbusTCP.stOpera.xSetSingalHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF	
+		
+	2://发送启动,1012,UINT
+		_fbModbusTCP.stParIn.aSendBuffer[1]:=16#00;
+		_fbModbusTCP.stParIn.aSendBuffer[2]:=16#01;	
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iFullSpeedStartStop_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;		 	
+		_fbModbusTCP.stOpera.xSetSingalHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF
+		
+	3://查询蠕动泵运行状态,1012,UINT
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iStartStop_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;		 	
+		_fbModbusTCP.stOpera.xReadHoldingRegisters:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF			
+		
+	4://判断运行状态,并延时
+		IF _fbModbusTCP.stParOut.aRcvBuffer[1]<>0 OR _fbModbusTCP.stParOut.aRcvBuffer[2]<>0 THEN
+			xRunning:=TRUE;
+			xComplete:=TRUE;
+		ELSE
+			_tonDelay(IN:=TRUE,PT:=T#0.5S);
+			IF _tonDelay.Q THEN
+				_tonDelay(IN:=FALSE);
+				_diCmdState:=2;
+			END_IF
+		END_IF		
+		
+		
+	ELSE
+		;
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="mCmdStopAction" Id="{9107f7fa-ac07-4e38-bc87-7d4640e74f6b}">
+      <Declaration><![CDATA[METHOD PROTECTED mCmdStopAction
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[// return the real actual fault number
+IF eERRORID <> RudongPump_ERROR.No_ERROR
+THEN
+  RETURN;  
+END_IF
+
+CASE _diCmdState OF
+	0://清空缓冲区
+		_tonDelay(IN:=_fbModbusTCP.xRdyCmd,PT:=T#100MS);
+		SysMemSet(ADR(_fbModbusTCP.stParIn.aSendBuffer),0,SIZEOF(_fbModbusTCP.stParIn.aSendBuffer));		
+		IF _fbModbusTCP.xRdyCmd AND _tonDelay.Q THEN
+			_diCmdState:=_diCmdState+1;
+		ELSE
+			_fbModbusTCP.xExecute:=FALSE;
+		END_IF
+
+	1://发送启动停止,1012,UINT
+		_fbModbusTCP.stParIn.aSendBuffer[1]:=16#00;
+		_fbModbusTCP.stParIn.aSendBuffer[2]:=16#00;	
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iFullSpeedStartStop_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;		 	
+		_fbModbusTCP.stOpera.xSetSingalHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF		
+ 		
+	2://发送启动停止,1011,UINT
+		_fbModbusTCP.stParIn.aSendBuffer[1]:=16#00;
+		_fbModbusTCP.stParIn.aSendBuffer[2]:=16#00;	
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iStartStop_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;		 	
+		_fbModbusTCP.stOpera.xSetSingalHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF	
+ 		
+	3://发送启动停止,2003,UINT
+		_fbModbusTCP.stParIn.aSendBuffer[1]:=16#00;
+		_fbModbusTCP.stParIn.aSendBuffer[2]:=16#00;	
+		_fbModbusTCP.stParIn.iHoldingRegisterAddress:=stModbusAddress.iModuleStartStop_Address;
+		_fbModbusTCP.stParIn.iHoldingRegisterNum:=1;		 	
+		_fbModbusTCP.stOpera.xSetSingalHoldingRegister:=TRUE;
+		IF _fbModbusTCP.xDone THEN
+			_fbModbusTCP.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+		END_IF
+		IF _fbModbusTCP.xError THEN
+			eERRORID:=RudongPump_ERROR.FLT_Mobdus;
+			_diCmdState:=999;
+		END_IF	
+
+	4://完成	
+		xComplete:=TRUE;
+		
+	ELSE
+		;
+END_CASE]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="ResetAction" Id="{e70c5bee-d879-4f50-bfd0-ee02a1a13e78}">
+      <Declaration><![CDATA[METHOD PROTECTED ResetAction
+VAR_OUTPUT
+	xComplete: BOOL;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[(*
+* Cleaning
+* => free all allocated resources
+* => reinitialize instance variables
+*)
+tOperationTimer(IN:=0);
+tInvocationTimer(IN:=0);
+xRunning:=FALSE;
+// init command state
+//xExecute:=FALSE;
+_diCmdState := 0;
+_tonCmdTimeout(in:=FALSE);
+_tonDelay(IN:= FALSE);
+_tonTimeout(in:=FALSE);
+_xModeChange := FALSE;
+_rStopCmdTrig(CLK:=FALSE);
+_iNGCount := 0;
+_fbModbusTCP.xExecute:=FALSE;
+FOR k:=1 TO 15 BY 1 DO
+	_rOperaTrig[k](CLK:=FALSE);
+END_FOR	
+	
+stDeviceOpe.xConfigure_Auto:= stDeviceOpe.xConfigure_Hmi:= FALSE;
+stDeviceOpe.xStop_Auto:= stDeviceOpe.xStop_Hmi:= FALSE;
+stDeviceOpe.xFullSpeedPull_Auto:= stDeviceOpe.xFullSpeedPull_Hmi:= FALSE;
+stDeviceOpe.xFullSpeedPush_Auto:= stDeviceOpe.xFullSpeedPush_Hmi:= FALSE;
+stDeviceOpe.xFullSpeedStop_Auto:= stDeviceOpe.xFullSpeedStop_Hmi:= FALSE;
+FOR k:=1 TO 5 DO
+	stDeviceOpe.xPull_Auto[k]:= stDeviceOpe.xPull_Hmi[k] := FALSE;
+	stDeviceOpe.xPush_Auto[k]:= stDeviceOpe.xPush_Hmi[k] := FALSE;
+END_FOR
+
+stDeviceOpe.xPumpCal_Auto:=stDeviceOpe.xPumpCal_Hmi:=FALSE;
+stDeviceOpe.xCalParWrite_Auto:=stDeviceOpe.xCalParWrite_Hmi:=FALSE;
+stDeviceOpe.xResetCalcoeffCal_Hmi:=FALSE;
+xResetRequest:=FALSE;
+//复位完成
+xComplete:=1;	
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_RuDongPump_ModbusTCP">
+      <LineId Id="3" Count="113" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.AbortAction">
+      <LineId Id="3" Count="5" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.ACT_GetModbusAddress">
+      <LineId Id="2" Count="76" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.ACT_PumpPar">
+      <LineId Id="2" Count="275" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.ACTMap">
+      <LineId Id="2" Count="38" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.CmdCalParWrite">
+      <LineId Id="3" Count="39" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.CmdCalReset">
+      <LineId Id="3" Count="36" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.CmdPumpCal">
+      <LineId Id="3" Count="153" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.CmdRunAction">
+      <LineId Id="3" Count="126" />
+      <LineId Id="131" Count="28" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.CyclicAction">
+      <LineId Id="3" Count="68" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.HandleAbortedState">
+      <LineId Id="3" Count="7" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.HandleAbortingState">
+      <LineId Id="3" Count="9" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.HandleDoneState">
+      <LineId Id="3" Count="7" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.HandleDormantState">
+      <LineId Id="3" Count="99" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.HandleErrorState">
+      <LineId Id="3" Count="6" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.HandleExecutingState">
+      <LineId Id="3" Count="12" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.HandleResettingState">
+      <LineId Id="3" Count="12" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.mCmdConfigureAction">
+      <LineId Id="3" Count="68" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.mCmdFullSpeedStartAction">
+      <LineId Id="3" Count="81" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.mCmdStopAction">
+      <LineId Id="3" Count="7" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="11" Count="4" />
+      <LineId Id="17" Count="51" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_RuDongPump_ModbusTCP.ResetAction">
+      <LineId Id="3" Count="38" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

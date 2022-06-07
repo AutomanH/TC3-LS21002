@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ModbusParIn" Id="{9e24b850-e2e6-429c-a2d5-c3094d9a63c4}">
+    <Declaration><![CDATA[TYPE ModbusParIn :
+STRUCT
+	///数据输入	
+	aSendBuffer: ARRAY[1..255] OF BYTE;
+	///保持寄存器起始地址
+	iHoldingRegisterAddress: WORD := 16#0;
+	///保持寄存器数量	,1-125
+	iHoldingRegisterNum: WORD := 16#1;
+	///线圈起始地址
+	iCoilStartAddress: WORD := 16#0;
+	///线圈数量	,1-2000
+	iCoilNum: WORD := 16#1;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

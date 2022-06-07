@@ -1,0 +1,38 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="RuDongPump_ModbusAddress" Id="{7b97a740-3ceb-4b64-bfd7-737ddce1c0ea}">
+    <Declaration><![CDATA[TYPE RuDongPump_ModbusAddress :
+STRUCT
+	///泵头型号设定地址
+	iPumpType_Address: WORD;
+	///软管型号设定地址
+	iHosePipeType_Address: WORD;
+	///罐装量设定地址
+	iFluVolumeSet_Address: WORD;
+	///罐装时间设定地址	
+	iRuntimeSet_Address: WORD;
+	///罐装间隔时间设定地址	
+	iIntervalTime_Address: WORD;
+	///罐装次数设定地址		
+	iCycleNumber_Address: WORD;
+	///回吸角度设定地址		
+	iBackAngle_Address: WORD;
+	///运行方向设定地址		
+	iMoveDirection_Address: WORD;
+	///启停控制设定地址		
+	iStartStop_Address: WORD;
+	///全速启停控制设定地址		
+	iFullSpeedStartStop_Address: WORD;
+	///灌装单元地址设定地址	
+	iModuleAddress_Address: WORD;
+	///灌装单元启停控制设定地址		
+	iModuleStartStop_Address: WORD;
+	///实际罐装量设定地址		
+	iModuleRealFluVolumeSet_Address: WORD;
+	///恢复校准系数设定地址		
+	iRecoveryCalCoefficient_Address: WORD;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

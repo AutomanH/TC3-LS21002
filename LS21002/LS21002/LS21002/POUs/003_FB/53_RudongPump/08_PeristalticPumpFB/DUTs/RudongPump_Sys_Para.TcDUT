@@ -7,7 +7,7 @@ TYPE RudongPump_Sys_Para :
 STRUCT
 	bySlaveID 		    : BYTE;//旋转从站号(modbus RTU)
 	strSlaveIP        : STRING(15) := '127.0.0.0';//modbus子站IP地址
-  iSlavePort	      : UINT:=1031;
+  	iSlavePort	      : UINT:=1031;
 	xPumpRunSignal    : BOOL;//泵运行信号：true（泵处于运行状态）；false(泵处于停止状态)
 	iType             : INT :=2;//1:modbus RTU;2:modbus TCP(默认)
 	pRunSignal		    : POINTER TO INT;//

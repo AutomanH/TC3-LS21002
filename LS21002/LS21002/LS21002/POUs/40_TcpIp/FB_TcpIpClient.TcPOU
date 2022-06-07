@@ -399,162 +399,44 @@ xComplete:=1;
       </Implementation>
     </Method>
     <LineIds Name="FB_TcpIpClient">
-      <LineId Id="33" Count="0" />
-      <LineId Id="270" Count="0" />
-      <LineId Id="272" Count="0" />
-      <LineId Id="218" Count="0" />
-      <LineId Id="220" Count="0" />
-      <LineId Id="223" Count="0" />
-      <LineId Id="34" Count="8" />
-      <LineId Id="105" Count="2" />
-      <LineId Id="44" Count="1" />
-      <LineId Id="119" Count="0" />
-      <LineId Id="47" Count="1" />
-      <LineId Id="9" Count="0" />
+      <LineId Id="3" Count="22" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_TcpIpClient.AbortAction">
-      <LineId Id="10" Count="2" />
-      <LineId Id="20" Count="0" />
-      <LineId Id="5" Count="0" />
-      <LineId Id="13" Count="0" />
-      <LineId Id="19" Count="0" />
+      <LineId Id="3" Count="5" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_TcpIpClient.CyclicAction">
-      <LineId Id="45" Count="4" />
-      <LineId Id="52" Count="0" />
-      <LineId Id="220" Count="1" />
-      <LineId Id="277" Count="0" />
-      <LineId Id="177" Count="0" />
-      <LineId Id="61" Count="0" />
-      <LineId Id="210" Count="0" />
-      <LineId Id="231" Count="0" />
-      <LineId Id="230" Count="0" />
-      <LineId Id="225" Count="0" />
-      <LineId Id="229" Count="0" />
-      <LineId Id="292" Count="1" />
-      <LineId Id="295" Count="0" />
-      <LineId Id="297" Count="0" />
-      <LineId Id="299" Count="0" />
-      <LineId Id="298" Count="0" />
-      <LineId Id="294" Count="0" />
-      <LineId Id="236" Count="5" />
-      <LineId Id="235" Count="0" />
-      <LineId Id="243" Count="0" />
-      <LineId Id="303" Count="0" />
-      <LineId Id="244" Count="2" />
-      <LineId Id="248" Count="0" />
-      <LineId Id="296" Count="0" />
-      <LineId Id="369" Count="1" />
-      <LineId Id="373" Count="0" />
-      <LineId Id="372" Count="0" />
-      <LineId Id="371" Count="0" />
-      <LineId Id="343" Count="1" />
-      <LineId Id="250" Count="0" />
-      <LineId Id="242" Count="0" />
-      <LineId Id="254" Count="3" />
-      <LineId Id="259" Count="1" />
-      <LineId Id="300" Count="0" />
-      <LineId Id="261" Count="4" />
-      <LineId Id="267" Count="0" />
-      <LineId Id="270" Count="0" />
-      <LineId Id="291" Count="0" />
-      <LineId Id="306" Count="0" />
-      <LineId Id="309" Count="2" />
-      <LineId Id="313" Count="2" />
-      <LineId Id="308" Count="0" />
-      <LineId Id="284" Count="0" />
-      <LineId Id="272" Count="1" />
-      <LineId Id="279" Count="0" />
-      <LineId Id="274" Count="0" />
-      <LineId Id="276" Count="0" />
-      <LineId Id="316" Count="0" />
-      <LineId Id="318" Count="2" />
-      <LineId Id="322" Count="0" />
-      <LineId Id="324" Count="1" />
-      <LineId Id="323" Count="0" />
-      <LineId Id="348" Count="0" />
-      <LineId Id="345" Count="0" />
-      <LineId Id="326" Count="0" />
-      <LineId Id="330" Count="0" />
-      <LineId Id="332" Count="1" />
-      <LineId Id="331" Count="0" />
-      <LineId Id="328" Count="0" />
-      <LineId Id="383" Count="0" />
-      <LineId Id="329" Count="0" />
-      <LineId Id="327" Count="0" />
-      <LineId Id="347" Count="0" />
-      <LineId Id="281" Count="1" />
-      <LineId Id="280" Count="0" />
-      <LineId Id="82" Count="0" />
-      <LineId Id="74" Count="0" />
-      <LineId Id="83" Count="0" />
-      <LineId Id="285" Count="5" />
-      <LineId Id="85" Count="0" />
+      <LineId Id="3" Count="106" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_TcpIpClient.HandleAbortingState">
-      <LineId Id="15" Count="0" />
-      <LineId Id="25" Count="0" />
-      <LineId Id="24" Count="0" />
-      <LineId Id="26" Count="0" />
-      <LineId Id="30" Count="0" />
-      <LineId Id="28" Count="1" />
-      <LineId Id="31" Count="0" />
-      <LineId Id="27" Count="0" />
-      <LineId Id="32" Count="0" />
+      <LineId Id="3" Count="8" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_TcpIpClient.HandleDoneState">
-      <LineId Id="5" Count="0" />
-      <LineId Id="10" Count="0" />
-      <LineId Id="12" Count="5" />
-      <LineId Id="11" Count="0" />
+      <LineId Id="3" Count="7" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_TcpIpClient.HandleDormantState">
-      <LineId Id="5" Count="0" />
-      <LineId Id="9" Count="0" />
-      <LineId Id="12" Count="1" />
-      <LineId Id="10" Count="0" />
+      <LineId Id="3" Count="3" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_TcpIpClient.HandleErrorState">
-      <LineId Id="10" Count="0" />
-      <LineId Id="19" Count="0" />
-      <LineId Id="21" Count="0" />
-      <LineId Id="30" Count="0" />
-      <LineId Id="22" Count="0" />
-      <LineId Id="12" Count="3" />
-      <LineId Id="17" Count="0" />
-      <LineId Id="5" Count="0" />
+      <LineId Id="3" Count="9" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_TcpIpClient.HandleExecutingState">
-      <LineId Id="29" Count="0" />
-      <LineId Id="33" Count="0" />
-      <LineId Id="31" Count="0" />
-      <LineId Id="41" Count="0" />
-      <LineId Id="16" Count="0" />
-      <LineId Id="20" Count="1" />
-      <LineId Id="42" Count="5" />
-      <LineId Id="19" Count="0" />
+      <LineId Id="3" Count="12" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_TcpIpClient.HandleResettingState">
-      <LineId Id="5" Count="0" />
-      <LineId Id="13" Count="0" />
-      <LineId Id="12" Count="0" />
-      <LineId Id="25" Count="0" />
-      <LineId Id="14" Count="0" />
-      <LineId Id="16" Count="1" />
-      <LineId Id="24" Count="0" />
-      <LineId Id="18" Count="3" />
-      <LineId Id="15" Count="0" />
+      <LineId Id="3" Count="11" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_TcpIpClient.ResetAction">
-      <LineId Id="10" Count="2" />
-      <LineId Id="15" Count="0" />
-      <LineId Id="18" Count="1" />
-      <LineId Id="59" Count="0" />
-      <LineId Id="51" Count="0" />
-      <LineId Id="50" Count="0" />
-      <LineId Id="46" Count="0" />
-      <LineId Id="44" Count="1" />
-      <LineId Id="13" Count="0" />
+      <LineId Id="3" Count="11" />
+      <LineId Id="2" Count="0" />
     </LineIds>
   </POU>
 </TcPlcObject>

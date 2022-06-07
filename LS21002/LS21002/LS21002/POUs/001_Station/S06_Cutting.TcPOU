@@ -165,7 +165,9 @@ CASE station.iStepAuto OF
 			END_IF
 		END_IF
 	20:////Restore_after_Estop_Process1 上载数据流程
-			IF tsModuleProcess[1].xProcessNotStarted AND NOT  tsModuleProcess[1].xProcessStarted THEN
+			IF  station.xSingleRunning OR  fbMachine[1].xTryRun THEN
+					station.iStepAuto :=40; 
+			ELSIF tsModuleProcess[1].xProcessNotStarted AND NOT  tsModuleProcess[1].xProcessStarted THEN
 					station.iStepAuto :=21; (*process not started*)
 			ELSIF  tsModuleProcess[1].xProcessStarted AND NOT  tsModuleProcess[1].xProcessCompleted THEN
 				 station.iStepAuto := 21;(*process started*)
@@ -228,7 +230,9 @@ CASE station.iStepAuto OF
 				station.iStepAuto :=90;	
 		END_IF
 	90:////Restore_after_Estop_Process2 切膜流程
-			IF tsModuleProcess[2].xProcessNotStarted AND NOT  tsModuleProcess[2].xProcessStarted THEN
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=100; 
+			ELSIF tsModuleProcess[2].xProcessNotStarted AND NOT  tsModuleProcess[2].xProcessStarted THEN
 					station.iStepAuto :=110; (*process not started*)
 			ELSIF  tsModuleProcess[2].xProcessStarted AND NOT  tsModuleProcess[2].xProcessCompleted THEN
 				 station.iStepAuto := 110;(*process started*)
@@ -252,7 +256,6 @@ CASE station.iStepAuto OF
 	120:
 			tsModuleProcess[2].xProcessCompleted:=TRUE;
 			station.iStepAuto :=125;	
-			
 	125:	
 		IF  arProcessDataStation[1].xMaterialOnOff  THEN
 			arProcessDataStation[1].stProduct.xCutting_NOK:=FALSE;
@@ -293,7 +296,9 @@ CASE station.iStepAuto OF
 			END_IF 	
 	////产品流程结束	
 	200:////Restore_after_Estop_Process3 数据传输流程
-			IF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
+			IF  station.xRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=999;
+			ELSIF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
 					station.iStepAuto :=210; (*process not started*)
 			ELSIF  tsModuleProcess[3].xProcessStarted AND NOT  tsModuleProcess[3].xProcessCompleted THEN
 				 station.iStepAuto := 220;(*process started*)
@@ -625,7 +630,9 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="1972" Count="0" />
       <LineId Id="2016" Count="1" />
       <LineId Id="1977" Count="0" />
-      <LineId Id="1983" Count="16" />
+      <LineId Id="1983" Count="3" />
+      <LineId Id="2183" Count="1" />
+      <LineId Id="1987" Count="12" />
       <LineId Id="2001" Count="2" />
       <LineId Id="2019" Count="7" />
       <LineId Id="1932" Count="0" />
@@ -653,7 +660,9 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="1652" Count="0" />
       <LineId Id="1789" Count="2" />
       <LineId Id="1653" Count="0" />
-      <LineId Id="2032" Count="10" />
+      <LineId Id="2032" Count="0" />
+      <LineId Id="2188" Count="1" />
+      <LineId Id="2033" Count="9" />
       <LineId Id="2027" Count="0" />
       <LineId Id="2043" Count="0" />
       <LineId Id="2045" Count="1" />
@@ -665,7 +674,7 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="1796" Count="0" />
       <LineId Id="2048" Count="0" />
       <LineId Id="2050" Count="1" />
-      <LineId Id="2084" Count="1" />
+      <LineId Id="2085" Count="0" />
       <LineId Id="2100" Count="0" />
       <LineId Id="2103" Count="1" />
       <LineId Id="2102" Count="0" />
@@ -692,7 +701,9 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="1816" Count="2" />
       <LineId Id="1815" Count="0" />
       <LineId Id="1665" Count="0" />
-      <LineId Id="2118" Count="16" />
+      <LineId Id="2118" Count="0" />
+      <LineId Id="2185" Count="1" />
+      <LineId Id="2119" Count="15" />
       <LineId Id="2145" Count="0" />
       <LineId Id="2175" Count="0" />
       <LineId Id="2147" Count="0" />

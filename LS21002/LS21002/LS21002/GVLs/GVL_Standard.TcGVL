@@ -20,7 +20,8 @@
 	fbERG_20_Modbus				:ARRAY[1..gc_uiHITBOT_Number] OF FB_ERG_20_Modbus;
 	fbGetTime					:FB_GetTime;
 	fbEthercatTerminalState		:FB_EthercatTerminalState;
-	
+	fbCamera					:ARRAY[1..gc_uiCameraNum] OF FB_Camera;
+	fbRudongPumpModbusTcp		:ARRAY[1..gc_uiRudongPump] OF FB_RuDongPump_ModbusTCP;
 	
     xNot_power					: ARRAY[1..gc_uiAxisNum] OF BOOL;//设原点时断使能
 	cnSlaveAddr	        : ARRAY[1..gc_uiAxisNum] OF UINT;//伺服的从站地址
@@ -39,7 +40,7 @@
 	
 	xMainLineRunTestHMI:BOOL;//环形线运行测试按钮
 	
-	axBypassSignal	:ARRAY[1..50] OF BOOL ;
+	axBypassSignal	:ARRAY[1..50] OF BOOL ;//[1]-上料工位相机屏蔽  //[2]-注液屏蔽  [3]-相机液位检测屏蔽  [4]-热封铝膜屏蔽
 	//
 	stPara: INT;
 	aReleaseControl: INT;
@@ -55,9 +56,14 @@ VAR_GLOBAL
 	//程序编号调用
 	asModuleSeqData	    	:ARRAY[1..gc_uiStationNum] OF tsPartSequence;(*module sequence *)
 	stZ_ERG_20_IOData      :ARRAY[1..gc_uiHITBOT_Number] OF ST_ERG_20_IOData;
-	stCameraHmi		    	:DUT_CameraSend;
-	stCamearHmiTrigger		:ARRAY[1..18] OF BOOL;
-	
+	//相机检测工位检测结果
+	arCameraResultHmi:ARRAY[1..5,1..4,1..12] OF INT;
+	//相机结果中转
+	arCameraResult:ARRAY[1..gc_uiCameraNum] OF INT;
+	//各工位手动NG触摸屏按钮
+	arManualNOKHmiButton:ARRAY[1..gc_uiStationNum] OF  BOOL;
+	//临时使用 待删除
+	xAutoModeTest: BOOL;
 END_VAR
 
 VAR_GLOBAL PERSISTENT

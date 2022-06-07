@@ -1,0 +1,181 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_Camera" Id="{d6929595-da25-4baa-b108-0d912ac90d24}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Camera
+VAR_INPUT
+	xlInit	:BOOL;(*初始化*)
+	xlTrigger:BOOL;(*相机触发*)
+	xlTriggerHmi:BOOL;(*触摸屏相机触发*)
+	xlLight  :BOOL;(*是否存在光源*)
+	xlReady	 :BOOL;(*相机准备就绪信号*)
+	xlAutoMode:BOOL;(*自动模式*)
+	xlManualMode:BOOL;(*手动模式*)
+	tlDelay: TIME;  (*打开光源与拍照间隔的时间*)
+END_VAR
+VAR_OUTPUT
+	xQStart	:BOOL;			//开始拍照
+	xQLight: BOOL := FALSE;//打开光源
+	xQCompleted:BOOL;		//拍照完成
+	xQAlarm	: BOOL := FALSE;// 报警输出
+	xQBusy	 	:BOOL;
+	xQHmiAlarm	:STRING;//报警输出
+END_VAR
+VAR_IN_OUT
+	ilCompleted :INT;(*拍照完成*)
+END_VAR
+VAR
+	bStep:BYTE;
+	{attribute 'hide'}
+	tonDelay: TON;//计时器
+	{attribute 'hide'}
+	tonAlarmTime :Ton;//报警计时器
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ACT_Init();
+ACT_Trigger();
+ACT_Alarm();]]></ST>
+    </Implementation>
+    <Action Name="ACT_Alarm" Id="{42165045-1927-44c9-8eee-258a82b0f70d}">
+      <Implementation>
+        <ST><![CDATA[IF NOT xlReady THEN
+	xQHmiAlarm:='Camera not Ready signal';
+ELSIF xQAlarm THEN
+	xQHmiAlarm:='Camera complete time out';
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Init" Id="{4b8c9287-3be3-4a47-a770-80413c4d9c30}">
+      <Implementation>
+        <ST><![CDATA[IF  xlInit THEN
+	xlTrigger:=FALSE;	
+	xlTriggerHmi:=FALSE;
+	xlLight :=FALSE;
+	ilCompleted:=0;
+	xQStart:=FALSE;
+	xQLight:=FALSE;
+	xQCompleted:=FALSE;
+	xQAlarm	  :=FALSE;
+	xQBusy    :=FALSE;
+	xlInit	  :=FALSE;
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Trigger" Id="{9183c163-8be5-4fbe-86c9-2c27dadf0cba}">
+      <Implementation>
+        <ST><![CDATA[CASE bStep OF
+	0://等待触发
+		tonDelay(IN:=FALSE);
+		tonAlarmTime(IN:=FALSE);
+		
+		IF  ((xlAutomode AND xlTrigger) OR
+			(xlManualmode AND xlTriggerHmi)) AND xlReady THEN
+			xQCompleted:=FALSE;
+			xQBusy:=TRUE;
+			bStep:=bStep +1;
+			(*xlTrigger:=FALSE;*)
+			xlTriggerHmi:=FALSE;
+		END_IF
+	
+	1://打开光源信号
+		IF xlLight THEN
+			xQLight:=TRUE;
+		END_IF
+		bStep:=bStep+1;		
+	2://开始拍照
+		tonDelay(IN:=,PT:=tlDelay,	Q=>,ET=>);
+		IF  tonDelay.Q  THEN
+			xQStart:=TRUE;
+			tonDelay(IN:=FALSE);
+			bStep:=bStep+1;		
+		END_IF
+	 3://拍照结束
+	 		IF  ilCompleted = 1 THEN 
+				xQStart:=FALSE;
+				xQLight:=FALSE;
+				bStep:=bStep+1;	
+				xQCompleted:=TRUE;	
+			ELSE
+				tonAlarmTime(IN:=TRUE,PT:=T#3S,	Q=>,ET=>);
+				IF    tonAlarmTime.Q THEN
+					xQAlarm:=TRUE;
+					tonAlarmTime(IN:=FALSE);
+					bStep:=0;	
+				END_IF
+			END_IF
+	4://关闭光源
+			xQCompleted:=TRUE;
+			xQLight:=FALSE;
+			bStep:=bStep+1;	
+	5://流程结束
+			xQBusy:=FALSE;
+			bStep:=0;	
+END_CASE]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="FB_Camera">
+      <LineId Id="73" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="81" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Camera.ACT_Alarm">
+      <LineId Id="1" Count="0" />
+      <LineId Id="4" Count="1" />
+      <LineId Id="8" Count="0" />
+      <LineId Id="3" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Camera.ACT_Init">
+      <LineId Id="3" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="35" Count="0" />
+      <LineId Id="27" Count="1" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="4" Count="0" />
+      <LineId Id="25" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Camera.ACT_Trigger">
+      <LineId Id="6" Count="0" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="71" Count="0" />
+      <LineId Id="110" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="92" Count="0" />
+      <LineId Id="111" Count="0" />
+      <LineId Id="90" Count="0" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="101" Count="0" />
+      <LineId Id="100" Count="0" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="96" Count="0" />
+      <LineId Id="23" Count="1" />
+      <LineId Id="27" Count="2" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="36" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="49" Count="1" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="51" Count="1" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="58" Count="0" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="69" Count="1" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="78" Count="1" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="53" Count="0" />
+      <LineId Id="104" Count="0" />
+      <LineId Id="109" Count="0" />
+      <LineId Id="107" Count="1" />
+      <LineId Id="97" Count="2" />
+      <LineId Id="14" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

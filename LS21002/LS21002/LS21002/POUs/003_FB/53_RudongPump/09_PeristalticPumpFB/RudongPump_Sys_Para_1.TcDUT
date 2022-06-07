@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="RudongPump_Sys_Para_1" Id="{862413c4-5957-49a0-876f-6d8172a9bee5}">
+    <Declaration><![CDATA[{attribute 'qualified_only' := ''}
+{attribute 'strict' := ''}
+TYPE RudongPump_Sys_Para_1 :
+STRUCT
+	///从站号(modbus)
+	bySlaveID: BYTE;
+	///modbus子站IP地址	
+	strSlaveIP: STRING(15) := '127.0.0.0';
+	nRemotePort: INT;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

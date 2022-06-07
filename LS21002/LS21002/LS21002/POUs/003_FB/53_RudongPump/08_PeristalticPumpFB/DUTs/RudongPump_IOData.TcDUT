@@ -20,6 +20,7 @@ STRUCT
 	O_ModuleRealVolume		: REAL;//实际灌装量	(0.1-9999.99ml)	
 	O_ModuleMicroReg		: INT;//灌装量微调1,+;0-
 	O_ResetCalcoeff			: INT;//恢复校准系数	
+	O_BackAngle					:INT;//回吸角度设置
 	I_RunSignal				:INT;//1,运行，0，停止
 	I_CalSignal				:INT;//1，校准中，0，停止
 END_STRUCT

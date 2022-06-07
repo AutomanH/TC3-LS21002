@@ -1,0 +1,101 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="ModbusTCP_ErrorQuery" Id="{e903718d-2f5e-4a52-bc59-05491f401876}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION ModbusTCP_ErrorQuery : STRING
+VAR_INPUT
+	///错误编号
+	ModbusTCP_ErrorNum: BYTE;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[CASE ModbusTCP_ErrorNum OF
+	16#00://	
+(*
+无错误
+*)
+		ModbusTCP_ErrorQuery:='Modbus_No_Error';
+		
+(*
+非法功能，
+对于服务器（或从站）来说，询问中接收到的功能码是不可允许的操作，
+可能是因为功能码仅适用于新设备而被选单元中不可实现同时，
+还指出服务器（或从站）在错误状态中处理这种请求，
+例如：它是未配置的，且要求返回寄存器值 。
+*)				
+	16#01://
+		ModbusTCP_ErrorQuery:='Modbus_IllegalFunction_Error';
+		
+(*
+非法数据地址
+对于服务器（或从站）来说，询问中接收的数据地址是不可允许的地址，
+特别是参考号和传输长度的组合是无效的。对于带有100个寄存器的控制器来说，
+偏移量96和长度4的请求会成功，而偏移量96和长度5的请求将产生异常码02。
+*)		
+	16#02://
+		ModbusTCP_ErrorQuery:='Modbus_IllegalDataAddress_Error';
+		
+(*
+非法数据值
+对于服务器（或从站）来说，询问中包括的值是不可允许的值。该值指示了组合请求剩余结构中的故障。
+例如：隐含长度是不正确的。modbus协议不知道任何特殊寄存器的任何特殊值的重要意义，
+寄存器中被提交存储的数据项有一个应用程序期望之外的值。
+*)					
+	16#03://
+		ModbusTCP_ErrorQuery:='Modbus_IllegalDataValue_Error';
+		
+(*
+从站设备故障
+当服务器（或从站）正在设法执行请求的操作时，产生不可重新获得的差错。
+*)		
+	16#04://
+		ModbusTCP_ErrorQuery:='Modbus_SlaveBrakeDown_Error';
+		
+(*
+确认与编程命令一起使用，服务器（或从站）已经接受请求，
+并且正在处理这个请求，但是需要长持续时间进行这些操作，
+返回这个响应防止在客户机（或主站）中发生超时错误，
+客户机（或主机）可以继续发送轮询程序完成报文来确认是否完成处理。
+*)				
+	16#05://
+		ModbusTCP_ErrorQuery:='Modbus_SlaveProcessing_Alarm';//指令正在处理	
+
+(*
+从属设备忙与编程命令一起使用，服务器（或从站）正在处理长持续时间的程序命令，
+当服务器（或从站）空闲时，客户机（或主站）应该稍后重新传输报文。
+*)		
+	16#06://
+		ModbusTCP_ErrorQuery:='Modbus_SlaveBusy_Error';	
+
+(*
+存储奇偶性差错与功能码20和21以及参考类型6一起使用，
+指示扩展文件区不能通过一致性校验。服务器（或从站）设备读取记录文件，
+但在存储器中发现一个奇偶校验错误。客户机（或主机）可重新发送请求，但可以在服务器（或从站）设备上要求服务。
+*)		
+	16#08://
+		ModbusTCP_ErrorQuery:='Modbus_Parity_Error';	//校验错误，MODBUSTCP无此错误	
+		
+(*
+不可用网关路径与网关一起使用，
+指示网关不能为处理请求分配输入端口值输出端口的内部通信路径，
+通常意味着网关是错误配置的或过载的。
+*)		
+	16#0A://
+		ModbusTCP_ErrorQuery:='Modbus_GateWay_Error';	
+		
+(*
+网关目标设备响应失败与网关一起使用，
+指示没有从目标设备中获得响应，通常意味着设备未在网络中。
+*)		
+	16#0B://
+		ModbusTCP_ErrorQuery:='Modbus_SlaveNon-existent';			
+		
+	ELSE
+		ModbusTCP_ErrorQuery:='Modbus_SlaveNon-existent';
+END_CASE]]></ST>
+    </Implementation>
+    <LineIds Name="ModbusTCP_ErrorQuery">
+      <LineId Id="3" Count="82" />
+      <LineId Id="2" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

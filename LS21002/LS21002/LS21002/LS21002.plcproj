@@ -20,6 +20,9 @@
     <Compile Include="DUTs\Camera\DUT_CameraSend.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DUTs\Camera\ST_CameraPara.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\DUT_NCIO.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -232,6 +235,9 @@
     <Compile Include="POUs\003_FB\03_TURINRobotFB\FB_TURINContorl.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\003_FB\054_Camera\FB_Camera.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\003_FB\05_StationFB\E_State.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -391,6 +397,9 @@
     <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\DUTs\STATE_1.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\DUTs\ST_ModbusAddress.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\FB_RuDongPump_modbus_DF600Plus.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -437,6 +446,63 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\梅特勒托利多秤\FB_MT_MKC.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\09_PeristalticPumpFB\FB_RuDongPump_ModbusTCP.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\09_PeristalticPumpFB\RudongPump_CMD_1.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\09_PeristalticPumpFB\RudongPump_ERROR_1.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\09_PeristalticPumpFB\RudongPump_IOData_1.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\09_PeristalticPumpFB\RuDongPump_ModbusAddress.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\09_PeristalticPumpFB\RudongPump_Ope_1.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\09_PeristalticPumpFB\RudongPump_PumpHeadType_1.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\09_PeristalticPumpFB\RudongPump_PumpType_1.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\09_PeristalticPumpFB\RudongPump_RunData_1.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\09_PeristalticPumpFB\RudongPump_SoftPipeType_1.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\09_PeristalticPumpFB\RudongPump_Sys_Para_1.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\41 Modbus指令\DataExchange\ModbusTCP_ErrorQuery.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\41 Modbus指令\FB_ModbusTCP.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\41 Modbus指令\ModbusParIn.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\41 Modbus指令\ModbusParOut.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\41 Modbus指令\Modbus_Cmd.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\41 Modbus指令\Modbus_ErrorCode.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\41 Modbus指令\Modbus_Operation.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\53_RudongPump\41 Modbus指令\Modbus_SysPar.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\003_FB\Z_ERG_20 FB\DUTs\ERG_20_CMD.TcDUT">
@@ -488,6 +554,9 @@
     <Compile Include="POUs\MAIN.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\RecipeManager.TcRMO">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="DUTs" />
@@ -526,6 +595,10 @@
     <Folder Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\校准程序" />
     <Folder Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\梅特勒托利多秤" />
     <Folder Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\梅特勒托利多秤\DUTs" />
+    <Folder Include="POUs\003_FB\054_Camera" />
+    <Folder Include="POUs\003_FB\53_RudongPump\09_PeristalticPumpFB" />
+    <Folder Include="POUs\003_FB\53_RudongPump\41 Modbus指令" />
+    <Folder Include="POUs\003_FB\53_RudongPump\41 Modbus指令\DataExchange" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB\DUTs" />
     <Folder Include="POUs\004_FC\001_Parallel" />
@@ -593,6 +666,86 @@
     <None Include="LS21002.tmc">
       <SubType>Content</SubType>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <SubObject Include="FB_ClientDataExcha.AbortAction" />
+    <SubObject Include="FB_ClientDataExcha.CyclicAction" />
+    <SubObject Include="FB_ClientDataExcha.HandleAbortingState" />
+    <SubObject Include="FB_ClientDataExcha.HandleDoneState" />
+    <SubObject Include="FB_ClientDataExcha.HandleDormantState" />
+    <SubObject Include="FB_ClientDataExcha.HandleErrorState" />
+    <SubObject Include="FB_ClientDataExcha.HandleExecutingState" />
+    <SubObject Include="FB_ClientDataExcha.HandleResettingState" />
+    <SubObject Include="FB_ClientDataExcha.ResetAction" />
+    <SubObject Include="FB_ModbusTCP.AbortAction" />
+    <SubObject Include="FB_ModbusTCP.Cmd_ReadCoil" />
+    <SubObject Include="FB_ModbusTCP.Cmd_ReadHoldingRegister" />
+    <SubObject Include="FB_ModbusTCP.Cmd_ReadInputCoil" />
+    <SubObject Include="FB_ModbusTCP.Cmd_ReadInputRegister" />
+    <SubObject Include="FB_ModbusTCP.Cmd_WriteMultiCoil" />
+    <SubObject Include="FB_ModbusTCP.Cmd_WriteMultiHoldingRegister" />
+    <SubObject Include="FB_ModbusTCP.Cmd_WriteSingleCoil" />
+    <SubObject Include="FB_ModbusTCP.Cmd_WriteSingleHoldingRegister" />
+    <SubObject Include="FB_ModbusTCP.CyclicAction" />
+    <SubObject Include="FB_ModbusTCP.HandleAbortedState" />
+    <SubObject Include="FB_ModbusTCP.HandleAbortingState" />
+    <SubObject Include="FB_ModbusTCP.HandleDoneState" />
+    <SubObject Include="FB_ModbusTCP.HandleDormantState" />
+    <SubObject Include="FB_ModbusTCP.HandleErrorState" />
+    <SubObject Include="FB_ModbusTCP.HandleExecutingState" />
+    <SubObject Include="FB_ModbusTCP.HandleResettingState" />
+    <SubObject Include="FB_ModbusTCP.ResetAction" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.AbortAction" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.ACTMap" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.ACT_GetModbusAddress" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.ACT_PumpPar" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.CmdCalParWrite" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.CmdCalReset" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.CmdPumpCal" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.CmdRunAction" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.CyclicAction" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.HandleAbortedState" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.HandleAbortingState" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.HandleDoneState" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.HandleDormantState" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.HandleErrorState" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.HandleExecutingState" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.HandleResettingState" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.mCmdConfigureAction" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.mCmdFullSpeedStartAction" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.mCmdStopAction" />
+    <SubObject Include="FB_RuDongPump_ModbusTCP.ResetAction" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.AbortAction" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.ACTMap" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.ACT_GetModbusAdr" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.ACT_PumpPar" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.CmdCalParWrite" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.CmdCalReset" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.CmdPumpCal" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.CmdRunAction" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.ConnectAction" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.CyclicAction" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.HandleAbortedState" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.HandleAbortingState" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.HandleDoneState" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.HandleDormantState" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.HandleErrorState" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.HandleExecutingState" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.HandleResettingState" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.JudgePar" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.mCmdConfigureAction" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.mCmdFullSpeedStartAction" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.mCmdStopAction" />
+    <SubObject Include="FB_RuDongPump_modbus_DF600Plus.ResetAction" />
+    <SubObject Include="FB_TcpIpClient.AbortAction" />
+    <SubObject Include="FB_TcpIpClient.CyclicAction" />
+    <SubObject Include="FB_TcpIpClient.HandleAbortingState" />
+    <SubObject Include="FB_TcpIpClient.HandleDoneState" />
+    <SubObject Include="FB_TcpIpClient.HandleDormantState" />
+    <SubObject Include="FB_TcpIpClient.HandleErrorState" />
+    <SubObject Include="FB_TcpIpClient.HandleExecutingState" />
+    <SubObject Include="FB_TcpIpClient.HandleResettingState" />
+    <SubObject Include="FB_TcpIpClient.ResetAction" />
   </ItemGroup>
   <ProjectExtensions>
     <PlcProjectOptions>

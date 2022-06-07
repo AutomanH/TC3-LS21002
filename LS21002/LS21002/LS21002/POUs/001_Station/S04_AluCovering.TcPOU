@@ -131,9 +131,10 @@ CASE station.iStepAuto OF
 			fbThermostat_2.xStart :=TRUE;
 			arTonDelay[02](IN:= FALSE);
 			station.iStepAuto:=20;	
-			
 	20:////Restore_after_Estop_Process1 上载数据流程
-			IF tsModuleProcess[1].xProcessNotStarted AND NOT  tsModuleProcess[1].xProcessStarted THEN
+			IF  station.xSingleRunning OR  fbMachine[1].xTryRun THEN
+					station.iStepAuto:=50;
+			ELSIF tsModuleProcess[1].xProcessNotStarted AND NOT  tsModuleProcess[1].xProcessStarted THEN
 					station.iStepAuto :=21; (*process not started*)
 			ELSIF  tsModuleProcess[1].xProcessStarted AND NOT  tsModuleProcess[1].xProcessCompleted THEN
 				 station.iStepAuto := 21;(*process started*)
@@ -146,7 +147,6 @@ CASE station.iStepAuto OF
 			END_IF	
 	21://
 				tsModuleProcess[1].xProcessNotStarted:=TRUE;
-				
 				station.iStepAuto:= 30;
 				
 	30://数据load 
@@ -157,20 +157,24 @@ CASE station.iStepAuto OF
 		tsModuleProcess[1].xQDataCompleted:=TRUE;
 		station.iStepAuto:= 40;
 	40: //判断产品状态
-			IF fbMachine[1].xTryRun OR station.xSingleRunning THEN
-				station.iStepAuto:= 50; 
+			IF  arProcessDataStation[1].xMaterialOnOff   AND
+				 arProcessDataStation[2].xMaterialOnOff  THEN
+				station.iStepAuto:= 41;
 			ELSE
-				IF  arProcessDataStation[1].xMaterialOnOff   AND
-					 arProcessDataStation[2].xMaterialOnOff  THEN
-					station.iStepAuto:= 50;
-				ELSE
-					station.iStepAuto:= 999;
-				END_IF
+				station.iStepAuto:= 999;
 			END_IF
-		
+	41://手动NOK按钮
+			IF   arManualNOKHmiButton[4]  AND NOT station.xCycleRunning THEN
+				station.iStepAuto:= 140;
+			ELSE	
+				station.iStepAuto:= 50;
+			END_IF	
+	
 	/////产品流程开始	
 	50:////Restore_after_Estop_Process2 热熔流程
-			IF tsModuleProcess[2].xProcessNotStarted AND NOT  tsModuleProcess[2].xProcessStarted THEN
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=60; 
+			ELSIF tsModuleProcess[2].xProcessNotStarted AND NOT  tsModuleProcess[2].xProcessStarted THEN
 					station.iStepAuto :=60; (*process not started*)
 			ELSIF  tsModuleProcess[2].xProcessStarted AND NOT  tsModuleProcess[2].xProcessCompleted THEN
 				 station.iStepAuto := 140;(*process started*)
@@ -202,22 +206,23 @@ CASE station.iStepAuto OF
 					END_IF
 	
 	80://判断加热棒是否准备就绪
-		IF  fbThermostat_1.xRdy AND  fbThermostat_2.xRdy THEN
-				station.iStepAuto:= 90;
-		END_IF
+			IF  ( fbThermostat_1.xRdy AND  fbThermostat_2.xRdy ) OR 
+				axBypassSignal[4] OR  fbMachine[1].xTryRun THEN
+					station.iStepAuto:= 90;
+			END_IF
 	90://Z轴伺服下降到位置1
-		tsModuleProcess[2].xProcessStarted:=TRUE;
-		fbZAxisMove_1.xMoveAuto[2]:=TRUE;
-    	fbZAxisMove_2.xMoveAuto[2]:=TRUE;
-		IF  fbZAxisMove_1.xMoveInPos[2] AND fbZAxisMove_2.xMoveInPos[2]THEN
-			station.iStepInit:=100;	
-		END_IF
+			tsModuleProcess[2].xProcessStarted:=TRUE;
+			fbZAxisMove_1.xMoveAuto[2]:=TRUE;
+			fbZAxisMove_2.xMoveAuto[2]:=TRUE;
+			IF  fbZAxisMove_1.xMoveInPos[2] AND fbZAxisMove_2.xMoveInPos[2]THEN
+				station.iStepInit:=100;	
+			END_IF
 	100://复位热熔时间
 			arTonDelay[02](IN:=FALSE  , PT:=stData.Thermostat[1].tTON_Delay , Q=> , ET=> );//热熔延时时间
 			station.iStepAuto:=110;
  	110://延时等待热熔完成
 			arTonDelay[02](IN:=  , PT:=stData.Thermostat[1].tTON_Delay , Q=> , ET=> );//热熔延时时间
-		IF  arTonDelay[02].Q THEN
+		IF  arTonDelay[02].Q  OR axBypassSignal[4]  OR fbMachine[1].xTryRun  THEN
 			station.iStepInit:=120;	
 			arTonDelay[02](IN:= FALSE );//热熔延时时间
 		END_IF
@@ -236,11 +241,11 @@ CASE station.iStepAuto OF
 			tsModuleProcess[2].xQDataCompleted :=TRUE;
 			station.iStepInit:=160;	
 	160://Z轴上升
-		fbZAxisMove_1.xMoveAuto[1]:=TRUE;
-    	fbZAxisMove_2.xMoveAuto[1]:=TRUE;
-		IF  fbZAxisMove_1.xMoveInPos[1] AND fbZAxisMove_2.xMoveInPos[1]THEN
-			station.iStepInit:=170;	
-		END_IF
+			fbZAxisMove_1.xMoveAuto[1]:=TRUE;
+			fbZAxisMove_2.xMoveAuto[1]:=TRUE;
+			IF  fbZAxisMove_1.xMoveInPos[1] AND fbZAxisMove_2.xMoveInPos[1]THEN
+				station.iStepInit:=170;	
+			END_IF
 	170://水平调整气缸收回
 			fbHOZAdjustCyl_1.xAuto :=FALSE;
 			fbHOZAdjustCyl_2.xAuto :=false;
@@ -254,7 +259,9 @@ CASE station.iStepAuto OF
 		END_IF
 	////产品流程结束	
 	200:////Restore_after_Estop_Process3 数据传输流程
-			IF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
+			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					station.iStepAuto :=999; 
+			ELSIF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
 					station.iStepAuto :=210; (*process not started*)
 			ELSIF  tsModuleProcess[3].xProcessStarted AND NOT  tsModuleProcess[3].xProcessCompleted THEN
 				 station.iStepAuto := 220;(*process started*)
@@ -279,6 +286,7 @@ CASE station.iStepAuto OF
  	240://本地数据清除
 			MEMSET(ADR(arProcessDataStation[1]),0,SIZEOF(arProcessDataStation[1]));
 			MEMSET(ADR(arProcessDataStation[2]),0,SIZEOF(arProcessDataStation[2]));
+			arManualNOKHmiButton[4]:=FALSE;
 			tsModuleProcess[3].xQDataCompleted:=TRUE;
 			station.iStepAuto:= 999;
 	999://----Single Run Finish----
@@ -518,8 +526,9 @@ QxS04HOZAdjustCyl_4HP	:=	fbHOZAdjustCyl_4.xHP_Valve	;
       <LineId Id="1640" Count="1" />
       <LineId Id="1683" Count="0" />
       <LineId Id="1259" Count="0" />
-      <LineId Id="1708" Count="0" />
-      <LineId Id="1710" Count="14" />
+      <LineId Id="1710" Count="0" />
+      <LineId Id="1827" Count="1" />
+      <LineId Id="1711" Count="12" />
       <LineId Id="1709" Count="0" />
       <LineId Id="1725" Count="0" />
       <LineId Id="1727" Count="0" />
@@ -527,9 +536,17 @@ QxS04HOZAdjustCyl_4HP	:=	fbHOZAdjustCyl_4.xHP_Valve	;
       <LineId Id="1728" Count="1" />
       <LineId Id="1731" Count="1" />
       <LineId Id="1730" Count="0" />
-      <LineId Id="1734" Count="9" />
-      <LineId Id="1555" Count="2" />
-      <LineId Id="1752" Count="10" />
+      <LineId Id="1734" Count="0" />
+      <LineId Id="1738" Count="5" />
+      <LineId Id="1556" Count="0" />
+      <LineId Id="1817" Count="1" />
+      <LineId Id="1820" Count="1" />
+      <LineId Id="1815" Count="0" />
+      <LineId Id="1814" Count="0" />
+      <LineId Id="1557" Count="0" />
+      <LineId Id="1752" Count="0" />
+      <LineId Id="1837" Count="1" />
+      <LineId Id="1753" Count="9" />
       <LineId Id="1744" Count="0" />
       <LineId Id="1560" Count="0" />
       <LineId Id="1764" Count="0" />
@@ -538,7 +555,9 @@ QxS04HOZAdjustCyl_4HP	:=	fbHOZAdjustCyl_4.xHP_Valve	;
       <LineId Id="1653" Count="13" />
       <LineId Id="1649" Count="0" />
       <LineId Id="1645" Count="0" />
-      <LineId Id="1631" Count="3" />
+      <LineId Id="1631" Count="1" />
+      <LineId Id="1831" Count="0" />
+      <LineId Id="1633" Count="1" />
       <LineId Id="1643" Count="0" />
       <LineId Id="1765" Count="0" />
       <LineId Id="1668" Count="3" />
@@ -568,7 +587,9 @@ QxS04HOZAdjustCyl_4HP	:=	fbHOZAdjustCyl_4.xHP_Valve	;
       <LineId Id="1566" Count="1" />
       <LineId Id="1702" Count="1" />
       <LineId Id="1582" Count="0" />
-      <LineId Id="1793" Count="13" />
+      <LineId Id="1793" Count="0" />
+      <LineId Id="1834" Count="1" />
+      <LineId Id="1794" Count="12" />
       <LineId Id="1791" Count="0" />
       <LineId Id="1600" Count="0" />
       <LineId Id="1807" Count="0" />
@@ -576,6 +597,7 @@ QxS04HOZAdjustCyl_4HP	:=	fbHOZAdjustCyl_4.xHP_Valve	;
       <LineId Id="1611" Count="0" />
       <LineId Id="1809" Count="2" />
       <LineId Id="1617" Count="2" />
+      <LineId Id="1822" Count="0" />
       <LineId Id="1812" Count="0" />
       <LineId Id="1626" Count="0" />
       <LineId Id="1212" Count="2" />
