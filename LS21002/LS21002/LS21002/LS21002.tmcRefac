@@ -1,0 +1,15 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Refactors>
+  <Renames>
+    <RenamedType>
+      <Type guid="6d87f4ff-d64b-43b3-8965-765dd8053529">DUT_PUTPARTPOSCHOOSE</Type>
+      <From>stPutPartPosChoose</From>
+      <To>stPutPartPosChoose</To>
+    </RenamedType>
+    <RenamedType>
+      <Type guid="0cd08ff2-a05d-4f8d-9547-c91a6ffda2d0">DUT_TAKEPARTPOSCHOOSE</Type>
+      <From>stTakePartPosChoose</From>
+      <To>stTakePartPosChoose</To>
+    </RenamedType>
+  </Renames>
+</Refactors>

@@ -4,16 +4,20 @@
     <Declaration><![CDATA[TYPE DUT_SysToRobot1 :
 STRUCT
 //PLC-Robot	
-xStepRunPermit      		:BOOL;//流程允许运行
-xTakePartPermit 			:BOOL;//主流线取料允许
-xPutPartPremit  			:BOOL;//允许去放料位
-xClampBoxDone				:BOOL;//夹取孔板完成	
-xReleaseBoxDone   			:BOOL;//释放孔板完成
-
-iMoveMode           :WORD;//1=回原点   2=振动盘到环形线  
-iTakePartPosChoose	:WORD;//1=第一块板取料，2=第二块板取料  3=buffer位置取料 
-iPutPartPosChoose	:WORD;//1=卡片1位置放料 2=卡片2位置放料   3=NG位置放料   4=buffer位置放料
-iRatio              :WORD;//机器人速率
+xStepRunning					:BOOL;//子程序运行中
+xStepRunPermit      	:BOOL;//流程允许运行
+xClampPartDone				:BOOL;//夹取孔板完成	
+xReleasePartDone   		:BOOL;//释放孔板完成
+xPickPos1Premit				:BOOL;//去主线位置1取料允许
+xPickPos2Premit				:BOOL;//去主线位置2取料允许
+xPickPos3Premit				:BOOL;//去buffer位置取料允许
+xPickTransferPosPremit:BOOL;//去中转位置允许
+xPutPos1Premit				:BOOL;//去皮带线位置1放料允许
+xPutPos2Premit				:BOOL;//去皮带线位置2放料允许
+xPutPos3Premit				:BOOL;//去NG流道位置放料允许
+xPutPos4Premit				:BOOL;//去buffer位置放料允许
+iMoveMode           	:WORD;//1=回原点   2=取料程序  4=放料程序
+iRatio              	:WORD;//机器人速率
 END_STRUCT
 END_TYPE
 ]]></Declaration>

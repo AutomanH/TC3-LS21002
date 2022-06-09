@@ -4,18 +4,27 @@
     <Declaration><![CDATA[TYPE DUT_SysFromRobot1 :
 STRUCT
 //Robot-PLC
-xSafety_1					:BOOL;//安全位1
-xSafety_2					:BOOL;//安全位2
-xSafety_3					:BOOL;//安全位3
-xHomeReached	    		:BOOL;//回原点完成
-xTakePartPosReached     	:BOOL;//到达取料位
+xHomePosReached	    		:BOOL;//回原点完成
+xPickPartPosReached 	  :BOOL;//到达取料位
 xPutPartPosReached			:BOOL;//到达放料位
-xRefPosReached				:BOOL;//到达参考位
+xPickPos1Reached				:BOOL;//到达主流线取料位置1
+xPickPos2Reached				:BOOL;//到达主流线取料位置2
+xPickPos3Reached				:BOOL;//到达buffer位置取料
+xPickTransferPosReached	:BOOL;//到达中转位置
+xPutPos1Reached         :BOOL;//到达皮带线位置1
+xPutPos2Reached         :BOOL;//到达皮带线位置2
+xPutPos3Reached         :BOOL;//到达NG流道位置
+xPutPos4Reached					:BOOL;//到达缓存取料位置
+
+xStepRunning						:BOOL;//子程序已运行
 xStepRunDone        		:BOOL;//流程已运行
-xInitOK            			 :BOOL;//初始化完成
-xHomPosition				:BOOL;//原点位置
+xInitOK            			:BOOL;//初始化完成
+xOutofseg1   						:BOOL;//干涉区1外
+xOutofseg2          	  :BOOL;//干涉区2外
+xOutofseg3          	  :BOOL;//干涉区3外
 END_STRUCT
 END_TYPE
+
 ]]></Declaration>
   </DUT>
 </TcPlcObject>

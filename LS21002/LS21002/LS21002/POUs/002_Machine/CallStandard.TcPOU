@@ -1006,21 +1006,20 @@ ELSE
 
 END_IF
 //TO ROBOT
-fbTURINContorl[1].pSysToRobot[1]    := stToRobot.iMoveMode; 
-fbTURINContorl[1].pSysToRobot[2]    := stToRobot.iRatio;
-fbTURINContorl[1].pSysToRobot[3].0  := stToRobot.xStepRunPermit;
-fbTURINContorl[1].pSysToRobot[3].1  := stToRobot.xGo_PickPoint;
-fbTURINContorl[1].pSysToRobot[3].2  := stToRobot.xGo_PickPointUp;
-fbTURINContorl[1].pSysToRobot[3].3  := stToRobot.xGo_PutPoint1;
-fbTURINContorl[1].pSysToRobot[3].4  := stToRobot.xGo_PutPoint2;	
-fbTURINContorl[1].pSysToRobot[3].5  := stToRobot.xGo_PutPoint3;	
-fbTURINContorl[1].pSysToRobot[3].6  := stToRobot.xGo_StandByPos;
-fbTURINContorl[1].pSysToRobot[3].7  := stToRobot.xResetWorkDone;	
-fbTURINContorl[1].pSysToRobot[3].8  := stToRobot.xGo_PutPoint11;
-fbTURINContorl[1].pSysToRobot[3].9  := stToRobot.xGo_PutPoint12;	
-fbTURINContorl[1].pSysToRobot[3].10 := stToRobot.xGo_PutPoint13;	
+fbTURINContorl[1].pSysToRobot[1]    := stToRobot1.iMoveMode; 
+fbTURINContorl[1].pSysToRobot[2]    := stToRobot1.iRatio;
+fbTURINContorl[1].pSysToRobot[3].0  := stToRobot1.xStepRunPermit;
+fbTURINContorl[1].pSysToRobot[3].1  := stToRobot1.xPickPos1Premit ;      
+fbTURINContorl[1].pSysToRobot[3].2  := stToRobot1.xPickPos2Premit  ;      
+fbTURINContorl[1].pSysToRobot[3].3  := stToRobot1.xPickPos3Premit ;       
+fbTURINContorl[1].pSysToRobot[3].4  := stToRobot1.xPickTransferPosPremit; 
+fbTURINContorl[1].pSysToRobot[3].5  := stToRobot1.xPutPos1Premit    ;     
+fbTURINContorl[1].pSysToRobot[3].6  := stToRobot1.xPutPos2Premit    ;     
+fbTURINContorl[1].pSysToRobot[3].7  := stToRobot1.xPutPos3Premit    ;    
+fbTURINContorl[1].pSysToRobot[3].8  := stToRobot1.xPutPos4Premit    ;     
+fbTURINContorl[1].pSysToRobot[3].9  := stToRobot1.xClampPartDone  ;     
+fbTURINContorl[1].pSysToRobot[3].10 := stToRobot1.xReleasePartDone ;    
 
-	
 //FROM ROBOT
 stFromRobot.xEstop					  	    := fbTURINContorl[1].pSysFromRobot[0].00;
 stFromRobot.xLocal_Remote				    := fbTURINContorl[1].pSysFromRobot[0].02;
@@ -1028,25 +1027,25 @@ stFromRobot.xEnable				          := fbTURINContorl[1].pSysFromRobot[0].03;
 stFromRobot.xRuntip				          := fbTURINContorl[1].pSysFromRobot[1].08;
 stFromRobot.xStopTip				        := fbTURINContorl[1].pSysFromRobot[1].09;
                                     
-stFromRobot.xAt_HomePosition		    := fbTURINContorl[1].pSysFromRobot[3].00;
-stFromRobot.xAt_PickPoint           := fbTURINContorl[1].pSysFromRobot[3].01;
-stFromRobot.xAt_PickPointUp         := fbTURINContorl[1].pSysFromRobot[3].02;
-stFromRobot.xAt_PutPoint1           := fbTURINContorl[1].pSysFromRobot[3].03;
-stFromRobot.xAt_PutPoint2           := fbTURINContorl[1].pSysFromRobot[3].04;
-stFromRobot.xAt_PutPoint3      	    := fbTURINContorl[1].pSysFromRobot[3].05;
-stFromRobot.xStepRuning     	      := fbTURINContorl[1].pSysFromRobot[3].06;
-stFromRobot.xInitOK         		    := fbTURINContorl[1].pSysFromRobot[3].07;
-stFromRobot.xGoHomeDone        	    := fbTURINContorl[1].pSysFromRobot[3].08;
-stFromRobot.xCycleDone              := fbTURINContorl[1].pSysFromRobot[3].09;
-stFromRobot.xOutofseg1              := fbTURINContorl[1].pSysFromRobot[3].10;
-stFromRobot.xOutofseg2              := fbTURINContorl[1].pSysFromRobot[3].11;
-stFromRobot.xOutofseg3              := fbTURINContorl[1].pSysFromRobot[3].14;
-stFromRobot.xSeg1Complete           := fbTURINContorl[1].pSysFromRobot[3].12;
-stFromRobot.xSeg2Complete           := fbTURINContorl[1].pSysFromRobot[3].13;
+stFromRobot1.xHomePosReached         	 	 := fbTURINContorl[1].pSysFromRobot[3].00;
+stFromRobot1.xPickPos1Reached              := fbTURINContorl[1].pSysFromRobot[3].01;
+stFromRobot1.xPickPos2Reached              := fbTURINContorl[1].pSysFromRobot[3].02;
+stFromRobot1.xPickPos3Reached              := fbTURINContorl[1].pSysFromRobot[3].03;
+stFromRobot1.xPickTransferPosReached       := fbTURINContorl[1].pSysFromRobot[3].04;
+stFromRobot1.xPutPos1Reached          	    := fbTURINContorl[1].pSysFromRobot[3].05;
+stFromRobot1.xPutPos2Reached               := fbTURINContorl[1].pSysFromRobot[3].06;
+stFromRobot1.xPutPos3Reached         	    := fbTURINContorl[1].pSysFromRobot[3].07;
+stFromRobot1.xPutPos4Reached          	    := fbTURINContorl[1].pSysFromRobot[3].08;
+stFromRobot1.xStepRunning                  := fbTURINContorl[1].pSysFromRobot[3].09;
+stFromRobot1.xStepRunDone                  := fbTURINContorl[1].pSysFromRobot[3].10;
+stFromRobot1.xInitOK                      	:= fbTURINContorl[1].pSysFromRobot[3].11;
+stFromRobot1.xOutofseg1                     := fbTURINContorl[1].pSysFromRobot[3].14;
+stFromRobot1.xOutofseg2                     := fbTURINContorl[1].pSysFromRobot[3].12;
+stFromRobot1.xOutofseg3                     := fbTURINContorl[1].pSysFromRobot[3].13;
 
 
 
-]]></ST>
+                                    ]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_UPS" Id="{e4391efc-d1f1-46b0-8a19-32f7ecb84c12}">
@@ -1455,7 +1454,7 @@ END_FOR]]></ST>
       <LineId Id="211" Count="0" />
       <LineId Id="214" Count="0" />
       <LineId Id="236" Count="1" />
-      <LineId Id="216" Count="1" />
+      <LineId Id="216" Count="0" />
       <LineId Id="215" Count="0" />
       <LineId Id="178" Count="2" />
       <LineId Id="207" Count="3" />
@@ -1470,7 +1469,7 @@ END_FOR]]></ST>
       <LineId Id="188" Count="0" />
       <LineId Id="190" Count="0" />
       <LineId Id="193" Count="0" />
-      <LineId Id="32" Count="0" />
+      <LineId Id="251" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.ACT_UPS">
       <LineId Id="2" Count="8" />

@@ -8,7 +8,7 @@ TYPE CmdRobot1 :
 	noCmd := 0 ,
 	Cmd_GoHome:=1 ,
 	Cmd_TakePart:=2 ,
-	Cmd_PutPart:=3
+	Cmd_PutPart:=4
 	//1=回原点程序  2=取料程序  3=放料程序
 	
 )WORD;
