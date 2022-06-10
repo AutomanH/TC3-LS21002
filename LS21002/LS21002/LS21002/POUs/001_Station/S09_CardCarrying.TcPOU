@@ -54,7 +54,16 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[]]></ST>
+      <ST><![CDATA[A_Input();
+Alarm();
+Delay();
+FlowAuto();
+FlowInit();
+General();
+ILC();
+TipAuto();
+TipManual();
+Z_Output();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{ba23078b-8967-4278-88bc-5ab193e99c06}">
       <Implementation>
@@ -143,6 +152,11 @@ CASE station.iStepAuto OF
     10: //复位数据 
 			fbZAxisStepMotor1.xJogForwardAuto:=FALSE;
 			fbZAxisStepMotor2.xJogForwardAuto:=FALSE;
+			IF  station.xSingleRunning THEN
+				 FOR i:=1 TO gc_ModuleProNo BY 1 DO
+						 MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+				 END_FOR
+			END_IF
 			station.iStepAuto:=20;
 	20://检查卡片是否在位
 			_AlarmDisable:=FALSE;
@@ -567,6 +581,7 @@ QxS08VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
       </Implementation>
     </Action>
     <LineIds Name="S09_CardCarrying">
+      <LineId Id="57" Count="8" />
       <LineId Id="5" Count="0" />
     </LineIds>
     <LineIds Name="S09_CardCarrying.A_Input">
@@ -592,6 +607,8 @@ QxS08VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
       <LineId Id="1167" Count="17" />
       <LineId Id="1256" Count="0" />
       <LineId Id="1481" Count="1" />
+      <LineId Id="1785" Count="3" />
+      <LineId Id="1784" Count="0" />
       <LineId Id="1259" Count="0" />
       <LineId Id="1506" Count="0" />
       <LineId Id="1541" Count="0" />

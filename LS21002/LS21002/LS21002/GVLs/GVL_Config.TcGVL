@@ -20,6 +20,7 @@
 	gc_StepHistory							:INT:=500;//step log数量
 	gc_RecipeNum							:WORD:=1;//保存配方数量
 	gc_ModuleProNo							:INT:=10;//过程数据数组大小
+	gc_AliveNum									:INT:=10;//心跳包数量
 END_VAR]]></Declaration>
   </GVL>
 </TcPlcObject>

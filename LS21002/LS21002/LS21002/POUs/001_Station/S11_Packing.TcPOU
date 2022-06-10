@@ -6,9 +6,19 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[]]></ST>
+      <ST><![CDATA[A_Input();
+Alarm();
+Delay();
+FlowAuto();
+FlowInit();
+General();
+ILC();
+TipAuto();
+TipManual();
+Z_Output();]]></ST>
     </Implementation>
     <LineIds Name="S11_Packing">
+      <LineId Id="9" Count="8" />
       <LineId Id="5" Count="0" />
     </LineIds>
   </POU>

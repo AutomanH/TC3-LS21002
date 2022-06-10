@@ -55,48 +55,29 @@ IF NOT  fbMachine[1].xAirOn THEN
 	fbMachine[1].dwAlarm[1].00:=TRUE; //[M01.00] 设备气压报警
 	;
 END_IF
-(*
-//安全门被打开1
-IF fbMachine[1].xAutoMode AND NOT  strDoorBypassHmi  THEN
-	IF	 NOT  fb_doors[1].xIDoorClosed  THEN
-		fbMachine[1].dwAlarm[1].02:=TRUE; //[M01.02] 设备安全门1被打开
-	END_IF
-	IF	 NOT  fb_doors[2].xIDoorClosed  THEN
-		fbMachine[1].dwAlarm[1].05:=TRUE; //[M01.05] 设备安全门2被打开
-	END_IF
-	IF	 NOT  fb_doors[3].xIDoorClosed  THEN
-		fbMachine[1].dwAlarm[1].06:=TRUE; //[M01.06] 设备安全门13被打开
-	END_IF
-	IF	 NOT  fb_doors[4].xIDoorClosed  THEN
-		fbMachine[1].dwAlarm[1].07:=TRUE; //[M01.07] 设备安全门4被打开
-	END_IF
-	IF	 NOT  fb_doors[5].xIDoorClosed  THEN
-		fbMachine[1].dwAlarm[1].08:=TRUE; //[M01.08] 设备安全门5被打开
-	END_IF
-	IF	 NOT  fb_doors[6].xIDoorClosed  THEN
-		fbMachine[1].dwAlarm[1].09:=TRUE; //[M01.09] 设备安全门6被打开
-	END_IF
-	IF	 NOT  fb_doors[7].xIDoorClosed  THEN
-		fbMachine[1].dwAlarm[1].10:=TRUE; //[M01.10] 设备安全门7被打开
-	END_IF
-	IF	 NOT  fb_doors[8].xIDoorClosed  THEN
-		fbMachine[1].dwAlarm[1].11:=TRUE; //[M01.11] 设备安全门8被打开
-	END_IF
-	IF	 NOT  fb_doors[9].xIDoorClosed  THEN
-		fbMachine[1].dwAlarm[1].12:=TRUE; //[M01.12] 设备安全门9被打开
-	END_IF
-	IF	 NOT  fb_doors[10].xIDoorClosed  THEN
-		fbMachine[1].dwAlarm[1].13:=TRUE; //[M01.13] 设备安全门10被打开
-	END_IF
-	IF	 NOT  fb_doors[11].xIDoorClosed  THEN
-		fbMachine[1].dwAlarm[1].14:=TRUE; //[M01.14] 设备安全门11被打开
-	END_IF
-	IF	 NOT  fb_doors[12].xIDoorClosed  THEN
-		fbMachine[1].dwAlarm[1].15:=TRUE; //[M01.15] 设备安全门12被打开
-	END_IF
-END_IF
 
-*)
+//心跳
+	IF  fbAlive[1].xQAliveError THEN
+		fbMachine[1].dwAlarm[1].05:=TRUE; //[M01.05] 未检测到相机心跳1
+	END_IF
+	IF  fbAlive[2].xQAliveError THEN
+		fbMachine[1].dwAlarm[1].06:=TRUE; //[M01.06] 未检测到相机心跳2
+	END_IF
+	IF  fbAlive[3].xQAliveError THEN
+		fbMachine[1].dwAlarm[1].07:=TRUE; //[M01.07] 未检测到相机心跳3
+	END_IF
+	IF  fbAlive[4].xQAliveError THEN
+		fbMachine[1].dwAlarm[1].08:=TRUE; //[M01.08] 未检测到工控机1心跳
+	END_IF
+	IF  fbAlive[5].xQAliveError THEN
+		fbMachine[1].dwAlarm[1].09:=TRUE; //[M01.09] 未检测到工控机2心跳
+	END_IF
+	IF  fbAlive[6].xQAliveError THEN
+		fbMachine[1].dwAlarm[1].10:=TRUE; //[M01.10] 未检测到工控机3心跳
+	END_IF
+	IF  fbAlive[7].xQAliveError THEN
+		fbMachine[1].dwAlarm[1].11:=TRUE; //[M01.11] 未检测到热缩封膜机心跳
+	END_IF
 
 
 //急停被按下
@@ -391,34 +372,16 @@ fbMachine[1].xTip                      :=(fbMachine[1].xManualTip OR fbMachine[1
       <LineId Id="85" Count="3" />
       <LineId Id="11" Count="0" />
       <LineId Id="246" Count="0" />
-      <LineId Id="93" Count="1" />
+      <LineId Id="93" Count="0" />
       <LineId Id="184" Count="0" />
       <LineId Id="193" Count="0" />
       <LineId Id="192" Count="0" />
-      <LineId Id="195" Count="1" />
+      <LineId Id="294" Count="1" />
       <LineId Id="194" Count="0" />
-      <LineId Id="198" Count="1" />
-      <LineId Id="197" Count="0" />
-      <LineId Id="201" Count="1" />
-      <LineId Id="200" Count="0" />
-      <LineId Id="204" Count="1" />
-      <LineId Id="203" Count="0" />
-      <LineId Id="207" Count="1" />
-      <LineId Id="206" Count="0" />
-      <LineId Id="210" Count="1" />
-      <LineId Id="209" Count="0" />
-      <LineId Id="213" Count="1" />
-      <LineId Id="212" Count="0" />
-      <LineId Id="216" Count="1" />
-      <LineId Id="215" Count="0" />
-      <LineId Id="219" Count="1" />
-      <LineId Id="218" Count="0" />
-      <LineId Id="222" Count="1" />
-      <LineId Id="221" Count="0" />
-      <LineId Id="225" Count="1" />
-      <LineId Id="224" Count="0" />
-      <LineId Id="169" Count="0" />
-      <LineId Id="229" Count="2" />
+      <LineId Id="296" Count="7" />
+      <LineId Id="314" Count="0" />
+      <LineId Id="305" Count="5" />
+      <LineId Id="231" Count="0" />
       <LineId Id="228" Count="0" />
       <LineId Id="171" Count="7" />
       <LineId Id="237" Count="1" />

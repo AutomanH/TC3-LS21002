@@ -22,6 +22,7 @@
 	fbEthercatTerminalState		:FB_EthercatTerminalState;
 	fbCamera					:ARRAY[1..gc_uiCameraNum] OF FB_Camera;
 	fbRudongPumpModbusTcp		:ARRAY[1..gc_uiRudongPump] OF FB_RuDongPump_ModbusTCP;
+	fbAlive					 :ARRAY[1..gc_AliveNum] OF FB_Alive;
 	
     xNot_power					: ARRAY[1..gc_uiAxisNum] OF BOOL;//设原点时断使能
 	cnSlaveAddr	        : ARRAY[1..gc_uiAxisNum] OF UINT;//伺服的从站地址
@@ -72,9 +73,6 @@ VAR_GLOBAL PERSISTENT
 	arStepInit					:DUT_Sta;
 	stCalibration			:DUT_Calibration;
 END_VAR
-
-
-
 ]]></Declaration>
   </GVL>
 </TcPlcObject>

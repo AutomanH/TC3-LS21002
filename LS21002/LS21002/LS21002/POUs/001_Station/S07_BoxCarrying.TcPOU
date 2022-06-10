@@ -95,7 +95,13 @@ xBeltBoxCheckSensor[2]:=IxBeltEntryBoxCheckSensor2	;
 station.adwAlarm[1].00:=station.xInitTimeout;	  			//S07BoxCarrying 初始化超时
 
 (*station.adwAlarm[1].01:=TRUE;*)//NG流道满料请处理	  	
-(*station.adwAlarm[1].02:=TRUE;*)//NG流道步进运动超时 ，请检查传感器是否正常]]></ST>
+(*station.adwAlarm[1].02:=TRUE;*)//NG流道步进运动超时 ，请检查传感器是否正常
+station.adwAlarm[1].03	:=	fbRobot.eErrID<>0	;//	S07孔板搬运工位机械手报错
+station.adwAlarm[1].04	:=	fbClamp.xError	;//	S07孔板搬运工位夹爪报错
+station.adwAlarm[1].05	:=	fbNGStepMotor.xError	;//	S07孔板搬运工位NG流道伺服报错
+station.adwAlarm[1].06	:=	fbNGStepMotor.xNotPowerOn	;//	S07孔板搬运工位NG流道伺服未使能
+station.adwAlarm[1].07	:=	fbNGStepMotor.xMoveTimeout	;//	S07孔板搬运工位NG流道伺服移动超时
+]]></ST>
       </Implementation>
     </Action>
     <Action Name="Delay" Id="{2db4a02f-a342-4718-bc45-d3fd6620ccc0}">
@@ -159,6 +165,11 @@ CASE station.iStepAuto OF
 			station.iStepAuto:= 5;
 		END_IF
     5: //复位数据
+			IF  station.xSingleRunning THEN
+				 FOR i:=1 TO gc_ModuleProNo BY 1 DO
+						 MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+				 END_FOR
+			END_IF
 			station.iStepAuto:=10;
 	10: //判断产品是否到该工位
 		IF  fbMachine[1].xTryRun OR station.xSingleRunning THEN
@@ -796,6 +807,8 @@ END_CASE
       <LineId Id="262" Count="0" />
       <LineId Id="266" Count="0" />
       <LineId Id="268" Count="0" />
+      <LineId Id="270" Count="4" />
+      <LineId Id="269" Count="0" />
     </LineIds>
     <LineIds Name="S07_BoxCarrying.Delay">
       <LineId Id="64" Count="10" />
@@ -804,6 +817,8 @@ END_CASE
     </LineIds>
     <LineIds Name="S07_BoxCarrying.FlowAuto">
       <LineId Id="2830" Count="28" />
+      <LineId Id="3659" Count="3" />
+      <LineId Id="3658" Count="0" />
       <LineId Id="2860" Count="14" />
       <LineId Id="3251" Count="1" />
       <LineId Id="2875" Count="27" />

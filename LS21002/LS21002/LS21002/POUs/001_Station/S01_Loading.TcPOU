@@ -119,6 +119,26 @@ station.adwAlarm[1].02:=//S01链板线上料位置2相机检测到深放反，�
 station.adwAlarm[1].03:=//S01链板线上料位置3相机检测到深孔板放反，请检查
 station.adwAlarm[1].04:=//S01链板线上料位置4相机检测到深孔板放反，请检查
 *)
+station.adwAlarm[1].05	:=	fbClamp_1.xError	;//	S01电动夹爪1报错，请检查
+station.adwAlarm[1].06	:=	fbClamp_2.xError	;//	S01电动夹爪2报错，请检查
+station.adwAlarm[1].07	:=	fbVTCPressCyl_1.xHP_Off 	;//	S01链板线-下压气缸1原点未到位
+station.adwAlarm[1].08	:=	fbVTCPressCyl_1.xWP_Off 	;//	S01链板线-下压气缸1动点未到位
+station.adwAlarm[1].09	:=	fbVTCPressCyl_2.xHP_Off	;//	S01链板线-下压气缸2原点未到位
+station.adwAlarm[1].10	:=	fbVTCPressCyl_2.xWP_Off	;//	S01链板线-下压气缸2动点未到位
+station.adwAlarm[1].11	:=	fbVTCPressCyl_3.xHP_Off	;//	S01链板线-下压气缸3原点未到位
+station.adwAlarm[1].12	:=	fbVTCPressCyl_3.xWP_Off	;//	S01链板线-下压气缸3动点未到位
+station.adwAlarm[1].13	:=	fbVTCPressCyl_4.xHP_Off	;//	S01链板线-下压气缸4原点未到位
+station.adwAlarm[1].14	:=	fbVTCPressCyl_4.xWP_Off	;//	S01链板线-下压气缸4动点未到位
+station.adwAlarm[1].15	:=	fbVTCCyl_1.xHP_Off 	;//	S01移栽机构-Z轴气缸1原点未到位
+station.adwAlarm[1].16	:=	fbVTCCyl_1.xWP_Off	;//	S01移栽机构-Z轴气缸1动点未到位
+station.adwAlarm[1].17	:=	fbVTCCyl_2.xHP_Off 	;//	S01移栽机构-Z轴气缸2原点未到位
+station.adwAlarm[1].18	:=	fbVTCCyl_2.xWP_Off	;//	S01移栽机构-Z轴气缸2动点未到位
+station.adwAlarm[1].19	:=	fbXAxisMove.xError	;//	S01移栽上料X轴伺服报错
+station.adwAlarm[1].20	:=	fbXAxisMove.xNotPowerOn	;//	S01移栽上料X轴伺服未使能
+station.adwAlarm[1].21	:=	fbXAxisMove.xMoveTimeout	;//	S01移栽上料X轴伺服移动超时
+station.adwAlarm[1].22	:=	fbYAxisMove.xError	;//	S01移栽上料Y轴伺服报错
+station.adwAlarm[1].23	:=	fbYAxisMove.xNotPowerOn	;//	S01移栽上料Y轴伺服未使能
+station.adwAlarm[1].24	:=	fbYAxisMove.xMoveTimeout	;//	S01移栽上料Y轴伺服移动超时
 
 
 
@@ -190,6 +210,11 @@ CASE station.iStepAuto OF
 			Camera.xlInit:=TRUE;
 			MEMSET(ADR(arMainlineFixtureData[arCurFixtureNumStation[1]]),0,SIZEOF(arMainlineFixtureData[arCurFixtureNumStation[1]]));
 			MEMSET(ADR(arMainlineFixtureData[arCurFixtureNumStation[2]]),0,SIZEOF(arMainlineFixtureData[arCurFixtureNumStation[2]]));
+			IF  station.xSingleRunning THEN
+				 FOR i:=1 TO gc_ModuleProNo BY 1 DO
+						 MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+				 END_FOR
+			END_IF
 			station.iStepAuto:= 20;
   	20://此处开始处理上料流程
 		station.iStepAuto:= 30;
@@ -499,97 +524,93 @@ CASE station.iStepAuto OF
 			IF   bXCounter=1 THEN
 						fbVTCCyl_1.xAuto:=FALSE;
 						IF fbVTCCyl_1.xHP_Delay THEN
-							 station.iStepAuto:=345;	
+							 station.iStepAuto:=350;	
 						END_IF				
 				ELSIF	 bXCounter=2 THEN
 						fbVTCCyl_2.xAuto:=FALSE;
 						IF fbVTCCyl_2.xHP_Delay THEN
-							 station.iStepAuto:=345;	
+							 station.iStepAuto:=350;	
 						END_IF	
 			END_IF
-	345://放料完成
+	350://Restore_after_Estop_Process8 数据传输流程
+			 IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					 station.iStepAuto :=400; 
+			 ELSIF tsModuleProcess[8].xProcessNotStarted AND NOT  tsModuleProcess[8].xProcessStarted THEN
+					 station.iStepAuto :=360; (*process not started*)
+			 ELSIF  tsModuleProcess[8].xProcessStarted AND NOT  tsModuleProcess[8].xProcessCompleted THEN
+					station.iStepAuto :=370;(*process started*)
+			 ELSIF  tsModuleProcess[8].xProcessCompleted AND NOT tsModuleProcess[8].xQDataCompleted  THEN
+					 station.iStepAuto :=400 ;(*process completed*)
+			 ELSE
+					 station.iStepAuto :=360; 
+			 END_IF		
+		 
+	360://任务成功
+		 tsModuleProcess[8].xProcessNotStarted:=TRUE;
+		 tsModuleProcess[8].xProcessStarted:=TRUE;
+		 
+		 arProcessDataStation[1].xMaterialOnOff:=TRUE;
+		 arProcessDataStation[2].xMaterialOnOff:=TRUE;
+		 
+		 arProcessDataStation[1].stProduct.xLoading_OK:=TRUE;
+		 arProcessDataStation[2].stProduct.xLoading_OK:=TRUE;
+		 station.iStepAuto:= 370;
+	370://数据unload
+			 MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[1]]),ADR(arProcessDataStation[1]),SIZEOF(arProcessDataStation[1]));
+			 MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[2]]),ADR(arProcessDataStation[2]),SIZEOF(arProcessDataStation[2]));
+			 station.iStepAuto:= 380;
+	380://本地数据清除
+			 MEMSET(ADR(arProcessDataStation[1]),0,SIZEOF(arProcessDataStation[1]));
+			 MEMSET(ADR(arProcessDataStation[2]),0,SIZEOF(arProcessDataStation[2]));
+			 FOR i:=1 TO gc_ModuleProNo BY 1 DO
+				 MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+			 END_FOR
+			 tsModuleProcess[8].xProcessCompleted:=TRUE;
+			 station.iStepAuto:= 400;		
+			 
+			
+	400://放料完成
 			IF bXCounter =2 THEN
 				station.xDone:=TRUE;
 			END_IF
-			station.iStepAuto:=350;
-	350://夹爪旋转回原位置
+			station.iStepAuto:=410;
+	410://夹爪旋转回原位置
 			IF   bXCounter=1 THEN
 						  fbClamp_1.aReleaseControl[2]:=TRUE ;		
 						IF fbClamp_1.xDone THEN
 							 fbClamp_1.xExecute :=FALSE ;
-							 station.iStepAuto:=360;	
+							 station.iStepAuto:=420;	
 						END_IF				
 					
 				ELSIF	 bXCounter=2 THEN
 						 fbClamp_2.aReleaseControl[2]:=TRUE ;
 						IF fbClamp_2.xDone THEN
 							 fbClamp_2.xExecute :=FALSE ;
-							 station.iStepAuto:=360;	
+							 station.iStepAuto:=420;	
 						END_IF	
 			END_IF
-	360://X轴循环+1
+	420://X轴循环+1
 			bXCounter :=bXCounter +1;
-			station.iStepAuto:=370;	
+			station.iStepAuto:=430;	
 
-	370:  
+	430:  
 		IF   bXCounter<=2 THEN
 				station.iStepAuto:=280;	
 		ELSE
-				station.iStepAuto:=380;	
+				station.iStepAuto:=440;	
 		END_IF
 
-	380://循环-1
+	440://循环-1
 		bCounter :=bCounter +1;
-		station.iStepAuto:=390;
+		station.iStepAuto:=450;
 		
-	390://链板线取完一行标志位	
+	450://
 		IF 	 bCounter <=2 THEN
 			 station.iStepAuto:=160;	
 		ELSE
-		 	  station.iStepAuto:=500;
+		 	  station.iStepAuto:=999;
 		END_IF
-	500://Restore_after_Estop_Process8 数据传输流程
-			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
-					station.iStepAuto :=999; 
-			ELSIF tsModuleProcess[8].xProcessNotStarted AND NOT  tsModuleProcess[8].xProcessStarted THEN
-					station.iStepAuto :=510; (*process not started*)
-			ELSIF  tsModuleProcess[8].xProcessStarted AND NOT  tsModuleProcess[8].xProcessCompleted THEN
-				 station.iStepAuto :=510;(*process started*)
-			ELSIF  tsModuleProcess[8].xProcessCompleted AND NOT tsModuleProcess[8].xQDataCompleted  THEN
-					station.iStepAuto :=550 ;(*process completed*)
-			ELSE
-					station.iStepAuto :=510; 
-			END_IF		
-		
-	510://任务成功
-		tsModuleProcess[8].xProcessNotStarted:=TRUE;
-		tsModuleProcess[8].xProcessStarted:=TRUE;
-		
-		arProcessDataStation[1].xMaterialOnOff:=TRUE;
-		arProcessDataStation[2].xMaterialOnOff:=TRUE;
-		
-		arProcessDataStation[1].stProduct.xLoading_OK:=TRUE;
-		arProcessDataStation[2].stProduct.xLoading_OK:=TRUE;
-	
-		station.iStepAuto:= 550;
-	550://数据unload
-		IF   NOT  station.xSingleRunning THEN
-			MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[1]]),ADR(arProcessDataStation[1]),SIZEOF(arProcessDataStation[1]));
-			MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[2]]),ADR(arProcessDataStation[2]),SIZEOF(arProcessDataStation[2]));
-			station.iStepAuto:= 560;
-		ELSE
-			station.iStepAuto:= 999;
-		END_IF
- 	560://本地数据清除
-			MEMSET(ADR(arProcessDataStation[1]),0,SIZEOF(arProcessDataStation[1]));
-			MEMSET(ADR(arProcessDataStation[2]),0,SIZEOF(arProcessDataStation[2]));
-			FOR i:=1 TO gc_ModuleProNo BY 1 DO
-				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
-			END_FOR
-			tsModuleProcess[8].xProcessCompleted:=TRUE;
-			station.iStepAuto:= 999;
 	999://----Single Run Finish----
-			
 		station.iStepAuto :=0;
 		station.xSingleRunFlag:=FALSE;
 		station.xCycleEnable:=FALSE;	
@@ -742,7 +763,7 @@ END_IF
     <Action Name="General" Id="{853ea6bd-bb20-473d-996d-ff4ed10c4144}">
       <Implementation>
         <ST><![CDATA[
- ]]></ST>
+]]></ST>
       </Implementation>
     </Action>
     <Action Name="ILC" Id="{0b3196e9-82f1-46a4-9b14-c04a89d888e7}">
@@ -888,7 +909,10 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="177" Count="0" />
       <LineId Id="190" Count="1" />
       <LineId Id="199" Count="1" />
-      <LineId Id="192" Count="6" />
+      <LineId Id="192" Count="0" />
+      <LineId Id="220" Count="19" />
+      <LineId Id="206" Count="0" />
+      <LineId Id="194" Count="4" />
       <LineId Id="181" Count="0" />
     </LineIds>
     <LineIds Name="S01_Loading.Delay">
@@ -906,6 +930,7 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="1943" Count="0" />
       <LineId Id="1667" Count="0" />
       <LineId Id="1821" Count="0" />
+      <LineId Id="3155" Count="4" />
       <LineId Id="1711" Count="0" />
       <LineId Id="1672" Count="0" />
       <LineId Id="1876" Count="0" />
@@ -1091,6 +1116,10 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="2695" Count="4" />
       <LineId Id="2701" Count="4" />
       <LineId Id="2584" Count="0" />
+      <LineId Id="3115" Count="23" />
+      <LineId Id="3140" Count="2" />
+      <LineId Id="3146" Count="6" />
+      <LineId Id="3112" Count="2" />
       <LineId Id="2845" Count="0" />
       <LineId Id="2848" Count="0" />
       <LineId Id="2851" Count="0" />
@@ -1119,32 +1148,8 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="3098" Count="0" />
       <LineId Id="3102" Count="0" />
       <LineId Id="2288" Count="0" />
-      <LineId Id="2746" Count="0" />
-      <LineId Id="3083" Count="1" />
-      <LineId Id="2747" Count="7" />
-      <LineId Id="2745" Count="0" />
-      <LineId Id="2740" Count="0" />
-      <LineId Id="1636" Count="0" />
-      <LineId Id="2755" Count="2" />
-      <LineId Id="1638" Count="0" />
-      <LineId Id="1825" Count="0" />
-      <LineId Id="1829" Count="0" />
-      <LineId Id="1639" Count="0" />
-      <LineId Id="1826" Count="1" />
-      <LineId Id="1640" Count="0" />
-      <LineId Id="1625" Count="0" />
-      <LineId Id="1802" Count="0" />
-      <LineId Id="1631" Count="0" />
-      <LineId Id="1831" Count="0" />
-      <LineId Id="1703" Count="0" />
-      <LineId Id="1747" Count="0" />
-      <LineId Id="1804" Count="1" />
-      <LineId Id="1852" Count="2" />
-      <LineId Id="2853" Count="1" />
-      <LineId Id="2852" Count="0" />
-      <LineId Id="2760" Count="0" />
-      <LineId Id="1806" Count="0" />
-      <LineId Id="1395" Count="4" />
+      <LineId Id="1395" Count="0" />
+      <LineId Id="1397" Count="2" />
       <LineId Id="2297" Count="0" />
       <LineId Id="2901" Count="0" />
       <LineId Id="2909" Count="73" />

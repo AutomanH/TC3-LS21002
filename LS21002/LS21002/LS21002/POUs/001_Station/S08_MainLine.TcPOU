@@ -28,7 +28,16 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[]]></ST>
+      <ST><![CDATA[A_Input();
+Alarm();
+Delay();
+FlowAuto();
+FlowInit();
+General();
+ILC();
+TipAuto();
+TipManual();
+Z_Output();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{2a912516-78df-4e77-81e9-cc324488ed21}">
       <Implementation>
@@ -50,6 +59,9 @@ xMainLineEndCheckSensor[2] :=IxLineEndCheckSensor2;
       <Implementation>
         <ST><![CDATA[//
 station.adwAlarm[1].00:=station.xInitTimeout;	  			//S08Label 初始化超时
+station.adwAlarm[1].01	:=	fbMainLineAxis.xError	;//	S08主流线旋转伺服报错
+station.adwAlarm[1].02	:=	fbMainLineAxis.xNotPowerOn	;//	S08主流线旋转伺服未使能
+station.adwAlarm[1].03	:=	fbMainLineAxis.xMoveTimeout	;//	S08主流线旋转伺服移动超时
 
 ]]></ST>
       </Implementation>
@@ -117,6 +129,11 @@ CASE station.iStepAuto OF
 			station.iStepAuto:= 10;
 		END_IF
     10: //复位数据 
+			IF  station.xSingleRunning THEN
+				 FOR i:=1 TO gc_ModuleProNo BY 1 DO
+						 MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+				 END_FOR
+			END_IF
 			station.iStepAuto:=50;
 			
 	50://等待各个工位完成信号
@@ -357,8 +374,8 @@ arCurFixtureNumStation[14]:=31;
 arCurFixtureNumStation[15]:=32;
 arCurFixtureNumStation[16]:=33;
 //尾端
-arCurFixtureNumStation[17]:=39;
-arCurFixtureNumStation[18]:=40;
+arCurFixtureNumStation[17]:=41;
+arCurFixtureNumStation[18]:=42;
 
 ]]></ST>
       </Implementation>
@@ -460,6 +477,7 @@ END_IF
       </Implementation>
     </Action>
     <LineIds Name="S08_MainLine">
+      <LineId Id="31" Count="8" />
       <LineId Id="5" Count="0" />
     </LineIds>
     <LineIds Name="S08_MainLine.A_Input">
@@ -473,6 +491,7 @@ END_IF
     </LineIds>
     <LineIds Name="S08_MainLine.Alarm">
       <LineId Id="176" Count="1" />
+      <LineId Id="267" Count="2" />
       <LineId Id="262" Count="0" />
       <LineId Id="266" Count="0" />
     </LineIds>
@@ -487,6 +506,8 @@ END_IF
       <LineId Id="1161" Count="4" />
       <LineId Id="1167" Count="17" />
       <LineId Id="1256" Count="0" />
+      <LineId Id="1700" Count="3" />
+      <LineId Id="1699" Count="0" />
       <LineId Id="1259" Count="0" />
       <LineId Id="1456" Count="1" />
       <LineId Id="1466" Count="0" />

@@ -58,9 +58,13 @@ Z_Output();]]></ST>
     </Action>
     <Action Name="Alarm" Id="{04903be7-f3af-4c6c-90de-ca8e7e7d880a}">
       <Implementation>
-        <ST><![CDATA[//
-station.adwAlarm[1].00:=station.xInitTimeout;	  			//S08Label 初始化超时
-
+        <ST><![CDATA[station.adwAlarm[1].00	:=	station.xInitTimeout	;//	S05 初始化超时
+station.adwAlarm[1].01	:=	fbZAxisMove_1.xError	;//	S05调整工位Z轴伺服1报错
+station.adwAlarm[1].02	:=	fbZAxisMove_1.xNotPowerOn	;//	S05调整工位Z轴伺服1未使能
+station.adwAlarm[1].03	:=	fbZAxisMove_1.xMoveTimeout	;//	S05调整工位Z轴伺服1移动超时
+station.adwAlarm[1].04	:=	fbZAxisMove_2.xError	;//	S05调整工位Z轴伺服2报错
+station.adwAlarm[1].05	:=	fbZAxisMove_2.xNotPowerOn	;//	S05调整工位Z轴伺服2未使能
+station.adwAlarm[1].06	:=	fbZAxisMove_2.xMoveTimeout	;//	S05调整工位Z轴伺服2移动超时
 ]]></ST>
       </Implementation>
     </Action>
@@ -127,6 +131,11 @@ CASE station.iStepAuto OF
 		END_IF
     10: //复位数据 
 			arTonDelay[02](IN:= FALSE); 
+			IF  station.xSingleRunning THEN
+				 FOR i:=1 TO gc_ModuleProNo BY 1 DO
+						 MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+				 END_FOR
+			END_IF
 			station.iStepAuto:=20;
 			
 	20:////Restore_after_Estop_Process1 上载数据流程
@@ -422,8 +431,7 @@ END_IF
       <LineId Id="8" Count="0" />
     </LineIds>
     <LineIds Name="S05_Adjusting.Alarm">
-      <LineId Id="176" Count="1" />
-      <LineId Id="262" Count="0" />
+      <LineId Id="267" Count="6" />
       <LineId Id="266" Count="0" />
     </LineIds>
     <LineIds Name="S05_Adjusting.Delay">
@@ -436,6 +444,8 @@ END_IF
       <LineId Id="1167" Count="17" />
       <LineId Id="1256" Count="0" />
       <LineId Id="1638" Count="0" />
+      <LineId Id="1823" Count="3" />
+      <LineId Id="1822" Count="0" />
       <LineId Id="1259" Count="0" />
       <LineId Id="1659" Count="0" />
       <LineId Id="1667" Count="0" />

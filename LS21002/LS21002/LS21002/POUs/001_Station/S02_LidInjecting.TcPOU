@@ -75,8 +75,44 @@ fbROTCyl.xHP_Sensor	:=	IxS02ROTCylHP	;
     </Action>
     <Action Name="Alarm" Id="{830c4921-b54b-4c6d-a396-f5d5eb2c5278}">
       <Implementation>
-        <ST><![CDATA[//
-station.adwAlarm[1].00:=station.xInitTimeout;	  			//S08Label 初始化超时
+        <ST><![CDATA[station.adwAlarm[1].00	:=	station.xInitTimeout	;//	S02 初始化超时
+station.adwAlarm[1].01	:=	fbRudongPump[1].xError	;//	S02注液工位蠕动泵1报错
+station.adwAlarm[1].02	:=	fbRudongPump[2].xError	;//	S02注液工位蠕动泵2报错
+station.adwAlarm[1].03	:=	fbRudongPump[3].xError	;//	S02注液工位蠕动泵3报错
+station.adwAlarm[1].04	:=	fbRudongPump[4].xError	;//	S02注液工位蠕动泵4报错
+station.adwAlarm[1].05	:=	fbRudongPump[5].xError	;//	S02注液工位蠕动泵5报错
+station.adwAlarm[1].06	:=	fbRudongPump[6].xError	;//	S02注液工位蠕动泵6报错
+station.adwAlarm[1].07	:=	fbRudongPump[7].xError	;//	S02注液工位蠕动泵7报错
+station.adwAlarm[1].08	:=	fbRudongPump[8].xError	;//	S02注液工位蠕动泵8报错
+station.adwAlarm[1].09	:=	fbRudongPump[9].xError	;//	S02注液工位蠕动泵9报错
+station.adwAlarm[1].10	:=	fbRudongPump[10].xError	;//	S02注液工位蠕动泵10报错
+station.adwAlarm[1].11	:=	fbRudongPump[11].xError	;//	S02注液工位蠕动泵11报错
+station.adwAlarm[1].12	:=	fbRudongPump[12].xError	;//	S02注液工位蠕动泵12报错
+station.adwAlarm[1].13	:=	fbHOZAdjustCyl_1.xHP_Off 	;//	S02上层水平调整气缸1原点未到位
+station.adwAlarm[1].14	:=	fbHOZAdjustCyl_1.xWP_Off 	;//	S02上层水平调整气缸1动点未到位
+station.adwAlarm[1].15	:=	fbHOZAdjustCyl_2.xHP_Off	;//	S02上层水平调整气缸2原点未到位
+station.adwAlarm[1].16	:=	fbHOZAdjustCyl_2.xWP_Off	;//	S02上层水平调整气缸2动点未到位
+station.adwAlarm[1].17	:=	fbHOZAdjustCyl_3.xHP_Off	;//	S02下层水平调整气缸1原点未到位
+station.adwAlarm[1].18	:=	fbHOZAdjustCyl_3.xWP_Off	;//	S02下层水平调整气缸1动点未到位
+station.adwAlarm[1].19	:=	fbHOZAdjustCyl_4.xHP_Off	;//	S02下层水平调整气缸2原点未到位
+station.adwAlarm[1].20	:=	fbHOZAdjustCyl_4.xWP_Off	;//	S02下层水平调整气缸2动点未到位
+station.adwAlarm[1].21	:=	fbROTCyl.xHP_Off	;//	S02防滴液旋转气缸原点未到位
+station.adwAlarm[1].22	:=	fbROTCyl.xWP_Off	;//	S02防滴液旋转气缸动点未到位
+station.adwAlarm[1].23	:=	fbXAxisMove.xError	;//	S02注液工位X轴伺服报错
+station.adwAlarm[1].24	:=	fbXAxisMove.xNotPowerOn	;//	S02注液工位X轴伺服未使能
+station.adwAlarm[1].25	:=	fbXAxisMove.xMoveTimeout	;//	S02注液工位X轴伺服移动超时
+station.adwAlarm[1].26	:=	fbYAxisMove.xError	;//	S02注液工位Y轴伺服报错
+station.adwAlarm[1].27	:=	fbYAxisMove.xNotPowerOn	;//	S02注液工位Y轴伺服未使能
+station.adwAlarm[1].28	:=	fbYAxisMove.xMoveTimeout	;//	S02注液工位Y轴伺服移动超时
+station.adwAlarm[1].29	:=	fbZAxisMove.xError	;//	S02注液工位Z轴伺服报错
+station.adwAlarm[1].30	:=	fbZAxisMove.xNotPowerOn	;//	S02注液工位Z轴伺服未使能
+station.adwAlarm[1].31	:=	fbZAxisMove.xMoveTimeout	;//	S02注液工位Z轴伺服移动超时
+station.adwAlarm[2].00	:=	fbStirAxis.xError	;//	S02注液工位搅拌旋转伺服报错
+station.adwAlarm[2].01	:=	fbStirAxis.xNotPowerOn	;//	S02注液工位搅拌旋转伺服未使能
+station.adwAlarm[2].02	:=	fbStirAxis.xMoveTimeout	;//	S02注液工位搅拌旋转伺服移动超时
+station.adwAlarm[2].03	:=	fbMKC204C.xError	;//	S03注液工位称重设备报警
+
+
 
 ]]></ST>
       </Implementation>
@@ -146,6 +182,11 @@ CASE station.iStepAuto OF
 			station.iStepAuto:= 10;
 		END_IF
     10: //复位数据 
+			IF  station.xSingleRunning THEN
+				 FOR i:=1 TO gc_ModuleProNo BY 1 DO
+						 MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+				 END_FOR
+			END_IF
 			station.iStepAuto:=15;
 	
 	15://程序分类选择
@@ -457,7 +498,7 @@ CASE station.iStepAuto OF
 			END_IF
 			
 	1110://判断Y轴循环
-			IF      stCalibration.iYCounter >12 THEN
+			IF   stCalibration.iYCounter >12 THEN
 					 stCalibration.iYCounter:=1;
 					 stCalibration.iXCounter:=1;
 					 station.iStepAuto:=1130;
@@ -764,7 +805,9 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="40" Count="0" />
     </LineIds>
     <LineIds Name="S02_LidInjecting.Alarm">
-      <LineId Id="176" Count="1" />
+      <LineId Id="338" Count="35" />
+      <LineId Id="291" Count="0" />
+      <LineId Id="279" Count="0" />
       <LineId Id="262" Count="0" />
       <LineId Id="266" Count="0" />
     </LineIds>
@@ -778,6 +821,8 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="1161" Count="4" />
       <LineId Id="1167" Count="17" />
       <LineId Id="1256" Count="0" />
+      <LineId Id="2265" Count="3" />
+      <LineId Id="2264" Count="0" />
       <LineId Id="1259" Count="0" />
       <LineId Id="2179" Count="0" />
       <LineId Id="2003" Count="2" />

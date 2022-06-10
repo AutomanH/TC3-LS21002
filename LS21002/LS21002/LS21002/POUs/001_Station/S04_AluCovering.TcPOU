@@ -15,7 +15,7 @@ VAR
 	fbZAxisMove_2	 :REFERENCE TO FB_Axis:=fbAxis[11];	//		热熔工位-Z轴伺服2
 	//温控器
 	fbThermostat_1			 :REFERENCE TO FB_TempControl_FUSHI:=fbTempretureControl[1];//温控器1
-    fbThermostat_2			 :REFERENCE TO FB_TempControl_FUSHI:=fbTempretureControl[2];//温控器2
+  fbThermostat_2			 :REFERENCE TO FB_TempControl_FUSHI:=fbTempretureControl[2];//温控器2
 	//延时
 	arTonDelay :ARRAY[1..20] OF TON;
 	//返回值
@@ -30,7 +30,16 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[]]></ST>
+      <ST><![CDATA[A_Input();
+Alarm();
+Delay();
+FlowAuto();
+FlowInit();
+General();
+ILC();
+TipAuto();
+TipManual();
+Z_Output();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{65b47811-5915-4744-a63e-96ca1ba2a959}">
       <Implementation>
@@ -56,8 +65,24 @@ fbHOZAdjustCyl_4.xHP_Sensor	:=	IxS04HOZAdjustCyl_4HP	;
     </Action>
     <Action Name="Alarm" Id="{4b5e4421-5305-4405-b11b-0af4cd39b3da}">
       <Implementation>
-        <ST><![CDATA[//
-station.adwAlarm[1].00:=station.xInitTimeout;	  			//S08Label 初始化超时
+        <ST><![CDATA[station.adwAlarm[1].00	:=	station.xInitTimeout	;//	S04 初始化超时
+station.adwAlarm[1].01	:=	fbHOZAdjustCyl_1.xHP_Off 	;//	S04上层水平调整气缸1原点未到位
+station.adwAlarm[1].02	:=	fbHOZAdjustCyl_1.xWP_Off 	;//	S04上层水平调整气缸1动点未到位
+station.adwAlarm[1].03	:=	fbHOZAdjustCyl_2.xHP_Off	;//	S04上层水平调整气缸2原点未到位
+station.adwAlarm[1].04	:=	fbHOZAdjustCyl_2.xWP_Off	;//	S04上层水平调整气缸2动点未到位
+station.adwAlarm[1].05	:=	fbHOZAdjustCyl_3.xHP_Off	;//	S04下层水平调整气缸1原点未到位
+station.adwAlarm[1].06	:=	fbHOZAdjustCyl_3.xWP_Off	;//	S04下层水平调整气缸1动点未到位
+station.adwAlarm[1].07	:=	fbHOZAdjustCyl_4.xHP_Off	;//	S04下层水平调整气缸2原点未到位
+station.adwAlarm[1].08	:=	fbHOZAdjustCyl_4.xWP_Off	;//	S04下层水平调整气缸2动点未到位
+station.adwAlarm[1].09	:=	fbZAxisMove_1.xError	;//	S04热封铝膜工位Z轴伺服1报错
+station.adwAlarm[1].10	:=	fbZAxisMove_1.xNotPowerOn	;//	S04热封铝膜工位Z轴伺服1未使能
+station.adwAlarm[1].11	:=	fbZAxisMove_1.xMoveTimeout	;//	S04热封铝膜工位Z轴伺服1移动超时
+station.adwAlarm[1].12	:=	fbZAxisMove_2.xError	;//	S04热封铝膜工位Z轴伺服2报错
+station.adwAlarm[1].13	:=	fbZAxisMove_2.xNotPowerOn	;//	S04热封铝膜工位Z轴伺服2未使能
+station.adwAlarm[1].14	:=	fbZAxisMove_2.xMoveTimeout	;//	S04热封铝膜工位Z轴伺服2移动超时
+station.adwAlarm[1].15	:=	fbThermostat_1.xError	;//	S04热封铝膜工位温控器1报错
+station.adwAlarm[1].16	:=	fbThermostat_2.xError	;//	S04热封铝膜工位温控器2报错
+
 
 ]]></ST>
       </Implementation>
@@ -130,6 +155,11 @@ CASE station.iStepAuto OF
 			fbThermostat_1.xStart :=TRUE;
 			fbThermostat_2.xStart :=TRUE;
 			arTonDelay[02](IN:= FALSE);
+			IF  station.xSingleRunning THEN
+				 FOR i:=1 TO gc_ModuleProNo BY 1 DO
+						 MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+				 END_FOR
+			END_IF
 			station.iStepAuto:=20;	
 	20:////Restore_after_Estop_Process1 上载数据流程
 			IF  station.xSingleRunning OR  fbMachine[1].xTryRun THEN
@@ -493,6 +523,7 @@ QxS04HOZAdjustCyl_4HP	:=	fbHOZAdjustCyl_4.xHP_Valve	;
       </Implementation>
     </Action>
     <LineIds Name="S04_AluCovering">
+      <LineId Id="33" Count="8" />
       <LineId Id="5" Count="0" />
     </LineIds>
     <LineIds Name="S04_AluCovering.A_Input">
@@ -505,7 +536,8 @@ QxS04HOZAdjustCyl_4HP	:=	fbHOZAdjustCyl_4.xHP_Valve	;
       <LineId Id="8" Count="0" />
     </LineIds>
     <LineIds Name="S04_AluCovering.Alarm">
-      <LineId Id="176" Count="1" />
+      <LineId Id="267" Count="16" />
+      <LineId Id="177" Count="0" />
       <LineId Id="262" Count="0" />
       <LineId Id="266" Count="0" />
     </LineIds>
@@ -525,6 +557,8 @@ QxS04HOZAdjustCyl_4HP	:=	fbHOZAdjustCyl_4.xHP_Valve	;
       <LineId Id="1642" Count="0" />
       <LineId Id="1640" Count="1" />
       <LineId Id="1683" Count="0" />
+      <LineId Id="1840" Count="3" />
+      <LineId Id="1839" Count="0" />
       <LineId Id="1259" Count="0" />
       <LineId Id="1710" Count="0" />
       <LineId Id="1827" Count="1" />

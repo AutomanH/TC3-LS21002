@@ -93,9 +93,32 @@ fbHOZAdjustCyl_8.xHP_Sensor	:=	IxS03HOZAdjustCyl_8HP	;
     </Action>
     <Action Name="Alarm" Id="{a083e1a6-5ad3-41b2-bcc4-4b4a15412287}">
       <Implementation>
-        <ST><![CDATA[//
-station.adwAlarm[1].00:=station.xInitTimeout;	  			//S08Label 初始化超时
-
+        <ST><![CDATA[station.adwAlarm[1].00	:=	station.xInitTimeout	;//	S03 初始化超时
+station.adwAlarm[1].01	:=	fbHOZAdjustCyl_1.xHP_Off 	;//	S03上层水平调整气缸1(小)原点未到位
+station.adwAlarm[1].02	:=	fbHOZAdjustCyl_1.xWP_Off 	;//	S03上层水平调整气缸1(小)动点未到位
+station.adwAlarm[1].03	:=	fbHOZAdjustCyl_2.xHP_Off	;//	S03上层水平调整气缸2(小)原点未到位
+station.adwAlarm[1].04	:=	fbHOZAdjustCyl_2.xWP_Off	;//	S03上层水平调整气缸2(小)动点未到位
+station.adwAlarm[1].05	:=	fbHOZAdjustCyl_3.xHP_Off	;//	S03下层水平调整气缸1(小)原点未到位
+station.adwAlarm[1].06	:=	fbHOZAdjustCyl_3.xWP_Off	;//	S03下层水平调整气缸1(小)动点未到位
+station.adwAlarm[1].07	:=	fbHOZAdjustCyl_4.xHP_Off	;//	S03下层水平调整气缸2(小)原点未到位
+station.adwAlarm[1].08	:=	fbHOZAdjustCyl_4.xWP_Off	;//	S03下层水平调整气缸2(小)动点未到位
+station.adwAlarm[1].09	:=	fbHOZAdjustCyl_5.xHP_Off	;//	S03上层水平调整气缸1(大)原点未到位
+station.adwAlarm[1].10	:=	fbHOZAdjustCyl_5.xWP_Off	;//	S03上层水平调整气缸1(大)动点未到位
+station.adwAlarm[1].11	:=	fbHOZAdjustCyl_6.xHP_Off	;//	S03上层水平调整气缸2(大)原点未到位
+station.adwAlarm[1].12	:=	fbHOZAdjustCyl_6.xWP_Off	;//	S03上层水平调整气缸2(大)动点未到位
+station.adwAlarm[1].13	:=	fbHOZAdjustCyl_7.xHP_Off	;//	S03下层水平调整气缸1(大)原点未到位
+station.adwAlarm[1].14	:=	fbHOZAdjustCyl_7.xWP_Off	;//	S03下层水平调整气缸1(大)动点未到位
+station.adwAlarm[1].15	:=	fbHOZAdjustCyl_8.xHP_Off	;//	S03下层水平调整气缸2(大)原点未到位
+station.adwAlarm[1].16	:=	fbHOZAdjustCyl_8.xWP_Off	;//	S03下层水平调整气缸2(大)动点未到位
+station.adwAlarm[1].17	:=	fbXAxisMove.xError	;//	S03液位检测X轴伺服报错
+station.adwAlarm[1].18	:=	fbXAxisMove.xNotPowerOn	;//	S03液位检测X轴伺服未使能
+station.adwAlarm[1].19	:=	fbXAxisMove.xMoveTimeout	;//	S03液位检测X轴伺服移动超时
+station.adwAlarm[1].20	:=	fbYAxisMove.xError	;//	S03液位检测Y轴伺服报错
+station.adwAlarm[1].21	:=	fbYAxisMove.xNotPowerOn	;//	S03液位检测Y轴伺服未使能
+station.adwAlarm[1].22	:=	fbYAxisMove.xMoveTimeout	;//	S03液位检测Y轴伺服移动超时
+station.adwAlarm[1].23	:=	fbZAxisMove.xError	;//	S03液位检测Z轴伺服报错
+station.adwAlarm[1].24	:=	fbZAxisMove.xNotPowerOn	;//	S03液位检测Z轴伺服未使能
+station.adwAlarm[1].25	:=	fbZAxisMove.xMoveTimeout	;//	S03液位检测Z轴伺服移动超时
 ]]></ST>
       </Implementation>
     </Action>
@@ -162,8 +185,12 @@ CASE station.iStepAuto OF
 			station.iStepAuto:= 5;
 		END_IF		
 	 5://复位数据
-			
-		station.iStepAuto:= 10;
+			IF  station.xSingleRunning THEN
+				 FOR i:=1 TO gc_ModuleProNo BY 1 DO
+						 MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+				 END_FOR
+			END_IF	
+			station.iStepAuto:= 10;
 	 10: //判断产品是否到该工位
 		IF  station.xSingleRunning THEN
 			station.iStepAuto:= 11;
@@ -1277,8 +1304,7 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="8" Count="0" />
     </LineIds>
     <LineIds Name="S03_LidChecking.Alarm">
-      <LineId Id="176" Count="1" />
-      <LineId Id="262" Count="0" />
+      <LineId Id="303" Count="25" />
       <LineId Id="266" Count="0" />
     </LineIds>
     <LineIds Name="S03_LidChecking.Delay">
@@ -1291,7 +1317,9 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="1253" Count="0" />
       <LineId Id="1161" Count="4" />
       <LineId Id="1167" Count="17" />
-      <LineId Id="3236" Count="1" />
+      <LineId Id="3236" Count="0" />
+      <LineId Id="3724" Count="3" />
+      <LineId Id="3237" Count="0" />
       <LineId Id="1890" Count="0" />
       <LineId Id="1536" Count="2" />
       <LineId Id="3695" Count="2" />

@@ -17,7 +17,16 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[]]></ST>
+      <ST><![CDATA[A_Input();
+Alarm();
+Delay();
+FlowAuto();
+FlowInit();
+General();
+ILC();
+TipAuto();
+TipManual();
+Z_Output();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{08bf5b2d-c23a-4b9f-bc0b-d78d0ef357a0}">
       <Implementation>
@@ -201,6 +210,7 @@ station.xCanRun :=TRUE ;
       </Implementation>
     </Action>
     <LineIds Name="S13_Labeling">
+      <LineId Id="20" Count="8" />
       <LineId Id="5" Count="0" />
     </LineIds>
     <LineIds Name="S13_Labeling.A_Input">

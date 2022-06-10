@@ -89,6 +89,7 @@ ACT_PeristalticPump();
 //ACT_PeristalticPump_1();
 ACT_TURINRobot();
 ACT_MT_MCK();
+ACT_Alive();
 ]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{423c098f-672e-4e09-b9e7-666319181834}">
@@ -96,6 +97,20 @@ ACT_MT_MCK();
         <ST><![CDATA[IF   fbTURINContorl[1].pSysFromRobot[2].0 THEN
  		xMonitoring:=TRUE;
 END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Alive" Id="{8c363e7b-0adc-484e-b6ea-1c3c645d0dff}">
+      <Implementation>
+        <ST><![CDATA[fbAlive[1].iAliveSingle:=sCamera_TO_Plc.iCameraAlive[1];
+fbAlive[2].iAliveSingle:=sCamera_TO_Plc.iCameraAlive[2];
+fbAlive[3].iAliveSingle:=sCamera_TO_Plc.iCameraAlive[3];
+fbAlive[4].iAliveSingle:=sPLC_From_PC.iPCAlive[1];
+fbAlive[5].iAliveSingle:=sPLC_From_PC.iPCAlive[1];
+fbAlive[6].iAliveSingle:=sPLC_From_PC.iPCAlive[1];
+fbAlive[7].iAliveSingle:=sPLC_From_200SMART.iStationAlive;
+FOR i:=1 TO gc_AliveNum DO
+		fbAlive[i](iAliveSingle:= , xQAlive=> , xQAliveError=> );
+END_FOR]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_Axis" Id="{bbaeb5df-675a-4409-9a50-2a8bdac269a5}">
@@ -527,7 +542,7 @@ ELSE
 	_BuzzerBypassLamp:=FALSE;
 END_IF
 *)
-QxStartButtonLamp	:=fbMachine[1].xStartLight	;
+QxStartButtonLamp	:=fbMachine[1].xStartLight;
 QxStopButtonLamp	:=fbMachine[1].xStopLight;	
 QxResetButtonLamp	:=fbMachine[1].xResetLight;	
 QxInitButtonLamp	:=fbMachine[1].xInitLight;	
@@ -623,6 +638,51 @@ fbRudongPump[12].stPara.bySlaveID:=1;
 stData.RudongPump[1].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
 stData.RudongPump[1].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
 stData.RudongPump[1].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.RudongPump[2].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
+stData.RudongPump[2].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
+stData.RudongPump[2].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.RudongPump[3].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
+stData.RudongPump[3].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
+stData.RudongPump[3].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.RudongPump[4].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
+stData.RudongPump[4].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
+stData.RudongPump[4].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.RudongPump[5].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
+stData.RudongPump[5].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
+stData.RudongPump[5].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.RudongPump[6].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
+stData.RudongPump[6].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
+stData.RudongPump[6].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.RudongPump[7].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
+stData.RudongPump[7].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
+stData.RudongPump[7].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.RudongPump[8].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
+stData.RudongPump[8].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
+stData.RudongPump[8].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.RudongPump[9].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
+stData.RudongPump[9].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
+stData.RudongPump[9].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.RudongPump[10].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
+stData.RudongPump[10].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
+stData.RudongPump[10].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.RudongPump[11].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
+stData.RudongPump[11].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
+stData.RudongPump[11].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.RudongPump[12].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
+stData.RudongPump[12].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
+stData.RudongPump[12].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+
 
 FOR i :=1 TO gc_uiRudongPump BY 1 DO
 	fbRudongPump[i](
@@ -1179,10 +1239,20 @@ END_FOR]]></ST>
       <LineId Id="727" Count="0" />
       <LineId Id="791" Count="0" />
       <LineId Id="662" Count="0" />
+      <LineId Id="858" Count="0" />
       <LineId Id="528" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.A_Input">
       <LineId Id="12" Count="2" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_Alive">
+      <LineId Id="2" Count="0" />
+      <LineId Id="6" Count="0" />
+      <LineId Id="12" Count="3" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="3" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="5" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.ACT_Axis">
       <LineId Id="13" Count="0" />
@@ -1372,6 +1442,29 @@ END_FOR]]></ST>
       <LineId Id="185" Count="0" />
       <LineId Id="189" Count="2" />
       <LineId Id="148" Count="0" />
+      <LineId Id="193" Count="2" />
+      <LineId Id="192" Count="0" />
+      <LineId Id="197" Count="2" />
+      <LineId Id="196" Count="0" />
+      <LineId Id="201" Count="2" />
+      <LineId Id="200" Count="0" />
+      <LineId Id="205" Count="2" />
+      <LineId Id="204" Count="0" />
+      <LineId Id="209" Count="2" />
+      <LineId Id="208" Count="0" />
+      <LineId Id="213" Count="2" />
+      <LineId Id="212" Count="0" />
+      <LineId Id="217" Count="2" />
+      <LineId Id="216" Count="0" />
+      <LineId Id="221" Count="2" />
+      <LineId Id="220" Count="0" />
+      <LineId Id="225" Count="2" />
+      <LineId Id="224" Count="0" />
+      <LineId Id="229" Count="2" />
+      <LineId Id="228" Count="0" />
+      <LineId Id="233" Count="2" />
+      <LineId Id="232" Count="0" />
+      <LineId Id="236" Count="0" />
       <LineId Id="136" Count="0" />
       <LineId Id="132" Count="0" />
       <LineId Id="71" Count="23" />

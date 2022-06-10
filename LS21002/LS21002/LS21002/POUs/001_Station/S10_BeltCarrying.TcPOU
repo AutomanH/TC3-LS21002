@@ -29,7 +29,16 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[]]></ST>
+      <ST><![CDATA[A_Input();
+Alarm();
+Delay();
+FlowAuto();
+FlowInit();
+General();
+ILC();
+TipAuto();
+TipManual();
+Z_Output();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{5549612f-f835-4cac-8e2f-81ddd47e4429}">
       <Implementation>
@@ -115,6 +124,11 @@ CASE station.iStepAuto OF
 			station.iStepAuto:= 10;
 		END_IF
     10: //复位数据 
+			IF  station.xSingleRunning THEN
+				 FOR i:=1 TO gc_ModuleProNo BY 1 DO
+						 MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+				 END_FOR
+			END_IF
 			station.iStepAuto:=15;
 	15://等待工位完成信号
 		IF  S07_BoxCarrying.station.xDone  AND 
@@ -328,6 +342,7 @@ END_IF
       </Implementation>
     </Action>
     <LineIds Name="S10_BeltCarrying">
+      <LineId Id="32" Count="8" />
       <LineId Id="5" Count="0" />
     </LineIds>
     <LineIds Name="S10_BeltCarrying.A_Input">
@@ -353,6 +368,8 @@ END_IF
       <LineId Id="1452" Count="0" />
       <LineId Id="1183" Count="1" />
       <LineId Id="1256" Count="0" />
+      <LineId Id="1956" Count="3" />
+      <LineId Id="1955" Count="0" />
       <LineId Id="1259" Count="0" />
       <LineId Id="1784" Count="1" />
       <LineId Id="1947" Count="0" />

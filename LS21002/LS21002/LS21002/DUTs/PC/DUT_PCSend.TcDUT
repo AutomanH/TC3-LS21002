@@ -4,7 +4,7 @@
     <Declaration><![CDATA[TYPE DUT_PCSend :
 STRUCT
    //PC---PLC
-   xPCAlive : INT ;//0=false  1=true
+   iPCAlive:ARRAY[1..3] OF INT ;//1s跳变
    //移液枪
    iActionResult1	:INT;//0=false  1=true
  //1=取TIP头 2=扔TIP头 3=吸液 4=吐液 5=初始化（正常）   6=查询TIP头状态

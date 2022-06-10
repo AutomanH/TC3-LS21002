@@ -86,9 +86,25 @@ fbGlampAdjustCyl_3.xHP_Sensor	:=	IxS06GlampAdjustCyl_3HP	;
     </Action>
     <Action Name="Alarm" Id="{9eac2c9f-5d99-4890-b419-9170d6594623}">
       <Implementation>
-        <ST><![CDATA[//
-station.adwAlarm[1].00:=station.xInitTimeout;	  			//S08Label 初始化超时
-
+        <ST><![CDATA[station.adwAlarm[1].00	:=	station.xInitTimeout	;//	S06 初始化超时
+station.adwAlarm[1].01	:=	fbGlampCyl_2.xHP_Off	;//	S06切膜工位夹膜气缸(前)原点未到位
+station.adwAlarm[1].02	:=	fbGlampCyl_1.xWP_Off	;//	S06切膜工位夹膜气缸(前)动点未到位
+station.adwAlarm[1].03	:=	fbGlampCyl_2.xHP_Off	;//	S06切膜工位夹膜气缸(后)原点未到位
+station.adwAlarm[1].04	:=	fbGlampCyl_2.xWP_Off	;//	S06切膜工位夹膜气缸(后)动点未到位
+station.adwAlarm[1].05	:=	fbHOZReachedCyl_1.xHP_Off 	;//	S06切膜工位水平到位气缸1原点未到位
+station.adwAlarm[1].06	:=	fbHOZReachedCyl_1.xWP_Off	;//	S06切膜工位水平到位气缸1动点未到位
+station.adwAlarm[1].07	:=	fbHOZReachedCyl_2.xHP_Off	;//	S06切膜工位水平到位气缸2原点未到位
+station.adwAlarm[1].08	:=	fbHOZReachedCyl_2.xWP_Off	;//	S06切膜工位水平到位气缸2动点未到位
+station.adwAlarm[1].09	:=	fbHOZCyl.xHP_Off 	;//	S06切膜工位水平切膜气缸原点未到位
+station.adwAlarm[1].10	:=	fbHOZCyl.xWP_Off 	;//	S06切膜工位水平切膜气缸动点未到位
+station.adwAlarm[1].11	:=	fbVTCAdjustCyl.xHP_Off 	;//	S06切膜工位顶升气缸原点未到位
+station.adwAlarm[1].12	:=	fbVTCAdjustCyl.xWP_Off 	;//	S06切膜工位顶升气缸动点未到位
+station.adwAlarm[1].13	:=	fbGlampAdjustCyl_1.xHP_Off 	;//	S06切膜工位调整夹爪气缸1原点未到位
+station.adwAlarm[1].14	:=	fbGlampAdjustCyl_1.xWP_Off	;//	S06切膜工位调整夹爪气缸1动点未到位
+station.adwAlarm[1].15	:=	fbGlampAdjustCyl_2.xHP_Off	;//	S06切膜工位调整夹爪气缸2原点未到位
+station.adwAlarm[1].16	:=	fbGlampAdjustCyl_2.xWP_Off	;//	S06切膜工位调整夹爪气缸2动点未到位
+station.adwAlarm[1].17	:=	fbGlampAdjustCyl_3.xHP_Off	;//	S06切膜工位调整夹爪气缸3原点未到位
+station.adwAlarm[1].18	:=	fbGlampAdjustCyl_3.xWP_Off	;//	S06切膜工位调整夹爪气缸3动点未到位
 ]]></ST>
       </Implementation>
     </Action>
@@ -154,6 +170,11 @@ CASE station.iStepAuto OF
 			station.iStepAuto:= 5;
 		END_IF
     5: //复位数据 
+				IF  station.xSingleRunning THEN
+				 FOR i:=1 TO gc_ModuleProNo BY 1 DO
+						 MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+				 END_FOR
+			END_IF
 			station.iStepAuto:=10;
 	10: //判断产品是否到该工位
 		IF  fbMachine[1].xTryRun OR station.xSingleRunning THEN
@@ -618,8 +639,7 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="8" Count="0" />
     </LineIds>
     <LineIds Name="S06_Cutting.Alarm">
-      <LineId Id="176" Count="1" />
-      <LineId Id="262" Count="0" />
+      <LineId Id="267" Count="18" />
       <LineId Id="266" Count="0" />
     </LineIds>
     <LineIds Name="S06_Cutting.Delay">
@@ -631,6 +651,8 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="1155" Count="10" />
       <LineId Id="1167" Count="17" />
       <LineId Id="1256" Count="0" />
+      <LineId Id="2191" Count="3" />
+      <LineId Id="2190" Count="0" />
       <LineId Id="1259" Count="0" />
       <LineId Id="1949" Count="6" />
       <LineId Id="1958" Count="0" />

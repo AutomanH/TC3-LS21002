@@ -20,7 +20,16 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[]]></ST>
+      <ST><![CDATA[A_Input();
+Alarm();
+Delay();
+FlowAuto();
+FlowInit();
+General();
+ILC();
+TipAuto();
+TipManual();
+Z_Output();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{56ab53d4-cea4-4110-a800-d493a02bd0e3}">
       <Implementation>
@@ -205,6 +214,7 @@ station.xCanRun :=TRUE ;
       </Implementation>
     </Action>
     <LineIds Name="S14_LabelChecking">
+      <LineId Id="23" Count="8" />
       <LineId Id="5" Count="0" />
     </LineIds>
     <LineIds Name="S14_LabelChecking.A_Input">
