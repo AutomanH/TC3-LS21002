@@ -4,7 +4,6 @@
     <Declaration><![CDATA[TYPE DUT_SysToRobot1 :
 STRUCT
 //PLC-Robot	
-xStepRunning					:BOOL;//子程序运行中
 xStepRunPermit      	:BOOL;//流程允许运行
 xClampPartDone				:BOOL;//夹取孔板完成	
 xReleasePartDone   		:BOOL;//释放孔板完成

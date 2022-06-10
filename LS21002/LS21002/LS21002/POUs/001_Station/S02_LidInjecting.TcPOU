@@ -205,43 +205,24 @@ CASE station.iStepAuto OF
 		END_IF
 	    station.iStepAuto:= 50;
 
-	50:////Restore_after_Estop_Process1 注液流程1
+	50:////Restore_after_Estop_Process1/2 注液流程1/2
 			IF  station.xSingleRunning  OR fbMachine[1].xTryRun THEN
 					station.iStepAuto :=80; 
-			ELSIF tsModuleProcess[2].xProcessNotStarted AND NOT  tsModuleProcess[2].xProcessStarted THEN
+			ELSIF tsModuleProcess[bXCounter+1].xProcessNotStarted AND NOT  tsModuleProcess[bXCounter+1].xProcessStarted THEN
 					station.iStepAuto :=100; (*process not started*)
-			ELSIF  tsModuleProcess[2].xProcessStarted AND NOT  tsModuleProcess[2].xProcessCompleted THEN
+			ELSIF  tsModuleProcess[bXCounter+1].xProcessStarted AND NOT  tsModuleProcess[bXCounter+1].xProcessCompleted THEN
 				 station.iStepAuto :=155 ;(*process started*)
-			ELSIF  tsModuleProcess[2].xProcessCompleted AND NOT tsModuleProcess[2].xQDataCompleted  THEN
+			ELSIF  tsModuleProcess[bXCounter+1].xProcessCompleted AND NOT tsModuleProcess[bXCounter+1].xQDataCompleted  THEN
 					station.iStepAuto :=150  ;(*process completed*)
-			ELSIF tsModuleProcess[2].xQDataCompleted THEN
-					station.iStepAuto :=160;(*Qdata completed *)
-			ELSE
-					station.iStepAuto :=80; 
-			END_IF
-	
-	60://Restore_after_Estop_Process2 注液流程2 
-			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
-				  station.iStepAuto :=80; 
-			ELSIF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
-					station.iStepAuto :=100; (*process not started*)
-			ELSIF  tsModuleProcess[3].xProcessStarted AND NOT  tsModuleProcess[3].xProcessCompleted THEN
-				 station.iStepAuto :=155 ;(*process started*)
-			ELSIF  tsModuleProcess[3].xProcessCompleted AND NOT tsModuleProcess[3].xQDataCompleted  THEN
-					station.iStepAuto := 150 ;(*process completed*)
-			ELSIF tsModuleProcess[3].xQDataCompleted THEN
+			ELSIF tsModuleProcess[bXCounter+1].xQDataCompleted THEN
 					station.iStepAuto :=160;(*Qdata completed *)
 			ELSE
 					station.iStepAuto :=80; 
 			END_IF
 
 	80://流程未开始
-		 IF  bXCounter =1 THEN
-			 tsModuleProcess[2].xProcessNotStarted:=TRUE;
-		 ELSIF bXCounter =2 THEN
-			 tsModuleProcess[3].xProcessNotStarted:=TRUE;
-		 END_IF
-		 station.iStepAuto:= 90;
+			 tsModuleProcess[bXCounter+1].xProcessNotStarted:=TRUE;
+		 		station.iStepAuto:= 90;
 	90://水平调整气缸伸出
 		IF  iBoxChoose =1 THEN
 			(*上层水平调整气缸*)
@@ -290,13 +271,9 @@ CASE station.iStepAuto OF
 				station.iStepAuto:=130;
 			END_IF
 	130://开始注液
-		 IF  bXCounter =1 THEN
-			 tsModuleProcess[2].xProcessStarted:=TRUE;
-		 ELSIF bXCounter =2 THEN
-			 tsModuleProcess[3].xProcessStarted:=TRUE;
-		 END_IF
+		  tsModuleProcess[bXCounter+1].xProcessStarted:=TRUE;
 		 FOR i:=1 TO  12 BY 1 DO
-				fbRudongPump[i].stDeviceOpe.xPush_Auto[1]:=TRUE;
+				fbRudongPump[i].stDeviceOpe.xPull_Auto[1]:=TRUE;
 		 END_FOR
 		station.iStepAuto:= 140;
 	140://注液结束
@@ -310,11 +287,7 @@ CASE station.iStepAuto OF
 				END_IF
 		END_FOR 
 	145://注液完成
-		 IF  bXCounter =1 THEN
-			 tsModuleProcess[2].xProcessCompleted:=TRUE;
-		 ELSIF bXCounter =2 THEN
-			 tsModuleProcess[3].xProcessCompleted:=TRUE;
-		 END_IF
+	 tsModuleProcess[bXCounter+1].xProcessCompleted:=TRUE;
 		station.iStepAuto:=150;	
 	
 	150://写入结果
@@ -325,11 +298,7 @@ CASE station.iStepAuto OF
 				arProcessDataStation[2].stProduct.xlidInjecting_OK:=TRUE;
 				arProcessDataStation[2].stProduct.xlidInjecting_NOK:=FALSE;	
 		END_IF
-		IF  bXCounter =1 THEN
-			 tsModuleProcess[2].xQDataCompleted:=TRUE;
-		 ELSIF bXCounter =2 THEN
-			 tsModuleProcess[3].xQDataCompleted:=TRUE;
-		 END_IF
+		tsModuleProcess[bXCounter].xQDataCompleted:=TRUE;
 		station.iStepAuto:=160;
 	155://注液失败
 		IF  bXCounter = 1 THEN
@@ -357,7 +326,7 @@ CASE station.iStepAuto OF
 		
 	190://检查循环次数
 			IF   bXCounter<=2 THEN
-				station.iStepAuto:=60;
+				station.iStepAuto:=50;
 			ELSE
 				station.iStepAuto:=200;
 			END_IF
@@ -848,15 +817,9 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="2206" Count="1" />
       <LineId Id="1746" Count="9" />
       <LineId Id="1745" Count="0" />
-      <LineId Id="1628" Count="0" />
-      <LineId Id="1861" Count="0" />
-      <LineId Id="2216" Count="1" />
-      <LineId Id="1862" Count="9" />
-      <LineId Id="1860" Count="0" />
       <LineId Id="1976" Count="0" />
-      <LineId Id="1767" Count="2" />
-      <LineId Id="1771" Count="1" />
-      <LineId Id="1770" Count="0" />
+      <LineId Id="1767" Count="0" />
+      <LineId Id="1769" Count="0" />
       <LineId Id="1766" Count="0" />
       <LineId Id="1980" Count="14" />
       <LineId Id="1979" Count="0" />
@@ -881,7 +844,8 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="2228" Count="1" />
       <LineId Id="2227" Count="0" />
       <LineId Id="1544" Count="0" />
-      <LineId Id="1775" Count="5" />
+      <LineId Id="1776" Count="0" />
+      <LineId Id="1780" Count="0" />
       <LineId Id="1784" Count="0" />
       <LineId Id="1782" Count="0" />
       <LineId Id="1774" Count="0" />
@@ -893,7 +857,6 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="1975" Count="0" />
       <LineId Id="1805" Count="0" />
       <LineId Id="1654" Count="1" />
-      <LineId Id="1823" Count="3" />
       <LineId Id="1821" Count="1" />
       <LineId Id="1652" Count="1" />
       <LineId Id="1658" Count="0" />
@@ -903,7 +866,6 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="1811" Count="0" />
       <LineId Id="1817" Count="0" />
       <LineId Id="1808" Count="0" />
-      <LineId Id="1828" Count="3" />
       <LineId Id="1827" Count="0" />
       <LineId Id="1546" Count="0" />
       <LineId Id="1847" Count="0" />

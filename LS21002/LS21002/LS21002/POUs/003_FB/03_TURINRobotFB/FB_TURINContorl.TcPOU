@@ -364,7 +364,7 @@ THEN
 				_iInitState := _iInitState + 1;
 		 END_IF		 
 		 8://判断是否为Running
-		  IF stData.i_Running THEN 
+		  IF stData.i_Running  THEN 
 				_iInitState := _iInitState + 1;
 			ELSE 
 				_iInitState := 4 ;

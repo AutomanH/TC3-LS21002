@@ -256,44 +256,24 @@ CASE station.iStepAuto OF
 				 bXCounter:=1;
 				 _FirstCycle[3]:=TRUE;
 			END_IF
-			station.iStepAuto:= 45;		
-		45:////Restore_after_Estop_Process2 X轴位置1拍照流程
-			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
-					station.iStepAuto :=70; 
-			ELSIF tsModuleProcess[2].xProcessNotStarted AND NOT  tsModuleProcess[2].xProcessStarted THEN
-					station.iStepAuto :=70; (*process not started*)
-			ELSIF  tsModuleProcess[2].xProcessStarted AND NOT  tsModuleProcess[2].xProcessCompleted THEN
-				 station.iStepAuto := 70;(*process started*)
-			ELSIF  tsModuleProcess[2].xProcessCompleted AND NOT tsModuleProcess[2].xQDataCompleted  THEN
-					station.iStepAuto :=200;(*process completed*)
-			ELSIF tsModuleProcess[2].xQDataCompleted THEN
-					station.iStepAuto :=200;(*Qdata completed *)
-			ELSE
-					station.iStepAuto :=70; 
-			END_IF	
-		50:////Restore_after_Estop_Process3 X轴位置2拍照流程
-			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
-					station.iStepAuto :=70; 
-			ELSIF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
-					station.iStepAuto :=70; (*process not started*)
-			ELSIF  tsModuleProcess[3].xProcessStarted AND NOT  tsModuleProcess[3].xProcessCompleted THEN
-				 station.iStepAuto := 70;(*process started*)
-			ELSIF  tsModuleProcess[3].xProcessCompleted AND NOT tsModuleProcess[3].xQDataCompleted  THEN
-					station.iStepAuto :=200;(*process completed*)
-			ELSIF tsModuleProcess[3].xQDataCompleted THEN
-					station.iStepAuto :=200;(*Qdata completed *)
-			ELSE
-					station.iStepAuto :=70; 
-			END_IF	
-	
+			station.iStepAuto:= 50;		
+		50:////Restore_after_Estop_Process2/3 X轴位置1/2拍照流程
+			 IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+					 station.iStepAuto :=70; 
+			 ELSIF tsModuleProcess[bXCounter+1].xProcessNotStarted AND NOT  tsModuleProcess[bXCounter+1].xProcessStarted THEN
+					 station.iStepAuto :=70; (*process not started*)
+			 ELSIF  tsModuleProcess[bXCounter+1].xProcessStarted AND NOT  tsModuleProcess[bXCounter+1].xProcessCompleted THEN
+					station.iStepAuto := 70;(*process started*)
+			 ELSIF  tsModuleProcess[bXCounter+1].xProcessCompleted AND NOT tsModuleProcess[bXCounter+1].xQDataCompleted  THEN
+					 station.iStepAuto :=200;(*process completed*)
+			 ELSIF tsModuleProcess[bXCounter+1].xQDataCompleted THEN
+					 station.iStepAuto :=200;(*Qdata completed *)
+			 ELSE
+					 station.iStepAuto :=70; 
+			 END_IF	
 		70://流程未开始
-				IF    bXCounter =1 THEN
-					 tsModuleProcess[2].xProcessNotStarted :=TRUE;
-				ELSIF	bXCounter= 2 THEN
-					 tsModuleProcess[3].xProcessNotStarted :=TRUE;
-				END_IF
+				tsModuleProcess[bXCounter+1].xProcessNotStarted :=TRUE;
 				station.iStepAuto :=80; 
-				
 		80://水平调整气缸伸出		
 			IF   bCounter =1 THEN
 					IF  iBoxChoose =1 THEN
@@ -376,11 +356,7 @@ CASE station.iStepAuto OF
 			END_IF
 		140://触发拍照
 			(*开始循环*)
-			IF  bXCounter =1 THEN
-				tsModuleProcess[2].xProcessStarted :=TRUE;
-			ELSIF bXCounter =2 THEN
-				tsModuleProcess[3].xProcessStarted :=TRUE;
-			END_IF
+			tsModuleProcess[bXCounter+1].xProcessStarted :=TRUE;
 			IF   bCounter =1  (*17.18位置有产品*)  THEN
 					IF  bXCounter =1 THEN
 							FOR i:=2 TO  9 BY 1 DO
@@ -893,14 +869,9 @@ CASE station.iStepAuto OF
 				station.iStepAuto:=190; 
 			END_IF
 		190:///X轴拍照流程完成
-			IF  bXCounter =1 THEN
-				 tsModuleProcess[2].xProcessCompleted:=TRUE;
-				 tsModuleProcess[2].xQDataCompleted:=TRUE;
-			 ELSIF bXCounter =2 THEN
-				 tsModuleProcess[3].xProcessCompleted:=TRUE;
-				 tsModuleProcess[3].xQDataCompleted:=TRUE;
-			END_IF
-			station.iStepAuto:=200; 
+				 tsModuleProcess[bXCounter+1].xProcessCompleted:=TRUE;
+				 tsModuleProcess[bXCounter+1].xQDataCompleted:=TRUE;
+					station.iStepAuto:=200; 
 		200://Y轴回拍照位置1
 				fbYAxisMove.xMoveAuto[2]:=TRUE;
 				IF  fbYAxisMove.xMoveInPos[2] THEN
@@ -911,7 +882,7 @@ CASE station.iStepAuto OF
 			station.iStepAuto:=220;
 		220://X循环判断
 			IF   bXCounter<=2 THEN
-				station.iStepAuto:=70;
+				station.iStepAuto:=50;
 			ELSE
 				station.iStepAuto:=230; 
 			END_IF	
@@ -1382,17 +1353,9 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="3275" Count="1" />
       <LineId Id="2991" Count="9" />
       <LineId Id="2986" Count="0" />
-      <LineId Id="3013" Count="0" />
-      <LineId Id="3277" Count="1" />
-      <LineId Id="3014" Count="9" />
-      <LineId Id="3012" Count="0" />
-      <LineId Id="3149" Count="0" />
       <LineId Id="3003" Count="0" />
-      <LineId Id="3006" Count="0" />
-      <LineId Id="3010" Count="1" />
-      <LineId Id="3008" Count="1" />
+      <LineId Id="3010" Count="0" />
       <LineId Id="3005" Count="0" />
-      <LineId Id="3163" Count="0" />
       <LineId Id="3172" Count="33" />
       <LineId Id="3207" Count="3" />
       <LineId Id="3164" Count="0" />
@@ -1427,9 +1390,7 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="3264" Count="0" />
       <LineId Id="1556" Count="0" />
       <LineId Id="2511" Count="0" />
-      <LineId Id="3024" Count="0" />
-      <LineId Id="3034" Count="1" />
-      <LineId Id="3031" Count="1" />
+      <LineId Id="3723" Count="0" />
       <LineId Id="1807" Count="0" />
       <LineId Id="2463" Count="0" />
       <LineId Id="2466" Count="1" />
@@ -1634,11 +1595,9 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="2599" Count="0" />
       <LineId Id="2592" Count="0" />
       <LineId Id="3101" Count="0" />
-      <LineId Id="3109" Count="0" />
       <LineId Id="3108" Count="0" />
-      <LineId Id="3110" Count="2" />
-      <LineId Id="3115" Count="0" />
-      <LineId Id="3113" Count="1" />
+      <LineId Id="3110" Count="0" />
+      <LineId Id="3114" Count="0" />
       <LineId Id="2610" Count="2" />
       <LineId Id="2616" Count="0" />
       <LineId Id="2614" Count="0" />

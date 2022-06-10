@@ -30,7 +30,16 @@ VAR
 	bClearProcessStep	:BYTE;
 END_VAR]]></Declaration>
     <Implementation>
-      <ST><![CDATA[]]></ST>
+      <ST><![CDATA[A_Input();
+Alarm();
+Delay();
+FlowAuto();
+FlowInit();
+General();
+ILC();
+TipAuto();
+TipManual();
+Z_Output();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{d026f879-9ebf-471b-ac71-87e8725143ee}">
       <Implementation>
@@ -400,6 +409,7 @@ END_IF
       </Implementation>
     </Action>
     <LineIds Name="S05_Adjusting">
+      <LineId Id="33" Count="8" />
       <LineId Id="5" Count="0" />
     </LineIds>
     <LineIds Name="S05_Adjusting.A_Input">

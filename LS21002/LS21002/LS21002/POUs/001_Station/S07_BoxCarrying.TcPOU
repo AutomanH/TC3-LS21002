@@ -34,11 +34,8 @@ VAR
 	bRobCounter: BYTE;
 	//放料到卡片上
 	xPutBoxInCardPosDone :BOOL;
-	// //buffer位置是否有产品
+	//buffer位置是否有产品
 	xBufferPosCheckSensor: BOOL;
-	// //需要去取Buffer位置的产品
-	xNeedTakePartBufferPos: BOOL;
-	
 	//NG流道传感器
 	xNGPosCheckSensor :ARRAY[1..3] OF BOOL;
 	//允许机械手放料到NG流道
@@ -52,11 +49,26 @@ VAR
 	//取上来的孔板放置位置
 	iPutPartPosChoose:WORD;
 	iPickPartPosChoose:WORD;
+	//已经放完的孔板位置
+	xPutBeltLineCompleted:ARRAY[1..2] OF BOOL;
 
+	// 临时
+	bRobotStep: BYTE;
+	// 临时
+	xRobotStartTryRun: BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[]]></ST>
+      <ST><![CDATA[A_Input();
+Alarm();
+Delay();
+FlowAuto();
+FlowInit();
+General();
+ILC();
+TipAuto();
+TipManual();
+Z_Output();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{f1dcf18d-ccc6-45af-824d-0ee13206a5a0}">
       <Implementation>
@@ -147,7 +159,6 @@ CASE station.iStepAuto OF
 			station.iStepAuto:= 5;
 		END_IF
     5: //复位数据
-			xNeedTakePartBufferPos:=FALSE;
 			station.iStepAuto:=10;
 	10: //判断产品是否到该工位
 		IF  fbMachine[1].xTryRun OR station.xSingleRunning THEN
@@ -192,45 +203,28 @@ CASE station.iStepAuto OF
 			 _FirstCycle[1]:=TRUE;
 		 END_IF
 		station.iStepAuto:= 50;
-	50:////Restore_after_Estop_Process2 机械手第一次取料流程
+	50:////Restore_after_Estop_Process2 /Process3机械手第1/2次取料流程
 			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
-					station.iStepAuto :=70; 
-			ELSIF tsModuleProcess[2].xProcessNotStarted AND NOT  tsModuleProcess[2].xProcessStarted THEN
-					station.iStepAuto :=70; (*process not started*)
-			ELSIF  tsModuleProcess[2].xProcessStarted AND NOT  tsModuleProcess[2].xProcessCompleted THEN
-				 station.iStepAuto := 70;(*process started*)
-			ELSIF  tsModuleProcess[2].xProcessCompleted AND NOT tsModuleProcess[2].xQDataCompleted  THEN
+					station.iStepAuto :=60; 
+			ELSIF tsModuleProcess[bRobCounter+1].xProcessNotStarted AND NOT  tsModuleProcess[bRobCounter+1].xProcessStarted THEN
+					station.iStepAuto :=60; (*process not started*)
+			ELSIF  tsModuleProcess[bRobCounter+1].xProcessStarted AND NOT  tsModuleProcess[bRobCounter+1].xProcessCompleted THEN
+				 station.iStepAuto := 60;(*process started*)
+			ELSIF  tsModuleProcess[bRobCounter+1].xProcessCompleted AND NOT tsModuleProcess[bRobCounter+1].xQDataCompleted  THEN
 					station.iStepAuto :=100 ;(*process completed*)
-			ELSIF tsModuleProcess[2].xQDataCompleted THEN
+			ELSIF tsModuleProcess[bRobCounter+1].xQDataCompleted THEN
 					station.iStepAuto :=100;(*Qdata completed *)
 			ELSE
-					station.iStepAuto :=70; 
-			END_IF	
-	60:////Restore_after_Estop_Process3 机械手第二次取料流程
-			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
-					station.iStepAuto :=70; 
-			ELSIF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
-					station.iStepAuto :=70; (*process not started*)
-			ELSIF  tsModuleProcess[3].xProcessStarted AND NOT  tsModuleProcess[3].xProcessCompleted THEN
-				 station.iStepAuto := 70;(*process started*)
-			ELSIF  tsModuleProcess[3].xProcessCompleted AND NOT tsModuleProcess[3].xQDataCompleted  THEN
-					station.iStepAuto :=100 ;(*process completed*)
-			ELSIF tsModuleProcess[3].xQDataCompleted THEN
-					station.iStepAuto :=100;(*Qdata completed *)
-			ELSE
-					station.iStepAuto :=70; 
-			END_IF	
-	70://机械手选择取料程序	
-			IF bRobCounter =1 THEN
-				tsModuleProcess[2].xProcessNotStarted:=TRUE;
-			ELSIF bRobCounter =2 THEN
-				tsModuleProcess[3].xProcessNotStarted:=TRUE;	
+					station.iStepAuto :=60; 
 			END_IF
+	60://机械手选择取料程序	
+			tsModuleProcess[bRobCounter+1].xProcessNotStarted:=TRUE;
 			stToRobot1.iMoveMode := CmdRobot1.Cmd_TakePart ;//切换程序
-			IF    stToRobot1.xStepRunning  THEN
-			 			station.iStepAuto :=75; 
+			IF    stFromRobot1.xStepRunning  THEN
+			 			stToRobot1.iMoveMode := CmdRobot1.noCmd ;
+			 			station.iStepAuto :=70; 
 			END_IF
-	75://取料子程序运行
+	70://取料子程序运行
 			stToRobot1.xStepRunPermit := TRUE ;
 			IF stFromRobot1.xStepRunDone THEN
 					stToRobot1.xStepRunPermit := FALSE ;
@@ -239,7 +233,7 @@ CASE station.iStepAuto OF
 	80:	//机械手允许去取料位
 				IF  bRobCounter =1 THEN
 				 	stToRobot1.xPickPos1Premit :=TRUE;
-						IF stFromRobot1.xPutPos1Reached THEN 
+						IF stFromRobot1.xPickPos1Reached THEN 
 							 stToRobot1.xPickPos1Premit := FALSE ;
 							 station.iStepAuto :=90;
 						END_IF
@@ -251,125 +245,67 @@ CASE station.iStepAuto OF
 						END_IF
 				END_IF			
 	90://电动夹爪夹紧
-		 IF bRobCounter =1 THEN
-				 tsModuleProcess[2].xProcessStarted:=TRUE;
-		 ELSIF bRobCounter =2 THEN
-				 tsModuleProcess[3].xProcessStarted:=TRUE;	
-		 END_IF
+		 tsModuleProcess[bRobCounter+1].xProcessStarted:=TRUE;
 		 IF NOT fbmachine[1].xTryRun THEN 
-			 station.iStepAuto :=100;
+			 station.iStepAuto :=95;
 		 ELSE
 			fbClamp.stOper.aClampControl[1]:=TRUE ;
 			IF fbClamp.xDone  OR ( fbClamp.xGripClampEmpty AND  fbmachine[1].xTryRun )   THEN
 					fbClamp.xExecute :=FALSE ;
-					station.iStepAuto :=100;
+					station.iStepAuto :=95;
 			END_IF
 		END_IF
 	95://夹取完成,机械手回中转位
 				stToRobot1.xClampPartDone:=TRUE;
 			IF   stFromRobot1.xPickTransferPosReached THEN
-					 IF bRobCounter =2 THEN
-						 xS07MainlineRunPermit:=TRUE;		
-					 END_IF
-			END_IF
-			station.iStepAuto :=96;
-	96:	
-			stToRobot1.iMoveMode := CmdRobot1.Cmd_PutPart ;//切换程序
-			IF    stToRobot1.xStepRunning  THEN
-			 			station.iStepAuto :=100; 
-			END_IF
-
-	100://判断该去哪个位置放料
-			IF bRobCounter =1 THEN
-				tsModuleProcess[2].xProcessCompleted:=TRUE;
-			ELSIF bRobCounter =2 THEN
-					tsModuleProcess[3].xProcessCompleted:=TRUE;	
-			END_IF
-			IF  bRobCounter =1 THEN
-				IF  ( arProcessDataStation[2].stProduct.xALL_OK  AND arProcessDataStation[1].stProduct.xALL_OK ) AND 
-					(( arProcessDataStation[2].stProduct.xALL_OK  AND arProcessDataStation[1].stProduct.xPart_NG) AND 
-					xBufferPosCheckSensor ) (*Buffer位有产品*)   THEN
-						iPutPartPosChoose :=stPutPartPosChoose.CardPositon_1;(*卡片1位置 *)
-				ELSIF   arProcessDataStation[2].stProduct.xALL_OK  AND arProcessDataStation[1].stProduct.xPart_NG AND 
-						 NOT xBufferPosCheckSensor  (*Buffer位无产品*) THEN
-						 iPutPartPosChoose :=stPutPartPosChoose.BufferPostion;(*buffer位置 *)
-				ELSIF   arProcessDataStation[2].stProduct.xPart_NG  THEN 
-						iPutPartPosChoose :=stPutPartPosChoose.NGPositon;(*NG位置 *)
-				END_IF 
-			ELSIF  bRobCounter =2 THEN
-				IF   (arProcessDataStation[1].stProduct.xALL_OK  AND arProcessDataStation[2].stProduct.xALL_OK) THEN
-						iPutPartPosChoose  :=stPutPartPosChoose.CardPostion_2;(*卡片2位置 *)	
-				ELSIF  (arProcessDataStation[1].stProduct.xALL_OK AND  arProcessDataStation[2].stProduct.xPart_NG  AND 
-						  xBufferPosCheckSensor  (*Buffer位置有产品*)) THEN
-							iPutPartPosChoose  :=stPutPartPosChoose.CardPositon_1;(*卡片1位置 *)	
-						xNeedTakePartBufferPos:=TRUE;
-				ELSIF   arProcessDataStation[1].stProduct.xPart_NG  THEN 
-							iPutPartPosChoose  :=stPutPartPosChoose.NGPositon;(*NG位置 *)
-				ELSIF  arProcessDataStation[1].stProduct.xALL_OK AND  arProcessDataStation[2].stProduct.xPart_NG  AND
-						  NOT xBufferPosCheckSensor  (*Buffer位无产品*) THEN
-									iPutPartPosChoose   :=stPutPartPosChoose.BufferPostion;(*buffer位置 *)
-				END_IF
-			END_IF
-			station.iStepAuto :=101;
-		101://放料子程序运行
-			stToRobot1.xStepRunPermit := TRUE ;
-			IF stFromRobot1.xStepRunDone THEN
-					stToRobot1.xStepRunPermit := FALSE ;
-					station.iStepAuto :=102; 
-	 		END_IF
-	102:	//机械手允许去取料位
-				IF  bRobCounter =1 THEN
-				 	stToRobot1.xPickPos1Premit :=TRUE;
-						IF stFromRobot1.xPickPos1Reached THEN 
-							 stToRobot1.xPickPos1Premit := FALSE ;
-							 station.iStepAuto :=105;
+						 tsModuleProcess[bRobCounter+1].xProcessCompleted:=TRUE;
+						IF bRobCounter =2 THEN
+								xS07MainlineRunPermit:=TRUE;
 						END_IF
-				ELSIF bRobCounter =2 THEN
-					 stToRobot1.xPickPos2Premit :=TRUE;
-					 	IF stFromRobot1.xPickPos2Reached THEN 
-							 stToRobot1.xPickPos2Premit := FALSE ;
-							 station.iStepAuto :=105;
-						END_IF
-				END_IF
-					
-	105:
-		IF  bRobCounter =1 THEN
-			////Restore_after_Estop_Process4 机械手第一次放料流程
+			END_IF
+			station.iStepAuto :=100;
+	100:
+			////Restore_after_Estop_Process4/Process5 机械手第1/2次放料流程
 			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
 					station.iStepAuto :=110; 
-			ELSIF tsModuleProcess[4].xProcessNotStarted AND NOT  tsModuleProcess[4].xProcessStarted THEN
+			ELSIF tsModuleProcess[bRobCounter+3].xProcessNotStarted AND NOT  tsModuleProcess[bRobCounter+3].xProcessStarted THEN
 					station.iStepAuto :=110; (*process not started*)
-			ELSIF  tsModuleProcess[4].xProcessStarted AND NOT  tsModuleProcess[4].xProcessCompleted THEN
+			ELSIF  tsModuleProcess[bRobCounter+3].xProcessStarted AND NOT  tsModuleProcess[bRobCounter+3].xProcessCompleted THEN
 				 station.iStepAuto := 110;(*process started*)
-			ELSIF  tsModuleProcess[4].xProcessCompleted AND NOT tsModuleProcess[4].xQDataCompleted  THEN
-					station.iStepAuto :=160 ;(*process completed*)
-			ELSIF tsModuleProcess[4].xQDataCompleted THEN
-					station.iStepAuto :=160;(*Qdata completed *)
+			ELSIF  tsModuleProcess[bRobCounter+3].xProcessCompleted AND NOT tsModuleProcess[bRobCounter+3].xQDataCompleted  THEN
+					station.iStepAuto :=170 ;(*process completed*)
+			ELSIF tsModuleProcess[bRobCounter+3].xQDataCompleted THEN
+					station.iStepAuto :=170;(*Qdata completed *)
 			ELSE
 					station.iStepAuto :=110; 
 			END_IF	
-		ELSIF  bRobCounter =2 THEN
-			////Restore_after_Estop_Process5 机械手第二次放料流程
-			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
-					station.iStepAuto :=110; 
-			ELSIF tsModuleProcess[5].xProcessNotStarted AND NOT  tsModuleProcess[5].xProcessStarted THEN
-					station.iStepAuto :=110; (*process not started*)
-			ELSIF  tsModuleProcess[5].xProcessStarted AND NOT  tsModuleProcess[5].xProcessCompleted THEN
-				 station.iStepAuto := 110;(*process started*)
-			ELSIF  tsModuleProcess[5].xProcessCompleted AND NOT tsModuleProcess[5].xQDataCompleted  THEN
-					station.iStepAuto :=160 ;(*process completed*)
-			ELSIF tsModuleProcess[5].xQDataCompleted THEN
-					station.iStepAuto :=160;(*Qdata completed *)
-			ELSE
-					station.iStepAuto :=110; 
-			END_IF				
-		END_IF	
-	110://检查放料是否被允许
+	110://判断该去哪个位置放料
+			tsModuleProcess[bRobCounter+3].xProcessNotStarted:=TRUE;
 			IF  bRobCounter =1 THEN
-				tsModuleProcess[4].xProcessNotStarted:=TRUE;
+			 		IF   arProcessDataStation[1].stProduct.xALL_OK  THEN
+					 		IF    NOT xPutBeltLineCompleted[1]  AND  NOT  xPutBeltLineCompleted[2] THEN
+					 				iPutPartPosChoose :=stPutPartPosChoose.CardPositon_1;(*卡片1位置 *)
+							ELSIF    xPutBeltLineCompleted[1]  AND  NOT  xPutBeltLineCompleted[2] THEN
+							 		iPutPartPosChoose :=stPutPartPosChoose.CardPostion_2;(*卡片2位置 *)
+							END_IF
+					ELSIF  arProcessDataStation[1].stProduct.xPart_NG  THEN
+					 		iPutPartPosChoose :=stPutPartPosChoose.NGPositon;(*NG位置*)
+					END_IF
 			ELSIF  bRobCounter =2 THEN
-				tsModuleProcess[5].xProcessNotStarted:=TRUE;
-			END_IF
+			 		IF   arProcessDataStation[2].stProduct.xALL_OK  THEN 
+					 		IF    NOT xPutBeltLineCompleted[1]  AND  NOT  xPutBeltLineCompleted[2] THEN
+					 					iPutPartPosChoose :=stPutPartPosChoose.CardPositon_1;(*卡片1位置 *)
+							ELSIF  NOT xPutBeltLineCompleted[1]  AND  NOT  xPutBeltLineCompleted[2] THEN
+							 			iPutPartPosChoose :=stPutPartPosChoose.CardPostion_2;(*卡片2位置 *)
+							ELSIF	  xPutBeltLineCompleted[1] AND xPutBeltLineCompleted[2] THEN 
+							 				iPutPartPosChoose :=stPutPartPosChoose.BufferPostion;(*buffer位置 *)
+							END_IF
+					ELSIF  arProcessDataStation[2].stProduct.xPart_NG  THEN
+					 		iPutPartPosChoose :=stPutPartPosChoose.NGPositon;(*NG位置*)
+					END_IF
+			 END_IF
+			station.iStepAuto :=115;	
+		115://检查放料是否被允许
 				IF   iPutPartPosChoose  =stPutPartPosChoose.CardPositon_1 OR 
 					   iPutPartPosChoose  =stPutPartPosChoose.CardPostion_2 THEN
 						IF  S09_CardCarrying.station.xDone 				AND
@@ -388,12 +324,18 @@ CASE station.iStepAuto OF
 						END_IF	
 				END_IF
 					station.iStepAuto :=120; 
-	120://放料子程序运行
+	120:	///切换放料程序
+			stToRobot1.iMoveMode := CmdRobot1.Cmd_PutPart ;//切换程序
+			IF    stFromRobot1.xStepRunning  THEN
+			 			stToRobot1.iMoveMode := CmdRobot1.noCmd ;
+			 			station.iStepAuto :=125; 
+			END_IF
+	125://放料子程序运行
 			stToRobot1.xStepRunPermit := TRUE ;
 			IF stFromRobot1.xStepRunDone THEN
 					stToRobot1.xStepRunPermit := FALSE ;
 					station.iStepAuto :=130; 
-	 		END_IF
+	 		END_IF				
 	130:	//机械手开始放料
 				CASE   iPutPartPosChoose OF
 				 	stPutPartPosChoose.CardPositon_1:
@@ -422,22 +364,21 @@ CASE station.iStepAuto OF
 								END_IF
 				END_CASE
 	140://机械手到位，松开夹爪
-			IF  bRobCounter =1 THEN
-				tsModuleProcess[4].xProcessStarted:=TRUE;
-			ELSIF  bRobCounter =2 THEN
-				tsModuleProcess[5].xProcessStarted:=TRUE;
-			END_IF
+			tsModuleProcess[bRobCounter+3].xProcessStarted:=TRUE;
 			fbClamp.stOper.aReleaseControl[1]:=TRUE ;
 			IF fbClamp.xDone  THEN 
 			  fbClamp.xExecute :=FALSE ;
-			  station.iStepAuto:= 160;
+			  station.iStepAuto:= 150;
 			END_IF		
-	160://机械手回中转位置
-			IF  bRobCounter =1 THEN
-				tsModuleProcess[4].xProcessCompleted:=TRUE;
-			ELSIF  bRobCounter =2 THEN
-				tsModuleProcess[5].xProcessCompleted:=TRUE;
+	150://记录放完的位置标志位
+			IF  iPutPartPosChoose=stPutPartPosChoose.CardPositon_1 THEN
+			 	xPutBeltLineCompleted[1]:=TRUE;
+			ELSIF iPutPartPosChoose=stPutPartPosChoose.CardPostion_2 THEN
+			 	xPutBeltLineCompleted[2]:=TRUE;
 			END_IF
+			station.iStepAuto:= 160;
+	160://机械手回中转位置
+			tsModuleProcess[bRobCounter+3].xProcessCompleted:=TRUE;
 			stToRobot1.xReleasePartDone:=TRUE;
 			IF stFromRobot1.xPickTransferPosReached THEN
 					station.iStepAuto :=170; 
@@ -447,12 +388,16 @@ CASE station.iStepAuto OF
 			station.iStepAuto :=180; 
 	180://判断是否继续
 			IF   bRobCounter<=2 THEN
-				station.iStepAuto :=60; 
+				station.iStepAuto :=50; 
 			ELSE
 				station.iStepAuto :=190; 
 			END_IF
 	190://是否需要第三次放料	
-			IF   	xNeedTakePartBufferPos THEN
+			IF   	xPutBeltLineCompleted[1] AND 
+					 NOT xPutBeltLineCompleted[2] AND  
+						xBeltBoxCheckSensor[1] AND
+					NOT 	xBeltBoxCheckSensor[2] AND
+					xBufferPosCheckSensor THEN
 					station.iStepAuto :=200; 
 			ELSE
 					station.iStepAuto :=300; 
@@ -476,6 +421,7 @@ CASE station.iStepAuto OF
 			iPickPartPosChoose :=stTakePartPosChoose.BufferPostion; 
 			stToRobot1.iMoveMode := CmdRobot1.Cmd_TakePart ;//切换程序
 			IF  stFromRobot1.xStepRunning THEN
+			 			stToRobot1.iMoveMode := CmdRobot1.noCmd ;
 			 			station.iStepAuto :=220; 
 			END_IF
 	220://取料程序运行
@@ -485,7 +431,7 @@ CASE station.iStepAuto OF
 					station.iStepAuto :=230; 
 	 		END_IF	
 	230://去Buffer位置的产品
-				stToRobot1.xPickPos3Premit := TRUE ;//允许机械手去取料位置
+				stToRobot1.xPickPos3Premit := TRUE ;
 			 IF stFromRobot1.xPickPos3Reached THEN 
 				stToRobot1.xPickPos3Premit := FALSE ;
 				station.iStepAuto :=240;
@@ -508,9 +454,9 @@ CASE station.iStepAuto OF
 					station.iStepAuto :=260;
 		END_IF
 	260://机械手切换放料程序
-			iPutPartPosChoose  := stPutPartPosChoose.CardPostion_2;(*buffer位置 *)	
 			stToRobot1.iMoveMode := CmdRobot1.Cmd_PutPart ;//切换程序
 			IF  stFromRobot1.xStepRunning THEN
+			 	stToRobot1.iMoveMode := CmdRobot1.noCmd ;
 			 	station.iStepAuto :=265;
 			END_IF
 	265://运行放料程序
@@ -519,7 +465,7 @@ CASE station.iStepAuto OF
 					stToRobot1.xStepRunPermit := FALSE ;
 					station.iStepAuto :=270; 
 	 		END_IF	
-	270://去放料
+	270://放到皮带线位置2
 			stToRobot1.xPutPos2Premit := TRUE ;
 			 IF stFromRobot1.xPutPos4Reached THEN 
 				stToRobot1.xPutPos2Premit := FALSE ;
@@ -542,21 +488,21 @@ CASE station.iStepAuto OF
 			END_FOR
 			station.iStepAuto:=310;
 	310://查看皮带线上是否放满两个深孔板
-		IF  xBeltBoxCheckSensor[1] AND
-			xBeltBoxCheckSensor[2] THEN
+		IF  xBeltBoxCheckSensor[1] AND xBeltBoxCheckSensor[2] AND
+			xPutBeltLineCompleted[1] AND xPutBeltLineCompleted[2] THEN	
+			xPutBeltLineCompleted[1]:=FALSE;
+			xPutBeltLineCompleted[2]:=FALSE;
 			station.iStepAuto :=999; 
 		ELSE
 			station.iStepAuto :=5; 	
 		END_IF
 	999://----Single Run Finish----
-			
 		station.iStepAuto :=0;
 		IF NOT station.xSingleContinuousRun THEN
 			station.xSingleRunFlag:=FALSE;
 		END_IF
 		station.xCycleEnable:=FALSE;	
 		station.xDone:=TRUE;
-
 	ELSE
 		;	
 END_CASE
@@ -659,8 +605,9 @@ CASE station.iStepInit OF
 		END_IF		
 70://机械手初始化	
 		stToRobot1.iMoveMode := CmdRobot1.Cmd_GoHome ;
-		IF  stToRobot1.xStepRunning THEN
+		IF  stFromRobot1.xStepRunning THEN
 		 		station.iStepInit:=80;	
+				stToRobot1.iMoveMode := CmdRobot1.noCmd ;
 		END_IF
 80://运行初始化子程序
 		stToRobot1.xStepRunPermit := TRUE ;
@@ -668,7 +615,7 @@ CASE station.iStepInit OF
 		stToRobot1.xStepRunPermit := FALSE ;
    		station.iStepInit:=90;	
 	 END_IF
-999://机械手初始化并检测机械手初始化完成
+90://机械手初始化并检测机械手初始化完成
 	 IF  stFromRobot1.xHomePosReached THEN
         station.iStepInit:=999;	
 	 END_IF	
@@ -745,10 +692,88 @@ END_IF
     </Action>
     <Action Name="Z_Output" Id="{a11808b0-a8ee-46f9-9be6-f8c744d674fe}">
       <Implementation>
-        <ST><![CDATA[]]></ST>
+        <ST><![CDATA[(*
+CASE  bRobotStep  OF
+ 0:
+ 		IF   xRobotStartTryRun  THEN
+		 		 bRobotStep:=bRobotStep +1;
+		END_IF
+1:  //机械手初始化
+		fbRobot.xInitExte := TRUE ;
+		 bRobotStep:=bRobotStep +1;
+2:
+		IF fbRobot.xInitFinish THEN 
+			fbRobot.xInitExte := FALSE ;	
+			 bRobotStep:=bRobotStep +1;
+		END_IF		
+3://机械手初始化	
+		stToRobot1.iMoveMode := CmdRobot1.Cmd_GoHome ;
+		IF  stFromRobot1.xStepRunning THEN
+		 		 bRobotStep:=bRobotStep +1;
+				stToRobot1.iMoveMode := CmdRobot1.noCmd ;
+		END_IF
+4://运行初始化子程序
+		stToRobot1.xStepRunPermit := TRUE ;
+	 IF stFromRobot1.xStepRunDone  THEN
+		stToRobot1.xStepRunPermit := FALSE ;
+   	 bRobotStep:=bRobotStep +1;
+	 END_IF
+5://机械手初始化并检测机械手初始化完成
+	 IF  stFromRobot1.xHomePosReached THEN
+       bRobotStep:=bRobotStep +1;
+	 END_IF	
+6://机械手选择取料程序	
+			stToRobot1.iMoveMode := CmdRobot1.Cmd_TakePart ;//切换程序
+			IF    stFromRobot1.xStepRunning  THEN
+			 			stToRobot1.iMoveMode := CmdRobot1.noCmd ;
+			 			 bRobotStep:=bRobotStep +1;
+			END_IF
+7://取料子程序运行
+			stToRobot1.xStepRunPermit := TRUE ;
+			IF stFromRobot1.xStepRunDone THEN
+					stToRobot1.xStepRunPermit := FALSE ;
+					 bRobotStep:=bRobotStep +1;
+	 		END_IF
+8:	//机械手允许去取料位
+				 	stToRobot1.xPickPos1Premit :=TRUE;
+						IF stFromRobot1.xPickPos1Reached THEN 
+							 stToRobot1.xPickPos1Premit := FALSE ;
+							 	 bRobotStep:=bRobotStep +1;
+						END_IF
+9://夹取完成,机械手回中转位
+				stToRobot1.xClampPartDone:=TRUE;
+			IF   stFromRobot1.xPickTransferPosReached THEN
+					 bRobotStep:=bRobotStep +1;
+			END_IF
+10:
+			stToRobot1.iMoveMode := CmdRobot1.Cmd_PutPart ;//切换程序
+			IF    stFromRobot1.xStepRunning  THEN
+			 			stToRobot1.iMoveMode := CmdRobot1.noCmd ;
+			 		 bRobotStep:=bRobotStep +1;
+			END_IF
+11://放料子程序运行
+			stToRobot1.xStepRunPermit := TRUE ;
+			IF stFromRobot1.xStepRunDone THEN
+					stToRobot1.xStepRunPermit := FALSE ;
+					 bRobotStep:=bRobotStep +1;
+	 		END_IF
+12:	//机械手开始放料
+			stToRobot1.xPutPos1Premit:=TRUE;(*卡片1位置 *)
+			IF stFromRobot1.xPutPos1Reached THEN 
+				 stToRobot1.xPutPos1Premit := FALSE ;
+				 bRobotStep:=bRobotStep +1;
+			END_IF
+13://机械手回中转位置
+			stToRobot1.xReleasePartDone:=TRUE;
+			IF stFromRobot1.xPickTransferPosReached THEN
+					bRobotStep:=0;
+	 		END_IF	
+END_CASE
+*)]]></ST>
       </Implementation>
     </Action>
     <LineIds Name="S07_BoxCarrying">
+      <LineId Id="63" Count="8" />
       <LineId Id="5" Count="0" />
     </LineIds>
     <LineIds Name="S07_BoxCarrying.A_Input">
@@ -778,15 +803,18 @@ END_IF
       <LineId Id="40" Count="0" />
     </LineIds>
     <LineIds Name="S07_BoxCarrying.FlowAuto">
-      <LineId Id="2830" Count="44" />
+      <LineId Id="2830" Count="28" />
+      <LineId Id="2860" Count="14" />
       <LineId Id="3251" Count="1" />
       <LineId Id="2875" Count="27" />
       <LineId Id="3253" Count="1" />
-      <LineId Id="2903" Count="11" />
-      <LineId Id="3255" Count="1" />
-      <LineId Id="2915" Count="16" />
+      <LineId Id="2903" Count="10" />
+      <LineId Id="2926" Count="0" />
+      <LineId Id="2928" Count="0" />
       <LineId Id="3269" Count="0" />
-      <LineId Id="3265" Count="2" />
+      <LineId Id="3265" Count="0" />
+      <LineId Id="3476" Count="0" />
+      <LineId Id="3266" Count="1" />
       <LineId Id="3264" Count="0" />
       <LineId Id="2935" Count="5" />
       <LineId Id="3271" Count="0" />
@@ -798,25 +826,44 @@ END_IF
       <LineId Id="3282" Count="2" />
       <LineId Id="3281" Count="0" />
       <LineId Id="3273" Count="0" />
-      <LineId Id="2946" Count="21" />
+      <LineId Id="2946" Count="0" />
+      <LineId Id="2951" Count="12" />
+      <LineId Id="3567" Count="1" />
+      <LineId Id="3570" Count="0" />
+      <LineId Id="3565" Count="0" />
+      <LineId Id="2967" Count="0" />
       <LineId Id="3316" Count="0" />
-      <LineId Id="3311" Count="0" />
-      <LineId Id="3314" Count="0" />
-      <LineId Id="3312" Count="1" />
-      <LineId Id="3310" Count="0" />
-      <LineId Id="3296" Count="0" />
-      <LineId Id="2970" Count="31" />
-      <LineId Id="3382" Count="18" />
-      <LineId Id="3381" Count="0" />
-      <LineId Id="3317" Count="0" />
-      <LineId Id="3002" Count="2" />
+      <LineId Id="3002" Count="0" />
+      <LineId Id="3004" Count="0" />
       <LineId Id="3257" Count="1" />
-      <LineId Id="3005" Count="12" />
-      <LineId Id="3259" Count="1" />
-      <LineId Id="3018" Count="33" />
-      <LineId Id="3347" Count="0" />
-      <LineId Id="3380" Count="0" />
-      <LineId Id="3405" Count="6" />
+      <LineId Id="3005" Count="10" />
+      <LineId Id="3519" Count="0" />
+      <LineId Id="3657" Count="0" />
+      <LineId Id="3525" Count="0" />
+      <LineId Id="3597" Count="0" />
+      <LineId Id="3636" Count="0" />
+      <LineId Id="3609" Count="0" />
+      <LineId Id="3637" Count="0" />
+      <LineId Id="3639" Count="0" />
+      <LineId Id="3638" Count="0" />
+      <LineId Id="3610" Count="2" />
+      <LineId Id="3598" Count="0" />
+      <LineId Id="3613" Count="0" />
+      <LineId Id="3625" Count="0" />
+      <LineId Id="3614" Count="0" />
+      <LineId Id="3627" Count="0" />
+      <LineId Id="3641" Count="2" />
+      <LineId Id="3626" Count="0" />
+      <LineId Id="3615" Count="1" />
+      <LineId Id="3599" Count="1" />
+      <LineId Id="3550" Count="0" />
+      <LineId Id="3574" Count="0" />
+      <LineId Id="3580" Count="16" />
+      <LineId Id="3573" Count="0" />
+      <LineId Id="3552" Count="5" />
+      <LineId Id="3559" Count="4" />
+      <LineId Id="3517" Count="0" />
+      <LineId Id="3411" Count="0" />
       <LineId Id="3425" Count="0" />
       <LineId Id="3427" Count="0" />
       <LineId Id="3431" Count="3" />
@@ -826,20 +873,45 @@ END_IF
       <LineId Id="3441" Count="10" />
       <LineId Id="3440" Count="0" />
       <LineId Id="3428" Count="0" />
-      <LineId Id="3066" Count="36" />
+      <LineId Id="3066" Count="0" />
+      <LineId Id="3071" Count="5" />
+      <LineId Id="3629" Count="0" />
+      <LineId Id="3633" Count="0" />
+      <LineId Id="3631" Count="0" />
+      <LineId Id="3634" Count="0" />
+      <LineId Id="3632" Count="0" />
+      <LineId Id="3630" Count="0" />
+      <LineId Id="3635" Count="0" />
+      <LineId Id="3077" Count="0" />
+      <LineId Id="3082" Count="15" />
+      <LineId Id="3646" Count="1" />
+      <LineId Id="3645" Count="0" />
+      <LineId Id="3650" Count="0" />
+      <LineId Id="3098" Count="4" />
       <LineId Id="3261" Count="1" />
       <LineId Id="3103" Count="14" />
       <LineId Id="3452" Count="0" />
+      <LineId Id="3478" Count="0" />
       <LineId Id="3454" Count="1" />
       <LineId Id="3453" Count="0" />
       <LineId Id="3118" Count="4" />
-      <LineId Id="3124" Count="0" />
+      <LineId Id="3648" Count="0" />
       <LineId Id="3465" Count="3" />
       <LineId Id="3458" Count="0" />
-      <LineId Id="3130" Count="19" />
-      <LineId Id="3473" Count="2" />
+      <LineId Id="3130" Count="17" />
+      <LineId Id="3149" Count="0" />
+      <LineId Id="3473" Count="0" />
+      <LineId Id="3479" Count="0" />
+      <LineId Id="3474" Count="1" />
       <LineId Id="3472" Count="0" />
-      <LineId Id="3150" Count="100" />
+      <LineId Id="3150" Count="28" />
+      <LineId Id="3652" Count="0" />
+      <LineId Id="3655" Count="0" />
+      <LineId Id="3180" Count="0" />
+      <LineId Id="3656" Count="0" />
+      <LineId Id="3181" Count="3" />
+      <LineId Id="3186" Count="5" />
+      <LineId Id="3193" Count="57" />
       <LineId Id="1224" Count="0" />
     </LineIds>
     <LineIds Name="S07_BoxCarrying.FlowInit">
@@ -856,7 +928,9 @@ END_IF
       <LineId Id="633" Count="0" />
       <LineId Id="662" Count="1" />
       <LineId Id="701" Count="0" />
-      <LineId Id="703" Count="1" />
+      <LineId Id="703" Count="0" />
+      <LineId Id="705" Count="0" />
+      <LineId Id="704" Count="0" />
       <LineId Id="702" Count="0" />
       <LineId Id="664" Count="8" />
       <LineId Id="686" Count="0" />
@@ -894,7 +968,29 @@ END_IF
       <LineId Id="41" Count="0" />
     </LineIds>
     <LineIds Name="S07_BoxCarrying.Z_Output">
+      <LineId Id="3" Count="0" />
       <LineId Id="2" Count="0" />
+      <LineId Id="6" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="19" Count="1" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="22" Count="19" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="52" Count="11" />
+      <LineId Id="65" Count="4" />
+      <LineId Id="92" Count="2" />
+      <LineId Id="97" Count="1" />
+      <LineId Id="100" Count="5" />
+      <LineId Id="174" Count="6" />
+      <LineId Id="183" Count="4" />
+      <LineId Id="218" Count="0" />
+      <LineId Id="224" Count="2" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="7" Count="0" />
+      <LineId Id="227" Count="0" />
     </LineIds>
   </POU>
 </TcPlcObject>

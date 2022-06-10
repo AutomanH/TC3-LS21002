@@ -29,7 +29,7 @@ VAR
 	arProcessDataStation : ARRAY [1..2] OF DUT_MainlineFixture;
 	//过程标志位
 	xFlowLineReady:BOOL;//连班线准备流程完成信号
-	xTakeBoxCompleted:BOOL;//取一行料完成信号
+	xTakeBoxPremit:BOOL;//允许链板线执行下一循环
 	//过程记录
 	tsModuleProcess:ARRAY[1..gc_ModuleProNo] OF DUT_Process;
 	xClearModuleProcessDone:BOOL;
@@ -58,10 +58,8 @@ VAR
 	iClearProcessStep: INT;
 	// //首次循环
 	_FirstCycle: ARRAY[1..10] of bool;
-	// 夹爪1旋转完成
-	_Clamp1RotateCompleted: BOOL;
-	// 夹爪2旋转完成
-	_Clamp2RotateCompleted: BOOL;
+	// 夹爪1/2旋转完成
+	xRotateCompletedClamp:ARRAY[1..2] OF BOOL;
 END_VAR
 
 ]]></Declaration>
@@ -178,7 +176,6 @@ CASE station.iStepAuto OF
 		THEN
 			station.xDone:=TRUE;
 		END_IF
-		
 		IF  station.xSingleRunning 
 			OR station.xCanRun 
 			//AND NOT station.xDone 
@@ -216,7 +213,7 @@ CASE station.iStepAuto OF
 			station.iStepAuto:=50;	
 		END_IF
 	50://清除链板线一行的取料信号
-		xTakeBoxCompleted:=FALSE;
+		xTakeBoxPremit:=FALSE;
 		station.iStepAuto:=60;
 	60://Y轴去拍照位置
 		fbYAxisMove.xMoveAuto[2]:=TRUE;
@@ -269,42 +266,28 @@ CASE station.iStepAuto OF
 			station.iStepAuto:=150;
 
 ///预留复检步骤120-150
-	150://Restore_after_Estop_Process2 取孔板流程1
+	150://开始循环。循环次数=2
+			IF ( bCounter >2) OR NOT _FirstCycle[1] THEN
+			 	bCounter:=1;
+				_FirstCycle[1]:=TRUE;
+			END_IF
+			station.iStepAuto :=160; 
+
+
+	160://Restore_after_Estop_Process2/3 取孔板流程1/2
 			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
-					station.iStepAuto :=160; 
-			ELSIF tsModuleProcess[2].xProcessNotStarted AND NOT  tsModuleProcess[2].xProcessStarted THEN
+					station.iStepAuto :=170; 
+			ELSIF tsModuleProcess[bCounter+1].xProcessNotStarted AND NOT  tsModuleProcess[bCounter+1].xProcessStarted THEN
 					station.iStepAuto :=190 ; (*process not started*)
-			ELSIF  tsModuleProcess[2].xProcessStarted AND NOT  tsModuleProcess[2].xProcessCompleted THEN
+			ELSIF  tsModuleProcess[bCounter+1].xProcessStarted AND NOT  tsModuleProcess[bCounter+1].xProcessCompleted THEN
 				 station.iStepAuto :=185 ;(*process started*)
-			ELSIF  tsModuleProcess[2].xProcessCompleted AND NOT tsModuleProcess[2].xQDataCompleted  THEN
+			ELSIF  tsModuleProcess[bCounter+1].xProcessCompleted AND NOT tsModuleProcess[bCounter+1].xQDataCompleted  THEN
 					station.iStepAuto := 230 ;(*process completed*)
 			ELSE
-					station.iStepAuto :=160; 
+					station.iStepAuto :=170; 
 			END_IF
-	160://开始循环。循环次数=2
-		IF ( bCounter >2) OR NOT _FirstCycle[1] THEN
-		 	bCounter:=1;
-			_FirstCycle[1]:=TRUE;
-		END_IF
-		station.iStepAuto :=170; 	
-	170:////Restore_after_Estop_Process2 取孔板流程2
-			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
-					station.iStepAuto :=180; 
-			ELSIF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
-					station.iStepAuto :=190 ; (*process not started*)
-			ELSIF  tsModuleProcess[3].xProcessStarted AND NOT  tsModuleProcess[3].xProcessCompleted THEN
-				 station.iStepAuto :=185 ;(*process started*)
-			ELSIF  tsModuleProcess[3].xProcessCompleted AND NOT tsModuleProcess[3].xQDataCompleted  THEN
-					station.iStepAuto :=230 ;(*process completed*)
-			ELSE
-					station.iStepAuto :=180; 
-			END_IF
-	180://
-			IF   bCounter =1 THEN
-				tsModuleProcess[2].xProcessNotStarted :=TRUE;
-			ELSIF bCounter =2 THEN
-				tsModuleProcess[3].xProcessNotStarted :=TRUE;
-			END_IF
+	170://
+			tsModuleProcess[bCounter+1].xProcessNotStarted :=TRUE;
 			 station.iStepAuto:=190;
 		(***异常处理开始*)
 	185://电动夹爪打开
@@ -348,11 +331,7 @@ CASE station.iStepAuto OF
 			 station.iStepAuto:=210;		
 		END_IF
 	210://电动夹爪夹取
-		IF   bCounter =1 THEN
-				tsModuleProcess[2].xProcessStarted :=TRUE;
-		ELSIF bCounter =2 THEN
-				tsModuleProcess[3].xProcessStarted :=TRUE;
-		END_IF
+				tsModuleProcess[bCounter+1].xProcessStarted :=TRUE;
 		IF  fbmachine[1].xTryRun THEN 
 				station.iStepAuto:=220;	
 		ELSE
@@ -368,11 +347,7 @@ CASE station.iStepAuto OF
 	220://Z轴上升
 			arClampHavePart[1]:=TRUE;//夹爪1有产品标志位
 			arClampHavePart[2]:=TRUE;//夹爪2有产品标志位
-			IF   bCounter =1 THEN
-					tsModuleProcess[3].xProcessCompleted :=TRUE;
-			ELSIF bCounter =2 THEN
-					tsModuleProcess[3].xProcessCompleted :=TRUE;
-			END_IF
+				tsModuleProcess[bCounter+1].xProcessCompleted :=TRUE;
 				fbVTCCyl_1.xAuto:=FALSE;
 				fbVTCCyl_2.xAuto:=FALSE;
 			IF  fbVTCCyl_1.xHP_Delay AND 
@@ -380,87 +355,68 @@ CASE station.iStepAuto OF
 				 station.iStepAuto:=225;		
 			END_IF
 	225://判断流程
-			IF bCounter =1 THEN
-				 station.iStepAuto:=230;	
-			ELSIF bCounter =2 THEN
-				 station.iStepAuto:=235;	
+			IF bCounter =2 THEN
+					xTakeBoxPremit:=TRUE;//允许链板线执行动作
 			END_IF
-	230://Restore_after_Estop_Process4 翻转孔板流程1
+			station.iStepAuto:=230;	
+	230://Restore_after_Estop_Process4 /Process5翻转孔板流程1/2
 			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
-					station.iStepAuto :=236; 
-			ELSIF tsModuleProcess[4].xProcessNotStarted AND NOT  tsModuleProcess[4].xProcessStarted THEN
-					station.iStepAuto :=236 ; (*process not started*)
-			ELSIF  tsModuleProcess[4].xProcessStarted AND NOT  tsModuleProcess[4].xProcessCompleted THEN
-				 station.iStepAuto :=236;(*process started*)
-			ELSIF  tsModuleProcess[4].xProcessCompleted AND NOT tsModuleProcess[4].xQDataCompleted  THEN
+					station.iStepAuto :=240; 
+			ELSIF tsModuleProcess[bCounter+3].xProcessNotStarted AND NOT  tsModuleProcess[bCounter+3].xProcessStarted THEN
+					station.iStepAuto :=240 ; (*process not started*)
+			ELSIF  tsModuleProcess[bCounter+3].xProcessStarted AND NOT  tsModuleProcess[bCounter+3].xProcessCompleted THEN
+				 station.iStepAuto :=240;(*process started*)
+			ELSIF  tsModuleProcess[bCounter+3].xProcessCompleted AND NOT tsModuleProcess[bCounter+3].xQDataCompleted  THEN
 					station.iStepAuto :=260 ;(*process completed*)
 			ELSE
-					station.iStepAuto :=236; 
+					station.iStepAuto :=240; 
 			END_IF
-	235://Restore_after_Estop_Process5翻转孔板流程2
-			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
-					station.iStepAuto :=236; 
-			ELSIF tsModuleProcess[5].xProcessNotStarted AND NOT  tsModuleProcess[5].xProcessStarted THEN
-					station.iStepAuto :=236 ; (*process not started*)
-			ELSIF  tsModuleProcess[5].xProcessStarted AND NOT  tsModuleProcess[5].xProcessCompleted THEN
-				 station.iStepAuto :=236;(*process started*)
-			ELSIF  tsModuleProcess[5].xProcessCompleted AND NOT tsModuleProcess[5].xQDataCompleted  THEN
-					station.iStepAuto :=260 ;(*process completed*)
-			ELSE
-					station.iStepAuto :=236; 
-			END_IF
-	236://判断夹爪1是否有过调整
-			IF  NOT _Clamp1RotateCompleted AND NOT _Clamp2RotateCompleted THEN
+	240://判断夹爪1是否有过调整
+			IF  NOT xRotateCompletedClamp[1] AND NOT xRotateCompletedClamp[2] THEN
 				station.iStepAuto:=240;
-			ELSIF _Clamp1RotateCompleted AND NOT _Clamp2RotateCompleted THEN
+			ELSIF xRotateCompletedClamp[1] AND NOT xRotateCompletedClamp[2] THEN
 				station.iStepAuto:=250;
-			ELSIF  _Clamp1RotateCompleted AND  _Clamp2RotateCompleted THEN
+			ELSIF  xRotateCompletedClamp[1] AND  xRotateCompletedClamp[2] THEN
 				station.iStepAuto:=260;	
 			END_IF
 			
-	240://根据相机结果判断是否需要旋转矫正-夹爪1
-			IF bCounter =1 THEN
-				tsModuleProcess[4].xProcessNotStarted :=TRUE;
-				tsModuleProcess[4].xProcessStarted :=TRUE;
-			ELSIF bCounter =2 THEN
-				tsModuleProcess[5].xProcessNotStarted :=TRUE;
-				tsModuleProcess[5].xProcessStarted :=TRUE;
-			END_IF
-				IF  (sCamera_TO_Plc.iS01Result[1] =1 (*OK*) AND bCounter=2) OR
-					 (sCamera_TO_Plc.iS01Result[2] =1 (*OK*) AND bCounter=1) OR axBypassSignal[1] OR fbmachine[1].xTryRun THEN
-					 	_Clamp1RotateCompleted:=TRUE;
+	240://根据相机结果判断是否需要旋转矫正-夹爪1/2
+				tsModuleProcess[bCounter+3].xProcessNotStarted :=TRUE;
+				IF   axBypassSignal[1] OR fbmachine[1].xTryRun THEN
+					 	xRotateCompletedClamp[1]:=TRUE;
+						xRotateCompletedClamp[2]:=TRUE;
 						station.iStepAuto:=250;			
 				ELSIF  (sCamera_To_Plc.iS01Result[1] =2(*角度反*) AND bCounter =2 ) OR
 						(sCamera_To_Plc.iS01Result[2] =2(*角度反*) AND bCounter =1 ) THEN	
 							fbClamp_1.aRotateClampControl[1]:=TRUE ;
 							 IF (fbClamp_1.xDone OR (fbClamp_1.xClosecoverFailure AND fbmachine[1].xTryRun)) THEN						
 									fbClamp_1.xExecute :=FALSE ;
-									_Clamp1RotateCompleted:=TRUE;
+									 xRotateCompletedClamp[1]:=TRUE;
 									station.iStepAuto:= 250;
 							END_IF			
 				END_IF	
 	
 	250:////根据相机结果判断是否需要旋转矫正-夹爪2
-				tsModuleProcess[4].xProcessStarted :=TRUE;
-				IF  (sCamera_TO_Plc.iS01Result[3] =1 (*OK*) AND bCounter=2) OR
-					 (sCamera_TO_Plc.iS01Result[4] =1 (*OK*) AND bCounter=1) OR  axBypassSignal[1] OR fbmachine[1].xTryRun THEN
-						station.iStepAuto:=260;		
+				tsModuleProcess[bCounter+3].xProcessStarted :=TRUE;
+				IF   axBypassSignal[1] OR fbmachine[1].xTryRun THEN
+					 	xRotateCompletedClamp[1]:=TRUE;
+						xRotateCompletedClamp[2]:=TRUE;
+						station.iStepAuto:=260;				
 				ELSIF  (sCamera_To_Plc.iS01Result[3] =2(*角度反*) AND bCounter =2 ) OR
 						(sCamera_To_Plc.iS01Result[4] =2(*角度反*) AND bCounter =1 ) THEN
 						fbClamp_2.aRotateClampControl[1]:=TRUE ;
 						 IF (fbClamp_2.xDone OR (fbClamp_2.xClosecoverFailure AND fbmachine[1].xTryRun)) THEN			
 									fbClamp_2.xExecute :=FALSE ;
+									xRotateCompletedClamp[2]:=TRUE;
 									station.iStepAuto:= 260;
 							END_IF		
 				END_IF	
 	260://夹爪矫正完成
-			IF  bCounter =1 THEN
-				tsModuleProcess[4].xProcessCompleted:=TRUE;
-			ELSIF bCounter =2 THEN
-				tsModuleProcess[5].xProcessCompleted:=TRUE;
-			END_IF
+			tsModuleProcess[bCounter+3].xProcessCompleted:=TRUE;
 			station.iStepAuto:=265;
 	265://检查是否允许放料
+			xRotateCompletedClamp[1]:=FALSE;
+			xRotateCompletedClamp[2]:=FALSE;
 			IF  NOT  xLoadingReachedSensor[1]  AND
 				NOT  xLoadingReachedSensor[2]  AND 
 				NOT station.xDone 			   AND
@@ -474,34 +430,21 @@ CASE station.iStepAuto OF
 				_FirstCycle[2]:=TRUE;
 			END_IF
 			station.iStepAuto :=280;
-	280://Restore_after_Estop_Process6 孔板放料流程1
+	280://Restore_after_Estop_Process6/7 孔板放料流程1/2
 			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
 					station.iStepAuto :=300; 
-			ELSIF tsModuleProcess[6].xProcessNotStarted AND NOT  tsModuleProcess[6].xProcessStarted THEN
+			ELSIF tsModuleProcess[bXCounter+5].xProcessNotStarted AND NOT  tsModuleProcess[bXCounter+5].xProcessStarted THEN
 					station.iStepAuto :=300 ; (*process not started*)
-			ELSIF  tsModuleProcess[6].xProcessStarted AND NOT  tsModuleProcess[6].xProcessCompleted THEN
+			ELSIF  tsModuleProcess[bXCounter+5].xProcessStarted AND NOT  tsModuleProcess[bXCounter+5].xProcessCompleted THEN
 				 station.iStepAuto :=300;(*process started*)
-			ELSIF  tsModuleProcess[6].xProcessCompleted AND NOT tsModuleProcess[6].xQDataCompleted  THEN
+			ELSIF  tsModuleProcess[bXCounter+5].xProcessCompleted AND NOT tsModuleProcess[bXCounter+5].xQDataCompleted  THEN
 					station.iStepAuto :=330;(*process completed*)
 			ELSE
 					station.iStepAuto :=300; 
 			END_IF		
-	290://Restore_after_Estop_Process7 孔板放料流程2
-			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
-					station.iStepAuto :=300; 
-			ELSIF tsModuleProcess[7].xProcessNotStarted AND NOT  tsModuleProcess[7].xProcessStarted THEN
-					station.iStepAuto :=300; (*process not started*)
-			ELSIF  tsModuleProcess[7].xProcessStarted AND NOT  tsModuleProcess[7].xProcessCompleted THEN
-				 station.iStepAuto :=300;(*process started*)
-			ELSIF  tsModuleProcess[7].xProcessCompleted AND NOT tsModuleProcess[7].xQDataCompleted  THEN
-					station.iStepAuto :=330 ;(*process completed*)
-			ELSE
-					station.iStepAuto :=300; 
-			END_IF		
-
 	300://X轴去放料位置	
+			tsModuleProcess[bXCounter+5].xProcessNotStarted:=TRUE;
 			IF   bXCounter=1 THEN
-					tsModuleProcess[6].xProcessNotStarted:=TRUE;
 					fbXAxisMove.xMoveAuto[4]:=TRUE;
 					fbYAxisMove.xMoveAuto[4]:=TRUE;
 					IF fbXAxisMove.xMoveInPos[4] AND 
@@ -510,7 +453,6 @@ CASE station.iStepAuto OF
 					END_IF				
 				
 			ELSIF	 bXCounter=2 THEN
-					tsModuleProcess[7].xProcessNotStarted:=TRUE;
 					fbXAxisMove.xMoveAuto[5]:=TRUE;
 					fbYAxisMove.xMoveAuto[4]:=TRUE;
 					IF fbXAxisMove.xMoveInPos[5] AND 
@@ -532,15 +474,14 @@ CASE station.iStepAuto OF
 						END_IF	
 			END_IF
 	320://电动夹爪松开
+			tsModuleProcess[bXCounter+5].xProcessStarted:=TRUE;
 			IF   bXCounter=1 THEN
-						tsModuleProcess[6].xProcessStarted:=TRUE;
 						fbClamp_1.aReleaseControl[1]:=TRUE;
 						IF fbClamp_1.xDone THEN
 							fbClamp_1.xExecute:=FALSE;
 							 station.iStepAuto:=330;	
 						END_IF				
 			ELSIF	 bXCounter=2 THEN
-						tsModuleProcess[7].xProcessStarted:=TRUE;
 						fbClamp_2.aReleaseControl[1]:=TRUE;
 						IF fbClamp_2.xDone THEN
 							fbClamp_2.xExecute:=FALSE;
@@ -549,27 +490,17 @@ CASE station.iStepAuto OF
 			END_IF		
 			
 	330://传感器检测
-			IF   bXCounter=1 THEN
-						arClampHavePart[1]:=FALSE;//夹爪1有产品标志位
-						tsModuleProcess[6].xProcessCompleted:=TRUE;
-						IF   xLoadingReachedSensor[1] THEN
-							station.iStepAuto:=340;	
-						END_IF
-					
-				ELSIF	 bXCounter=2 THEN
-						arClampHavePart[2]:=FALSE;//夹爪2有产品标志位
-						tsModuleProcess[7].xProcessCompleted:=TRUE;
-						IF   xLoadingReachedSensor[2] THEN
-							station.iStepAuto:=340;	
-						END_IF
-			END_IF		
+				tsModuleProcess[bXCounter+5].xProcessCompleted:=TRUE;
+				arClampHavePart[bXCounter]:=FALSE;//夹爪1/2有产品标志位
+				IF   xLoadingReachedSensor[bXCounter] THEN
+					station.iStepAuto:=340;	
+				END_IF
 	340://Z轴上升		
 			IF   bXCounter=1 THEN
 						fbVTCCyl_1.xAuto:=FALSE;
 						IF fbVTCCyl_1.xHP_Delay THEN
 							 station.iStepAuto:=345;	
 						END_IF				
-					
 				ELSIF	 bXCounter=2 THEN
 						fbVTCCyl_2.xAuto:=FALSE;
 						IF fbVTCCyl_2.xHP_Delay THEN
@@ -596,14 +527,13 @@ CASE station.iStepAuto OF
 							 station.iStepAuto:=360;	
 						END_IF	
 			END_IF
-					
 	360://X轴循环+1
 			bXCounter :=bXCounter +1;
 			station.iStepAuto:=370;	
 
 	370:  
 		IF   bXCounter<=2 THEN
-				station.iStepAuto:=290;	
+				station.iStepAuto:=280;	
 		ELSE
 				station.iStepAuto:=380;	
 		END_IF
@@ -614,12 +544,10 @@ CASE station.iStepAuto OF
 		
 	390://链板线取完一行标志位	
 		IF 	 bCounter <=2 THEN
-			 station.iStepAuto:=170;	
+			 station.iStepAuto:=160;	
 		ELSE
-			xTakeBoxCompleted:=TRUE;
+		 	  station.iStepAuto:=500;
 		END_IF
-		station.iStepAuto:=500;
-		
 	500://Restore_after_Estop_Process8 数据传输流程
 			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
 					station.iStepAuto :=999; 
@@ -659,8 +587,6 @@ CASE station.iStepAuto OF
 				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
 			END_FOR
 			tsModuleProcess[8].xProcessCompleted:=TRUE;
-			_Clamp1RotateCompleted:=FALSE;
-			_Clamp2RotateCompleted:=FALSE;
 			station.iStepAuto:= 999;
 	999://----Single Run Finish----
 			
@@ -720,7 +646,7 @@ CASE bFlowLineStep OF
 	xFlowLineReady:=TRUE;
 	bFlowLineStep:=50;
 50://等待前面一行取走信号
-	IF  xTakeBoxCompleted THEN
+	IF  xTakeBoxPremit THEN
 		xFlowLineReady:=FALSE;
 		bFlowLineStep:=60;
 	END_IF
@@ -974,7 +900,8 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="1323" Count="2" />
       <LineId Id="1327" Count="2" />
       <LineId Id="1331" Count="2" />
-      <LineId Id="1335" Count="17" />
+      <LineId Id="1335" Count="6" />
+      <LineId Id="1343" Count="9" />
       <LineId Id="1573" Count="0" />
       <LineId Id="1943" Count="0" />
       <LineId Id="1667" Count="0" />
@@ -1023,24 +950,17 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="2330" Count="0" />
       <LineId Id="2437" Count="2" />
       <LineId Id="2052" Count="1" />
+      <LineId Id="3089" Count="4" />
+      <LineId Id="3087" Count="1" />
+      <LineId Id="3086" Count="0" />
       <LineId Id="2441" Count="0" />
       <LineId Id="3068" Count="0" />
       <LineId Id="3071" Count="1" />
       <LineId Id="2444" Count="4" />
       <LineId Id="2451" Count="1" />
       <LineId Id="2442" Count="0" />
-      <LineId Id="2819" Count="2" />
-      <LineId Id="2830" Count="0" />
-      <LineId Id="2818" Count="0" />
-      <LineId Id="2822" Count="0" />
-      <LineId Id="2464" Count="0" />
-      <LineId Id="3073" Count="1" />
-      <LineId Id="2454" Count="5" />
-      <LineId Id="2462" Count="1" />
-      <LineId Id="2453" Count="0" />
-      <LineId Id="2471" Count="1" />
-      <LineId Id="2476" Count="2" />
-      <LineId Id="2474" Count="0" />
+      <LineId Id="2471" Count="0" />
+      <LineId Id="2476" Count="0" />
       <LineId Id="2479" Count="0" />
       <LineId Id="2802" Count="1" />
       <LineId Id="2857" Count="0" />
@@ -1060,8 +980,7 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="2067" Count="1" />
       <LineId Id="2066" Count="0" />
       <LineId Id="2009" Count="0" />
-      <LineId Id="2484" Count="3" />
-      <LineId Id="2482" Count="0" />
+      <LineId Id="2485" Count="0" />
       <LineId Id="2071" Count="0" />
       <LineId Id="2084" Count="1" />
       <LineId Id="2860" Count="1" />
@@ -1074,32 +993,24 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="2080" Count="0" />
       <LineId Id="2012" Count="0" />
       <LineId Id="2770" Count="1" />
-      <LineId Id="2489" Count="3" />
       <LineId Id="2488" Count="0" />
       <LineId Id="2098" Count="4" />
       <LineId Id="2097" Count="0" />
-      <LineId Id="2983" Count="1" />
-      <LineId Id="2987" Count="2" />
+      <LineId Id="3100" Count="0" />
+      <LineId Id="2988" Count="1" />
       <LineId Id="2986" Count="0" />
+      <LineId Id="3099" Count="0" />
       <LineId Id="2524" Count="0" />
       <LineId Id="3075" Count="1" />
       <LineId Id="2525" Count="8" />
-      <LineId Id="2991" Count="0" />
-      <LineId Id="3077" Count="1" />
-      <LineId Id="2992" Count="7" />
-      <LineId Id="2990" Count="0" />
       <LineId Id="3040" Count="6" />
       <LineId Id="3039" Count="0" />
       <LineId Id="3047" Count="0" />
       <LineId Id="2014" Count="0" />
-      <LineId Id="3007" Count="1" />
-      <LineId Id="3014" Count="0" />
-      <LineId Id="3010" Count="1" />
-      <LineId Id="3015" Count="0" />
-      <LineId Id="3009" Count="0" />
+      <LineId Id="3008" Count="0" />
       <LineId Id="2192" Count="0" />
-      <LineId Id="2172" Count="0" />
       <LineId Id="3020" Count="0" />
+      <LineId Id="3104" Count="0" />
       <LineId Id="2120" Count="0" />
       <LineId Id="2138" Count="0" />
       <LineId Id="2173" Count="0" />
@@ -1110,17 +1021,20 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="3030" Count="0" />
       <LineId Id="2191" Count="0" />
       <LineId Id="2546" Count="0" />
-      <LineId Id="2174" Count="2" />
+      <LineId Id="3105" Count="2" />
+      <LineId Id="2176" Count="0" />
       <LineId Id="2178" Count="1" />
-      <LineId Id="2182" Count="3" />
+      <LineId Id="2182" Count="2" />
+      <LineId Id="3108" Count="0" />
+      <LineId Id="2185" Count="0" />
       <LineId Id="2188" Count="0" />
       <LineId Id="2207" Count="0" />
       <LineId Id="2143" Count="0" />
-      <LineId Id="3000" Count="1" />
-      <LineId Id="3003" Count="1" />
-      <LineId Id="3002" Count="0" />
+      <LineId Id="3001" Count="0" />
       <LineId Id="2211" Count="0" />
       <LineId Id="2832" Count="0" />
+      <LineId Id="3109" Count="0" />
+      <LineId Id="3111" Count="0" />
       <LineId Id="2836" Count="0" />
       <LineId Id="2840" Count="1" />
       <LineId Id="2855" Count="0" />
@@ -1133,13 +1047,9 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="3079" Count="1" />
       <LineId Id="2557" Count="7" />
       <LineId Id="2556" Count="0" />
-      <LineId Id="2565" Count="0" />
-      <LineId Id="3081" Count="1" />
-      <LineId Id="2566" Count="8" />
-      <LineId Id="2578" Count="0" />
       <LineId Id="2592" Count="0" />
+      <LineId Id="3094" Count="0" />
       <LineId Id="2599" Count="0" />
-      <LineId Id="2609" Count="0" />
       <LineId Id="2606" Count="0" />
       <LineId Id="2614" Count="0" />
       <LineId Id="2607" Count="0" />
@@ -1148,7 +1058,7 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="2605" Count="0" />
       <LineId Id="2600" Count="0" />
       <LineId Id="2602" Count="0" />
-      <LineId Id="2610" Count="1" />
+      <LineId Id="2611" Count="0" />
       <LineId Id="2615" Count="0" />
       <LineId Id="2612" Count="0" />
       <LineId Id="2617" Count="0" />
@@ -1163,30 +1073,23 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="2637" Count="0" />
       <LineId Id="2618" Count="0" />
       <LineId Id="2620" Count="0" />
-      <LineId Id="2641" Count="0" />
-      <LineId Id="2653" Count="0" />
-      <LineId Id="2642" Count="1" />
+      <LineId Id="3095" Count="0" />
+      <LineId Id="2641" Count="2" />
       <LineId Id="2655" Count="0" />
       <LineId Id="2644" Count="1" />
       <LineId Id="2647" Count="0" />
-      <LineId Id="2654" Count="0" />
       <LineId Id="2656" Count="3" />
       <LineId Id="2651" Count="0" />
       <LineId Id="2619" Count="0" />
       <LineId Id="2582" Count="1" />
-      <LineId Id="2663" Count="0" />
+      <LineId Id="3096" Count="0" />
       <LineId Id="2774" Count="0" />
-      <LineId Id="2664" Count="0" />
       <LineId Id="2669" Count="0" />
       <LineId Id="2681" Count="0" />
       <LineId Id="2680" Count="0" />
-      <LineId Id="2670" Count="1" />
-      <LineId Id="2775" Count="0" />
-      <LineId Id="2672" Count="0" />
-      <LineId Id="2682" Count="1" />
-      <LineId Id="2677" Count="1" />
       <LineId Id="2662" Count="0" />
-      <LineId Id="2695" Count="10" />
+      <LineId Id="2695" Count="4" />
+      <LineId Id="2701" Count="4" />
       <LineId Id="2584" Count="0" />
       <LineId Id="2845" Count="0" />
       <LineId Id="2848" Count="0" />
@@ -1200,7 +1103,6 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="2738" Count="0" />
       <LineId Id="2735" Count="1" />
       <LineId Id="2725" Count="0" />
-      <LineId Id="2719" Count="0" />
       <LineId Id="2585" Count="0" />
       <LineId Id="2708" Count="1" />
       <LineId Id="2586" Count="1" />
@@ -1214,10 +1116,9 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="2282" Count="0" />
       <LineId Id="2739" Count="0" />
       <LineId Id="2299" Count="2" />
-      <LineId Id="2741" Count="1" />
+      <LineId Id="3098" Count="0" />
+      <LineId Id="3102" Count="0" />
       <LineId Id="2288" Count="0" />
-      <LineId Id="2310" Count="0" />
-      <LineId Id="2761" Count="0" />
       <LineId Id="2746" Count="0" />
       <LineId Id="3083" Count="1" />
       <LineId Id="2747" Count="7" />
@@ -1242,7 +1143,6 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="2853" Count="1" />
       <LineId Id="2852" Count="0" />
       <LineId Id="2760" Count="0" />
-      <LineId Id="3050" Count="1" />
       <LineId Id="1806" Count="0" />
       <LineId Id="1395" Count="4" />
       <LineId Id="2297" Count="0" />

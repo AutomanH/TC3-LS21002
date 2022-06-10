@@ -42,7 +42,16 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[]]></ST>
+      <ST><![CDATA[A_Input();
+Alarm();
+Delay();
+FlowAuto();
+FlowInit();
+General();
+ILC();
+TipAuto();
+TipManual();
+Z_Output();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{ac41a8a8-64d1-4ae2-89c0-59150345259a}">
       <Implementation>
@@ -213,8 +222,6 @@ CASE station.iStepAuto OF
 				  (fbGlampAdjustCyl_3.xWP_Delay OR  arProcessDataStation[3].xMaterialOnOff =FALSE)  THEN
 					station.iStepAuto :=70;	
 			END_IF
-		
-		
 	70://水平到位气缸伸出
 		fbHOZReachedCyl_1.xauto :=TRUE;
 		fbHOZReachedCyl_2.xauto :=true;
@@ -599,6 +606,7 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       </Implementation>
     </Action>
     <LineIds Name="S06_Cutting">
+      <LineId Id="54" Count="8" />
       <LineId Id="5" Count="0" />
     </LineIds>
     <LineIds Name="S06_Cutting.A_Input">
@@ -649,7 +657,7 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="1776" Count="0" />
       <LineId Id="1782" Count="0" />
       <LineId Id="1773" Count="1" />
-      <LineId Id="1646" Count="2" />
+      <LineId Id="1648" Count="0" />
       <LineId Id="1783" Count="0" />
       <LineId Id="1649" Count="1" />
       <LineId Id="1784" Count="0" />

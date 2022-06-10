@@ -63,6 +63,9 @@ VAR
 	
 	iSlavePort: INT;
 	
+	xMonitoring: BOOL;
+	xReset: BOOL;
+	xtest: BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -84,12 +87,15 @@ ACT_Z_ERG_20();
 ACT_Camera();
 ACT_PeristalticPump();
 //ACT_PeristalticPump_1();
+ACT_TURINRobot();
 ACT_MT_MCK();
 ]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{423c098f-672e-4e09-b9e7-666319181834}">
       <Implementation>
-        <ST><![CDATA[]]></ST>
+        <ST><![CDATA[IF   fbTURINContorl[1].pSysFromRobot[2].0 THEN
+ 		xMonitoring:=TRUE;
+END_IF]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_Axis" Id="{bbaeb5df-675a-4409-9a50-2a8bdac269a5}">
@@ -985,12 +991,12 @@ ELSE
 		fbTURINContorl[i](
 			xManuMode:= TRUE , 
 			xAutoRunning:= fbMachine[1].xRunning , 
-			xEStop:= fbMachine[1].xEStop ,  
-			xReset:= fbMachine[1].xReset , 
-			xStart:= fbMachine[1].xStart , 
+			xEStop:= fbMachine[1].xEStop  OR TRUE,  
+			xReset:= (fbMachine[1].xReset OR xReset) , 
+			xStart:= (fbMachine[1].xStart OR  xtest) , 
 			xStop:= fbMachine[1].xStop , 
 			xPause:= fbMachine[1].xPause , 
-			xMovePermit:=fbMachine[1].xAlarm AND stFromRobot.xLocal_Remote ,
+			xMovePermit:=(fbMachine[1].xAlarm AND  FALSE) AND stFromRobot.xLocal_Remote ,
 			xContinue:= , 
 			//xInitExte:= S03_Robot.xInit, 
 			xInitExte:=,
@@ -1171,11 +1177,12 @@ END_FOR]]></ST>
       <LineId Id="658" Count="0" />
       <LineId Id="661" Count="0" />
       <LineId Id="727" Count="0" />
+      <LineId Id="791" Count="0" />
       <LineId Id="662" Count="0" />
       <LineId Id="528" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.A_Input">
-      <LineId Id="12" Count="0" />
+      <LineId Id="12" Count="2" />
     </LineIds>
     <LineIds Name="CallStandard.ACT_Axis">
       <LineId Id="13" Count="0" />
