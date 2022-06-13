@@ -330,24 +330,14 @@ CASE station.iStepAuto OF
 			fbVTCCyl_2.xHP_Delay THEN
 			 station.iStepAuto:=190;		
 		END_IF
-	(***异常处理结束*)			 
-			 
+	(***异常处理结束*)			  
 	190://XY轴去夹取位置1/2
-		IF  bCounter =2 THEN	
-			fbXAxisMove.xMoveAuto[2]:=TRUE;
+			fbXAxisMove.xMoveAuto[bCounter +1]:=TRUE;
 			fbYAxisMove.xMoveAuto[3]:=TRUE;
-			IF fbXAxisMove.xMoveInPos[3] AND 
+			IF fbXAxisMove.xMoveInPos[bCounter+1] AND 
 			   fbYAxisMove.xMoveInPos[3] THEN
 				 station.iStepAuto:=200;	
 			END_IF
-		ELSIF   bCounter =1 THEN
-			fbXAxisMove.xMoveAuto[3]:=TRUE;
-			fbYAxisMove.xMoveAuto[3]:=TRUE;
-			IF fbXAxisMove.xMoveInPos[4] AND 
-			   fbYAxisMove.xMoveInPos[3] THEN
-				 station.iStepAuto:=200;	
-			END_IF
-		END_IF
 	200://Z轴气缸下降
 		fbVTCCyl_1.xAuto:=TRUE;
 		fbVTCCyl_2.xAuto:=TRUE;
@@ -386,26 +376,26 @@ CASE station.iStepAuto OF
 			station.iStepAuto:=230;	
 	230://Restore_after_Estop_Process4 /Process5翻转孔板流程1/2
 			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
-					station.iStepAuto :=240; 
+					station.iStepAuto :=245; 
 			ELSIF tsModuleProcess[bCounter+3].xProcessNotStarted AND NOT  tsModuleProcess[bCounter+3].xProcessStarted THEN
-					station.iStepAuto :=240 ; (*process not started*)
+					station.iStepAuto :=245 ; (*process not started*)
 			ELSIF  tsModuleProcess[bCounter+3].xProcessStarted AND NOT  tsModuleProcess[bCounter+3].xProcessCompleted THEN
-				 station.iStepAuto :=240;(*process started*)
+				 station.iStepAuto :=245;(*process started*)
 			ELSIF  tsModuleProcess[bCounter+3].xProcessCompleted AND NOT tsModuleProcess[bCounter+3].xQDataCompleted  THEN
 					station.iStepAuto :=260 ;(*process completed*)
 			ELSE
-					station.iStepAuto :=240; 
+					station.iStepAuto :=245; 
 			END_IF
 	240://判断夹爪1是否有过调整
 			IF  NOT xRotateCompletedClamp[1] AND NOT xRotateCompletedClamp[2] THEN
-				station.iStepAuto:=240;
+				station.iStepAuto:=245;
 			ELSIF xRotateCompletedClamp[1] AND NOT xRotateCompletedClamp[2] THEN
 				station.iStepAuto:=250;
 			ELSIF  xRotateCompletedClamp[1] AND  xRotateCompletedClamp[2] THEN
 				station.iStepAuto:=260;	
 			END_IF
 			
-	240://根据相机结果判断是否需要旋转矫正-夹爪1/2
+	245://根据相机结果判断是否需要旋转矫正-夹爪1/2
 				tsModuleProcess[bCounter+3].xProcessNotStarted :=TRUE;
 				IF   axBypassSignal[1] OR fbmachine[1].xTryRun THEN
 					 	xRotateCompletedClamp[1]:=TRUE;
@@ -992,15 +982,9 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="2859" Count="0" />
       <LineId Id="2806" Count="11" />
       <LineId Id="2797" Count="0" />
-      <LineId Id="2801" Count="0" />
       <LineId Id="2007" Count="0" />
-      <LineId Id="2213" Count="0" />
       <LineId Id="2056" Count="4" />
       <LineId Id="2008" Count="0" />
-      <LineId Id="2214" Count="0" />
-      <LineId Id="2219" Count="4" />
-      <LineId Id="2217" Count="0" />
-      <LineId Id="2216" Count="0" />
       <LineId Id="2061" Count="3" />
       <LineId Id="2067" Count="1" />
       <LineId Id="2066" Count="0" />

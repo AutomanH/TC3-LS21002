@@ -2,14 +2,9 @@
 <Refactors>
   <Renames>
     <RenamedType>
-      <Type guid="f1f92b40-b4a7-41b1-b839-62ae5064f77c">POU</Type>
-      <From>POU</From>
-      <To>FB_Alive</To>
-    </RenamedType>
-    <RenamedType>
-      <Type guid="bbaeedba-2ab1-4d6f-8745-64e0b8ac1adb">COMMITWIT200SMART</Type>
-      <From>CommitWit200SMART</From>
-      <To>CommitWith200SMART</To>
+      <Type guid="436fc6ec-8d98-4c22-8d21-a7095f64a587">ACT_LIGHTSTEST</Type>
+      <From>ACT_LightsTest</From>
+      <To>LightsTest</To>
     </RenamedType>
   </Renames>
 </Refactors>

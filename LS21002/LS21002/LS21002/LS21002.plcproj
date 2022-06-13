@@ -214,6 +214,9 @@
     <Compile Include="POUs\002_Machine\ControlMachine.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\002_Machine\LightsTest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\003_FB\013_FB_Alive\FB_Alive.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -245,6 +248,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\003_FB\054_Camera\FB_Camera.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\055_\FB_EtherCatSlaveMonitor.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\003_FB\05_StationFB\E_State.TcDUT">
@@ -609,6 +615,7 @@
     <Folder Include="POUs\003_FB\53_RudongPump\41 Modbus指令" />
     <Folder Include="POUs\003_FB\53_RudongPump\41 Modbus指令\DataExchange" />
     <Folder Include="POUs\003_FB\013_FB_Alive" />
+    <Folder Include="POUs\003_FB\055_" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB\DUTs" />
     <Folder Include="POUs\004_FC\001_Parallel" />

@@ -78,8 +78,19 @@ END_IF
 	IF  fbAlive[7].xQAliveError THEN
 		fbMachine[1].dwAlarm[1].11:=TRUE; //[M01.11] 未检测到热缩封膜机心跳
 	END_IF
-
-
+//模块状态
+	IF  fbEhterCATSlaveMonitor[1].xQError THEN
+		fbMachine[1].dwAlarm[1].08:=TRUE; //[M01.05] ET01电柜EtherCAT总线报错
+	END_IF
+	IF  fbEhterCATSlaveMonitor[2].xQError THEN
+		fbMachine[1].dwAlarm[1].09:=TRUE; //[M01.05] ET02电柜EtherCAT总线报错
+	END_IF
+	IF  fbEhterCATSlaveMonitor[3].xQError THEN
+		fbMachine[1].dwAlarm[1].10:=TRUE; //[M01.05] ET03电柜EtherCAT总线报错
+	END_IF
+		IF  fbEhterCATSlaveMonitor[4].xQError THEN
+		fbMachine[1].dwAlarm[1].11:=TRUE; //[M01.05] ET04电柜EtherCAT总线报错
+	END_IF
 //急停被按下
 IF NOT IxSafetyRelayOK THEN 
 	fbMachine[1].dwAlarm[1].03:=TRUE; //[M01.03] 设备急停被按下
@@ -382,7 +393,14 @@ fbMachine[1].xTip                      :=(fbMachine[1].xManualTip OR fbMachine[1
       <LineId Id="314" Count="0" />
       <LineId Id="305" Count="5" />
       <LineId Id="231" Count="0" />
+      <LineId Id="317" Count="2" />
+      <LineId Id="357" Count="0" />
+      <LineId Id="362" Count="0" />
+      <LineId Id="359" Count="0" />
+      <LineId Id="365" Count="1" />
       <LineId Id="228" Count="0" />
+      <LineId Id="368" Count="1" />
+      <LineId Id="367" Count="0" />
       <LineId Id="171" Count="7" />
       <LineId Id="237" Count="1" />
       <LineId Id="179" Count="2" />

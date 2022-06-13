@@ -1,0 +1,78 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="LightsTest" Id="{1146d2cb-f55d-4151-aa2a-43669887c966}" SpecialFunc="None">
+    <Declaration><![CDATA[PROGRAM LightsTest
+VAR
+	fbLightTestOn_TRIG: R_TRIG;
+	fbLightTestOff_TRIG: F_TRIG;
+ 	xLightTest:BOOL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[LightsTest();]]></ST>
+    </Implementation>
+    <Action Name="LightsTest" Id="{436fc6ec-8d98-4c22-8d21-a7095f64a587}">
+      <Implementation>
+        <ST><![CDATA[fbLightTestOn_TRIG(CLK:=xLightTest , Q=> );
+fbLightTestOff_TRIG(CLK:=xLightTest , Q=> );
+IF fbLightTestOn_TRIG.Q THEN
+	QxStartButtonLamp:=TRUE	;//	启动按钮指示灯
+	QxStopButtonLamp:=TRUE		;//	停止按钮指示灯
+  QxResetButtonLamp:=TRUE		;//	复位按钮指示灯
+  QxInitButtonLamp:=TRUE		;//	初始化按钮指示灯
+	QxMachineLamp1Control:=TRUE;	;//	日光灯1控制
+  QxMachineLamp2Control:=TRUE;	;//	日光灯2控制
+	QxRedLamp	:=TRUE;//	三色灯-红灯
+	QxYellowLamp:=TRUE	;//	三色灯-黄灯
+	QxGreenLamp:=TRUE	;//	三色灯-绿灯
+	QxCameraLight1Trigger:=TRUE	;//	相机光源触发通道1
+	QxCameraLight2Trigger:=TRUE	;//	相机光源触发通道2
+	QxCameraLight3Trigger:=TRUE	;//	相机光源触发通道3
+	QxCameraLight4Trigger:=TRUE	;//	相机光源触发通道4
+	
+	QxRedLamp_1:=TRUE	;//	三色灯-红灯
+	QxYellowLamp_1:=TRUE	;//	三色灯-黄灯
+  QxGreenLamp_1:=TRUE	;//	三色灯-绿灯
+	QxMachineLamp3Contorl:=TRUE	;//	日光灯控制
+ELSIF fbLightTestOff_TRIG.Q THEN
+	QxStartButtonLamp:=FALSE	;//	启动按钮指示灯
+	QxStopButtonLamp:=FALSE		;//	停止按钮指示灯
+  QxResetButtonLamp:=FALSE		;//	复位按钮指示灯
+  QxInitButtonLamp:=FALSE		;//	初始化按钮指示灯
+	QxMachineLamp1Control:=FALSE;	;//	日光灯1控制
+  QxMachineLamp2Control:=FALSE;	;//	日光灯2控制
+	QxRedLamp	:=FALSE;//	三色灯-红灯
+	QxYellowLamp:=FALSE	;//	三色灯-黄灯
+	QxGreenLamp:=FALSE	;//	三色灯-绿灯
+	QxCameraLight1Trigger:=FALSE	;//	相机光源触发通道1
+	QxCameraLight2Trigger:=FALSE	;//	相机光源触发通道2
+	QxCameraLight3Trigger:=FALSE	;//	相机光源触发通道3
+	QxCameraLight4Trigger:=FALSE	;//	相机光源触发通道4
+	
+	QxRedLamp_1:=FALSE	;//	三色灯-红灯
+	QxYellowLamp_1:=FALSE	;//	三色灯-黄灯
+  QxGreenLamp_1:=FALSE	;//	三色灯-绿灯
+	QxMachineLamp3Contorl:=FALSE	;//	日光灯控制
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="LightsTest">
+      <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="LightsTest.LightsTest">
+      <LineId Id="2" Count="2" />
+      <LineId Id="92" Count="0" />
+      <LineId Id="183" Count="4" />
+      <LineId Id="182" Count="0" />
+      <LineId Id="188" Count="6" />
+      <LineId Id="196" Count="0" />
+      <LineId Id="195" Count="0" />
+      <LineId Id="93" Count="0" />
+      <LineId Id="197" Count="0" />
+      <LineId Id="94" Count="0" />
+      <LineId Id="198" Count="16" />
+      <LineId Id="181" Count="0" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

@@ -2,6 +2,22 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
   <POU Name="FB_Camera" Id="{d6929595-da25-4baa-b108-0d912ac90d24}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_Camera
+(*
+********************************************************************************
+* Name: FB_Camera
+*
+* Author:  AutomanH
+* Version: 1.0.0
+*
+* Description:
+*	Camera trigger and camera lights control
+*
+* Remarks:
+*
+*
+* Revisions:
+*   V1.0.0 -Automanh 2022.06.08
+*********************************************************************************)
 VAR_INPUT
 	xlInit	:BOOL;(*初始化*)
 	xlTrigger:BOOL;(*相机触发*)

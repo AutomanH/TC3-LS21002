@@ -23,6 +23,7 @@
 	fbCamera					:ARRAY[1..gc_uiCameraNum] OF FB_Camera;
 	fbRudongPumpModbusTcp		:ARRAY[1..gc_uiRudongPump] OF FB_RuDongPump_ModbusTCP;
 	fbAlive					 :ARRAY[1..gc_AliveNum] OF FB_Alive;
+	fbEhterCATSlaveMonitor	:ARRAY[1..gc_uiSlaveNum] OF FB_EtherCatSlaveMonitor;
 	
     xNot_power					: ARRAY[1..gc_uiAxisNum] OF BOOL;//设原点时断使能
 	cnSlaveAddr	        : ARRAY[1..gc_uiAxisNum] OF UINT;//伺服的从站地址

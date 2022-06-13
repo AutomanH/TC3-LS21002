@@ -21,6 +21,7 @@
 	gc_RecipeNum							:WORD:=1;//保存配方数量
 	gc_ModuleProNo							:INT:=10;//过程数据数组大小
 	gc_AliveNum									:INT:=10;//心跳包数量
+	gc_uiSlaveNum								:INT:=4;//电柜EtherCAT状态
 END_VAR]]></Declaration>
   </GVL>
 </TcPlcObject>

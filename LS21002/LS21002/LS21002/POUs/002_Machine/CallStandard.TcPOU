@@ -90,7 +90,7 @@ ACT_PeristalticPump();
 ACT_TURINRobot();
 ACT_MT_MCK();
 ACT_Alive();
-]]></ST>
+ACT_EtherCATSlaveState();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{423c098f-672e-4e09-b9e7-666319181834}">
       <Implementation>
@@ -440,6 +440,22 @@ fbCylinder[i](
 	xHP_Delay=> , 
 	xWP_Delay=> );
 END_FOR]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_EtherCATSlaveState" Id="{82baf70d-045c-409e-acbd-7228533e07f2}">
+      <Implementation>
+        <ST><![CDATA[
+(****************************************************Error Pause****************************************************)
+(* EtherCAT Terminal error*)
+FOR   i:=1 TO gc_uiSlaveNum BY 1 DO
+fbEhterCATSlaveMonitor[i](
+	xIActive:=TRUE ,
+	xIReset:=fbMachine[1].xReset,
+	axIState:= ,
+	xQError=> ,
+	iQErrorTerm=> );
+END_FOR
+]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_FuShiPXF" Id="{b09a59ac-3cd6-459f-8f83-2c1f45c9ed70}">
@@ -1357,6 +1373,14 @@ END_FOR]]></ST>
       <LineId Id="64" Count="0" />
       <LineId Id="20" Count="7" />
       <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_EtherCATSlaveState">
+      <LineId Id="2" Count="2" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="5" Count="1" />
+      <LineId Id="9" Count="3" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="14" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.ACT_FuShiPXF">
       <LineId Id="75" Count="0" />
