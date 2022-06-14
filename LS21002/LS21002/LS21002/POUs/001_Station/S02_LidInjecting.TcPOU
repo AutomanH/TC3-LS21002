@@ -158,7 +158,7 @@ THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
 	station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
-ELSIF station.xRunning 
+ELSIF station.xRunning OR  (tsModuleProcess[bXCounter+1].xProcessStarted AND  NOT tsModuleProcess[bXCounter+1].xProcessCompleted)
 THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
 CASE station.iStepAuto OF	  
@@ -191,13 +191,16 @@ CASE station.iStepAuto OF
 	
 	15://程序分类选择
 		 //进入校准程序
-		 IF  station.xSingleRunning AND stCalibration.xNeedCalibration THEN
-			  stCalibration.xWindowsTrigger:=TRUE;
-			  station.iStepAuto:=1000;
-		 ELSIF  NOT  stCalibration.xNeedCalibration THEN
-			 station.iStepAuto:=20;
+		 IF NOT   fbMachine[1].xTryRun THEN
+					IF  station.xSingleRunning AND stCalibration.xNeedCalibration THEN
+						 stCalibration.xWindowsTrigger:=TRUE;
+						 station.iStepAuto:=1000;
+					ELSIF  NOT  stCalibration.xNeedCalibration THEN
+						station.iStepAuto:=20;
+					END_IF
+		ELSE
+		 			station.iStepAuto:=20;
 		 END_IF
-
 	20:////Restore_after_Estop_Process1 上载数据流程
 			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
 					station.iStepAuto :=45; 
@@ -225,12 +228,17 @@ CASE station.iStepAuto OF
 
 	/////产品流程开始	
 	30: //判断产品状态
-		IF  arProcessDataStation[1].xMaterialOnOff   AND
-			 arProcessDataStation[2].xMaterialOnOff  THEN
-			station.iStepAuto:= 40;
+		IF NOT  fbMachine[1].xTryRun THEN
+			 IF  arProcessDataStation[1].xMaterialOnOff   AND
+					arProcessDataStation[2].xMaterialOnOff  THEN
+				 station.iStepAuto:= 40;
+			 ELSE
+				 station.iStepAuto:= 999;
+			 END_IF
 		ELSE
-			station.iStepAuto:= 999;
+		 		station.iStepAuto:= 40;
 		END_IF
+		 	
 	40://写入NOK按钮
 		IF   arManualNOKHmiButton[2]  AND NOT station.xSingleRunning THEN
 			station.iStepAuto:=155;
@@ -239,11 +247,8 @@ CASE station.iStepAuto OF
 			 station.iStepAuto:=45;
 		END_IF
 	//////产品流程开始
-	45://循环开始次数为2
-		IF bXCounter>2 OR  NOT _FirstCycle[1] THEN
+	45://循环开始次数为1，总循环为2
 			 bXCounter:=1;
-			 _FirstCycle[1]:=TRUE;
-		END_IF
 	    station.iStepAuto:= 50;
 
 	50:////Restore_after_Estop_Process1/2 注液流程1/2
@@ -281,20 +286,11 @@ CASE station.iStepAuto OF
 			END_IF
 		END_IF	 
 	100://XY轴去注液位置1、2
-		IF  bXCounter =2 THEN
-			fbXAxisMove.xMoveAuto[2]:=TRUE;
-			fbYAxisMove.xMoveAuto[2]:=TRUE;
-			IF fbXAxisMove.xMoveInPos[2]  AND fbYAxisMove.xMoveInPos[2]  THEN
+			fbXAxisMove.xMoveAuto[bXCounter+1]:=TRUE;
+			fbYAxisMove.xMoveAuto[bXCounter+1]:=TRUE;
+			IF fbXAxisMove.xMoveInPos[bXCounter+1]  AND fbYAxisMove.xMoveInPos[bXCounter+1]  THEN
 				station.iStepAuto:=110;	
 			END_IF
-		ELSIF bXCounter =1 THEN
-			fbXAxisMove.xMoveAuto[3]:=TRUE;
-			fbYAxisMove.xMoveAuto[3]:=TRUE;
-			IF fbXAxisMove.xMoveInPos[3]  AND fbYAxisMove.xMoveInPos[3]  THEN
-				station.iStepAuto:=110;	
-			END_IF
-		END_IF
-		
 	110:	//防滴液气缸收回
 		fbROTCyl.xAuto:=FALSE;
 		IF fbROTCyl.xHP_Delay THEN
@@ -328,29 +324,17 @@ CASE station.iStepAuto OF
 				END_IF
 		END_FOR 
 	145://注液完成
-	 tsModuleProcess[bXCounter+1].xProcessCompleted:=TRUE;
-		station.iStepAuto:=150;	
-	
+		tsModuleProcess[bXCounter+1].xProcessCompleted:=TRUE;
+		 station.iStepAuto:=150;	
 	150://写入结果
-		IF  bXCounter = 1 THEN
-				arProcessDataStation[1].stProduct.xlidInjecting_OK:=TRUE;
-				arProcessDataStation[1].stProduct.xlidInjecting_NOK:=FALSE;	
-		ELSIF  bXCounter =2 THEN
-				arProcessDataStation[2].stProduct.xlidInjecting_OK:=TRUE;
-				arProcessDataStation[2].stProduct.xlidInjecting_NOK:=FALSE;	
-		END_IF
-		tsModuleProcess[bXCounter].xQDataCompleted:=TRUE;
-		station.iStepAuto:=160;
+				arProcessDataStation[bXCounter].stProduct.xlidInjecting_OK:=TRUE;
+				arProcessDataStation[bXCounter].stProduct.xlidInjecting_NOK:=FALSE;	
+			 tsModuleProcess[bXCounter].xQDataCompleted:=TRUE;
+			 station.iStepAuto:=160;
 	155://注液失败
-		IF  bXCounter = 1 THEN
-				arProcessDataStation[1].stProduct.xlidInjecting_OK:=FALSE;
-				arProcessDataStation[1].stProduct.xlidInjecting_NOK:=TRUE;	
-		ELSIF  bXCounter =2 THEN
-				arProcessDataStation[2].stProduct.xlidInjecting_OK:=FALSE;
-				arProcessDataStation[2].stProduct.xlidInjecting_NOK:=TRUE;	
-		END_IF
-		station.iStepAuto:=160;
-
+				arProcessDataStation[bXCounter].stProduct.xlidInjecting_OK:=FALSE;
+				arProcessDataStation[bXCounter].stProduct.xlidInjecting_NOK:=TRUE;	
+				station.iStepAuto:=160;
 	160://Z轴上升
 		  fbXAxisMove.xMoveAuto[1]:=TRUE;
 		IF  fbXAxisMove.xMoveInPos[1] THEN
@@ -364,7 +348,6 @@ CASE station.iStepAuto OF
 	180://循环+1
 		 	bXCounter:=bXCounter +1 ;
 			station.iStepAuto:=190;
-		
 	190://检查循环次数
 			IF   bXCounter<=2 THEN
 				station.iStepAuto:=50;
@@ -549,48 +532,54 @@ CASE station.iStepInit OF
 20://防滴液气缸回原
 	fbROTCyl.xInit:=TRUE;
 	IF fbROTCyl.xHP_Delay THEN
-		station.iStepInit :=25;
+		station.iStepInit :=30;
 	END_IF
-25://停止蠕动泵
+30://停止蠕动泵
 		FOR i:=1 TO gc_uiRudongPump BY 1 DO
 			fbRudongPump[i].stDeviceOpe.xStop_Auto:=TRUE;
 		END_FOR
-			station.iStepInit :=26;
-26://等待蠕动泵全部停止
+			station.iStepInit :=40;
+40://等待蠕动泵全部停止
 		FOR i:=1 TO 12 BY 1 DO
 			IF  NOT  fbRudongPump[i].xDone  THEN
 					EXIT;
-			ELSE   	fbRudongPump[i].xExecute:=FALSE;
+			ELSE  
+			 	fbRudongPump[i].xExecute:=FALSE;
 			END_IF
 			IF  i = 12 THEN
-					station.iStepInit :=30;
+					station.iStepInit :=45;
 			END_IF
 		END_FOR 
-30://伺服上电
-  	 fbXAxisMove.xPowerInit := TRUE ;
+45://激活配置
+		FOR i:=1 TO 12 BY 1 DO
+				fbRudongPump[i].xNeedConfigurePara:=TRUE;
+		END_FOR
+			station.iStepInit :=50;
+50://伺服上电
+  	fbXAxisMove.xPowerInit := TRUE ;
 	 fbYAxisMove.xPowerInit := TRUE ;
 	 fbZAxisMove.xPowerInit := TRUE ;
 	IF fbXAxisMove.xPowerOn AND   fbYAxisMove.xPowerOn AND  fbZAxisMove.xPowerOn THEN 
-    	station.iStepInit:=40;	
+    	station.iStepInit:=60;	
 	END_IF
-40://Z轴伺服上升
+60://Z轴伺服上升
 		fbZAxisMove.xMoveAuto[1]:=TRUE;
 		IF fbZAxisMove.xMoveInPos[1]   THEN
-			station.iStepInit:=45;	
+			station.iStepInit:=70;	
 		END_IF
-45://防滴液气缸伸出
+70://防滴液气缸伸出
 		fbROTCyl.xAuto :=TRUE;
 		IF fbROTCyl.xWP_Delay THEN
-			station.iStepInit :=50;
+			station.iStepInit :=80;
 		END_IF
-50://XY轴回参考位
+80://XY轴回参考位
 		fbXAxisMove.xMoveAuto[1]:=TRUE;
 		fbYAxisMove.xMoveAuto[1]:=TRUE;
 		IF fbXAxisMove.xMoveInPos[1]  AND fbYAxisMove.xMoveInPos[1]  THEN
-			station.iStepInit:=60;	
+			station.iStepInit:=90;	
 		END_IF
 
-60://水平调整气缸收回
+90://水平调整气缸收回
 	fbHOZAdjustCyl_1.xInit :=TRUE;
     fbHOZAdjustCyl_2.xInit :=TRUE;
     fbHOZAdjustCyl_3.xInit :=TRUE;
@@ -599,14 +588,11 @@ CASE station.iStepInit OF
 		fbHOZAdjustCyl_2.xHP_Delay AND
 		fbHOZAdjustCyl_3.xHP_Delay AND
 		fbHOZAdjustCyl_4.xHP_Delay THEN
-		station.iStepInit:=70;	
+		station.iStepInit:=100;	
 	END_IF
 	
-70:
-		station.iStepInit:=100;	
-
-100://	
-    station.iStepInit:=999;	
+100:
+		station.iStepInit:=999;	
 999://初始化完成	
 	station.iStepInit:=0;
 	station.xInitDone:=TRUE;  
@@ -825,12 +811,17 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="2264" Count="0" />
       <LineId Id="1259" Count="0" />
       <LineId Id="2179" Count="0" />
-      <LineId Id="2003" Count="2" />
+      <LineId Id="2003" Count="1" />
+      <LineId Id="2269" Count="0" />
+      <LineId Id="2005" Count="0" />
       <LineId Id="2168" Count="0" />
       <LineId Id="2008" Count="0" />
       <LineId Id="2010" Count="0" />
       <LineId Id="2006" Count="1" />
-      <LineId Id="2241" Count="1" />
+      <LineId Id="2241" Count="0" />
+      <LineId Id="2271" Count="0" />
+      <LineId Id="2270" Count="0" />
+      <LineId Id="2242" Count="0" />
       <LineId Id="2260" Count="1" />
       <LineId Id="1926" Count="9" />
       <LineId Id="1918" Count="0" />
@@ -846,17 +837,23 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="1570" Count="0" />
       <LineId Id="1373" Count="0" />
       <LineId Id="1952" Count="0" />
+      <LineId Id="2272" Count="0" />
       <LineId Id="1956" Count="1" />
       <LineId Id="1965" Count="0" />
       <LineId Id="1970" Count="1" />
       <LineId Id="1949" Count="0" />
+      <LineId Id="2273" Count="0" />
+      <LineId Id="2275" Count="1" />
+      <LineId Id="2274" Count="0" />
       <LineId Id="2191" Count="0" />
       <LineId Id="2199" Count="1" />
       <LineId Id="2203" Count="0" />
       <LineId Id="2201" Count="1" />
       <LineId Id="2194" Count="0" />
       <LineId Id="2263" Count="0" />
-      <LineId Id="2210" Count="5" />
+      <LineId Id="2210" Count="0" />
+      <LineId Id="2212" Count="0" />
+      <LineId Id="2215" Count="0" />
       <LineId Id="2197" Count="0" />
       <LineId Id="1736" Count="0" />
       <LineId Id="2206" Count="1" />
@@ -869,14 +866,8 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="1980" Count="14" />
       <LineId Id="1979" Count="0" />
       <LineId Id="1629" Count="0" />
-      <LineId Id="1683" Count="0" />
       <LineId Id="1686" Count="3" />
       <LineId Id="1684" Count="0" />
-      <LineId Id="1690" Count="0" />
-      <LineId Id="1693" Count="3" />
-      <LineId Id="1691" Count="0" />
-      <LineId Id="1685" Count="0" />
-      <LineId Id="1541" Count="0" />
       <LineId Id="1543" Count="0" />
       <LineId Id="1638" Count="3" />
       <LineId Id="1643" Count="0" />
@@ -903,21 +894,14 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="1805" Count="0" />
       <LineId Id="1654" Count="1" />
       <LineId Id="1821" Count="1" />
-      <LineId Id="1652" Count="1" />
-      <LineId Id="1658" Count="0" />
+      <LineId Id="1653" Count="0" />
       <LineId Id="1807" Count="0" />
       <LineId Id="1816" Count="0" />
-      <LineId Id="1809" Count="0" />
-      <LineId Id="1811" Count="0" />
-      <LineId Id="1817" Count="0" />
-      <LineId Id="1808" Count="0" />
       <LineId Id="1827" Count="0" />
       <LineId Id="1546" Count="0" />
       <LineId Id="1847" Count="0" />
-      <LineId Id="1852" Count="5" />
-      <LineId Id="1842" Count="0" />
+      <LineId Id="1853" Count="1" />
       <LineId Id="1859" Count="0" />
-      <LineId Id="1846" Count="0" />
       <LineId Id="1660" Count="0" />
       <LineId Id="1663" Count="2" />
       <LineId Id="1662" Count="0" />
@@ -927,7 +911,7 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="1666" Count="0" />
       <LineId Id="1548" Count="0" />
       <LineId Id="1670" Count="0" />
-      <LineId Id="1549" Count="1" />
+      <LineId Id="1550" Count="0" />
       <LineId Id="1671" Count="1" />
       <LineId Id="1675" Count="1" />
       <LineId Id="1673" Count="0" />
@@ -1041,10 +1025,16 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="551" Count="2" />
       <LineId Id="548" Count="0" />
       <LineId Id="572" Count="1" />
-      <LineId Id="570" Count="0" />
+      <LineId Id="575" Count="0" />
+      <LineId Id="574" Count="0" />
       <LineId Id="565" Count="1" />
       <LineId Id="547" Count="0" />
       <LineId Id="554" Count="0" />
+      <LineId Id="576" Count="0" />
+      <LineId Id="579" Count="0" />
+      <LineId Id="582" Count="0" />
+      <LineId Id="581" Count="0" />
+      <LineId Id="578" Count="0" />
       <LineId Id="474" Count="0" />
       <LineId Id="482" Count="1" />
       <LineId Id="494" Count="0" />
@@ -1069,8 +1059,8 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="513" Count="2" />
       <LineId Id="511" Count="1" />
       <LineId Id="516" Count="1" />
-      <LineId Id="506" Count="1" />
-      <LineId Id="460" Count="6" />
+      <LineId Id="506" Count="0" />
+      <LineId Id="462" Count="4" />
       <LineId Id="436" Count="0" />
     </LineIds>
     <LineIds Name="S02_LidInjecting.General">

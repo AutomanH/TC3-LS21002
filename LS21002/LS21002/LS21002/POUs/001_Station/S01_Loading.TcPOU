@@ -12,7 +12,9 @@ VAR
 		fbVTCPressCyl_4	:REFERENCE TO FB_Cylinder:=fbCylinder[4];	//	链板线-下压气缸4
 		fbVTCCyl_1	:REFERENCE TO FB_Cylinder:=fbCylinder[5];	//	移栽机构-Z轴气缸1
 		fbVTCCyl_2	:REFERENCE TO FB_Cylinder:=fbCylinder[6];	//	移栽机构-Z轴气缸2
-
+//链板线
+		fbFlowLine:FB_FlowLine;	
+		
 	//伺服
 		fbXAxisMove	 :REFERENCE TO FB_Axis:=fbAxis[1];	//	移栽上料X轴伺服
 		fbYAxisMove	 :REFERENCE TO FB_Axis:=fbAxis[2];	//	移栽上料Y轴伺服
@@ -40,8 +42,7 @@ VAR
 	xFlowLineStart: BOOL;//链板线启动信号
 	bFlowLineStep: BYTE;
 	xFlowLineReadyCmd: BOOL;//连班线准备指令
-	xFlowLineReadySensor: ARRAY[1..4] OF BOOL;//链板线准备传感器
-	xFlowLineReachedSensor: ARRAY[1..4] OF BOOL;//链板线到位传感器
+	arFlowLineReachedSensor: ARRAY[1..4] OF BOOL;//链板线到位传感器
 	_FirstFlag: BOOL;
 	
 
@@ -60,6 +61,11 @@ VAR
 	_FirstCycle: ARRAY[1..10] of bool;
 	// 夹爪1/2旋转完成
 	xRotateCompletedClamp:ARRAY[1..2] OF BOOL;
+	//下压气缸原点传感器
+	arVTCPressCylHPSensor:ARRAY[1..4] OF BOOL;
+	//下压气缸动点传感器
+	arVTCPressCylWPSensor:ARRAY[1..4] OF BOOL;
+	
 END_VAR
 
 ]]></Declaration>
@@ -80,29 +86,32 @@ Z_Output();
     <Action Name="A_Input" Id="{d02a1e8b-99f7-4a59-a9d7-b46699eb8bde}">
       <Implementation>
         <ST><![CDATA[//气缸
-fbVTCPressCyl_1.xWP_Sensor	:=	IxS01VTCPressCyl_1WP 	;
-fbVTCPressCyl_1.xHP_Sensor	:=	IxS01VTCPressCyl_1HP	;
-fbVTCPressCyl_2.xWP_Sensor	:=	IxS01VTCPressCyl_2WP	;
-fbVTCPressCyl_2.xHP_Sensor	:=	IxS01VTCPressCyl_2HP	;
-fbVTCPressCyl_3.xWP_Sensor	:=	IxS01VTCPressCyl_3WP	;
-fbVTCPressCyl_3.xHP_Sensor	:=	IxS01VTCPressCyl_3HP	;
-fbVTCPressCyl_4.xWP_Sensor	:=	IxS01VTCPressCyl_4WP	;
-fbVTCPressCyl_4.xHP_Sensor	:=	IxS01VTCPressCyl_4HP	;
+fbVTCPressCyl_1.xWP_Sensor	:=
+arVTCPressCylWPSensor[1]		:=	IxS01VTCPressCyl_1WP 	;
+fbVTCPressCyl_1.xHP_Sensor	:=
+arVTCPressCylHPSensor[1]		:=	IxS01VTCPressCyl_1HP	;
+fbVTCPressCyl_2.xWP_Sensor	:=	
+arVTCPressCylWPSensor[2]		:=	IxS01VTCPressCyl_2WP	;
+fbVTCPressCyl_2.xHP_Sensor	:=
+arVTCPressCylHPSensor[2]		:=	IxS01VTCPressCyl_2HP	;
+fbVTCPressCyl_3.xWP_Sensor	:=	
+arVTCPressCylWPSensor[3]		:=IxS01VTCPressCyl_3WP	;
+fbVTCPressCyl_3.xHP_Sensor	:=
+arVTCPressCylHPSensor[3]		:=	IxS01VTCPressCyl_3HP	;
+fbVTCPressCyl_4.xWP_Sensor	:=	
+arVTCPressCylWPSensor[4]		:=IxS01VTCPressCyl_4WP	;
+fbVTCPressCyl_4.xHP_Sensor	:=
+arVTCPressCylHPSensor[4]		:=IxS01VTCPressCyl_4HP	;
 fbVTCCyl_1.xWP_Sensor	:=	IxS01VTCCyl_1WP	;
 fbVTCCyl_1.xHP_Sensor	:=	IxS01VTCCyl_1HP	;
 fbVTCCyl_2.xWP_Sensor	:=	IxS01VTCCyl_2WP	;
 fbVTCCyl_2.xHP_Sensor	:=	IxS01VTCCyl_2HP	;
 
 //链板线传感器
-xFlowLineReadySensor[1]:=IxS01PositionSensor1;
-xFlowLineReadySensor[2]:=IxS01PositionSensor2;
-xFlowLineReadySensor[3]:=IxS01PositionSensor3;
-xFlowLineReadySensor[4]:=IxS01PositionSensor4;
-//链板线到位传感器
-xFlowLineReachedSensor[1]:=IxS01Sensor1Reached;
-xFlowLineReachedSensor[2]:=IxS01Sensor2Reached;	
-xFlowLineReachedSensor[3]:=IxS02Sensor1Reached;	
-xFlowLineReachedSensor[4]:=IxS02Sensor2Reached;	
+arFlowLineReachedSensor[1]:=IxS01PositionSensor1;
+arFlowLineReachedSensor[2]:=IxS01PositionSensor2;
+arFlowLineReachedSensor[3]:=IxS01PositionSensor3;
+arFlowLineReachedSensor[4]:=IxS01PositionSensor4;
 //上料工位传感器
 xLoadingReachedSensor[1]:=IxS01Sensor1Reached;
 xLoadingReachedSensor[2]:=IxS01Sensor2Reached;
@@ -139,8 +148,7 @@ station.adwAlarm[1].21	:=	fbXAxisMove.xMoveTimeout	;//	S01移栽上料X轴伺服
 station.adwAlarm[1].22	:=	fbYAxisMove.xError	;//	S01移栽上料Y轴伺服报错
 station.adwAlarm[1].23	:=	fbYAxisMove.xNotPowerOn	;//	S01移栽上料Y轴伺服未使能
 station.adwAlarm[1].24	:=	fbYAxisMove.xMoveTimeout	;//	S01移栽上料Y轴伺服移动超时
-
-
+station.adwAlarm[1].25	:=	fbFlowLine.xQError	;			//	S01移栽上料链板线报错
 
 
 
@@ -151,7 +159,7 @@ station.adwAlarm[1].24	:=	fbYAxisMove.xMoveTimeout	;//	S01移栽上料Y轴伺服
     <Action Name="Delay" Id="{084f8558-cebd-455d-abdf-a99ad2ca1ee4}">
       <Implementation>
         <ST><![CDATA[(*arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );*)//TipAuto使用
-arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );
+(*arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );*)//链板线程序使用
 arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
 arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[05](IN:= , PT:=T#0.1S , Q=> , ET=> );
@@ -234,7 +242,7 @@ CASE station.iStepAuto OF
 			END_IF
 	40://等待链板线准备信号
 		tsModuleProcess[1].xProcessNotStarted:=TRUE;
-		IF    xFlowLineReady THEN
+		IF   fbFlowLine.xQReady THEN
 			station.iStepAuto:=50;	
 		END_IF
 	50://清除链板线一行的取料信号
@@ -261,7 +269,7 @@ CASE station.iStepAuto OF
 		(*位置1*)		
 		_AlarmDisable:=FALSE;
 		FOR  i:=1 TO 4 BY 1 DO
-			IF 	  sCamera_TO_Plc.iS01Result[i] =3 THEN
+			IF 	sCamera_TO_Plc.iS01Result[i] =3 THEN
 					station.iStepAuto:=101;
 					EXIT;
 			ELSIF	i =4 THEN
@@ -292,13 +300,19 @@ CASE station.iStepAuto OF
 
 ///预留复检步骤120-150
 	150://开始循环。循环次数=2
-			IF ( bCounter >2) OR NOT _FirstCycle[1] THEN
-			 	bCounter:=1;
-				_FirstCycle[1]:=TRUE;
-			END_IF
-			station.iStepAuto :=160; 
-
-
+		IF NOT  fbMachine[1].xTryRun THEN
+				IF  arFlowLineReachedSensor[1] AND arFlowLineReachedSensor[3]   THEN
+								bCounter:=1;
+				ELSIF arFlowLineReachedSensor[2] AND arFlowLineReachedSensor[4] THEN
+								bCounter:=2;
+				ELSIF
+								station.iStepAuto :=999; 
+				END_IF
+				station.iStepAuto :=160; 
+		ELSE
+		 		bCounter:=1;
+		 		station.iStepAuto :=160; 
+		END_IF
 	160://Restore_after_Estop_Process2/3 取孔板流程1/2
 			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
 					station.iStepAuto :=170; 
@@ -591,10 +605,14 @@ CASE station.iStepAuto OF
 		END_IF
 
 	440://循环-1
-		bCounter :=bCounter +1;
-		station.iStepAuto:=450;
+	IF  fbMachine[1].xTryRun THEN
+			bCounter :=bCounter +1;
+			station.iStepAuto:=450;
+	ELSE
+	 		station.iStepAuto:=150;
+	END_IF
 		
-	450://
+	450://空运行使用
 		IF 	 bCounter <=2 THEN
 			 station.iStepAuto:=160;	
 		ELSE
@@ -605,83 +623,6 @@ CASE station.iStepAuto OF
 		station.xSingleRunFlag:=FALSE;
 		station.xCycleEnable:=FALSE;	
 	//	station.xDone:=TRUE;
-(**************************************链板线程序********************************************)
-CASE bFlowLineStep OF
-0://启动
- 	IF (station.xRunning OR xFlowLineReadyCmd ) AND NOT _FirstFlag  THEN
-			bFlowLineStep:=20;
-			_FirstFlag:=TRUE;
-	ELSIF  _FirstFlag THEN 
-			bFlowLineStep:=30;
-	END_IF
-10:	//缓冲位置	
-	bFlowLineStep:=20;
-20://准备传感器检测
-	IF NOT fbmachine[1].xTryRun THEN
-		FOR  i:=1 TO 4 BY 1 DO
-			IF  NOT xFlowLineReadySensor[i]  THEN
-				bFlowLineStep:=10;
-				EXIT;
-			END_IF
-		END_FOR
-		bFlowLineStep:=30;
-	ELSE
-		bFlowLineStep:=30;
-	END_IF
-	
-30://到位传感器检测
-	IF NOT fbmachine[1].xTryRun THEN
-		FOR  i:=1 TO 4 BY 1 DO
-			IF  NOT xFlowLineReachedSensor[i]  THEN
-				bFlowLineStep:=10;
-				EXIT;
-			END_IF
-		END_FOR
-		bFlowLineStep:=40;
-	ELSE
-		bFlowLineStep:=40;
-	END_IF
-40://下压气缸伸出
-	fbVTCPressCyl_1.xAuto:=TRUE;
-	fbVTCPressCyl_2.xAuto:=TRUE;
-	fbVTCPressCyl_3.xAuto:=TRUE;	
-	fbVTCPressCyl_4.xAuto:=TRUE;	
-	IF  fbVTCPressCyl_1.xWP_Delay AND
-		fbVTCPressCyl_2.xWP_Delay AND 
-		fbVTCPressCyl_3.xWP_Delay AND 
-		fbVTCPressCyl_4.xWP_Delay THEN
-		bFlowLineStep:=45;
-	END_IF
-                
-45://输出链板线Ready信号
-	xFlowLineReady:=TRUE;
-	bFlowLineStep:=50;
-50://等待前面一行取走信号
-	IF  xTakeBoxPremit THEN
-		xFlowLineReady:=FALSE;
-		bFlowLineStep:=60;
-	END_IF
-60://下压气缸回原
-	fbVTCPressCyl_1.xAuto:=FALSE;
-	fbVTCPressCyl_2.xAuto:=false;
-	fbVTCPressCyl_3.xAuto:=false;	
-	fbVTCPressCyl_4.xAuto:=false;	
-	IF  fbVTCPressCyl_1.xHP_Delay AND
-		fbVTCPressCyl_2.xHP_Delay AND 
-		fbVTCPressCyl_3.xHP_Delay AND 
-		fbVTCPressCyl_4.xHP_Delay THEN
-		bFlowLineStep:=10;
-	END_IF
-END_CASE
-
-
-IF  station.xRunning THEN
-	xFlowLineStart:=TRUE;
-END_IF
-IF  fbmachine[1].xEmptyDone THEN
-	_Firstflag:=FALSE;
-END_IF
-
 
 	ELSE
 		;	
@@ -748,6 +689,21 @@ CASE station.iStepInit OF
 END_CASE
 END_IF
 ]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="FlowLine" Id="{b28f4192-39f5-4366-9ebd-07d256861364}">
+      <Implementation>
+        <ST><![CDATA[fbFlowLine(
+	arIReachedSensor:= arFlowLineReachedSensor, 
+	arIVTCCylHPSensor:=arVTCPressCylHPSensor , 
+	arIVTCCylWPSensor:=arVTCPressCylWPSensor ,
+	xIRunningPremit:=xTakeBoxPremit, 
+	xIEmptyDone:= fbMachine[1].xEmptyDone, 
+	xQStart=> , 
+	arQVTCCylHPValve=> , 
+	arQVTCCylWPValve=> , 
+	xQReady=> , 
+	xQError=> );]]></ST>
       </Implementation>
     </Action>
     <Action Name="General" Id="{853ea6bd-bb20-473d-996d-ff4ed10c4144}">
@@ -858,21 +814,28 @@ END_IF
     <Action Name="Z_Output" Id="{f73574ac-bbd1-4517-bd7c-1b8c56ce8f05}">
       <Implementation>
         <ST><![CDATA[(**************************气缸输出********************************)
-QxS01VTCPressCyl_1WP	:=	fbVTCPressCyl_1.xWP_Valve	;
-QxS01VTCPressCyl_1HP	:=	fbVTCPressCyl_1.xHP_Valve	;
-QxS01VTCPressCyl_2WP	:=	fbVTCPressCyl_2.xWP_Valve	;
-QxS01VTCPressCyl_2HP	:=	fbVTCPressCyl_2.xHP_Valve	;
-QxS01VTCPressCyl_3WP	:=	fbVTCPressCyl_3.xWP_Valve	;
-QxS01VTCPressCyl_3HP	:=	fbVTCPressCyl_3.xHP_Valve	;
-QxS01VTCPressCyl_4WP	:=	fbVTCPressCyl_4.xWP_Valve	;
-QxS01VTCPressCyl_4HP	:=	fbVTCPressCyl_4.xHP_Valve	;
+QxS01VTCPressCyl_1WP	:=	(fb_Machine[1].xManualMode AND    fbVTCPressCyl_1.xWP_Valve	) OR
+												 (fb_Machine[1].xAutoMode  AND  	fbFlowLine.arQVTCCylWPValve[1]);
+QxS01VTCPressCyl_1HP	:=		(fb_Machine[1].xManualMode AND    fbVTCPressCyl_1.xHP_Valve	) OR
+                           (fb_Machine[1].xAutoMode  AND  	fbFlowLine.arQVTCCylHPValve[1]);
+QxS01VTCPressCyl_2WP	:=		(fb_Machine[1].xManualMode AND    fbVTCPressCyl_2.xWP_Valve	) OR
+                           (fb_Machine[1].xAutoMode  AND  	fbFlowLine.arQVTCCylWPValve[2]);
+QxS01VTCPressCyl_2HP	:=		(fb_Machine[1].xManualMode AND    fbVTCPressCyl_2.xHP_Valve	) OR
+                           (fb_Machine[1].xAutoMode  AND  	fbFlowLine.arQVTCCylHPValve[2]);
+QxS01VTCPressCyl_3WP	:=		(fb_Machine[1].xManualMode AND    fbVTCPressCyl_3.xWP_Valve	) OR
+                           (fb_Machine[1].xAutoMode  AND  	fbFlowLine.arQVTCCylWPValve[3]);
+QxS01VTCPressCyl_3HP	:=		(fb_Machine[1].xManualMode AND    fbVTCPressCyl_3.xHP_Valve	) OR
+                           (fb_Machine[1].xAutoMode  AND  	fbFlowLine.arQVTCCylHPValve[3]);
+QxS01VTCPressCyl_4WP	:=		(fb_Machine[1].xManualMode AND    fbVTCPressCyl_4.xWP_Valve	) OR
+                           (fb_Machine[1].xAutoMode  AND  	fbFlowLine.arQVTCCylWPValve[4]);
+QxS01VTCPressCyl_4HP	:=		(fb_Machine[1].xManualMode AND    fbVTCPressCyl_4.xHP_Valve	) OR
+                          	 (fb_Machine[1].xAutoMode  AND  	fbFlowLine.arQVTCCylHPValve[4]);
 QxS01VTCCyl_1WP	:=	fbVTCCyl_1.xWP_Valve	;
 QxS01VTCCyl_1HP	:=	fbVTCCyl_1.xHP_Valve	;
 QxS01VTCCyl_2WP	:=	fbVTCCyl_2.xWP_Valve	;
 QxS01VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
 //链板线启动
-QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
-
+QxFlowLineStart:= (fbFlowLine.xQStart AND fbMachine[1].xEStop);
 ]]></ST>
       </Implementation>
     </Action>
@@ -884,10 +847,26 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
     </LineIds>
     <LineIds Name="S01_Loading.A_Input">
       <LineId Id="44" Count="0" />
-      <LineId Id="62" Count="11" />
+      <LineId Id="62" Count="0" />
+      <LineId Id="106" Count="0" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="107" Count="0" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="108" Count="0" />
+      <LineId Id="65" Count="0" />
+      <LineId Id="109" Count="0" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="110" Count="0" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="111" Count="0" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="112" Count="0" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="113" Count="0" />
+      <LineId Id="70" Count="3" />
       <LineId Id="75" Count="1" />
       <LineId Id="74" Count="0" />
-      <LineId Id="77" Count="7" />
+      <LineId Id="77" Count="2" />
       <LineId Id="93" Count="0" />
       <LineId Id="96" Count="0" />
       <LineId Id="87" Count="0" />
@@ -901,7 +880,6 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="199" Count="1" />
       <LineId Id="192" Count="0" />
       <LineId Id="220" Count="19" />
-      <LineId Id="206" Count="0" />
       <LineId Id="194" Count="4" />
       <LineId Id="181" Count="0" />
     </LineIds>
@@ -965,9 +943,19 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="2330" Count="0" />
       <LineId Id="2437" Count="2" />
       <LineId Id="2052" Count="1" />
-      <LineId Id="3089" Count="4" />
-      <LineId Id="3087" Count="1" />
-      <LineId Id="3086" Count="0" />
+      <LineId Id="3089" Count="0" />
+      <LineId Id="3228" Count="0" />
+      <LineId Id="3216" Count="0" />
+      <LineId Id="3219" Count="0" />
+      <LineId Id="3218" Count="0" />
+      <LineId Id="3222" Count="0" />
+      <LineId Id="3241" Count="0" />
+      <LineId Id="3243" Count="0" />
+      <LineId Id="3226" Count="0" />
+      <LineId Id="3232" Count="0" />
+      <LineId Id="3229" Count="0" />
+      <LineId Id="3233" Count="0" />
+      <LineId Id="3230" Count="1" />
       <LineId Id="2441" Count="0" />
       <LineId Id="3068" Count="0" />
       <LineId Id="3071" Count="1" />
@@ -1125,8 +1113,12 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="2712" Count="0" />
       <LineId Id="2267" Count="0" />
       <LineId Id="2148" Count="0" />
+      <LineId Id="3235" Count="0" />
       <LineId Id="2274" Count="0" />
       <LineId Id="2282" Count="0" />
+      <LineId Id="3236" Count="0" />
+      <LineId Id="3239" Count="0" />
+      <LineId Id="3238" Count="0" />
       <LineId Id="2739" Count="0" />
       <LineId Id="2299" Count="2" />
       <LineId Id="3098" Count="0" />
@@ -1135,10 +1127,7 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="1395" Count="0" />
       <LineId Id="1397" Count="2" />
       <LineId Id="2297" Count="0" />
-      <LineId Id="2901" Count="0" />
-      <LineId Id="2909" Count="73" />
-      <LineId Id="2908" Count="0" />
-      <LineId Id="2906" Count="1" />
+      <LineId Id="3201" Count="0" />
       <LineId Id="1401" Count="4" />
       <LineId Id="1410" Count="1" />
       <LineId Id="1105" Count="0" />
@@ -1175,6 +1164,11 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
       <LineId Id="482" Count="0" />
       <LineId Id="466" Count="4" />
       <LineId Id="436" Count="0" />
+    </LineIds>
+    <LineIds Name="S01_Loading.FlowLine">
+      <LineId Id="2" Count="3" />
+      <LineId Id="7" Count="5" />
+      <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="S01_Loading.General">
       <LineId Id="601" Count="0" />
@@ -1226,9 +1220,24 @@ QxFlowLineStart:= (xFlowLineStart AND fbMachine[1].xEStop);
     </LineIds>
     <LineIds Name="S01_Loading.Z_Output">
       <LineId Id="2" Count="0" />
-      <LineId Id="32" Count="12" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="57" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="58" Count="0" />
+      <LineId Id="35" Count="0" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="36" Count="0" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="62" Count="0" />
+      <LineId Id="38" Count="0" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="64" Count="1" />
+      <LineId Id="41" Count="3" />
       <LineId Id="16" Count="0" />
-      <LineId Id="47" Count="0" />
       <LineId Id="52" Count="0" />
     </LineIds>
   </POU>

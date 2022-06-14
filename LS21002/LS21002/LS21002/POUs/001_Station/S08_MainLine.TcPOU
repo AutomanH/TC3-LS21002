@@ -374,8 +374,8 @@ arCurFixtureNumStation[14]:=31;
 arCurFixtureNumStation[15]:=32;
 arCurFixtureNumStation[16]:=33;
 //尾端
-arCurFixtureNumStation[17]:=41;
-arCurFixtureNumStation[18]:=42;
+arCurFixtureNumStation[17]:=42;
+arCurFixtureNumStation[18]:=43;
 
 ]]></ST>
       </Implementation>

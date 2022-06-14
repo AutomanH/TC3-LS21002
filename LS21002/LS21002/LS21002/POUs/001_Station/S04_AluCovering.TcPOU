@@ -126,7 +126,7 @@ THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
 	station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
-ELSIF station.xRunning  OR   tsModuleProcess[2].xProcessStarted
+ELSIF station.xRunning  OR (  tsModuleProcess[2].xProcessStarted AND   NOT tsModuleProcess[2].xProcessCompleted)
 THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
 CASE station.iStepAuto OF	  
@@ -187,11 +187,15 @@ CASE station.iStepAuto OF
 		tsModuleProcess[1].xQDataCompleted:=TRUE;
 		station.iStepAuto:= 40;
 	40: //判断产品状态
-			IF  arProcessDataStation[1].xMaterialOnOff   AND
-				 arProcessDataStation[2].xMaterialOnOff  THEN
-				station.iStepAuto:= 41;
+			IF	NOT fbMachine[1].xTryRun THEN
+					IF  arProcessDataStation[1].xMaterialOnOff   AND
+						 arProcessDataStation[2].xMaterialOnOff  THEN
+						station.iStepAuto:= 41;
+					ELSE
+						station.iStepAuto:= 999;
+					END_IF
 			ELSE
-				station.iStepAuto:= 999;
+						station.iStepAuto:= 41;
 			END_IF
 	41://手动NOK按钮
 			IF   arManualNOKHmiButton[4]  AND NOT station.xCycleRunning THEN
@@ -571,7 +575,9 @@ QxS04HOZAdjustCyl_4HP	:=	fbHOZAdjustCyl_4.xHP_Valve	;
       <LineId Id="1731" Count="1" />
       <LineId Id="1730" Count="0" />
       <LineId Id="1734" Count="0" />
+      <LineId Id="1844" Count="0" />
       <LineId Id="1738" Count="5" />
+      <LineId Id="1845" Count="2" />
       <LineId Id="1556" Count="0" />
       <LineId Id="1817" Count="1" />
       <LineId Id="1820" Count="1" />

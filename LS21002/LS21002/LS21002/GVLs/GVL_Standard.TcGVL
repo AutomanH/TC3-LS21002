@@ -19,7 +19,6 @@
 	fbRecipes					:ARRAY[1..gc_RecipeNum]OF FB_Recipes;
 	fbERG_20_Modbus				:ARRAY[1..gc_uiHITBOT_Number] OF FB_ERG_20_Modbus;
 	fbGetTime					:FB_GetTime;
-	fbEthercatTerminalState		:FB_EthercatTerminalState;
 	fbCamera					:ARRAY[1..gc_uiCameraNum] OF FB_Camera;
 	fbRudongPumpModbusTcp		:ARRAY[1..gc_uiRudongPump] OF FB_RuDongPump_ModbusTCP;
 	fbAlive					 :ARRAY[1..gc_AliveNum] OF FB_Alive;

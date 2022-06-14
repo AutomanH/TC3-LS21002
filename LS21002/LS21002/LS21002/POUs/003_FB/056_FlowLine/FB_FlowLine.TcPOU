@@ -1,0 +1,160 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_FlowLine" Id="{52997166-3b63-4e55-9278-d93ff937da70}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_FlowLine
+VAR_INPUT
+ arIReachedSensor:ARRAY[1..iColumnsNum] OF BOOL;
+ arIVTCCylHPSensor:ARRAY[1..iColumnsNum] OF BOOL;
+ arIVTCCylWPSensor:ARRAY[1..iColumnsNum] OF BOOL;
+ xIRunningPremit:BOOL;
+ xIEmptyDone:BOOL;
+END_VAR
+VAR_OUTPUT
+ xQStart:BOOL;//链板线启动
+ arQVTCCylHPValve:ARRAY[1..iColumnsNum] OF BOOL;
+ arQVTCCylWPValve:ARRAY[1..iColumnsNum] OF BOOL; 
+ xQReady:BOOL;
+ xQError:BOOL;
+END_VAR
+VAR
+	// 链板线步骤
+	bFlowLineStep: BYTE;
+	bFlowLineStepOld:BYTE;
+	// 延时
+	arTonDelay: ARRAY[1..10] OF ton;
+	i:INT;
+	_xFirstCycle: BOOL;
+END_VAR
+VAR CONSTANT
+ 	iColumnsNum :INT:=4;
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[(**************************************链板线程序********************************************)
+CASE bFlowLineStep OF
+0://启动
+	FOR i:=1 TO 10 BY 1 DO
+	 	arTonDelay[i](IN:=FALSE);
+	END_FOR
+ 	IF	(xIRunningPremit OR NOT _xFirstCycle) AND NOT xIEmptyDone  THEN
+	 		xQStart:=TRUE;
+			_xFirstCycle:=TRUE;
+			bFlowLineStep:=bFlowLineStep +1;
+	ELSE
+	 		xQStart:=FALSE;
+	END_IF
+1://下压气缸回原
+			FOR  i:=1 TO iColumnsNum BY 1 DO
+				 arQVTCCylHPValve[i]:=TRUE;
+			END_FOR 	
+			bFlowLineStep:=bFlowLineStep +1;
+2://判断回原是否完成
+		arTonDelay[01](IN:=NOT xQError  , PT:=T#5S , Q=> , ET=> );
+		IF  NOT arTonDelay[01].Q THEN
+			FOR  i:=1 TO iColumnsNum BY 1 DO
+			 	IF  NOT arIVTCCylHPSensor[i] THEN
+					EXIT;	
+				 ELSIF  i  =iColumnsNum THEN
+						bFlowLineStep:=bFlowLineStep +1;
+				 END_IF
+			 END_FOR
+		ELSE
+			xQError:=TRUE;    
+			bFlowLineStepOld :=bFlowLineStep;
+		END_IF
+		
+3://到位传感器检测
+	arTonDelay[01](IN:=FALSE);
+	arTonDelay[02](IN:=TRUE  , PT:=T#10S , Q=> , ET=> );
+	IF NOT fbmachine[1].xTryRun THEN
+		FOR  i:=1 TO iColumnsNum BY 1 DO
+			IF  NOT arIReachedSensor[i]  THEN
+				EXIT;
+			ELSIF   i =iColumnsNum THEN
+			 	bFlowLineStep:=bFlowLineStep +2;
+			ELSIF  arTonDelay[02].Q THEN
+			 bFlowLineStep:=bFlowLineStep +1;
+				arTonDelay[02](IN:=FALSE);
+			END_IF
+		END_FOR
+	ELSE
+			bFlowLineStep:=bFlowLineStep +1;
+	END_IF
+4://如果到位传感器只检测到一组，那么也可以进行
+		arTonDelay[02](IN:=FALSE);
+		FOR  i:=1 TO iColumnsNum BY 1 DO
+		 		IF arIReachedSensor[i] AND arIReachedSensor[i+2] THEN
+				 			bFlowLineStep:=bFlowLineStep +1;
+				ELSIF  i =iColumnsNum THEN
+				 			bFlowLineStep:=bFlowLineStep -1;
+				END_IF
+		END_FOR
+5://下压气缸伸出
+				FOR  i:=1 TO iColumnsNum BY 1 DO
+						arQVTCCylWPValve[i]:=TRUE;
+				END_FOR
+					bFlowLineStep:=bFlowLineStep +1;
+6://检测下压气缸到位
+			FOR  i:=1 TO iColumnsNum  BY 1 DO
+						IF  NOT   arIVTCCylWPSensor[i] OR  arIVTCCylHPSensor[i]  THEN
+							EXIT;
+						ELSIF  i=iColumnsNum THEN
+						 		bFlowLineStep:=bFlowLineStep +1;
+						END_IF
+			END_FOR    
+7://延时2S
+			arTonDelay[3](IN:=TRUE  , PT:=T#2S , Q=> , ET=> );
+		IF  	arTonDelay[3].Q THEN
+		 			bFlowLineStep:=bFlowLineStep +1;
+				 	arTonDelay[3](IN:=FALSE);
+		END_IF	      
+8://输出链板线Ready信号
+		 xQReady:=TRUE;
+		 bFlowLineStep:=0;
+END_CASE]]></ST>
+    </Implementation>
+    <LineIds Name="FB_FlowLine">
+      <LineId Id="10" Count="2" />
+      <LineId Id="223" Count="2" />
+      <LineId Id="14" Count="1" />
+      <LineId Id="134" Count="0" />
+      <LineId Id="16" Count="3" />
+      <LineId Id="212" Count="0" />
+      <LineId Id="214" Count="1" />
+      <LineId Id="213" Count="0" />
+      <LineId Id="216" Count="0" />
+      <LineId Id="145" Count="0" />
+      <LineId Id="170" Count="0" />
+      <LineId Id="173" Count="0" />
+      <LineId Id="204" Count="0" />
+      <LineId Id="206" Count="3" />
+      <LineId Id="205" Count="0" />
+      <LineId Id="218" Count="0" />
+      <LineId Id="182" Count="1" />
+      <LineId Id="186" Count="0" />
+      <LineId Id="147" Count="0" />
+      <LineId Id="202" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="222" Count="0" />
+      <LineId Id="21" Count="15" />
+      <LineId Id="131" Count="0" />
+      <LineId Id="37" Count="6" />
+      <LineId Id="119" Count="0" />
+      <LineId Id="121" Count="1" />
+      <LineId Id="120" Count="0" />
+      <LineId Id="123" Count="0" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="124" Count="0" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="125" Count="0" />
+      <LineId Id="127" Count="1" />
+      <LineId Id="126" Count="0" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="227" Count="1" />
+      <LineId Id="230" Count="0" />
+      <LineId Id="232" Count="1" />
+      <LineId Id="231" Count="0" />
+      <LineId Id="64" Count="2" />
+      <LineId Id="84" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

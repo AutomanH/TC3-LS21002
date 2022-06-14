@@ -161,7 +161,7 @@ THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
 	station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
-ELSIF station.xRunning  
+ELSIF station.xRunning  OR (tsModuleProcess[bXCounter+1].xProcessStarted AND NOT tsModuleProcess[bXCounter+1].xProcessCompleted)
 THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
 CASE station.iStepAuto OF	  
@@ -278,12 +278,9 @@ CASE station.iStepAuto OF
 			tsModuleProcess[1].xProcessCompleted:=TRUE;
 			station.iStepAuto:= 40;
 	/////产品流程开始	
-		40://设定X轴循环次数=2
-			IF  bXCounter>2 OR  NOT _FirstCycle[3]  THEN
+		40://设定X轴循环为1，总次数2
 				 bXCounter:=1;
-				 _FirstCycle[3]:=TRUE;
-			END_IF
-			station.iStepAuto:= 50;		
+				station.iStepAuto:= 50;		
 		50:////Restore_after_Estop_Process2/3 X轴位置1/2拍照流程
 			 IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
 					 station.iStepAuto :=70; 
@@ -341,40 +338,18 @@ CASE station.iStepAuto OF
 				station.iStepAuto:= 95;
 			END_IF			 
 		95://X轴移动到拍照位置1/2
-			IF  bXCounter =1 THEN
-				fbXAxisMove.xMoveAuto[2]:=TRUE;
-				IF  fbXAxisMove.xMoveInPos[2] THEN
+				fbXAxisMove.xMoveAuto[bXCounter+1]:=TRUE;
+				IF  fbXAxisMove.xMoveInPos[bXCounter+1] THEN
 					station.iStepAuto:= 100;
 				END_IF
-			ELSIF   bXCounter =2 THEN
-					fbXAxisMove.xMoveAuto[3]:=TRUE;
-				IF  fbXAxisMove.xMoveInPos[3] THEN
-					station.iStepAuto:= 100;
-				END_IF
-			END_IF
-		100://设定Y轴循环次数为3
-			IF  bYCounter>3 OR _FirstCycle[4] THEN
-				_FirstCycle[4]:=TRUE;
+		100://设定Y轴循环开始 总次数为3
 				 bYCounter:=1;
-			END_IF
-			station.iStepAuto:= 110;	
+				station.iStepAuto:= 110;	
 		110://Y轴移动到位置1/2/3	
-			IF  bYCounter=1 THEN
-				fbYAxisMove.xMoveAuto[2]:=TRUE;
-				IF  fbYAxisMove.xMoveInPos[2] THEN
+				fbYAxisMove.xMoveAuto[bYCounter+1]:=TRUE;
+				IF  fbYAxisMove.xMoveInPos[bYCounter+1] THEN
 					station.iStepAuto:= 120;
 				END_IF
-			ELSIF bYCounter =2 THEN
-				fbYAxisMove.xMoveAuto[3]:=TRUE;
-				IF  fbYAxisMove.xMoveInPos[3] THEN
-					station.iStepAuto:= 120;
-				END_IF
-			ELSIF bYCounter =3 THEN
-				fbYAxisMove.xMoveAuto[4]:=TRUE;
-				IF  fbYAxisMove.xMoveInPos[4] THEN
-					station.iStepAuto:= 120;
-				END_IF
-			END_IF
 		120://屏蔽拍照
 			IF axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
  					station.iStepAuto:= 150;	
@@ -891,7 +866,7 @@ CASE station.iStepAuto OF
 			
 		180://判断循环次数是否已到
 			IF   bYCounter<=3 THEN
-				station.iStepAuto:=50;
+				station.iStepAuto:=110;
 			ELSE
 				station.iStepAuto:=190; 
 			END_IF
@@ -1375,7 +1350,8 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="2976" Count="0" />
       <LineId Id="1750" Count="0" />
       <LineId Id="1552" Count="0" />
-      <LineId Id="3256" Count="4" />
+      <LineId Id="3256" Count="0" />
+      <LineId Id="3258" Count="0" />
       <LineId Id="3255" Count="0" />
       <LineId Id="2990" Count="0" />
       <LineId Id="3275" Count="1" />
@@ -1388,29 +1364,14 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="3207" Count="3" />
       <LineId Id="3164" Count="0" />
       <LineId Id="1761" Count="0" />
-      <LineId Id="1768" Count="0" />
       <LineId Id="1771" Count="2" />
       <LineId Id="1769" Count="0" />
-      <LineId Id="1774" Count="0" />
-      <LineId Id="1776" Count="2" />
-      <LineId Id="1775" Count="0" />
-      <LineId Id="1770" Count="0" />
       <LineId Id="1765" Count="0" />
-      <LineId Id="1943" Count="0" />
-      <LineId Id="3216" Count="0" />
       <LineId Id="1944" Count="0" />
-      <LineId Id="1779" Count="0" />
       <LineId Id="1781" Count="0" />
       <LineId Id="1783" Count="0" />
-      <LineId Id="1780" Count="0" />
       <LineId Id="1790" Count="2" />
       <LineId Id="1784" Count="0" />
-      <LineId Id="1786" Count="0" />
-      <LineId Id="1793" Count="2" />
-      <LineId Id="1787" Count="1" />
-      <LineId Id="1796" Count="2" />
-      <LineId Id="1789" Count="0" />
-      <LineId Id="1785" Count="0" />
       <LineId Id="3261" Count="1" />
       <LineId Id="3266" Count="0" />
       <LineId Id="3268" Count="0" />

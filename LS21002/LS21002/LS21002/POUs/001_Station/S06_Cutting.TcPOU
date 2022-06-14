@@ -146,7 +146,7 @@ IF NOT station.xInitDone
 THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
-ELSIF station.xRunning  
+ELSIF station.xRunning OR (  tsModuleProcess[2].xProcessStarted AND   NOT tsModuleProcess[2].xProcessCompleted)
 THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
 CASE station.iStepAuto OF	  

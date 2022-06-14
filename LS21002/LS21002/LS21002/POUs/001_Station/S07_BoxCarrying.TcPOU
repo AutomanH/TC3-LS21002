@@ -141,7 +141,8 @@ IF NOT station.xInitDone
 THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
-ELSIF station.xRunning  
+ELSIF station.xRunning  OR ( tsModuleProcess[bRobCounter+1].xProcessStarted AND NOT   tsModuleProcess[bRobCounter+1].xProcessCompleted) OR
+ 												 ( tsModuleProcess[bRobCounter+3].xProcessStarted AND NOT   tsModuleProcess[bRobCounter+3].xProcessCompleted)
 THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
 CASE station.iStepAuto OF	  
@@ -208,12 +209,9 @@ CASE station.iStepAuto OF
 				tsModuleProcess[1].xProcessCompleted	:=TRUE;
 				station.iStepAuto:= 40;		
 	/////产品流程开始	
-	40:	//机械手循环最多三次
-		 IF bRobCounter >2  OR  NOT _FirstCycle[1] THEN
+	40:	//机械手循环开始  总数为2  最多3
 			 bRobCounter :=1;
-			 _FirstCycle[1]:=TRUE;
-		 END_IF
-		station.iStepAuto:= 50;
+			station.iStepAuto:= 50;
 	50:////Restore_after_Estop_Process2 /Process3机械手第1/2次取料流程
 			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
 					station.iStepAuto :=60; 
@@ -568,10 +566,6 @@ CASE    iNGStep OF
 		iNGStep:=0;
 END_CASE
 
-
-
-
-
 END_IF]]></ST>
       </Implementation>
     </Action>
@@ -816,12 +810,16 @@ END_CASE
       <LineId Id="40" Count="0" />
     </LineIds>
     <LineIds Name="S07_BoxCarrying.FlowAuto">
-      <LineId Id="2830" Count="28" />
+      <LineId Id="2830" Count="5" />
+      <LineId Id="3663" Count="0" />
+      <LineId Id="2836" Count="22" />
       <LineId Id="3659" Count="3" />
       <LineId Id="3658" Count="0" />
       <LineId Id="2860" Count="14" />
       <LineId Id="3251" Count="1" />
-      <LineId Id="2875" Count="27" />
+      <LineId Id="2875" Count="21" />
+      <LineId Id="2898" Count="0" />
+      <LineId Id="2901" Count="1" />
       <LineId Id="3253" Count="1" />
       <LineId Id="2903" Count="10" />
       <LineId Id="2926" Count="0" />
@@ -926,7 +924,8 @@ END_CASE
       <LineId Id="3656" Count="0" />
       <LineId Id="3181" Count="3" />
       <LineId Id="3186" Count="5" />
-      <LineId Id="3193" Count="57" />
+      <LineId Id="3193" Count="52" />
+      <LineId Id="3250" Count="0" />
       <LineId Id="1224" Count="0" />
     </LineIds>
     <LineIds Name="S07_BoxCarrying.FlowInit">

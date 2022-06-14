@@ -250,7 +250,10 @@
     <Compile Include="POUs\003_FB\054_Camera\FB_Camera.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\003_FB\055_\FB_EtherCatSlaveMonitor.TcPOU">
+    <Compile Include="POUs\003_FB\055_EtherCATState\FB_EtherCatSlaveMonitor.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\056_FlowLine\FB_FlowLine.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\003_FB\05_StationFB\E_State.TcDUT">
@@ -359,9 +362,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\003_FB\43_implicit checks\CheckRangeUnsigned.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\003_FB\44_Ethercat\FB_EthercatTerminalState.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\003_FB\50_Recipe\FB_Recipes.TcPOU">
@@ -601,7 +601,6 @@
     <Folder Include="POUs\003_FB\19-AxisFB" />
     <Folder Include="POUs\003_FB\41_GetSystemTime" />
     <Folder Include="POUs\003_FB\43_implicit checks" />
-    <Folder Include="POUs\003_FB\44_Ethercat" />
     <Folder Include="POUs\003_FB\50_Recipe" />
     <Folder Include="POUs\003_FB\52_Temperature" />
     <Folder Include="POUs\003_FB\53_RudongPump" />
@@ -615,7 +614,8 @@
     <Folder Include="POUs\003_FB\53_RudongPump\41 Modbus指令" />
     <Folder Include="POUs\003_FB\53_RudongPump\41 Modbus指令\DataExchange" />
     <Folder Include="POUs\003_FB\013_FB_Alive" />
-    <Folder Include="POUs\003_FB\055_" />
+    <Folder Include="POUs\003_FB\055_EtherCATState" />
+    <Folder Include="POUs\003_FB\056_FlowLine" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB\DUTs" />
     <Folder Include="POUs\004_FC\001_Parallel" />
