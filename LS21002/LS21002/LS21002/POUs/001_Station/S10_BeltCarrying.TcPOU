@@ -114,7 +114,7 @@ CASE station.iStepAuto OF
 		
 		IF  station.xSingleRunning 
 			OR station.xCanRun 
-			//AND NOT station.xDone 
+			AND NOT station.xDone 
 			AND NOT station.xDisabled 
 			AND NOT fbMachine[1].xStopped
 		THEN
@@ -235,25 +235,25 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
-	station.iStepInit:=20;
-20://伺服上电
-	fbROTAxisMove.xPowerInit :=TRUE;
-	IF  fbROTAxisMove.xPowerOn THEN
-			station.iStepInit:=30;
-	END_IF
-30: //伺服回原点
-	fbROTAxisMove.xReferenceAuto := TRUE ;
-	station.iStepInit:=40;
-40://伺服回原点完成
-	IF  fbAxisHome[16].home_done THEN 
-		 fbROTAxisMove.xReferenceAuto  := FALSE ;
-		 station.iStepInit:=50;  
-	END_IF
-50://伺服去待机点
-	fbROTAxisMove.xMoveAuto[1]:=TRUE;
-	IF  fbROTAxisMove.xMoveInPos[1] THEN
-		 station.iStepInit:=999; 
-	END_IF
+	station.iStepInit:=999;
+//20://伺服上电
+//	fbROTAxisMove.xPowerInit :=TRUE;
+//	IF  fbROTAxisMove.xPowerOn THEN
+//			station.iStepInit:=30;
+//	END_IF
+//30: //伺服回原点
+//	fbROTAxisMove.xReferenceAuto := TRUE ;
+//	station.iStepInit:=40;
+//40://伺服回原点完成
+//	IF  fbAxisHome[16].home_done THEN 
+//		 fbROTAxisMove.xReferenceAuto  := FALSE ;
+//		 station.iStepInit:=50;  
+//	END_IF
+//50://伺服去待机点
+//	fbROTAxisMove.xMoveAuto[1]:=TRUE;
+//	IF  fbROTAxisMove.xMoveInPos[1] THEN
+//		 station.iStepInit:=999; 
+//	END_IF
 999://初始化完成	
 	station.iStepInit:=0;
 	station.xInitDone:=TRUE;  

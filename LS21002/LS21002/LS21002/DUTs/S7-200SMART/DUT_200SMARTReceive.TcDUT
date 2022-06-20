@@ -3,7 +3,7 @@
   <DUT Name="DUT_200SMARTReceive" Id="{df4fbfff-4a4e-459c-a62b-4448faab645e}">
     <Declaration><![CDATA[TYPE DUT_200SMARTReceive :
 STRUCT
-    iMachineMode:INT;//设备模式	1=手动模式  2 =手动模式
+  iMachineMode:INT;//设备模式	1=手动模式  2 =手动模式
 	iMachineInit:INT;//设备初始化	1=开始初始化  
 	iMachineStart:INT;//设备启动	1=设备启动
 	iMachineStop:INT;//设备停止	1=设备停止(暂停)

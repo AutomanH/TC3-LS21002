@@ -51,7 +51,7 @@ VAR_GLOBAL
 	stToRobot,stToRobotZero       : DUT_SysToRobot; //
 	stFromRobot,stFromRobotZero   : DUT_SysFromRobot; //
 	// 深孔板选择
-	iBoxChoose: INT;
+	iBoxChoose: INT:=1;
 	//允许主流线运行
 	xS07MainlineRunPermit	:BOOL;
 	//程序编号调用

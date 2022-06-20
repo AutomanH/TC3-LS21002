@@ -3,13 +3,126 @@
   <POU Name="S12_PreLine" Id="{ebde0494-312e-4ed1-9c94-463f75f332eb}" SpecialFunc="None">
     <Declaration><![CDATA[PROGRAM S12_PreLine
 VAR
-END_VAR
-]]></Declaration>
+ //工站
+	station					: REFERENCE TO FB_Station:=fbstation[12];
+END_VAR]]></Declaration>
     <Implementation>
-      <ST><![CDATA[]]></ST>
+      <ST><![CDATA[FlowAuto();
+FlowInit();
+ILC();]]></ST>
     </Implementation>
+    <Action Name="FlowAuto" Id="{adb8cf0c-6f6a-47e5-91ad-cc437d88c4a9}">
+      <Implementation>
+        <ST><![CDATA[
+//-----------------------------------------初始化是否完成判断----------------------------------------------
+IF NOT station.xInitDone 
+THEN
+ 	station.iStepAuto:=0;
+ 	station.xDone:=FALSE;
+ELSIF station.xRunning  
+THEN
+//-----------------------------------------动作步骤--------------------------------------------------------
+CASE station.iStepAuto OF	  
+	0: //----Home Step，等待启动----
+		IF station.xDisabled 
+			AND station.xCanRun 
+			AND NOT fbMachine[1].xStopped 
+			AND NOT station.xSingleRunning 
+		THEN
+			station.xDone:=TRUE;
+		END_IF
+		
+		IF  station.xSingleRunning 
+			OR station.xCanRun 
+			//AND NOT station.xDone 
+			AND NOT station.xDisabled 
+			AND NOT fbMachine[1].xStopped
+		THEN
+			station.xCycleEnable:=TRUE;
+			//station.xDone:= FALSE;  
+			
+			station.iStepAuto:= 10;
+		END_IF
+    10: //复位数据 
+			station.iStepAuto :=999;
+		
+	999://----Single Run Finish----
+			
+		station.iStepAuto :=0;
+		IF NOT station.xSingleContinuousRun THEN
+			station.xSingleRunFlag:=FALSE;
+		END_IF
+		
+		station.xCycleEnable:=FALSE;	
+		(*station.xDone:=TRUE;*)
+	ELSE
+		;	
+END_CASE
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="FlowInit" Id="{26f69f6c-c00d-4e18-a321-54ee35bfa7b9}">
+      <Implementation>
+        <ST><![CDATA[IF NOT station.xIniting THEN
+  station.iStepInit:=0;    
+ELSE
+//--------------------------------------------初始化步序----------------------------------
+CASE station.iStepInit OF	
+ 0://  
+  	IF station.xIniting THEN	
+  	  station.iStepInit:=10;	
+  	END_IF	
+10://复位数据
+  station.iStepInit:=999;	
+999://初始化完成	
+	station.iStepInit:=0;
+	station.xInitDone:=TRUE;  
+END_CASE
+END_IF
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ILC" Id="{a9cfde94-ebcb-4ae0-be24-a4394fab2264}">
+      <Implementation>
+        <ST><![CDATA[
+//---------------------------------------------------工站可执行-------------------------------------------------------
+station.xCanRun :=TRUE ;
+
+//---------------------------------------------------气缸动作条件-------------------------------------------
+
+
+]]></ST>
+      </Implementation>
+    </Action>
     <LineIds Name="S12_PreLine">
       <LineId Id="5" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+    <LineIds Name="S12_PreLine.FlowAuto">
+      <LineId Id="1155" Count="10" />
+      <LineId Id="1167" Count="7" />
+      <LineId Id="1960" Count="9" />
+      <LineId Id="1184" Count="0" />
+      <LineId Id="1256" Count="0" />
+      <LineId Id="1970" Count="0" />
+      <LineId Id="1778" Count="0" />
+      <LineId Id="1212" Count="2" />
+      <LineId Id="1453" Count="2" />
+      <LineId Id="1215" Count="5" />
+      <LineId Id="1224" Count="0" />
+    </LineIds>
+    <LineIds Name="S12_PreLine.FlowInit">
+      <LineId Id="437" Count="9" />
+      <LineId Id="459" Count="0" />
+      <LineId Id="462" Count="4" />
+      <LineId Id="436" Count="0" />
+    </LineIds>
+    <LineIds Name="S12_PreLine.ILC">
+      <LineId Id="234" Count="4" />
+      <LineId Id="313" Count="0" />
+      <LineId Id="302" Count="0" />
+      <LineId Id="274" Count="0" />
     </LineIds>
   </POU>
 </TcPlcObject>

@@ -7,9 +7,9 @@ VAR
 	station					: REFERENCE TO FB_Station:=fbstation[2];
 	//气缸
 	fbHOZAdjustCyl_1	:REFERENCE TO FB_Cylinder:=fbCylinder[7];	//	上层水平调整气缸1
-	fbHOZAdjustCyl_2	:REFERENCE TO FB_Cylinder:=fbCylinder[8];	//	上层水平调整气缸2
+//	fbHOZAdjustCyl_2	:REFERENCE TO FB_Cylinder:=fbCylinder[8];	//	上层水平调整气缸2
 	fbHOZAdjustCyl_3	:REFERENCE TO FB_Cylinder:=fbCylinder[9];	//	下层水平调整气缸1
-	fbHOZAdjustCyl_4	:REFERENCE TO FB_Cylinder:=fbCylinder[10];	//	下层水平调整气缸2
+//	fbHOZAdjustCyl_4	:REFERENCE TO FB_Cylinder:=fbCylinder[10];	//	下层水平调整气缸2
 	fbROTCyl	:REFERENCE TO FB_Cylinder:=fbCylinder[11];	//	旋转气缸-防滴液
 	//伺服
 	fbXAxisMove	 :REFERENCE TO FB_Axis:=fbAxis[3];	//	注液工位X轴伺服
@@ -59,14 +59,10 @@ Z_Output();]]></ST>
       <Implementation>
         <ST><![CDATA[//气缸
 
-fbHOZAdjustCyl_1.xWP_Sensor	:=	IxS02HOZAdjustCyl_1WP	;
-fbHOZAdjustCyl_1.xHP_Sensor	:=	IxS02HOZAdjustCyl_1HP	;
-fbHOZAdjustCyl_2.xWP_Sensor	:=	IxS02HOZAdjustCyl_2WP	;
-fbHOZAdjustCyl_2.xHP_Sensor	:=	IxS02HOZAdjustCyl_2HP	;
-fbHOZAdjustCyl_3.xWP_Sensor	:=	IxS02HOZAdjustCyl_3WP	;
-fbHOZAdjustCyl_3.xHP_Sensor	:=	IxS02HOZAdjustCyl_3HP	;
-fbHOZAdjustCyl_4.xWP_Sensor	:=	IxS02HOZAdjustCyl_4WP	;
-fbHOZAdjustCyl_4.xHP_Sensor	:=	IxS02HOZAdjustCyl_4HP	;
+fbHOZAdjustCyl_1.xWP_Sensor	:=	IxS02HOZAdjustCyl_1WP  AND IxS02HOZAdjustCyl_2WP	;
+fbHOZAdjustCyl_1.xHP_Sensor	:=	IxS02HOZAdjustCyl_1HP	 AND IxS02HOZAdjustCyl_2HP;
+fbHOZAdjustCyl_3.xWP_Sensor	:=	IxS02HOZAdjustCyl_3WP	AND IxS02HOZAdjustCyl_4WP	;
+fbHOZAdjustCyl_3.xHP_Sensor	:=	IxS02HOZAdjustCyl_3HP	AND IxS02HOZAdjustCyl_4HP;;
 fbROTCyl.xWP_Sensor	:=	IxS02ROTCylWP	;
 fbROTCyl.xHP_Sensor	:=	IxS02ROTCylHP	;
 
@@ -90,29 +86,23 @@ station.adwAlarm[1].11	:=	fbRudongPump[11].xError	;//	S02注液工位蠕动泵11
 station.adwAlarm[1].12	:=	fbRudongPump[12].xError	;//	S02注液工位蠕动泵12报错
 station.adwAlarm[1].13	:=	fbHOZAdjustCyl_1.xHP_Off 	;//	S02上层水平调整气缸1原点未到位
 station.adwAlarm[1].14	:=	fbHOZAdjustCyl_1.xWP_Off 	;//	S02上层水平调整气缸1动点未到位
-station.adwAlarm[1].15	:=	fbHOZAdjustCyl_2.xHP_Off	;//	S02上层水平调整气缸2原点未到位
-station.adwAlarm[1].16	:=	fbHOZAdjustCyl_2.xWP_Off	;//	S02上层水平调整气缸2动点未到位
-station.adwAlarm[1].17	:=	fbHOZAdjustCyl_3.xHP_Off	;//	S02下层水平调整气缸1原点未到位
-station.adwAlarm[1].18	:=	fbHOZAdjustCyl_3.xWP_Off	;//	S02下层水平调整气缸1动点未到位
-station.adwAlarm[1].19	:=	fbHOZAdjustCyl_4.xHP_Off	;//	S02下层水平调整气缸2原点未到位
-station.adwAlarm[1].20	:=	fbHOZAdjustCyl_4.xWP_Off	;//	S02下层水平调整气缸2动点未到位
-station.adwAlarm[1].21	:=	fbROTCyl.xHP_Off	;//	S02防滴液旋转气缸原点未到位
-station.adwAlarm[1].22	:=	fbROTCyl.xWP_Off	;//	S02防滴液旋转气缸动点未到位
-station.adwAlarm[1].23	:=	fbXAxisMove.xError	;//	S02注液工位X轴伺服报错
-station.adwAlarm[1].24	:=	fbXAxisMove.xNotPowerOn	;//	S02注液工位X轴伺服未使能
-station.adwAlarm[1].25	:=	fbXAxisMove.xMoveTimeout	;//	S02注液工位X轴伺服移动超时
-station.adwAlarm[1].26	:=	fbYAxisMove.xError	;//	S02注液工位Y轴伺服报错
-station.adwAlarm[1].27	:=	fbYAxisMove.xNotPowerOn	;//	S02注液工位Y轴伺服未使能
-station.adwAlarm[1].28	:=	fbYAxisMove.xMoveTimeout	;//	S02注液工位Y轴伺服移动超时
-station.adwAlarm[1].29	:=	fbZAxisMove.xError	;//	S02注液工位Z轴伺服报错
-station.adwAlarm[1].30	:=	fbZAxisMove.xNotPowerOn	;//	S02注液工位Z轴伺服未使能
-station.adwAlarm[1].31	:=	fbZAxisMove.xMoveTimeout	;//	S02注液工位Z轴伺服移动超时
-station.adwAlarm[2].00	:=	fbStirAxis.xError	;//	S02注液工位搅拌旋转伺服报错
-station.adwAlarm[2].01	:=	fbStirAxis.xNotPowerOn	;//	S02注液工位搅拌旋转伺服未使能
-station.adwAlarm[2].02	:=	fbStirAxis.xMoveTimeout	;//	S02注液工位搅拌旋转伺服移动超时
-station.adwAlarm[2].03	:=	fbMKC204C.xError	;//	S03注液工位称重设备报警
-
-
+station.adwAlarm[1].15	:=	fbHOZAdjustCyl_3.xHP_Off	;//	S02下层水平调整气缸1原点未到位
+station.adwAlarm[1].16	:=	fbHOZAdjustCyl_3.xWP_Off	;//	S02下层水平调整气缸1动点未到位
+station.adwAlarm[1].17	:=	fbROTCyl.xHP_Off	;//	S02防滴液旋转气缸原点未到位
+station.adwAlarm[1].18	:=	fbROTCyl.xWP_Off	;//	S02防滴液旋转气缸动点未到位
+station.adwAlarm[1].19	:=	fbXAxisMove.xError	;//	S02注液工位X轴伺服报错
+station.adwAlarm[1].20	:=	fbXAxisMove.xNotPowerOn	;//	S02注液工位X轴伺服未使能
+station.adwAlarm[1].21	:=	fbXAxisMove.xMoveTimeout	;//	S02注液工位X轴伺服移动超时
+station.adwAlarm[1].22	:=	fbYAxisMove.xError	;//	S02注液工位Y轴伺服报错
+station.adwAlarm[1].23	:=	fbYAxisMove.xNotPowerOn	;//	S02注液工位Y轴伺服未使能
+station.adwAlarm[1].24	:=	fbYAxisMove.xMoveTimeout	;//	S02注液工位Y轴伺服移动超时
+station.adwAlarm[1].25	:=	fbZAxisMove.xError	;//	S02注液工位Z轴伺服报错
+station.adwAlarm[1].26	:=	fbZAxisMove.xNotPowerOn	;//	S02注液工位Z轴伺服未使能
+station.adwAlarm[1].27	:=	fbZAxisMove.xMoveTimeout	;//	S02注液工位Z轴伺服移动超时
+//station.adwAlarm[1].28	:=	fbStirAxis.xError	;//	S02注液工位搅拌旋转伺服报错
+//station.adwAlarm[1].29	:=	fbStirAxis.xNotPowerOn	;//	S02注液工位搅拌旋转伺服未使能
+//station.adwAlarm[1].30	:=	fbStirAxis.xMoveTimeout	;//	S02注液工位搅拌旋转伺服移动超时
+station.adwAlarm[1].31	:=	fbMKC204C.xError	;//	S03注液工位称重设备报警
 
 ]]></ST>
       </Implementation>
@@ -273,15 +263,15 @@ CASE station.iStepAuto OF
 		IF  iBoxChoose =1 THEN
 			(*上层水平调整气缸*)
 			fbHOZAdjustCyl_1.xAuto :=TRUE;
-			fbHOZAdjustCyl_2.xAuto :=TRUE;
-			IF  fbHOZAdjustCyl_1.xWP_Delay AND fbHOZAdjustCyl_2.xWP_Delay  THEN
+		//	fbHOZAdjustCyl_2.xAuto :=TRUE;
+			IF  fbHOZAdjustCyl_1.xWP_Delay THEN// AND fbHOZAdjustCyl_2.xWP_Delay  THEN
 					station.iStepAuto:= 100;
 			END_IF
 		ELSIF  iBoxChoose= 2 THEN
 			(*下层水平调整气缸*)
 			fbHOZAdjustCyl_3.xAuto :=TRUE;
-			fbHOZAdjustCyl_4.xAuto :=TRUE;
-			IF  fbHOZAdjustCyl_3.xWP_Delay AND fbHOZAdjustCyl_4.xWP_Delay  THEN
+			//fbHOZAdjustCyl_4.xAuto :=TRUE;
+			IF  fbHOZAdjustCyl_3.xWP_Delay  THEN//AND fbHOZAdjustCyl_4.xWP_Delay  THEN
 					station.iStepAuto:= 100;
 			END_IF
 		END_IF	 
@@ -291,14 +281,14 @@ CASE station.iStepAuto OF
 			IF fbXAxisMove.xMoveInPos[bXCounter+1]  AND fbYAxisMove.xMoveInPos[bXCounter+1]  THEN
 				station.iStepAuto:=110;	
 			END_IF
-	110:	//防滴液气缸收回
-		fbROTCyl.xAuto:=FALSE;
-		IF fbROTCyl.xHP_Delay THEN
+	110:	//防滴液气缸伸出
+		fbROTCyl.xAuto:=TRUE;
+		IF fbROTCyl.xWP_Delay THEN
 			station.iStepAuto:=120;	
 		END_IF
 	120://Z轴下降去注液位置
-		   fbXAxisMove.xMoveAuto[2]:=TRUE;
-		IF  fbXAxisMove.xMoveInPos[2] THEN
+		   fbZAxisMove.xMoveAuto[2]:=TRUE;
+		IF  fbZAxisMove.xMoveInPos[2] THEN
 			station.iStepAuto:=125;
 		END_IF
 	125://屏蔽注液
@@ -314,15 +304,17 @@ CASE station.iStepAuto OF
 		 END_FOR
 		station.iStepAuto:= 140;
 	140://注液结束
-			FOR i:=1 TO 12 BY 1 DO
-				IF   NOT fbRudongPump[i].xDone  THEN
-					EXIT;
-				ELSE fbRudongPump[i].xExecute:=FALSE;
-				END_IF
-				IF	i=12 THEN 
-					station.iStepAuto:=145;	
-				END_IF
-		END_FOR 
+		
+				 FOR i:=1 TO 12 BY 1 DO
+					 IF   NOT fbRudongPump[i].xDone  THEN
+						 EXIT;
+					 ELSE fbRudongPump[i].xExecute:=FALSE;
+					 END_IF
+					 IF	i=12 THEN 
+						 station.iStepAuto:=145;	
+					 END_IF
+			 	END_FOR 
+	
 	145://注液完成
 		tsModuleProcess[bXCounter+1].xProcessCompleted:=TRUE;
 		 station.iStepAuto:=150;	
@@ -336,13 +328,13 @@ CASE station.iStepAuto OF
 				arProcessDataStation[bXCounter].stProduct.xlidInjecting_NOK:=TRUE;	
 				station.iStepAuto:=160;
 	160://Z轴上升
-		  fbXAxisMove.xMoveAuto[1]:=TRUE;
-		IF  fbXAxisMove.xMoveInPos[1] THEN
+		  fbZAxisMove.xMoveAuto[1]:=TRUE;
+		IF  fbZAxisMove.xMoveInPos[1] THEN
 			station.iStepAuto:=170;
 		END_IF
-	170://防滴漏气缸伸出
-		fbROTCyl.xAuto:=TRUE;
-		IF fbROTCyl.xWP_Delay THEN
+	170://防滴漏气缸收回
+		fbROTCyl.xAuto:=FALSE;
+		IF fbROTCyl.xHP_Delay THEN
 			station.iStepAuto:=180;	
 		END_IF
 	180://循环+1
@@ -358,15 +350,15 @@ CASE station.iStepAuto OF
 			IF  iBoxChoose =1 THEN
 			(*上层水平调整气缸*)
 			fbHOZAdjustCyl_1.xAuto :=FALSE;
-			fbHOZAdjustCyl_2.xAuto :=FALSE;
-			IF  fbHOZAdjustCyl_1.xHP_Delay AND fbHOZAdjustCyl_2.xHP_Delay  THEN
+		//	fbHOZAdjustCyl_2.xAuto :=FALSE;
+			IF  fbHOZAdjustCyl_1.xHP_Delay THEN  // AND fbHOZAdjustCyl_2.xHP_Delay  THEN
 					station.iStepAuto:= 210;
 			END_IF
 		ELSIF  iBoxChoose= 2 THEN
 			(*下层水平调整气缸*)
 			fbHOZAdjustCyl_3.xAuto :=FALSE;
-			fbHOZAdjustCyl_4.xAuto :=FALSE;
-			IF  fbHOZAdjustCyl_3.xHP_Delay AND fbHOZAdjustCyl_4.xHP_Delay  THEN
+		//	fbHOZAdjustCyl_4.xAuto :=FALSE;
+			IF  fbHOZAdjustCyl_3.xHP_Delay  THEN // AND fbHOZAdjustCyl_4.xHP_Delay  THEN
 					station.iStepAuto:= 210;
 			END_IF
 		END_IF
@@ -527,14 +519,28 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
-	station.iStepInit :=20;
-	
-20://防滴液气缸回原
+	FOR i:=1 TO gc_ModuleProNo BY 1 DO
+				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+	END_FOR
+	station.iStepInit :=15;
+15://伺服上电
+  	fbXAxisMove.xPowerInit := TRUE ;
+	 fbYAxisMove.xPowerInit := TRUE ;
+	 fbZAxisMove.xPowerInit := TRUE ;
+	IF fbXAxisMove.xPowerOn AND   fbYAxisMove.xPowerOn AND  fbZAxisMove.xPowerOn THEN 
+    	station.iStepInit:=20;	
+	END_IF	
+20://Z轴伺服上升
+		fbZAxisMove.xMoveAuto[1]:=TRUE;
+		IF fbZAxisMove.xMoveInPos[1]   THEN
+			station.iStepInit:=30;	
+		END_IF	
+30://防滴液气缸回原
 	fbROTCyl.xInit:=TRUE;
 	IF fbROTCyl.xHP_Delay THEN
-		station.iStepInit :=30;
+		station.iStepInit :=50;
 	END_IF
-30://停止蠕动泵
+35://停止蠕动泵
 		FOR i:=1 TO gc_uiRudongPump BY 1 DO
 			fbRudongPump[i].stDeviceOpe.xStop_Auto:=TRUE;
 		END_FOR
@@ -555,24 +561,7 @@ CASE station.iStepInit OF
 				fbRudongPump[i].xNeedConfigurePara:=TRUE;
 		END_FOR
 			station.iStepInit :=50;
-50://伺服上电
-  	fbXAxisMove.xPowerInit := TRUE ;
-	 fbYAxisMove.xPowerInit := TRUE ;
-	 fbZAxisMove.xPowerInit := TRUE ;
-	IF fbXAxisMove.xPowerOn AND   fbYAxisMove.xPowerOn AND  fbZAxisMove.xPowerOn THEN 
-    	station.iStepInit:=60;	
-	END_IF
-60://Z轴伺服上升
-		fbZAxisMove.xMoveAuto[1]:=TRUE;
-		IF fbZAxisMove.xMoveInPos[1]   THEN
-			station.iStepInit:=70;	
-		END_IF
-70://防滴液气缸伸出
-		fbROTCyl.xAuto :=TRUE;
-		IF fbROTCyl.xWP_Delay THEN
-			station.iStepInit :=80;
-		END_IF
-80://XY轴回参考位
+50://XY轴回参考位
 		fbXAxisMove.xMoveAuto[1]:=TRUE;
 		fbYAxisMove.xMoveAuto[1]:=TRUE;
 		IF fbXAxisMove.xMoveInPos[1]  AND fbYAxisMove.xMoveInPos[1]  THEN
@@ -581,13 +570,13 @@ CASE station.iStepInit OF
 
 90://水平调整气缸收回
 	fbHOZAdjustCyl_1.xInit :=TRUE;
-    fbHOZAdjustCyl_2.xInit :=TRUE;
+   // fbHOZAdjustCyl_2.xInit :=TRUE;
     fbHOZAdjustCyl_3.xInit :=TRUE;
-    fbHOZAdjustCyl_4.xInit :=TRUE;
+   // fbHOZAdjustCyl_4.xInit :=TRUE;
 	IF  fbHOZAdjustCyl_1.xHP_Delay AND 
-		fbHOZAdjustCyl_2.xHP_Delay AND
-		fbHOZAdjustCyl_3.xHP_Delay AND
-		fbHOZAdjustCyl_4.xHP_Delay THEN
+	//	fbHOZAdjustCyl_2.xHP_Delay AND
+		fbHOZAdjustCyl_3.xHP_Delay THEN
+	//	fbHOZAdjustCyl_4.xHP_Delay THEN
 		station.iStepInit:=100;	
 	END_IF
 	
@@ -636,12 +625,12 @@ station.xCanRun :=TRUE ;
 //---------------------------------------------------气缸动作条件-------------------------------------------
 fbHOZAdjustCyl_1.xOffILC	:=	TRUE	;
 fbHOZAdjustCyl_1.xOnILC	:=	TRUE	;
-fbHOZAdjustCyl_2.xOffILC	:=	TRUE	;
-fbHOZAdjustCyl_2.xOnILC	:=	TRUE	;
+//fbHOZAdjustCyl_2.xOffILC	:=	TRUE	;
+//fbHOZAdjustCyl_2.xOnILC	:=	TRUE	;
 fbHOZAdjustCyl_3.xOffILC	:=	TRUE	;
 fbHOZAdjustCyl_3.xOnILC	:=	TRUE	;
-fbHOZAdjustCyl_4.xOffILC	:=	TRUE	;
-fbHOZAdjustCyl_4.xOnILC	:=	TRUE	;
+//fbHOZAdjustCyl_4.xOffILC	:=	TRUE	;
+//fbHOZAdjustCyl_4.xOnILC	:=	TRUE	;
 fbROTCyl.xOffILC	:=	TRUE	;
 fbROTCyl.xOnILC	:=	TRUE;
 
@@ -651,19 +640,19 @@ fbXAxisMove.xMoveILC[1] :=
 fbxAxisMove.xMoveILC[2] :=					
 fbxAxisMove.xMoveILC[3] :=					
 fbxAxisMove.xMoveILC[4] :=					
-fbxAxisMove.xMoveILC[5] := 		fbZAxisMove.xMoveInPos[1] 			;
+fbxAxisMove.xMoveILC[5] := 	TRUE;//	fbZAxisMove.xMoveInPos[1] 			;
 fbYAxisMove.xRunILC := 					
 fbYAxisMove.xMoveILC[1] :=					
 fbYAxisMove.xMoveILC[2] :=					
 fbYAxisMove.xMoveILC[3] :=					
 fbYAxisMove.xMoveILC[4] :=					
-fbYAxisMove.xMoveILC[5] := 		fbZAxisMove.xMoveInPos[1] 			;
+fbYAxisMove.xMoveILC[5] := TRUE;//		fbZAxisMove.xMoveInPos[1] 			;
 fbZAxisMove.xRunILC := 	 				
 fbZAxisMove.xMoveILC[1] :=					
 fbZAxisMove.xMoveILC[2] :=					
 fbZAxisMove.xMoveILC[3] :=					
 fbZAxisMove.xMoveILC[4] :=					
-fbZAxisMove.xMoveILC[5] := 		fbROTCyl.xHP_Sensor		;
+fbZAxisMove.xMoveILC[5] := 		fbROTCyl.xWP_Sensor		;
 fbStirAxis.xRunILC := 					
 fbStirAxis.xMoveILC[1] :=					
 fbStirAxis.xMoveILC[2] :=					
@@ -692,9 +681,9 @@ fbMKC204C.xDeviceRunning:=station.xSingleRunning;]]></ST>
         <ST><![CDATA[
 //------------------------------------------------AutoTip Cylinder--------------------------------
 station.adwAutoTip[1].00	:=	fbHOZAdjustCyl_1.xAutoTip	;
-station.adwAutoTip[1].01	:=	fbHOZAdjustCyl_2.xAutoTip	;
+//station.adwAutoTip[1].01	:=	fbHOZAdjustCyl_2.xAutoTip	;
 station.adwAutoTip[1].02	:=	fbHOZAdjustCyl_3.xAutoTip	;
-station.adwAutoTip[1].03	:=	fbHOZAdjustCyl_4.xAutoTip	;
+//station.adwAutoTip[1].03	:=	fbHOZAdjustCyl_4.xAutoTip	;
 station.adwAutoTip[1].04	:=	fbROTCyl.xAutoTip	;
 
 //------------------------------------------------AutoTip Servo--------------------------------
@@ -768,12 +757,10 @@ END_IF
         <ST><![CDATA[(**************************气缸输出********************************)
 QxS02HOZAdjustCyl_1WP	:=	fbHOZAdjustCyl_1.xWP_Valve	;
 QxS02HOZAdjustCyl_1HP	:=	fbHOZAdjustCyl_1.xHP_Valve	;
-QxS02HOZAdjustCyl_2WP	:=	fbHOZAdjustCyl_2.xWP_Valve	;
-QxS02HOZAdjustCyl_2HP	:=	fbHOZAdjustCyl_2.xHP_Valve	;
+
 QxS02HOZAdjustCyl_3WP	:=	fbHOZAdjustCyl_3.xWP_Valve	;
 QxS02HOZAdjustCyl_3HP	:=	fbHOZAdjustCyl_3.xHP_Valve	;
-QxS02HOZAdjustCyl_4WP	:=	fbHOZAdjustCyl_4.xWP_Valve	;
-QxS02HOZAdjustCyl_4HP	:=	fbHOZAdjustCyl_4.xHP_Valve	;
+
 QxS02ROTCylWP	:=	fbROTCyl.xWP_Valve	;
 QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
 ]]></ST>
@@ -786,14 +773,14 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
     <LineIds Name="S02_LidInjecting.A_Input">
       <LineId Id="28" Count="0" />
       <LineId Id="54" Count="0" />
-      <LineId Id="56" Count="9" />
+      <LineId Id="56" Count="1" />
+      <LineId Id="60" Count="1" />
+      <LineId Id="64" Count="1" />
       <LineId Id="67" Count="0" />
       <LineId Id="40" Count="0" />
     </LineIds>
     <LineIds Name="S02_LidInjecting.Alarm">
-      <LineId Id="338" Count="35" />
-      <LineId Id="291" Count="0" />
-      <LineId Id="279" Count="0" />
+      <LineId Id="374" Count="31" />
       <LineId Id="262" Count="0" />
       <LineId Id="266" Count="0" />
     </LineIds>
@@ -886,13 +873,16 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="1782" Count="0" />
       <LineId Id="1774" Count="0" />
       <LineId Id="1650" Count="0" />
+      <LineId Id="2277" Count="0" />
       <LineId Id="1798" Count="1" />
       <LineId Id="1974" Count="0" />
       <LineId Id="1972" Count="1" />
       <LineId Id="1801" Count="0" />
       <LineId Id="1975" Count="0" />
       <LineId Id="1805" Count="0" />
-      <LineId Id="1654" Count="1" />
+      <LineId Id="1654" Count="0" />
+      <LineId Id="2280" Count="0" />
+      <LineId Id="1655" Count="0" />
       <LineId Id="1821" Count="1" />
       <LineId Id="1653" Count="0" />
       <LineId Id="1807" Count="0" />
@@ -1018,7 +1008,14 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
     </LineIds>
     <LineIds Name="S02_LidInjecting.FlowInit">
       <LineId Id="437" Count="9" />
-      <LineId Id="470" Count="2" />
+      <LineId Id="599" Count="1" />
+      <LineId Id="598" Count="0" />
+      <LineId Id="470" Count="0" />
+      <LineId Id="592" Count="5" />
+      <LineId Id="590" Count="0" />
+      <LineId Id="586" Count="3" />
+      <LineId Id="584" Count="0" />
+      <LineId Id="472" Count="0" />
       <LineId Id="475" Count="3" />
       <LineId Id="527" Count="0" />
       <LineId Id="529" Count="2" />
@@ -1035,15 +1032,6 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="582" Count="0" />
       <LineId Id="581" Count="0" />
       <LineId Id="578" Count="0" />
-      <LineId Id="474" Count="0" />
-      <LineId Id="482" Count="1" />
-      <LineId Id="494" Count="0" />
-      <LineId Id="484" Count="4" />
-      <LineId Id="490" Count="2" />
-      <LineId Id="518" Count="0" />
-      <LineId Id="522" Count="0" />
-      <LineId Id="524" Count="1" />
-      <LineId Id="523" Count="0" />
       <LineId Id="480" Count="0" />
       <LineId Id="498" Count="0" />
       <LineId Id="501" Count="0" />
@@ -1113,7 +1101,9 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
     </LineIds>
     <LineIds Name="S02_LidInjecting.Z_Output">
       <LineId Id="2" Count="0" />
-      <LineId Id="21" Count="9" />
+      <LineId Id="21" Count="1" />
+      <LineId Id="24" Count="2" />
+      <LineId Id="28" Count="2" />
       <LineId Id="20" Count="0" />
     </LineIds>
   </POU>

@@ -205,9 +205,6 @@
     <Compile Include="POUs\002_Machine\CommitWith200SMART.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\002_Machine\CommWithCamera.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="POUs\002_Machine\CommWithPC.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -254,6 +251,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\003_FB\056_FlowLine\FB_FlowLine.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\057_EncoderCounter\FB_Encoder.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\003_FB\05_StationFB\E_State.TcDUT">
@@ -616,6 +616,7 @@
     <Folder Include="POUs\003_FB\013_FB_Alive" />
     <Folder Include="POUs\003_FB\055_EtherCATState" />
     <Folder Include="POUs\003_FB\056_FlowLine" />
+    <Folder Include="POUs\003_FB\057_EncoderCounter" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB\DUTs" />
     <Folder Include="POUs\004_FC\001_Parallel" />

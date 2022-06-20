@@ -29,20 +29,20 @@ IxS01Sensor1Reached	:=	ET01_Input[1].INPUT.12	;//	上料工位¶到位传感器1
 IxS01Sensor2Reached	:=	ET01_Input[1].INPUT.13	;//	上料工位¶到位传感器2
 IxS02Sensor1Reached	:=	ET01_Input[1].INPUT.14	;//	注液工位¶到位传感器1
 IxS02Sensor2Reached	:=	ET01_Input[1].INPUT.15	;//	注液工位¶到位传感器2
-IxS01ReserveSensor1	:=	ET01_Input[2].INPUT.0	;//	链板线深孔板备料¶位置1传感器
-IxS01ReserveSensor2	:=	ET01_Input[2].INPUT.1	;//	链板线深孔板备料¶位置2传感器
-IxS01ReserveSensor3	:=	ET01_Input[2].INPUT.2	;//	链板线深孔板备料¶位置3传感器
-IxS01ReserveSensor4	:=	ET01_Input[2].INPUT.3	;//	链板线深孔板备料¶位置4传感器
+Ixshare2	:=	ET01_Input[2].INPUT.0	;//	备用
+Ixshare3	:=	ET01_Input[2].INPUT.1	;//	备用
+Ixshare4	:=	ET01_Input[2].INPUT.2	;//	备用
+Ixshare5	:=	ET01_Input[2].INPUT.3	;//	备用
 IxS03Sensor1Reached	:=	ET01_Input[2].INPUT.4	;//	相机工位¶到位传感器1
 IxS03Sensor2Reached	:=	ET01_Input[2].INPUT.5	;//	相机工位¶到位传感器2
 IxS03Sensor3Reached	:=	ET01_Input[2].INPUT.6	;//	相机工位¶到位传感器3
 IxS03Sensor4Reached	:=	ET01_Input[2].INPUT.7	;//	相机工位¶到位传感器4
 IxS03Sensor5Reached	:=	ET01_Input[2].INPUT.8	;//	相机工位¶到位传感器5
 IxVFDErrorSignal	:=	ET01_Input[2].INPUT.9	;//	上料链板线变频器异常
-Ixshare2	:=	ET01_Input[2].INPUT.10	;//	备用1
-Ixshare3	:=	ET01_Input[2].INPUT.11	;//	备用2
-Ixshare4	:=	ET01_Input[2].INPUT.12	;//	备用3
-Ixshare5	:=	ET01_Input[2].INPUT.13	;//	备用4
+Ixshare31	:=	ET01_Input[2].INPUT.10	;//	备用1
+Ixshare32	:=	ET01_Input[2].INPUT.11	;//	备用2
+Ixshare33	:=	ET01_Input[2].INPUT.12	;//	备用3
+Ixshare34	:=	ET01_Input[2].INPUT.13	;//	备用4
 IxS01SafetyDoorReady	:=	ET01_Input[2].INPUT.14	;//	上料工位安全门
 IxS02SafetyDoorReady_2	:=	ET01_Input[2].INPUT.15	;//	注液工位安全门
 IxS01VTCPressCyl_1WP	:=	ET01_Input[3].INPUT.0	;//	Z轴阻挡气缸1¶动点
@@ -109,7 +109,6 @@ Ixshare27	:=	ET01_Input[6].INPUT.12	;//	备用
 Ixshare28	:=	ET01_Input[6].INPUT.13	;//	备用
 Ixshare29	:=	ET01_Input[6].INPUT.14	;//	备用
 Ixshare30	:=	ET01_Input[6].INPUT.15	;//	备用
-
 ]]></ST>
       </Implementation>
     </Action>
@@ -277,12 +276,11 @@ IxShare163	:=	ET04_Input[2].INPUT.15	;//	备用
       <LineId Id="124" Count="0" />
     </LineIds>
     <LineIds Name="InputLink.ACT_ET01">
-      <LineId Id="194" Count="95" />
-      <LineId Id="385" Count="0" />
+      <LineId Id="579" Count="95" />
       <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="InputLink.ACT_ET02">
-      <LineId Id="690" Count="95" />
+      <LineId Id="786" Count="95" />
       <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="InputLink.ACT_ET03">

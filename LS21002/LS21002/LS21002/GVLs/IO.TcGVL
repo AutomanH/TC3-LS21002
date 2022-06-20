@@ -32,20 +32,20 @@ IxS01Sensor1Reached	:BOOL;//	上料工位¶到位传感器1
 IxS01Sensor2Reached	:BOOL;//	上料工位¶到位传感器2
 IxS02Sensor1Reached	:BOOL;//	注液工位¶到位传感器1
 IxS02Sensor2Reached	:BOOL;//	注液工位¶到位传感器2
-IxS01ReserveSensor1	:BOOL;//	链板线深孔板备料¶位置1传感器
-IxS01ReserveSensor2	:BOOL;//	链板线深孔板备料¶位置2传感器
-IxS01ReserveSensor3	:BOOL;//	链板线深孔板备料¶位置3传感器
-IxS01ReserveSensor4	:BOOL;//	链板线深孔板备料¶位置4传感器
+Ixshare2	:BOOL;//	备用1
+Ixshare3	:BOOL;//	备用2
+Ixshare4	:BOOL;//	备用3
+Ixshare5	:BOOL;//	备用4
 IxS03Sensor1Reached	:BOOL;//	相机工位¶到位传感器1
 IxS03Sensor2Reached	:BOOL;//	相机工位¶到位传感器2
 IxS03Sensor3Reached	:BOOL;//	相机工位¶到位传感器3
 IxS03Sensor4Reached	:BOOL;//	相机工位¶到位传感器4
 IxS03Sensor5Reached	:BOOL;//	相机工位¶到位传感器5
 IxVFDErrorSignal	:BOOL;//	上料链板线变频器异常
-Ixshare2	:BOOL;//	备用1
-Ixshare3	:BOOL;//	备用2
-Ixshare4	:BOOL;//	备用3
-Ixshare5	:BOOL;//	备用4
+Ixshare31	:BOOL;//	备用1
+Ixshare32	:BOOL;//	备用2
+Ixshare33	:BOOL;//	备用3
+Ixshare34	:BOOL;//	备用4
 IxS01SafetyDoorReady	:BOOL;//	上料工位安全门
 IxS02SafetyDoorReady_2	:BOOL;//	注液工位安全门
 IxS01VTCPressCyl_1WP	:BOOL;//	Z轴阻挡气缸1¶动点
@@ -112,6 +112,7 @@ Ixshare27	:BOOL;//	备用
 Ixshare28	:BOOL;//	备用
 Ixshare29	:BOOL;//	备用
 Ixshare30	:BOOL;//	备用
+
 QxStartButtonLamp	:BOOL;//	启动按钮指示灯
 QxStopButtonLamp	:BOOL;//	停止按钮指示灯
 QxResetButtonLamp	:BOOL;//	复位按钮指示灯
@@ -142,30 +143,30 @@ QxS01VTCCyl_2WP	:BOOL;//	上料工位¶移栽Z轴气缸2¶动点输出
 QxS01VTCCyl_2HP	:BOOL;//	上料工位¶移栽变距气缸¶原点输出
 QxS02HOZAdjustCyl_1WP	:BOOL;//	注液工位¶上层水平调整气缸1¶动点输出
 QxS02HOZAdjustCyl_1HP	:BOOL;//	注液工位¶上层水平调整气缸1¶原点输出
-QxS02HOZAdjustCyl_2WP	:BOOL;//	注液工位¶上层水平调整气缸2¶动点输出
-QxS02HOZAdjustCyl_2HP	:BOOL;//	注液工位¶上层水平调整气缸2¶原点输出
+QxShare40	:BOOL;//	备用
+QxShare41	:BOOL;//	备用
 QxS02HOZAdjustCyl_3WP	:BOOL;//	注液工位¶下层水平调整气缸1¶动点输出
 QxS02HOZAdjustCyl_3HP	:BOOL;//	注液工位¶下层水平调整气缸1¶原点输出
-QxS02HOZAdjustCyl_4WP	:BOOL;//	注液工位¶下层水平调整气缸2¶动点输出
-QxS02HOZAdjustCyl_4HP	:BOOL;//	注液工位¶下层水平调整气缸2¶原点输出
+QxShare42	:BOOL;//	备用
+QxShare43	:BOOL;//	备用
 QxS02ROTCylWP	:BOOL;//	注液工位¶防滴液¶动点输出
 QxS02ROTCylHP	:BOOL;//	注液工位¶防滴液¶原点输出
 QxS03HOZAdjustCyl_1WP	:BOOL;//	相机工位¶上层水平调整气缸1¶动点输出
 QxS03HOZAdjustCyl_1HP	:BOOL;//	相机工位¶上层水平调整气缸1¶原点输出
-QxS03HOZAdjustCyl_2WP	:BOOL;//	相机工位¶上层水平调整气缸2¶动点输出
-QxS03HOZAdjustCyl_2HP	:BOOL;//	相机工位¶上层水平调整气缸2¶原点输出
+QxShare44	:BOOL;//	备用
+QxShare45	:BOOL;//	备用
 QxS03HOZAdjustCyl_3WP	:BOOL;//	相机工位¶上层水平调整气缸3¶动点输出
 QxS03HOZAdjustCyl_3HP	:BOOL;//	相机工位¶上层水平调整气缸3¶原点输出
-QxS03HOZAdjustCyl_4WP	:BOOL;//	相机工位¶上层水平调整气缸4¶动点输出
-QxS03HOZAdjustCyl_4HP	:BOOL;//	相机工位¶上层水平调整气缸4¶原点输出
+QxShare46	:BOOL;//	备用
+QxShare47	:BOOL;//	备用
 QxS03HOZAdjustCyl_5WP	:BOOL;//	相机工位¶下层水平调整气缸1¶动点输出
 QxS03HOZAdjustCyl_5HP	:BOOL;//	相机工位¶下层水平调整气缸1¶原点输出
-QxS03HOZAdjustCyl_6WP	:BOOL;//	相机工位¶下层水平调整气缸2¶动点输出
-QxS03HOZAdjustCyl_6HP	:BOOL;//	相机工位¶下层水平调整气缸2¶原点输出
+QxShare52	:BOOL;//	备用
+QxShare51	:BOOL;//	备用
 QxS03HOZAdjustCyl_7WP	:BOOL;//	相机工位¶下层水平调整气缸3¶动点输出
 QxS03HOZAdjustCyl_7HP	:BOOL;//	相机工位¶下层水平调整气缸3¶原点输出
-QxS03HOZAdjustCyl_8WP	:BOOL;//	相机工位¶下层水平调整气缸3¶原点输出
-QxS03HOZAdjustCyl_8HP	:BOOL;//	相机工位¶下层水平调整气缸4¶原点输出
+QxShare50	:BOOL;//	备用
+QxShare53	:BOOL;//	备用
 QxShare7	:BOOL;//	备用
 QxShare8	:BOOL;//	备用
 QxShare9	:BOOL;//	备用
@@ -322,12 +323,12 @@ QxET02IonResetControl	:BOOL;//	卡片搬运工位¶离子风棒¶复位信号
 QxShare79	:BOOL;//	备用
 QxS04HOZAdjustCyl_1WP	:BOOL;//	热熔工位¶上层水平调整气缸1¶动点输出
 QxS04HOZAdjustCyl_1HP	:BOOL;//	热熔工位¶上层水平调整气缸1¶原点输出
-QxS04HOZAdjustCyl_2WP	:BOOL;//	热熔工位¶上层水平调整气缸2¶动点输出
-QxS04HOZAdjustCyl_2HP	:BOOL;//	热熔工位¶上层水平调整气缸2¶原点输出
+QxShare75	:BOOL;//	备用
+QxShare76	:BOOL;//	备用
 QxS04HOZAdjustCyl_3WP	:BOOL;//	热熔工位¶下层水平调整气缸1¶动点输出
 QxS04HOZAdjustCyl_3HP	:BOOL;//	热熔工位¶下层水平调整气缸1¶原点输出
-QxS04HOZAdjustCyl_4WP	:BOOL;//	热熔工位¶下层水平调整气缸2¶动点输出
-QxS04HOZAdjustCyl_4HP	:BOOL;//	热熔工位¶下层水平调整气缸2¶原点输出
+QxShare77	:BOOL;//	备用
+QxShare78	:BOOL;//	备用
 QxS06GlampCyl_1WP	:BOOL;//	切膜工位¶前侧夹膜气缸¶动点输出
 QxS06GlampCyl_1HP	:BOOL;//	切膜工位¶前侧夹膜气缸¶原点输出
 QxS06GlampCyl_2WP	:BOOL;//	切膜工位¶后侧夹膜气缸¶动点输出
@@ -368,7 +369,6 @@ QxShare92	:BOOL;//	备用
 QxShare93	:BOOL;//	备用
 QxShare94	:BOOL;//	备用
 QxShare95	:BOOL;//	备用
-
 
 
 

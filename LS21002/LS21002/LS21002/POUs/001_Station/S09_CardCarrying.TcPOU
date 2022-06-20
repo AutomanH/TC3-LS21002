@@ -394,65 +394,65 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
-	station.iStepInit:=20;
-20://检查是否需要破真空	
-	IF tsModuleProcess[1].xProcessStarted AND
-		 NOT tsModuleProcess[1].xProcessCompleted THEN
-		 station.iStepInit:=30;
-	ELSE
-		station.iStepInit:=40;	
-	END_IF
-30://破真空
-		xVacuum_WorkValveControl[1]:=FALSE;
-		xVacuum_WorkValveControl[2]:=FALSE;
-		xVacuum_BreakValveControl[1]:=TRUE;
-		xVacuum_BreakValveControl[2]:=TRUE;
-	IF   xVacuum_BreakCompleted[1] AND 
-		 xVacuum_BreakCompleted[2] THEN
-		 xVacuum_BreakValveControl[1]:=FALSE;
-		 xVacuum_BreakValveControl[2]:=FALSE;
-		 station.iStepInit:=40;	
-	END_IF
-40://上Z轴上升
-	fbVTCCyl_1.xInit:=TRUE;
-	IF  fbVTCCyl_1.xHP_Delay THEN
-		station.iStepInit:=50;	
-	END_IF
-50://下轴上升
-	fbVTCCyl_2.xInit:=TRUE;
-	IF  fbVTCCyl_2.xHP_Delay THEN
-		station.iStepInit:=60;	
-	END_IF
-60://X轴气缸回原
-	fbHOZCyl.xInit:=TRUE;
-	IF  fbHOZCyl.xHP_Delay THEN
-		station.iStepInit:=70;	
-	END_IF		
-70://卡片步进上电
-	fbZAxisStepMotor1.xPowerInit:=TRUE;
-	fbZAxisStepMotor2.xPowerInit:=TRUE;
-	IF		fbZAxisStepMotor1.xPowerOn AND
-		    fbZAxisStepMotor2.xPowerOn THEN
-			station.iStepInit:=80;	
-	END_IF
-80://回原点
-	fbZAxisStepMotor1.xReferenceAuto:=TRUE;
-	fbZAxisStepMotor2.xReferenceAuto:=TRUE;
-	station.iStepinit:=90;
-90:
-   IF  fbAxisHome[17].home_done  AND 
-		fbAxisHome[18].home_done THEN 
-		 fbZAxisStepMotor1.xReferenceAuto:=FALSE;
-		fbZAxisStepMotor2.xReferenceAuto:=FALSE;
-		 station.iStepInit:=100;  
-	END_IF
-100://去待机位置
-	 fbZAxisStepMotor1.xMoveAuto[1]:=TRUE;
-	  fbZAxisStepMotor2.xMoveAuto[1]:=TRUE;
-	IF    fbZAxisStepMotor1.xMoveInPos[1] AND 
-		fbZAxisStepMotor2.xMoveInPos[1] THEN
-		 station.iStepInit:=999;  
-	END_IF
+	station.iStepInit:=999;
+//20://检查是否需要破真空	
+//	IF tsModuleProcess[1].xProcessStarted AND
+//		 NOT tsModuleProcess[1].xProcessCompleted THEN
+//		 station.iStepInit:=30;
+//	ELSE
+//		station.iStepInit:=40;	
+//	END_IF
+//30://破真空
+//		xVacuum_WorkValveControl[1]:=FALSE;
+//		xVacuum_WorkValveControl[2]:=FALSE;
+//		xVacuum_BreakValveControl[1]:=TRUE;
+//		xVacuum_BreakValveControl[2]:=TRUE;
+//	IF   xVacuum_BreakCompleted[1] AND 
+//		 xVacuum_BreakCompleted[2] THEN
+//		 xVacuum_BreakValveControl[1]:=FALSE;
+//		 xVacuum_BreakValveControl[2]:=FALSE;
+//		 station.iStepInit:=40;	
+//	END_IF
+//40://上Z轴上升
+//	fbVTCCyl_1.xInit:=TRUE;
+//	IF  fbVTCCyl_1.xHP_Delay THEN
+//		station.iStepInit:=50;	
+//	END_IF
+//50://下轴上升
+//	fbVTCCyl_2.xInit:=TRUE;
+//	IF  fbVTCCyl_2.xHP_Delay THEN
+//		station.iStepInit:=60;	
+//	END_IF
+//60://X轴气缸回原
+//	fbHOZCyl.xInit:=TRUE;
+//	IF  fbHOZCyl.xHP_Delay THEN
+//		station.iStepInit:=70;	
+//	END_IF		
+//70://卡片步进上电
+//	fbZAxisStepMotor1.xPowerInit:=TRUE;
+//	fbZAxisStepMotor2.xPowerInit:=TRUE;
+//	IF		fbZAxisStepMotor1.xPowerOn AND
+//		    fbZAxisStepMotor2.xPowerOn THEN
+//			station.iStepInit:=80;	
+//	END_IF
+//80://回原点
+//	fbZAxisStepMotor1.xReferenceAuto:=TRUE;
+//	fbZAxisStepMotor2.xReferenceAuto:=TRUE;
+//	station.iStepinit:=90;
+//90:
+//   IF  fbAxisHome[17].home_done  AND 
+//		fbAxisHome[18].home_done THEN 
+//		 fbZAxisStepMotor1.xReferenceAuto:=FALSE;
+//		fbZAxisStepMotor2.xReferenceAuto:=FALSE;
+//		 station.iStepInit:=100;  
+//	END_IF
+//100://去待机位置
+//	 fbZAxisStepMotor1.xMoveAuto[1]:=TRUE;
+//	  fbZAxisStepMotor2.xMoveAuto[1]:=TRUE;
+//	IF    fbZAxisStepMotor1.xMoveInPos[1] AND 
+//		fbZAxisStepMotor2.xMoveInPos[1] THEN
+//		 station.iStepInit:=999;  
+//	END_IF
 999://初始化完成	
 	station.iStepInit:=0;
 	station.xInitDone:=TRUE;  
@@ -475,12 +475,12 @@ station.xCanRun :=TRUE ;
 
 //---------------------------------------------------气缸动作条件-------------------------------------------
 
-fbHOZCyl.xOffILC	:=	fbVTCCyl_1.xHP_Delay AND  fbVTCCyl_1.xHP_Delay 	;
-fbHOZCyl.xOnILC		:=	fbVTCCyl_1.xHP_Delay AND  fbVTCCyl_1.xHP_Delay	;
-fbVTCCyl_1.xOffILC	:=	fbHOZCyl.xHP_Delay OR fbHOZCyl.xWP_Delay	;
-fbVTCCyl_1.xOnILC	:=	fbHOZCyl.xHP_Delay OR fbHOZCyl.xWP_Delay	;
-fbVTCCyl_2.xOffILC	:=	fbHOZCyl.xHP_Delay OR fbHOZCyl.xWP_Delay	;
-fbVTCCyl_2.xOnILC	:=	fbHOZCyl.xHP_Delay OR fbHOZCyl.xWP_Delay	;
+fbHOZCyl.xOffILC	:=	TRUE;//fbVTCCyl_1.xHP_Delay AND  fbVTCCyl_1.xHP_Delay 	;
+fbHOZCyl.xOnILC		:=	TRUE;//fbVTCCyl_1.xHP_Delay AND  fbVTCCyl_1.xHP_Delay	;
+fbVTCCyl_1.xOffILC	:=	TRUE;//fbHOZCyl.xHP_Delay OR fbHOZCyl.xWP_Delay	;
+fbVTCCyl_1.xOnILC	:=	TRUE;//fbHOZCyl.xHP_Delay OR fbHOZCyl.xWP_Delay	;
+fbVTCCyl_2.xOffILC	:=	TRUE	;
+fbVTCCyl_2.xOnILC	:=	TRUE; //fbHOZCyl.xHP_Delay OR fbHOZCyl.xWP_Delay	;
 
 
 //---------------------------------------------------伺服动作条件-------------------------------------------

@@ -51,85 +51,58 @@ fbMachine[1].dwMessage[1].04			:=	fbMachine[1].xIniting;			//设备初始化中
 fbMachine[1].dwMessage[1].05			:=	fbMachine[1].xEmptying;			//设备清料中
 
 //----机台报警信息----
-IF NOT  fbMachine[1].xAirOn THEN
-	fbMachine[1].dwAlarm[1].00:=TRUE; //[M01.00] 设备气压报警
-	;
-END_IF
-
-//心跳
-	IF  fbAlive[1].xQAliveError THEN
-		fbMachine[1].dwAlarm[1].05:=TRUE; //[M01.05] 未检测到相机心跳1
-	END_IF
-	IF  fbAlive[2].xQAliveError THEN
-		fbMachine[1].dwAlarm[1].06:=TRUE; //[M01.06] 未检测到相机心跳2
-	END_IF
-	IF  fbAlive[3].xQAliveError THEN
-		fbMachine[1].dwAlarm[1].07:=TRUE; //[M01.07] 未检测到相机心跳3
-	END_IF
-	IF  fbAlive[4].xQAliveError THEN
-		fbMachine[1].dwAlarm[1].08:=TRUE; //[M01.08] 未检测到工控机1心跳
-	END_IF
-	IF  fbAlive[5].xQAliveError THEN
-		fbMachine[1].dwAlarm[1].09:=TRUE; //[M01.09] 未检测到工控机2心跳
-	END_IF
-	IF  fbAlive[6].xQAliveError THEN
-		fbMachine[1].dwAlarm[1].10:=TRUE; //[M01.10] 未检测到工控机3心跳
-	END_IF
-	IF  fbAlive[7].xQAliveError THEN
-		fbMachine[1].dwAlarm[1].11:=TRUE; //[M01.11] 未检测到热缩封膜机心跳
-	END_IF
-//模块状态
-	IF  fbEhterCATSlaveMonitor[1].xQError THEN
-		fbMachine[1].dwAlarm[1].08:=TRUE; //[M01.05] ET01电柜EtherCAT总线报错
-	END_IF
-	IF  fbEhterCATSlaveMonitor[2].xQError THEN
-		fbMachine[1].dwAlarm[1].09:=TRUE; //[M01.05] ET02电柜EtherCAT总线报错
-	END_IF
-	IF  fbEhterCATSlaveMonitor[3].xQError THEN
-		fbMachine[1].dwAlarm[1].10:=TRUE; //[M01.05] ET03电柜EtherCAT总线报错
-	END_IF
-		IF  fbEhterCATSlaveMonitor[4].xQError THEN
-		fbMachine[1].dwAlarm[1].11:=TRUE; //[M01.05] ET04电柜EtherCAT总线报错
-	END_IF
+//IF NOT  fbMachine[1].xAirOn THEN
+//	fbMachine[1].dwAlarm[1].00:=TRUE; //[M01.00] 设备气压报警
+//	;
+//END_IF
 //急停被按下
 IF NOT IxSafetyRelayOK THEN 
 	fbMachine[1].dwAlarm[1].03:=TRUE; //[M01.03] 设备急停被按下
 END_IF
 
+//心跳
+//	IF  fbAlive[1].xQAliveError THEN
+//		fbMachine[1].dwAlarm[1].05:=TRUE; //[M01.05] 未检测到相机心跳1
+//	END_IF
+//	IF  fbAlive[2].xQAliveError THEN
+//		fbMachine[1].dwAlarm[1].06:=TRUE; //[M01.06] 未检测到相机心跳2
+//	END_IF
+//	IF  fbAlive[3].xQAliveError THEN
+//		fbMachine[1].dwAlarm[1].07:=TRUE; //[M01.07] 未检测到相机心跳3
+//	END_IF
+//	IF  fbAlive[4].xQAliveError THEN
+//		fbMachine[1].dwAlarm[1].08:=TRUE; //[M01.08] 未检测到工控机1心跳
+//	END_IF
+//	IF  fbAlive[5].xQAliveError THEN
+//		fbMachine[1].dwAlarm[1].09:=TRUE; //[M01.09] 未检测到工控机2心跳
+//	END_IF
+//	IF  fbAlive[6].xQAliveError THEN
+//		fbMachine[1].dwAlarm[1].10:=TRUE; //[M01.10] 未检测到工控机3心跳
+//	END_IF
+//	IF  fbAlive[7].xQAliveError THEN
+//		fbMachine[1].dwAlarm[1].11:=TRUE; //[M01.11] 未检测到热缩封膜机心跳
+//	END_IF
+////模块状态
+//	IF  fbEhterCATSlaveMonitor[1].xQError THEN
+//		fbMachine[1].dwAlarm[1].12:=TRUE; //[M01.05] ET01电柜EtherCAT总线报错
+//	END_IF
+//	IF  fbEhterCATSlaveMonitor[2].xQError THEN
+//		fbMachine[1].dwAlarm[1].13:=TRUE; //[M01.05] ET02电柜EtherCAT总线报错
+//	END_IF
+//	IF  fbEhterCATSlaveMonitor[3].xQError THEN
+//		fbMachine[1].dwAlarm[1].14:=TRUE; //[M01.05] ET03电柜EtherCAT总线报错
+//	END_IF
+//		IF  fbEhterCATSlaveMonitor[4].xQError THEN
+//		fbMachine[1].dwAlarm[1].15:=TRUE; //[M01.05] ET04电柜EtherCAT总线报错
+//	END_IF
 
-(*
-tTimeoutAlarm(IN:= sPC_To_PLC.xPCAlive=0 AND (S03_LidExtracting.station.xRunning OR S03_LidExtracting.station.xIniting OR 
-											 S05_Marking.station.xRunning OR   S05_Marking.station.xIniting   OR
-											S06_CameraTesting.station.xRunning OR S06_CameraTesting.station.xIniting    )	, PT:=T#5S, Q=> , ET=> );
-IF  tTimeoutAlarm.Q THEN
-	fbMachine[1].dwAlarm[1].04:=TRUE; //[M01.04] PC无心跳
-END_IF
-
-
-*)
-
-
-(*
-//将上位机的报警读取在PLC中报警
-sysMEMCPY(ADR(fbMachine[1].dwAlarm[2]),ADR(sPC_TO_PLC.ariPCAlarm[1]),4);
-*)
-(*EtherCAT总线报警*)	
-fbEthercatTerminalState(
-	xIActive:=TRUE ,
-	xIReset:=fbMachine[1].xReset,
-	axIState:= ,
-	xQError=> ,
-	iQErrorTerm=> );
-IF   fbEthercatTerminalState.xQError THEN
- 	fbMachine[1].dwAlarm[1].17:=TRUE; //[M01.15] PLC EL模块通讯报错，请检查EtherCAT总线状态	
-END_IF
 	
 	
 //----工站报警汇总----
 
 xAlarm:= FALSE;							//先复位
 FOR i :=1 TO gc_uiStationNum DO 
-  IF fbStation[i].xAlarm  OR  fbEthercatTerminalState.xQError THEN		//整机故障单独 
+  IF fbStation[i].xAlarm THEN		//整机故障单独 
     xAlarm:=TRUE; 
   END_IF
 END_FOR
@@ -307,13 +280,12 @@ fbMachine[1].xEStop :=IxSafetyRelayOK ;
 
 fbMachine[1].xKey := TRUE;
 
-fbMachine[1].xAirOn :=  IxAirPressure ;
+fbMachine[1].xAirOn :=  IxAirPressure OR true;
 
 fbMachine[1].xSafety:=fbMachine[1].xDoorClosed 
 						AND fbMachine[1].xEStop 
 						AND fbMachine[1].xAirOn 
-						AND fbMachine[1].xKey ;
-	]]></ST>
+						AND fbMachine[1].xKey ;]]></ST>
       </Implementation>
     </Action>
     <Action Name="Timeout" Id="{21e89cc2-bcd2-45fb-a2b6-ed65b1837306}">
@@ -382,6 +354,8 @@ fbMachine[1].xTip                      :=(fbMachine[1].xManualTip OR fbMachine[1
       <LineId Id="10" Count="0" />
       <LineId Id="85" Count="3" />
       <LineId Id="11" Count="0" />
+      <LineId Id="371" Count="2" />
+      <LineId Id="370" Count="0" />
       <LineId Id="246" Count="0" />
       <LineId Id="93" Count="0" />
       <LineId Id="184" Count="0" />
@@ -401,20 +375,6 @@ fbMachine[1].xTip                      :=(fbMachine[1].xManualTip OR fbMachine[1
       <LineId Id="228" Count="0" />
       <LineId Id="368" Count="1" />
       <LineId Id="367" Count="0" />
-      <LineId Id="171" Count="7" />
-      <LineId Id="237" Count="1" />
-      <LineId Id="179" Count="2" />
-      <LineId Id="291" Count="1" />
-      <LineId Id="290" Count="0" />
-      <LineId Id="241" Count="0" />
-      <LineId Id="147" Count="0" />
-      <LineId Id="16" Count="0" />
-      <LineId Id="114" Count="0" />
-      <LineId Id="17" Count="1" />
-      <LineId Id="267" Count="5" />
-      <LineId Id="264" Count="0" />
-      <LineId Id="285" Count="0" />
-      <LineId Id="289" Count="0" />
       <LineId Id="288" Count="0" />
       <LineId Id="19" Count="0" />
       <LineId Id="286" Count="0" />
@@ -463,7 +423,6 @@ fbMachine[1].xTip                      :=(fbMachine[1].xManualTip OR fbMachine[1
     </LineIds>
     <LineIds Name="ControlMachine.Safety">
       <LineId Id="44" Count="16" />
-      <LineId Id="43" Count="0" />
     </LineIds>
     <LineIds Name="ControlMachine.Timeout">
       <LineId Id="53" Count="0" />

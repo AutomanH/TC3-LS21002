@@ -7,13 +7,13 @@ VAR
 	station					: REFERENCE TO FB_Station:=fbstation[3];
 	//气缸
 	fbHOZAdjustCyl_1	:REFERENCE TO FB_Cylinder:=fbCylinder[12];	//	上层水平调整气缸1（小）
-	fbHOZAdjustCyl_2	:REFERENCE TO FB_Cylinder:=fbCylinder[13];	//	上层水平调整气缸2（小）
+//	fbHOZAdjustCyl_2	:REFERENCE TO FB_Cylinder:=fbCylinder[13];	//	上层水平调整气缸2（小）
 	fbHOZAdjustCyl_3	:REFERENCE TO FB_Cylinder:=fbCylinder[14];	//	下层水平调整气缸1（小）
-	fbHOZAdjustCyl_4	:REFERENCE TO FB_Cylinder:=fbCylinder[15];	//	下层水平调整气缸2（小）
+//	fbHOZAdjustCyl_4	:REFERENCE TO FB_Cylinder:=fbCylinder[15];	//	下层水平调整气缸2（小）
 	fbHOZAdjustCyl_5	:REFERENCE TO FB_Cylinder:=fbCylinder[16];	//	上层水平调整气缸1（大）
-	fbHOZAdjustCyl_6	:REFERENCE TO FB_Cylinder:=fbCylinder[17];	//	上层水平调整气缸2（大）
+//	fbHOZAdjustCyl_6	:REFERENCE TO FB_Cylinder:=fbCylinder[17];	//	上层水平调整气缸2（大）
 	fbHOZAdjustCyl_7	:REFERENCE TO FB_Cylinder:=fbCylinder[18];	//	下层水平调整气缸1（大）
-	fbHOZAdjustCyl_8	:REFERENCE TO FB_Cylinder:=fbCylinder[19];	//	下层水平调整气缸2（大）
+//	fbHOZAdjustCyl_8	:REFERENCE TO FB_Cylinder:=fbCylinder[19];	//	下层水平调整气缸2（大）
 	//伺服
 	fbXAxisMove	 :REFERENCE TO FB_Axis:=fbAxis[6];	//	相机检测工位X轴伺服
 	fbYAxisMove	 :REFERENCE TO FB_Axis:=fbAxis[7];	//	相机检测工位Y轴伺服
@@ -64,22 +64,19 @@ Z_Output();]]></ST>
     <Action Name="A_Input" Id="{b6530cbb-368d-4144-89d4-ce2dff9991be}">
       <Implementation>
         <ST><![CDATA[//气缸
-fbHOZAdjustCyl_1.xWP_Sensor	:=	IxS03HOZAdjustCyl_1WP	;
-fbHOZAdjustCyl_1.xHP_Sensor	:=	IxS03HOZAdjustCyl_1HP	;
-fbHOZAdjustCyl_2.xWP_Sensor	:=	IxS03HOZAdjustCyl_2WP	;
-fbHOZAdjustCyl_2.xHP_Sensor	:=	IxS03HOZAdjustCyl_2HP	;
-fbHOZAdjustCyl_3.xWP_Sensor	:=	IxS03HOZAdjustCyl_3WP	;
-fbHOZAdjustCyl_3.xHP_Sensor	:=	IxS03HOZAdjustCyl_3HP	;
-fbHOZAdjustCyl_4.xWP_Sensor	:=	IxS03HOZAdjustCyl_4WP	;
-fbHOZAdjustCyl_4.xHP_Sensor	:=	IxS03HOZAdjustCyl_4HP	;
-fbHOZAdjustCyl_5.xWP_Sensor	:=	IxS03HOZAdjustCyl_5WP	;
-fbHOZAdjustCyl_5.xHP_Sensor	:=	IxS03HOZAdjustCyl_5HP	;
-fbHOZAdjustCyl_6.xWP_Sensor	:=	IxS03HOZAdjustCyl_6WP	;
-fbHOZAdjustCyl_6.xHP_Sensor	:=	IxS03HOZAdjustCyl_6HP	;
-fbHOZAdjustCyl_7.xWP_Sensor	:=	IxS03HOZAdjustCyl_7WP	;
-fbHOZAdjustCyl_7.xHP_Sensor	:=	IxS03HOZAdjustCyl_7HP	;
-fbHOZAdjustCyl_8.xWP_Sensor	:=	IxS03HOZAdjustCyl_8WP	;
-fbHOZAdjustCyl_8.xHP_Sensor	:=	IxS03HOZAdjustCyl_8HP	;
+//S03上层水平调整气缸1(小)
+fbHOZAdjustCyl_1.xWP_Sensor	:=	IxS03HOZAdjustCyl_1WP	 AND  IxS03HOZAdjustCyl_2WP;
+fbHOZAdjustCyl_1.xHP_Sensor	:=	IxS03HOZAdjustCyl_1HP AND IxS03HOZAdjustCyl_2HP	;
+//S03下层水平调整气缸1(小)
+fbHOZAdjustCyl_3.xWP_Sensor	:=	IxS03HOZAdjustCyl_5WP	 AND  IxS03HOZAdjustCyl_6WP;  
+fbHOZAdjustCyl_3.xHP_Sensor	:=	IxS03HOZAdjustCyl_5HP AND   IxS03HOZAdjustCyl_6HP;  
+//S03上层水平调整气缸1(大）
+fbHOZAdjustCyl_5.xWP_Sensor	:=IxS03HOZAdjustCyl_3WP  AND IxS03HOZAdjustCyl_4WP;										
+fbHOZAdjustCyl_5.xHP_Sensor	:=IxS03HOZAdjustCyl_3HP	 AND IxS03HOZAdjustCyl_4HP; 
+//S03下层水平调整气缸1(大） 									 
+fbHOZAdjustCyl_7.xWP_Sensor	:=	IxS03HOZAdjustCyl_7WP	AND 	IxS03HOZAdjustCyl_8WP;  
+fbHOZAdjustCyl_7.xHP_Sensor	:=	IxS03HOZAdjustCyl_7HP	AND 	IxS03HOZAdjustCyl_8HP;  
+
 
 
 
@@ -96,29 +93,21 @@ fbHOZAdjustCyl_8.xHP_Sensor	:=	IxS03HOZAdjustCyl_8HP	;
         <ST><![CDATA[station.adwAlarm[1].00	:=	station.xInitTimeout	;//	S03 初始化超时
 station.adwAlarm[1].01	:=	fbHOZAdjustCyl_1.xHP_Off 	;//	S03上层水平调整气缸1(小)原点未到位
 station.adwAlarm[1].02	:=	fbHOZAdjustCyl_1.xWP_Off 	;//	S03上层水平调整气缸1(小)动点未到位
-station.adwAlarm[1].03	:=	fbHOZAdjustCyl_2.xHP_Off	;//	S03上层水平调整气缸2(小)原点未到位
-station.adwAlarm[1].04	:=	fbHOZAdjustCyl_2.xWP_Off	;//	S03上层水平调整气缸2(小)动点未到位
-station.adwAlarm[1].05	:=	fbHOZAdjustCyl_3.xHP_Off	;//	S03下层水平调整气缸1(小)原点未到位
-station.adwAlarm[1].06	:=	fbHOZAdjustCyl_3.xWP_Off	;//	S03下层水平调整气缸1(小)动点未到位
-station.adwAlarm[1].07	:=	fbHOZAdjustCyl_4.xHP_Off	;//	S03下层水平调整气缸2(小)原点未到位
-station.adwAlarm[1].08	:=	fbHOZAdjustCyl_4.xWP_Off	;//	S03下层水平调整气缸2(小)动点未到位
-station.adwAlarm[1].09	:=	fbHOZAdjustCyl_5.xHP_Off	;//	S03上层水平调整气缸1(大)原点未到位
-station.adwAlarm[1].10	:=	fbHOZAdjustCyl_5.xWP_Off	;//	S03上层水平调整气缸1(大)动点未到位
-station.adwAlarm[1].11	:=	fbHOZAdjustCyl_6.xHP_Off	;//	S03上层水平调整气缸2(大)原点未到位
-station.adwAlarm[1].12	:=	fbHOZAdjustCyl_6.xWP_Off	;//	S03上层水平调整气缸2(大)动点未到位
-station.adwAlarm[1].13	:=	fbHOZAdjustCyl_7.xHP_Off	;//	S03下层水平调整气缸1(大)原点未到位
-station.adwAlarm[1].14	:=	fbHOZAdjustCyl_7.xWP_Off	;//	S03下层水平调整气缸1(大)动点未到位
-station.adwAlarm[1].15	:=	fbHOZAdjustCyl_8.xHP_Off	;//	S03下层水平调整气缸2(大)原点未到位
-station.adwAlarm[1].16	:=	fbHOZAdjustCyl_8.xWP_Off	;//	S03下层水平调整气缸2(大)动点未到位
-station.adwAlarm[1].17	:=	fbXAxisMove.xError	;//	S03液位检测X轴伺服报错
-station.adwAlarm[1].18	:=	fbXAxisMove.xNotPowerOn	;//	S03液位检测X轴伺服未使能
-station.adwAlarm[1].19	:=	fbXAxisMove.xMoveTimeout	;//	S03液位检测X轴伺服移动超时
-station.adwAlarm[1].20	:=	fbYAxisMove.xError	;//	S03液位检测Y轴伺服报错
-station.adwAlarm[1].21	:=	fbYAxisMove.xNotPowerOn	;//	S03液位检测Y轴伺服未使能
-station.adwAlarm[1].22	:=	fbYAxisMove.xMoveTimeout	;//	S03液位检测Y轴伺服移动超时
-station.adwAlarm[1].23	:=	fbZAxisMove.xError	;//	S03液位检测Z轴伺服报错
-station.adwAlarm[1].24	:=	fbZAxisMove.xNotPowerOn	;//	S03液位检测Z轴伺服未使能
-station.adwAlarm[1].25	:=	fbZAxisMove.xMoveTimeout	;//	S03液位检测Z轴伺服移动超时
+station.adwAlarm[1].03	:=	fbHOZAdjustCyl_3.xHP_Off	;//	S03下层水平调整气缸1(小)原点未到位
+station.adwAlarm[1].04	:=	fbHOZAdjustCyl_3.xWP_Off	;//	S03下层水平调整气缸1(小)动点未到位
+station.adwAlarm[1].05	:=	fbHOZAdjustCyl_5.xHP_Off	;//	S03上层水平调整气缸1(大)原点未到位
+station.adwAlarm[1].06	:=	fbHOZAdjustCyl_5.xWP_Off	;//	S03上层水平调整气缸1(大)动点未到位
+station.adwAlarm[1].07	:=	fbHOZAdjustCyl_7.xHP_Off	;//	S03下层水平调整气缸1(大)原点未到位
+station.adwAlarm[1].08	:=	fbHOZAdjustCyl_7.xWP_Off	;//	S03下层水平调整气缸1(大)动点未到位
+station.adwAlarm[1].09	:=	fbXAxisMove.xError	;//	S03液位检测X轴伺服报错
+station.adwAlarm[1].10	:=	fbXAxisMove.xNotPowerOn	;//	S03液位检测X轴伺服未使能
+station.adwAlarm[1].11	:=	fbXAxisMove.xMoveTimeout	;//	S03液位检测X轴伺服移动超时
+station.adwAlarm[1].12	:=	fbYAxisMove.xError	;//	S03液位检测Y轴伺服报错
+station.adwAlarm[1].13	:=	fbYAxisMove.xNotPowerOn	;//	S03液位检测Y轴伺服未使能
+station.adwAlarm[1].14	:=	fbYAxisMove.xMoveTimeout	;//	S03液位检测Y轴伺服移动超时
+station.adwAlarm[1].15	:=	fbZAxisMove.xError	;//	S03液位检测Z轴伺服报错
+station.adwAlarm[1].16	:=	fbZAxisMove.xNotPowerOn	;//	S03液位检测Z轴伺服未使能
+station.adwAlarm[1].17	:=	fbZAxisMove.xMoveTimeout	;//	S03液位检测Z轴伺服移动超时
 ]]></ST>
       </Implementation>
     </Action>
@@ -192,14 +181,14 @@ CASE station.iStepAuto OF
 			END_IF	
 			station.iStepAuto:= 10;
 	 10: //判断产品是否到该工位
-		IF  station.xSingleRunning THEN
-			station.iStepAuto:= 11;
-		ELSIF fbMachine[1].xTryRun THEN
+		IF fbMachine[1].xTryRun  THEN
 			IF NOT _FirstCycle[6] THEN
-					bCounter:=1;
+					bCounter:=3;
 					bEndCounter:=0;
 				_FirstCycle[6]:=TRUE;
 			END_IF
+			station.iStepAuto:= 11;
+		ELSIF  station.xSingleRunning THEN
 			station.iStepAuto:= 11;
 		ELSE
 			IF   	 NOT  arMainlineFixtureData[arCurFixtureNumStation[5]].xMaterialOnOff AND
@@ -303,38 +292,40 @@ CASE station.iStepAuto OF
 					IF  iBoxChoose =1 THEN
 						(*上层水平调整气缸*)
 						fbHOZAdjustCyl_1.xAuto :=TRUE;
-						fbHOZAdjustCyl_2.xAuto :=TRUE;
-						IF  fbHOZAdjustCyl_1.xWP_Delay AND fbHOZAdjustCyl_2.xWP_Delay  THEN
+						//fbHOZAdjustCyl_2.xAuto :=TRUE;
+						IF  fbHOZAdjustCyl_1.xWP_Delay  THEN//AND fbHOZAdjustCyl_2.xWP_Delay  THEN
 								station.iStepAuto:= 90;
 						END_IF
 					ELSIF  iBoxChoose= 2 THEN
 						(*下层水平调整气缸*)
 						fbHOZAdjustCyl_3.xAuto :=TRUE;
-						fbHOZAdjustCyl_4.xAuto :=TRUE;
-						IF  fbHOZAdjustCyl_3.xWP_Delay AND fbHOZAdjustCyl_4.xWP_Delay  THEN
+						//fbHOZAdjustCyl_4.xAuto :=TRUE;
+						IF  fbHOZAdjustCyl_3.xWP_Delay THEN //AND fbHOZAdjustCyl_4.xWP_Delay  THEN
 								station.iStepAuto:= 90;
 						END_IF
 					END_IF
 			ELSIF  bCounter =2 OR  bCounter =3 OR bEndCounter =1 OR bEndCounter =2 THEN
 					IF  iBoxChoose =1 THEN
 						(*上层水平调整气缸*)
+						fbHOZAdjustCyl_1.xAuto :=TRUE;
 						fbHOZAdjustCyl_5.xAuto :=TRUE;
-						fbHOZAdjustCyl_6.xAuto :=TRUE;
-						IF  fbHOZAdjustCyl_5.xWP_Delay AND fbHOZAdjustCyl_6.xWP_Delay  THEN
+					//	fbHOZAdjustCyl_6.xAuto :=TRUE;
+						IF  fbHOZAdjustCyl_1.xWP_Delay AND fbHOZAdjustCyl_5.xWP_Delay  THEN
 								station.iStepAuto:= 90;
 						END_IF
 					ELSIF  iBoxChoose= 2 THEN
 						(*下层水平调整气缸*)
+						fbHOZAdjustCyl_3.xAuto :=TRUE;
 						fbHOZAdjustCyl_7.xAuto :=TRUE;
-						fbHOZAdjustCyl_8.xAuto :=TRUE;
-						IF  fbHOZAdjustCyl_7.xWP_Delay AND fbHOZAdjustCyl_8.xWP_Delay  THEN
+						//fbHOZAdjustCyl_8.xAuto :=TRUE;
+						IF  fbHOZAdjustCyl_3.xWP_Delay AND fbHOZAdjustCyl_7.xWP_Delay  THEN
 								station.iStepAuto:= 90;
 						END_IF
 					END_IF
 			END_IF
 		90://Z轴下降
 			fbZAxisMove.xMoveAuto[2]:=TRUE;
-			IF  fbXAxisMove.xMoveInPos[2] THEN
+			IF  fbZAxisMove.xMoveInPos[2] THEN
 				station.iStepAuto:= 95;
 			END_IF			 
 		95://X轴移动到拍照位置1/2
@@ -890,27 +881,27 @@ CASE station.iStepAuto OF
 			END_IF	
 		230://Z轴上升
 				fbZAxisMove.xMoveAuto[1]:=TRUE;
-			IF  fbXAxisMove.xMoveInPos[1] THEN
+			IF  fbZAxisMove.xMoveInPos[1] THEN
 					station.iStepAuto:= 240;
 			END_IF
 		240://水平调整气缸松开
 					fbHOZAdjustCyl_1.xAuto:=FALSE;
-					fbHOZAdjustCyl_2.xAuto:=false;
-					fbHOZAdjustCyl_3.xAuto:=false;
-					fbHOZAdjustCyl_4.xAuto:=false;
+				//	fbHOZAdjustCyl_2.xAuto:=false;
+					fbHOZAdjustCyl_3.xAuto:=FALSE;
+				//	fbHOZAdjustCyl_4.xAuto:=FALSE;
 					fbHOZAdjustCyl_5.xAuto:=false;
-					fbHOZAdjustCyl_6.xAuto:=false;
+				//	fbHOZAdjustCyl_6.xAuto:=false;
 					fbHOZAdjustCyl_7.xAuto:=false;
-					fbHOZAdjustCyl_8.xAuto:=false;
+				//	fbHOZAdjustCyl_8.xAuto:=false;
 				IF  fbHOZAdjustCyl_1.xHP_Delay AND 
-					fbHOZAdjustCyl_2.xHP_Delay AND
+				//	fbHOZAdjustCyl_2.xHP_Delay AND
 					fbHOZAdjustCyl_3.xHP_Delay AND
-					fbHOZAdjustCyl_4.xHP_Delay AND 
+				//	fbHOZAdjustCyl_4.xHP_Delay AND 
 					fbHOZAdjustCyl_5.xHP_Delay AND 
-					fbHOZAdjustCyl_6.xHP_Delay AND
-					fbHOZAdjustCyl_7.xHP_Delay AND
-					fbHOZAdjustCyl_8.xHP_Delay THEN
-					station.iStepInit:=250;	
+				//	fbHOZAdjustCyl_6.xHP_Delay AND
+					fbHOZAdjustCyl_7.xHP_Delay THEN
+				//	fbHOZAdjustCyl_8.xHP_Delay THEN
+					station.iStepAuto:=250;	
 				END_IF
 		250://XY轴回参考点
 				fbXAxisMove.xMoveAuto[1]:=TRUE;
@@ -1041,6 +1032,9 @@ CASE station.iStepInit OF
 	FOR i:=2 TO 17 BY 1 DO
 		fbCamera[i].xlInit:=TRUE;
 	END_FOR
+	FOR i:=1 TO gc_ModuleProNo BY 1 DO
+				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+			END_FOR
 	station.iStepInit :=20;
 	 
 20://伺服上电
@@ -1063,22 +1057,22 @@ CASE station.iStepInit OF
 		END_IF
 50://水平调整气缸回原位
 		
-		fbHOZAdjustCyl_1.xinit:=TRUE;
-        fbHOZAdjustCyl_2.xinit:=true;
+				fbHOZAdjustCyl_1.xinit:=TRUE;
+      //  fbHOZAdjustCyl_2.xinit:=true;
         fbHOZAdjustCyl_3.xinit:=true;
-        fbHOZAdjustCyl_4.xinit:=true;
+       // fbHOZAdjustCyl_4.xinit:=true;
         fbHOZAdjustCyl_5.xinit:=true;
-        fbHOZAdjustCyl_6.xinit:=true;
+      //  fbHOZAdjustCyl_6.xinit:=true;
         fbHOZAdjustCyl_7.xinit:=true;
-        fbHOZAdjustCyl_8.xinit:=TRUE;
+      //  fbHOZAdjustCyl_8.xinit:=TRUE;
 	IF  fbHOZAdjustCyl_1.xHP_Delay AND 
-		fbHOZAdjustCyl_2.xHP_Delay AND
+	//	fbHOZAdjustCyl_2.xHP_Delay AND
 		fbHOZAdjustCyl_3.xHP_Delay AND
-		fbHOZAdjustCyl_4.xHP_Delay AND 
+	//	fbHOZAdjustCyl_4.xHP_Delay AND 
 		fbHOZAdjustCyl_5.xHP_Delay AND 
-		fbHOZAdjustCyl_6.xHP_Delay AND
-		fbHOZAdjustCyl_7.xHP_Delay AND
-		fbHOZAdjustCyl_8.xHP_Delay THEN
+	//	fbHOZAdjustCyl_6.xHP_Delay AND
+		fbHOZAdjustCyl_7.xHP_Delay THEN
+	//	fbHOZAdjustCyl_8.xHP_Delay THEN
 		station.iStepInit:=60;	
 	END_IF
 
@@ -1132,20 +1126,20 @@ station.xCanRun :=TRUE ;
 //---------------------------------------------------气缸动作条件-------------------------------------------
 fbHOZAdjustCyl_1.xOffILC	:=	TRUE	;
 fbHOZAdjustCyl_1.xOnILC	:=	TRUE	;
-fbHOZAdjustCyl_2.xOffILC	:=	TRUE	;
-fbHOZAdjustCyl_2.xOnILC	:=	TRUE	;
+//fbHOZAdjustCyl_2.xOffILC	:=	TRUE	;
+//fbHOZAdjustCyl_2.xOnILC	:=	TRUE	;
 fbHOZAdjustCyl_3.xOffILC	:=	TRUE	;
 fbHOZAdjustCyl_3.xOnILC	:=	TRUE	;
-fbHOZAdjustCyl_4.xOffILC	:=	TRUE	;
-fbHOZAdjustCyl_4.xOnILC	:=	TRUE	;
+//fbHOZAdjustCyl_4.xOffILC	:=	TRUE	;
+//fbHOZAdjustCyl_4.xOnILC	:=	TRUE	;
 fbHOZAdjustCyl_5.xOffILC	:=	TRUE	;
 fbHOZAdjustCyl_5.xOnILC	:=	TRUE	;
-fbHOZAdjustCyl_6.xOffILC	:=	TRUE	;
-fbHOZAdjustCyl_6.xOnILC	:=	TRUE	;
+//fbHOZAdjustCyl_6.xOffILC	:=	TRUE	;
+//fbHOZAdjustCyl_6.xOnILC	:=	TRUE	;
 fbHOZAdjustCyl_7.xOffILC	:=	TRUE	;
 fbHOZAdjustCyl_7.xOnILC	:=	TRUE	;
-fbHOZAdjustCyl_8.xOffILC	:=	TRUE	;
-fbHOZAdjustCyl_8.xOnILC	:=	TRUE	;
+//fbHOZAdjustCyl_8.xOffILC	:=	TRUE	;
+//fbHOZAdjustCyl_8.xOnILC	:=	TRUE	;
 
 
 //---------------------------------------------------伺服动作条件-------------------------------------------
@@ -1155,13 +1149,13 @@ fbXAxisMove.xMoveILC[1] :=
 fbxAxisMove.xMoveILC[2] :=		
 fbxAxisMove.xMoveILC[3] :=		
 fbxAxisMove.xMoveILC[4] :=		
-fbxAxisMove.xMoveILC[5] := 		fbZAxisMove.xMoveInPos[1] OR fbZAxisMove.xMoveInPos[2] ;
+fbxAxisMove.xMoveILC[5] := 		TRUE ;//fbZAxisMove.xMoveInPos[1] OR fbZAxisMove.xMoveInPos[2] ;
 fbYAxisMove.xRunILC := 		
 fbYAxisMove.xMoveILC[1] :=		
 fbYAxisMove.xMoveILC[2] :=		
 fbYAxisMove.xMoveILC[3] :=		
 fbYAxisMove.xMoveILC[4] :=		
-fbYAxisMove.xMoveILC[5] := 		fbZAxisMove.xMoveInPos[1] OR fbZAxisMove.xMoveInPos[2] ;
+fbYAxisMove.xMoveILC[5] := 	TRUE ;//	fbZAxisMove.xMoveInPos[1] OR fbZAxisMove.xMoveInPos[2] ;
 fbZAxisMove.xRunILC := 		
 fbZAxisMove.xMoveILC[1] :=		
 fbZAxisMove.xMoveILC[2] :=		
@@ -1177,13 +1171,13 @@ fbZAxisMove.xMoveILC[5] := 		TRUE;
         <ST><![CDATA[
 //------------------------------------------------AutoTip Cylinder--------------------------------
 station.adwAutoTip[1].00	:=	fbHOZAdjustCyl_1.xAutoTip	;
-station.adwAutoTip[1].01	:=	fbHOZAdjustCyl_2.xAutoTip	;
+//station.adwAutoTip[1].01	:=	fbHOZAdjustCyl_2.xAutoTip	;
 station.adwAutoTip[1].02	:=	fbHOZAdjustCyl_3.xAutoTip	;
-station.adwAutoTip[1].03	:=	fbHOZAdjustCyl_4.xAutoTip	;
+//station.adwAutoTip[1].03	:=	fbHOZAdjustCyl_4.xAutoTip	;
 station.adwAutoTip[1].04	:=	fbHOZAdjustCyl_5.xAutoTip	;
-station.adwAutoTip[1].05	:=	fbHOZAdjustCyl_6.xAutoTip	;
+//station.adwAutoTip[1].05	:=	fbHOZAdjustCyl_6.xAutoTip	;
 station.adwAutoTip[1].06	:=	fbHOZAdjustCyl_7.xAutoTip	;
-station.adwAutoTip[1].07	:=	fbHOZAdjustCyl_8.xAutoTip	;
+//station.adwAutoTip[1].07	:=	fbHOZAdjustCyl_8.xAutoTip	;
 
 //------------------------------------------------AutoTip Servo--------------------------------
 //**************************************
@@ -1245,22 +1239,19 @@ END_IF
     <Action Name="Z_Output" Id="{110cf067-dbbf-4e5d-8ee0-386447e50660}">
       <Implementation>
         <ST><![CDATA[(**************************气缸输出********************************)
+//S03上层水平调整气缸1(小)
 QxS03HOZAdjustCyl_1WP	:=	fbHOZAdjustCyl_1.xWP_Valve	;
 QxS03HOZAdjustCyl_1HP	:=	fbHOZAdjustCyl_1.xHP_Valve	;
-QxS03HOZAdjustCyl_2WP	:=	fbHOZAdjustCyl_2.xWP_Valve	;
-QxS03HOZAdjustCyl_2HP	:=	fbHOZAdjustCyl_2.xHP_Valve	;
+//S03下层水平调整气缸1(小)
 QxS03HOZAdjustCyl_3WP	:=	fbHOZAdjustCyl_3.xWP_Valve	;
 QxS03HOZAdjustCyl_3HP	:=	fbHOZAdjustCyl_3.xHP_Valve	;
-QxS03HOZAdjustCyl_4WP	:=	fbHOZAdjustCyl_4.xWP_Valve	;
-QxS03HOZAdjustCyl_4HP	:=	fbHOZAdjustCyl_4.xHP_Valve	;
+//S03上层水平调整气缸1(大）
 QxS03HOZAdjustCyl_5WP	:=	fbHOZAdjustCyl_5.xWP_Valve	;
 QxS03HOZAdjustCyl_5HP	:=	fbHOZAdjustCyl_5.xHP_Valve	;
-QxS03HOZAdjustCyl_6WP	:=	fbHOZAdjustCyl_6.xWP_Valve	;
-QxS03HOZAdjustCyl_6HP	:=	fbHOZAdjustCyl_6.xHP_Valve	;
+//S03下层水平调整气缸1(大）
 QxS03HOZAdjustCyl_7WP	:=	fbHOZAdjustCyl_7.xWP_Valve	;
 QxS03HOZAdjustCyl_7HP	:=	fbHOZAdjustCyl_7.xHP_Valve	;
-QxS03HOZAdjustCyl_8WP	:=	fbHOZAdjustCyl_8.xWP_Valve	;
-QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
+
 
 ]]></ST>
       </Implementation>
@@ -1271,15 +1262,22 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
     </LineIds>
     <LineIds Name="S03_LidChecking.A_Input">
       <LineId Id="28" Count="0" />
-      <LineId Id="82" Count="15" />
-      <LineId Id="65" Count="0" />
+      <LineId Id="99" Count="0" />
+      <LineId Id="82" Count="1" />
+      <LineId Id="100" Count="0" />
+      <LineId Id="86" Count="1" />
+      <LineId Id="101" Count="0" />
+      <LineId Id="90" Count="1" />
+      <LineId Id="102" Count="0" />
+      <LineId Id="94" Count="1" />
+      <LineId Id="104" Count="1" />
       <LineId Id="55" Count="0" />
       <LineId Id="40" Count="1" />
       <LineId Id="10" Count="3" />
       <LineId Id="8" Count="0" />
     </LineIds>
     <LineIds Name="S03_LidChecking.Alarm">
-      <LineId Id="303" Count="25" />
+      <LineId Id="361" Count="17" />
       <LineId Id="266" Count="0" />
     </LineIds>
     <LineIds Name="S03_LidChecking.Delay">
@@ -1296,12 +1294,13 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="3724" Count="3" />
       <LineId Id="3237" Count="0" />
       <LineId Id="1890" Count="0" />
-      <LineId Id="1536" Count="2" />
+      <LineId Id="1536" Count="0" />
       <LineId Id="3695" Count="2" />
       <LineId Id="3720" Count="0" />
       <LineId Id="3699" Count="0" />
       <LineId Id="3698" Count="0" />
       <LineId Id="3722" Count="0" />
+      <LineId Id="3730" Count="1" />
       <LineId Id="1539" Count="0" />
       <LineId Id="1546" Count="0" />
       <LineId Id="1717" Count="2" />
@@ -1360,7 +1359,11 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="3003" Count="0" />
       <LineId Id="3010" Count="0" />
       <LineId Id="3005" Count="0" />
-      <LineId Id="3172" Count="33" />
+      <LineId Id="3172" Count="19" />
+      <LineId Id="3732" Count="0" />
+      <LineId Id="3192" Count="6" />
+      <LineId Id="3733" Count="0" />
+      <LineId Id="3199" Count="6" />
       <LineId Id="3207" Count="3" />
       <LineId Id="3164" Count="0" />
       <LineId Id="1761" Count="0" />
@@ -1662,6 +1665,8 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="437" Count="9" />
       <LineId Id="475" Count="0" />
       <LineId Id="530" Count="1" />
+      <LineId Id="533" Count="1" />
+      <LineId Id="532" Count="0" />
       <LineId Id="472" Count="0" />
       <LineId Id="470" Count="0" />
       <LineId Id="482" Count="10" />
@@ -1723,7 +1728,12 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
     </LineIds>
     <LineIds Name="S03_LidChecking.Z_Output">
       <LineId Id="2" Count="0" />
-      <LineId Id="37" Count="15" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="37" Count="1" />
+      <LineId Id="40" Count="2" />
+      <LineId Id="44" Count="2" />
+      <LineId Id="48" Count="2" />
+      <LineId Id="52" Count="0" />
       <LineId Id="70" Count="1" />
     </LineIds>
   </POU>

@@ -8,6 +8,7 @@ VAR_INPUT
  arIVTCCylWPSensor:ARRAY[1..iColumnsNum] OF BOOL;
  xIRunningPremit:BOOL;
  xIEmptyDone:BOOL;
+ xITryRun:BOOL;
 END_VAR
 VAR_OUTPUT
  xQStart:BOOL;//链板线启动
@@ -44,6 +45,7 @@ CASE bFlowLineStep OF
 	END_IF
 1://下压气缸回原
 			FOR  i:=1 TO iColumnsNum BY 1 DO
+			 	 arQVTCCylWPValve[i]:=FALSE;
 				 arQVTCCylHPValve[i]:=TRUE;
 			END_FOR 	
 			bFlowLineStep:=bFlowLineStep +1;
@@ -65,7 +67,7 @@ CASE bFlowLineStep OF
 3://到位传感器检测
 	arTonDelay[01](IN:=FALSE);
 	arTonDelay[02](IN:=TRUE  , PT:=T#10S , Q=> , ET=> );
-	IF NOT fbmachine[1].xTryRun THEN
+	IF NOT xITryRun THEN
 		FOR  i:=1 TO iColumnsNum BY 1 DO
 			IF  NOT arIReachedSensor[i]  THEN
 				EXIT;
@@ -90,7 +92,9 @@ CASE bFlowLineStep OF
 		END_FOR
 5://下压气缸伸出
 				FOR  i:=1 TO iColumnsNum BY 1 DO
-						arQVTCCylWPValve[i]:=TRUE;
+						 arQVTCCylWPValve[i]:=TRUE;
+						 arQVTCCylHPValve[i]:=FALSE;
+				 
 				END_FOR
 					bFlowLineStep:=bFlowLineStep +1;
 6://检测下压气缸到位
@@ -119,7 +123,9 @@ END_CASE]]></ST>
       <LineId Id="134" Count="0" />
       <LineId Id="16" Count="3" />
       <LineId Id="212" Count="0" />
-      <LineId Id="214" Count="1" />
+      <LineId Id="214" Count="0" />
+      <LineId Id="262" Count="0" />
+      <LineId Id="215" Count="0" />
       <LineId Id="213" Count="0" />
       <LineId Id="216" Count="0" />
       <LineId Id="145" Count="0" />
@@ -139,7 +145,9 @@ END_CASE]]></ST>
       <LineId Id="131" Count="0" />
       <LineId Id="37" Count="6" />
       <LineId Id="119" Count="0" />
-      <LineId Id="121" Count="1" />
+      <LineId Id="121" Count="0" />
+      <LineId Id="263" Count="1" />
+      <LineId Id="122" Count="0" />
       <LineId Id="120" Count="0" />
       <LineId Id="123" Count="0" />
       <LineId Id="44" Count="0" />

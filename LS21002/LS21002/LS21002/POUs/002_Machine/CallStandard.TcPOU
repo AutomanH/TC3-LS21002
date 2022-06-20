@@ -44,6 +44,7 @@ VAR
 	SFCTrans: BOOL;
 	iInfo: INT;
 	arRefSwitchCheckSensor:ARRAY[1..gc_uiAxisNum] OF BOOL;
+	fbReference_TRIG:ARRAY[1..gc_uiAxisNum] OF R_TRIG;
 	
 	
 	
@@ -207,23 +208,23 @@ fbAxis[19].xIRelative_Encoder:=TRUE;
     </Action>
     <Action Name="ACT_AxisHome" Id="{f0326e53-8f63-4198-852d-14619dde76e1}">
       <Implementation>
-        <ST><![CDATA[sEctNetId := '192.168.1.1.6.1' ;//填写NETID
+        <ST><![CDATA[sEctNetId := '192.168.1.1.2.1' ;//填写NETID
 //回原点方式设定
-home_method[1] :=23;
-home_method[2] := 23 ;//35=机械回原点 23=正方向找原点 27=反方向找原点 7 11\
+home_method[1] :=27;
+home_method[2] := 27 ;//35=机械回原点 23=正方向找原点 27=反方向找原点 7 11\
 home_method[3] :=23;
-home_method[4] := 23;
+home_method[4] := 27;
 home_method[5] :=23;
-home_method[6] := 23 ;
+home_method[6] := 27 ;
 home_method[7] :=23;
-home_method[8] := 23;
+home_method[8] := 27;
 home_method[9] :=23;
 home_method[10] := 23 ;
 home_method[11] :=23;
 home_method[12] := 23;
 home_method[13] :=23;
-home_method[14] := 23 ;
-home_method[15] :=23;
+home_method[14] := 27 ;
+home_method[15] :=27;
 home_method[16] := 23;
 
 
@@ -237,63 +238,59 @@ fbAxisHome[19].iMode :=3;
 
 
 
-
-
-
-
-
-
-
-
-
-
-
 //从站地址
-cnSlaveAddr[01] := 1001 ;
-cnSlaveAddr[02] := 1002 ;
-cnSlaveAddr[03] := 1003 ;
-cnSlaveAddr[04] := 1004 ;
-cnSlaveAddr[05] := 1005 ;
-cnSlaveAddr[06] := 1006 ;
-cnSlaveAddr[07] := 1007 ;
-cnSlaveAddr[08] := 1008 ;
-cnSlaveAddr[09] := 1009 ;
-cnSlaveAddr[10] := 1010 ;
-cnSlaveAddr[11] := 1011 ;
+cnSlaveAddr[01] := 1014 ;
+cnSlaveAddr[02] := 1015 ;
+cnSlaveAddr[03] := 1016 ;
+cnSlaveAddr[04] := 1017 ;
+cnSlaveAddr[05] := 1018 ;
+cnSlaveAddr[06] := 1019 ;
+cnSlaveAddr[07] := 1020 ;
+cnSlaveAddr[08] := 1021 ;
 
-cnSlaveAddr[12] := 1012 ;
-cnSlaveAddr[13] := 1013 ;
-cnSlaveAddr[14] := 1014 ;
-cnSlaveAddr[15] := 1015 ;
-cnSlaveAddr[16] := 1016 ;
-cnSlaveAddr[17] := 1017 ;
-cnSlaveAddr[18] := 1018 ;
-cnSlaveAddr[19] := 1019 ;
+cnSlaveAddr[09] := 1024 ;
+
+cnSlaveAddr[10] := 1036 ;
+cnSlaveAddr[11] := 1037 ;
+cnSlaveAddr[12] := 1038 ;
+cnSlaveAddr[13] := 1039 ;
+cnSlaveAddr[14] := 1040 ;
+cnSlaveAddr[15] := 1041 ;
+cnSlaveAddr[16] := 1042 ;
+cnSlaveAddr[17] := 1043 ;
+cnSlaveAddr[18] := 1044 ;
+cnSlaveAddr[19] := 1045 ;
 
 
 
 
 FOR  i:=1 TO gc_uiAxisNum BY 1 DO
 	if i<=16 then
-	fbAxisHome[1].home_highspeed_set:= 150; //
-	fbAxisHome[1].home_lowspeed_set:= 5;
-
+	fbAxisHome[i].home_highspeed_set:= 150; //
+	fbAxisHome[i].home_lowspeed_set:= 5;
 	else
-		fbAxisHome[17].home_highspeed_set:= 100; //雷赛
-		fbAxisHome[17].home_lowspeed_set:= 10;
+		fbAxisHome[i].home_highspeed_set:= 100; //雷赛
+		fbAxisHome[i].home_lowspeed_set:= 10;
 	END_IF
 		fbAxisHome[i].tTimeOutSet := T#60S;//超时时间设定
 END_FOR
 
 
-
-
-
-
 FOR  i:=1  TO gc_uiAxisNum BY 1 DO
+ 
+
+		fbReference_TRIG[i](CLK:=fbAxis[i].xReferenceHmi OR  fbAxis[i].xReferenceAuto , Q=> );
+		IF    fbReference_TRIG[i].Q THEN
+			fbAxisHome[i].home_exe:=TRUE;
+			fbAxis[i].xReferenceHmi :=FALSE;
+		  fbAxis[i].xReferenceAuto:=FALSE;
+		END_IF
+		IF  fbAxisHome[i].home_exe AND   fbAxisHome[i].home_start THEN
+		 			fbAxisHome[i].home_exe:=FALSE;
+		END_IF
 		fbAxisHome[i](
 	    axis_name :=Axis[i], 
-		home_exe:=fbAxis[i].xReferenceHmi OR  fbAxis[i].xReferenceAuto, 
+		home_exe:=,//fbAxis[i].xReferenceHmi OR  fbAxis[i].xReferenceAuto, 
 		fb_netid:=sEctNetId , 
 		fb_nslaveaddr:= cnSlaveAddr[i] , 
 	    nctrl1:= nctrl1[i], 
@@ -528,8 +525,8 @@ fbMachine[i](
   xReset:= IxResetButton OR fbProface[1].xResetHmi ,
   xPause:= IxStopButton OR fbProface[1].xPauseHmi ,
   xInit:=IxInitButton OR fbProface[1].xInitHmi ,
-  xManualMode:= (IxManualMode OR  NOT xAutoModeTest), 
-  xAutoMode:= ( IxAutoMode OR  xAutoModeTest) ,	 
+  xManualMode:= (IxManualMode ), 
+  xAutoMode:= ( IxAutoMode ) ,	 
 	xRunning=>  , 
 	xEmptying=> ,
 	xEStopped=> , 
@@ -1065,14 +1062,14 @@ ELSE
 	//控制功能块实例化
 	FOR i:=1 TO gc_uiTURINRobot_Num DO
 		fbTURINContorl[i](
-			xManuMode:= TRUE , 
+			xManuMode:= fbMachine[1].xManualMode , 
 			xAutoRunning:= fbMachine[1].xRunning , 
-			xEStop:= fbMachine[1].xEStop  OR TRUE,  
-			xReset:= (fbMachine[1].xReset OR xReset) , 
-			xStart:= (fbMachine[1].xStart OR  xtest) , 
+			xEStop:= fbMachine[1].xEStop  ,  
+			xReset:= (fbMachine[1].xReset ) , 
+			xStart:= (fbMachine[1].xStart ) , 
 			xStop:= fbMachine[1].xStop , 
 			xPause:= fbMachine[1].xPause , 
-			xMovePermit:=(fbMachine[1].xAlarm AND  FALSE) AND stFromRobot.xLocal_Remote ,
+			xMovePermit:=  fbMachine[1].xAlarm  AND stFromRobot.xLocal_Remote,
 			xContinue:= , 
 			//xInitExte:= S03_Robot.xInit, 
 			xInitExte:=,
@@ -1187,7 +1184,7 @@ fbWritePersistentData(
         <ST><![CDATA[
 	fbERG_20_Modbus[1].stPara.bySlaveID := 1;
 	fbERG_20_Modbus[1].stPara.strSlaveIP := '192.168.1.20';//从站IP地址
-	fbERG_20_Modbus[1].stPara.iSlavePort := 1031;	
+	fbERG_20_Modbus[1].stPara.iSlavePort := 1030;	//四端口智嵌物联
 	
 	fbERG_20_Modbus[2].stPara.bySlaveID := 1;
 	fbERG_20_Modbus[2].stPara.strSlaveIP := '192.168.1.21';//从站IP地址
@@ -1197,8 +1194,8 @@ FOR i := 1 TO gc_uiHITBOT_Number BY 1 DO
 fbERG_20_Modbus[i](
 	xExecute:= , 
 	xAbort:= , 
-	xResetRequest:= , 
-	xPowerHmi:= , 
+	xResetRequest:=fbMachine[1].xReset , 
+	xPowerHmi:=TRUE , 
 	dwTimeLimit:= , 
 	dwTimeOut:= , 
 	stPara:= , 
@@ -1312,10 +1309,12 @@ END_FOR]]></ST>
       <LineId Id="960" Count="0" />
       <LineId Id="950" Count="0" />
       <LineId Id="838" Count="5" />
-      <LineId Id="938" Count="11" />
-      <LineId Id="937" Count="0" />
-      <LineId Id="846" Count="12" />
-      <LineId Id="978" Count="0" />
+      <LineId Id="938" Count="1" />
+      <LineId Id="846" Count="9" />
+      <LineId Id="1059" Count="0" />
+      <LineId Id="856" Count="0" />
+      <LineId Id="1060" Count="0" />
+      <LineId Id="857" Count="1" />
       <LineId Id="985" Count="7" />
       <LineId Id="980" Count="0" />
       <LineId Id="859" Count="0" />
@@ -1323,15 +1322,17 @@ END_FOR]]></ST>
       <LineId Id="1049" Count="0" />
       <LineId Id="1053" Count="0" />
       <LineId Id="1051" Count="1" />
-      <LineId Id="1050" Count="0" />
       <LineId Id="1054" Count="1" />
       <LineId Id="1057" Count="0" />
       <LineId Id="1056" Count="0" />
       <LineId Id="1058" Count="0" />
-      <LineId Id="998" Count="2" />
-      <LineId Id="881" Count="0" />
-      <LineId Id="889" Count="0" />
-      <LineId Id="893" Count="2" />
+      <LineId Id="998" Count="0" />
+      <LineId Id="1062" Count="0" />
+      <LineId Id="894" Count="1" />
+      <LineId Id="1064" Count="6" />
+      <LineId Id="1063" Count="0" />
+      <LineId Id="1072" Count="0" />
+      <LineId Id="1075" Count="1" />
       <LineId Id="897" Count="29" />
       <LineId Id="1048" Count="0" />
       <LineId Id="927" Count="0" />

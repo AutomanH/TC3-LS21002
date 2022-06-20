@@ -12,8 +12,8 @@ VAR
 
 
 	//伺服
-	fbZAxisMove_1	 :REFERENCE TO FB_Axis:=fbAxis[10];	//	调整工位-Z轴伺服1
-	fbZAxisMove_2	 :REFERENCE TO FB_Axis:=fbAxis[11];	//	调整工位-Z轴伺服2
+	fbZAxisMove_1	 :REFERENCE TO FB_Axis:=fbAxis[12];	//	调整工位-Z轴伺服1
+	fbZAxisMove_2	 :REFERENCE TO FB_Axis:=fbAxis[13];	//	调整工位-Z轴伺服2
 
 
 
@@ -197,31 +197,31 @@ CASE station.iStepAuto OF
 			fbZAxisMove_1.xMoveAuto[2]:=TRUE;
 		    fbZAxisMove_2.xMoveAuto[2]:=TRUE;
 			IF  fbZAxisMove_1.xMoveInPos[2] AND fbZAxisMove_2.xMoveInPos[2] THEN
-				station.iStepInit:=80;	
+				station.iStepAuto:=80;	
 			END_IF
 	80://复位延时
 				arTonDelay[02](IN:= FALSE); 
-					station.iStepInit:=90;
+					station.iStepAuto:=90;
 	90://延时等待
 		arTonDelay[02](IN:= TRUE , PT:=T#2S , Q=> , ET=>);//伺服下压延时		
 		IF  arTonDelay[2].Q THEN
-			station.iStepInit:=100;
+			station.iStepAuto:=100;
 		END_IF
 		
 	100://Z轴伺服上升
 			fbZAxisMove_1.xMoveAuto[1]:=TRUE;
 		    fbZAxisMove_2.xMoveAuto[1]:=TRUE;
 		IF  fbZAxisMove_1.xMoveInPos[1] AND fbZAxisMove_2.xMoveInPos[1] THEN
-			station.iStepInit:=110;	
+			station.iStepAuto:=110;	
 		END_IF	
 	110:
 		 tsModuleProcess[2].xProcessCompleted:=TRUE;
-		 station.iStepInit:=120;	
+		 station.iStepAuto:=120;	
 	120://调整结果
 		arProcessDataStation[1].stProduct.xAdjusting_NOK:=FALSE;
 		arProcessDataStation[2].stProduct.xAdjusting_OK :=TRUE;
 		 tsModuleProcess[2].xQDataCompleted:=TRUE;
-		station.iStepInit:=200;
+		station.iStepAuto:=200;
 	
 	////产品流程结束	
 	200:////Restore_after_Estop_Process3 数据传输流程
@@ -281,6 +281,9 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
+	FOR i:=1 TO gc_ModuleProNo BY 1 DO
+				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+		END_FOR
 	station.iStepInit:=20;
 20://伺服上电
 	fbZAxisMove_1.xPowerInit:=TRUE;
@@ -494,6 +497,8 @@ END_IF
     </LineIds>
     <LineIds Name="S05_Adjusting.FlowInit">
       <LineId Id="437" Count="9" />
+      <LineId Id="481" Count="1" />
+      <LineId Id="480" Count="0" />
       <LineId Id="467" Count="1" />
       <LineId Id="470" Count="3" />
       <LineId Id="469" Count="0" />

@@ -4,7 +4,7 @@
     <Declaration><![CDATA[PROGRAM S15_NG
 VAR
 	//工站
-	station					: REFERENCE TO FB_Station:=fbstation[13];
+	station					: REFERENCE TO FB_Station:=fbstation[15];
 	//气缸
 	fbHOZCyl_1			:REFERENCE TO FB_Cylinder:=fbCylinder[27];	//	分料气缸1
 	fbHOZCyl_2			:REFERENCE TO FB_Cylinder:=fbCylinder[28];	//	分料气缸2
@@ -154,8 +154,6 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
-
-100://	
     station.iStepInit:=999;	
 999://初始化完成	
 	station.iStepInit:=0;
@@ -257,7 +255,7 @@ station.xCanRun :=TRUE ;
     </LineIds>
     <LineIds Name="S15_NG.FlowInit">
       <LineId Id="437" Count="9" />
-      <LineId Id="459" Count="7" />
+      <LineId Id="461" Count="5" />
       <LineId Id="436" Count="0" />
     </LineIds>
     <LineIds Name="S15_NG.General">

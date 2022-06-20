@@ -18,16 +18,17 @@ S07_BoxCarrying();
 S08_MainLine();
 S09_CardCarrying();
 S10_BeltCarrying();
+S11_Packing();
+S12_PreLine();
 S13_Labeling();
 S14_LabelChecking();
 S15_NG();
-
+S16_Unloading();
 
 ControlMachine();
 CallStandard();
 CommWithPC();
 CommitWith200SMART();
-CommWithCamera();
 OutputLink();
 LightsTest.LightsTest();
 
@@ -42,12 +43,13 @@ LightsTest.LightsTest();
       <LineId Id="37" Count="0" />
       <LineId Id="13" Count="1" />
       <LineId Id="16" Count="0" />
+      <LineId Id="51" Count="1" />
       <LineId Id="23" Count="1" />
       <LineId Id="21" Count="1" />
       <LineId Id="20" Count="0" />
       <LineId Id="17" Count="1" />
       <LineId Id="29" Count="0" />
-      <LineId Id="41" Count="1" />
+      <LineId Id="41" Count="0" />
       <LineId Id="19" Count="0" />
       <LineId Id="47" Count="0" />
       <LineId Id="46" Count="0" />

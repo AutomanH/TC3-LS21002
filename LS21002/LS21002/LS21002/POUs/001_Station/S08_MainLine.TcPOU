@@ -24,7 +24,8 @@ VAR
 	xClearModuleProcessDone:BOOL;
 	bClearProcessStep	:BYTE;
 	// //环形线尾端传感器
-	xMainLineEndCheckSensor: ARRAY[1..2] of bool;
+	xMainLineEndCheckSensor: ARRAY[1..2] OF BOOL;
+	NextPosR_TRIG:R_TRIG;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -42,8 +43,8 @@ Z_Output();]]></ST>
     <Action Name="A_Input" Id="{2a912516-78df-4e77-81e9-cc324488ed21}">
       <Implementation>
         <ST><![CDATA[//传感器
-xMainLineEndCheckSensor[1] :=IxLineEndCheckSensor1;
-xMainLineEndCheckSensor[2] :=IxLineEndCheckSensor2;
+xMainLineEndCheckSensor[1] :=IxLineEndSensor1Reached;
+xMainLineEndCheckSensor[2] :=IxLineEndSensor2Reached;
 
 
 
@@ -189,18 +190,25 @@ CASE station.iStepAuto OF
 	110:
 	 	arTonDelay[02](IN:= TRUE , PT:=T#50MS , Q=> , ET=> );
 		   IF arTonDelay[02].Q THEN
-       		station.iStepAuto:=120;
+       		station.iStepAuto:=130;
 			arTonDelay[02](IN:=FALSE, PT:=T#50MS , Q=> , ET=> );
        	   END_IF
-	120:  //启动伺服电机
-	 		 fbMainLineAxis.xMoveAuto[2] := TRUE ;
-			 	station.iStepAuto:=130;
+//	120:  //启动伺服电机
+//	 		 fbMainLineAxis.xMoveAuto[2] := TRUE ;
+//			 	station.iStepAuto:=130;
+//	130:
+//			IF fbMainLineAxis.xMoveInPos[2]  THEN 	
+//				 fbMainLineAxis.xMoveAuto[2] := FALSE ;
+//				 tsModuleProcess[1].xProcessCompleted:=TRUE;
+//				 station.iStepAuto:=150;
+//			END_IF
 	130:
-			IF fbMainLineAxis.xMoveInPos[2]  THEN 	
-				 fbMainLineAxis.xMoveAuto[2] := FALSE ;
-				 tsModuleProcess[1].xProcessCompleted:=TRUE;
-				 station.iStepAuto:=150;
-			END_IF
+			fbMainLineAxis.xMoveAuto[2]:=TRUE;
+		 IF fbMainLineAxis.xMoveInPos[2] THEN
+			 station.iStepAuto :=150; 
+		 END_IF		
+			
+			
 	150://数据传递
 			FOR  i:=1 TO (gc_MainLineFixtureNumber-3) BY 1 DO
 				MEMCPY(ADR(arMainlineFixtureData[i+2]),ADR(arMainlineFixtureData[i]),SIZEOF(arMainlineFixtureData[i]));
@@ -256,7 +264,7 @@ CASE station.iStepAuto OF
 						station.iStepAuto:=190;
 			END_IF
 	190://启动各个工位
-			FOR  i:= 1 TO 6 BY 1 DO 
+			FOR  i:= 1 TO 7 BY 1 DO 
 				fbStation[i].xDone:=FALSE;
 			END_FOR
 			xS07MainlineRunPermit:=FALSE;
@@ -295,6 +303,10 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
+		_xFirstCycle:=FALSE;
+		FOR i:=1 TO gc_ModuleProNo BY 1 DO
+				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+			END_FOR
 		station.iStepInit:=20;
 20://伺服上电
 	fbMainLineAxis.xPowerInit:=TRUE;
@@ -322,6 +334,8 @@ CASE station.iStepInit OF
               IxLineEndCheckSensor1	 OR
               IxLineEndCheckSensor2	THEN
 			  	station.iStepInit:=100;	
+		ELSE
+		 		station.iStepInit:=40;	
 		END_IF
 40://皮带回原点
 		fbMainLineAxis.xReferenceAuto := TRUE ;
@@ -331,6 +345,12 @@ CASE station.iStepInit OF
 		 fbMainLineAxis.xReferenceAuto  := FALSE ;
 		 station.iStepInit:=60;  
 	END_IF
+55:	//旋转伺服上电
+	fbMainLineAxis.xPowerInit:=TRUE;
+	IF  fbMainLineAxis.xPowerOn THEN
+		station.iStepInit :=60;
+	END_IF
+			
 60://伺服到待机点
      fbMainLineAxis.xMoveAuto[1] := TRUE ;
 	IF fbMainLineAxis.xMoveInPos[1] THEN 
@@ -377,6 +397,18 @@ arCurFixtureNumStation[16]:=33;
 arCurFixtureNumStation[17]:=42;
 arCurFixtureNumStation[18]:=43;
 
+//////去下一个位置
+//NextPosR_TRIG(CLK:= fbMachine[1].xManualMode AND fbMainLineAxis.xMoveHmi[3], Q=> );
+//IF NextPosR_TRIG.Q THEN
+//			fbMainLineAxis.xMoveAuto[1] := TRUE ;
+//		 IF fbMainLineAxis.xMoveInPos[1] THEN 
+//					station.iStepInit:=100;	
+//		 END_IF
+//END_IF
+NextPosR_TRIG(CLK:= fbMachine[1].xManualMode AND fbMainLineAxis.xMoveHmi[6], Q=> );
+IF  NextPosR_TRIG.Q THEN
+ stData.Axis[15].rMovePosition[6]:=fbMainLineAxis.rActPos +fbMainLineAxis.rRelativeDistance;
+END_IF
 ]]></ST>
       </Implementation>
     </Action>
@@ -397,34 +429,35 @@ fbMainLineAxis.xMoveILC[2] :=
 fbMainLineAxis.xMoveILC[3] :=
 fbMainLineAxis.xMoveILC[4] :=
 fbMainLineAxis.xMoveILC[5] := 
-							S01_Loading.fbVTCCyl_1.xHP_Delay AND 
-							S01_Loading.fbVTCCyl_2.xHP_Delay AND 
-							S02_LidInjecting.fbHOZAdjustCyl_1.xHP_Delay AND
-							S02_LidInjecting.fbHOZAdjustCyl_2.xHP_Delay AND
-							S02_LidInjecting.fbHOZAdjustCyl_3.xHP_Delay AND
-							S02_LidInjecting.fbHOZAdjustCyl_4.xHP_Delay AND
-							S03_LidChecking.fbHOZAdjustCyl_1.xHP_Delay   AND
-							S03_LidChecking.fbHOZAdjustCyl_2.xHP_Delay   AND
-							S03_LidChecking.fbHOZAdjustCyl_3.xHP_Delay   AND
-							S03_LidChecking.fbHOZAdjustCyl_4.xHP_Delay   AND
-							S03_LidChecking.fbHOZAdjustCyl_5.xHP_Delay   AND
-							S03_LidChecking.fbHOZAdjustCyl_6.xHP_Delay   AND
-							S03_LidChecking.fbHOZAdjustCyl_7.xHP_Delay   AND
-							S03_LidChecking.fbHOZAdjustCyl_8.xHP_Delay   AND
-							S04_AluCovering.fbZAxisMove_1.xMoveInPos[1] AND 
-							S04_AluCovering.fbZAxisMove_2.xMoveInPos[1] AND
-							S04_AluCovering.fbHOZAdjustCyl_1.xHP_Delay AND
-							S04_AluCovering.fbHOZAdjustCyl_2.xHP_Delay AND
-							S04_AluCovering.fbHOZAdjustCyl_3.xHP_Delay AND
-							S04_AluCovering.fbHOZAdjustCyl_4.xHP_Delay AND
-							S05_Adjusting.fbZAxisMove_1.xMoveInPos[1] AND 
-							S05_Adjusting.fbZAxisMove_2.xMoveInPos[1] AND
-							S06_Cutting.fbVTCAdjustCyl.xHP_Delay AND
-							S06_Cutting.fbHOZCyl.xHP_Delay AND
-							S06_Cutting.fbHOZReachedCyl_1.xHP_Delay AND
-							S06_Cutting.fbHOZReachedCyl_2.xHP_Delay AND 
-							xMainLineEndCheckSensor[1]  AND 
-							xMainLineEndCheckSensor[2];]]></ST>
+fbMainLineAxis.xMoveILC[6] := 
+				S01_Loading.fbVTCCyl_1.xHP_Delay AND 
+				S01_Loading.fbVTCCyl_2.xHP_Delay AND 
+				S02_LidInjecting.fbHOZAdjustCyl_1.xHP_Delay AND
+				//S02_LidInjecting.fbHOZAdjustCyl_2.xHP_Delay AND
+				S02_LidInjecting.fbHOZAdjustCyl_3.xHP_Delay AND
+			//	S02_LidInjecting.fbHOZAdjustCyl_4.xHP_Delay AND
+				S03_LidChecking.fbHOZAdjustCyl_1.xHP_Delay   AND
+			//	S03_LidChecking.fbHOZAdjustCyl_2.xHP_Delay   AND
+				S03_LidChecking.fbHOZAdjustCyl_3.xHP_Delay   AND
+			//	S03_LidChecking.fbHOZAdjustCyl_4.xHP_Delay   AND
+				S03_LidChecking.fbHOZAdjustCyl_5.xHP_Delay   AND
+			//S03_LidChecking.fbHOZAdjustCyl_6.xHP_Delay   AND
+				S03_LidChecking.fbHOZAdjustCyl_7.xHP_Delay   AND
+		//		S03_LidChecking.fbHOZAdjustCyl_8.xHP_Delay   AND
+				S04_AluCovering.fbZAxisMove_1.xMoveInPos[1] AND 
+				S04_AluCovering.fbZAxisMove_2.xMoveInPos[1] AND
+				S04_AluCovering.fbHOZAdjustCyl_1.xHP_Delay AND
+			//	S04_AluCovering.fbHOZAdjustCyl_2.xHP_Delay AND
+				S04_AluCovering.fbHOZAdjustCyl_3.xHP_Delay AND
+			//	S04_AluCovering.fbHOZAdjustCyl_4.xHP_Delay AND
+				S05_Adjusting.fbZAxisMove_1.xMoveInPos[1] AND 
+				S05_Adjusting.fbZAxisMove_2.xMoveInPos[1] AND
+				S06_Cutting.fbVTCAdjustCyl.xHP_Delay AND
+				S06_Cutting.fbHOZCyl.xHP_Delay AND
+				S06_Cutting.fbHOZReachedCyl_1.xHP_Delay AND
+				S06_Cutting.fbHOZReachedCyl_2.xHP_Delay ; 
+//				NOT xMainLineEndCheckSensor[1]  AND 
+//				NOT xMainLineEndCheckSensor[2];]]></ST>
       </Implementation>
     </Action>
     <Action Name="TipAuto" Id="{b716fa5e-5270-4e18-9bba-03813482cbca}">
@@ -544,6 +577,9 @@ END_IF
       <LineId Id="1534" Count="0" />
       <LineId Id="1533" Count="0" />
       <LineId Id="1529" Count="0" />
+      <LineId Id="1710" Count="0" />
+      <LineId Id="1707" Count="2" />
+      <LineId Id="1704" Count="2" />
       <LineId Id="1584" Count="0" />
       <LineId Id="1588" Count="0" />
       <LineId Id="1587" Count="0" />
@@ -593,6 +629,9 @@ END_IF
     </LineIds>
     <LineIds Name="S08_MainLine.FlowInit">
       <LineId Id="437" Count="9" />
+      <LineId Id="569" Count="0" />
+      <LineId Id="567" Count="1" />
+      <LineId Id="566" Count="0" />
       <LineId Id="478" Count="0" />
       <LineId Id="492" Count="0" />
       <LineId Id="494" Count="4" />
@@ -612,12 +651,17 @@ END_IF
       <LineId Id="550" Count="0" />
       <LineId Id="548" Count="0" />
       <LineId Id="542" Count="1" />
-      <LineId Id="556" Count="1" />
+      <LineId Id="556" Count="0" />
+      <LineId Id="558" Count="1" />
+      <LineId Id="557" Count="0" />
       <LineId Id="501" Count="0" />
       <LineId Id="520" Count="1" />
       <LineId Id="524" Count="0" />
       <LineId Id="526" Count="1" />
-      <LineId Id="531" Count="3" />
+      <LineId Id="531" Count="1" />
+      <LineId Id="562" Count="3" />
+      <LineId Id="560" Count="1" />
+      <LineId Id="533" Count="1" />
       <LineId Id="536" Count="0" />
       <LineId Id="538" Count="0" />
       <LineId Id="522" Count="0" />
@@ -653,6 +697,13 @@ END_IF
       <LineId Id="413" Count="0" />
       <LineId Id="410" Count="0" />
       <LineId Id="405" Count="0" />
+      <LineId Id="415" Count="1" />
+      <LineId Id="421" Count="2" />
+      <LineId Id="419" Count="0" />
+      <LineId Id="418" Count="0" />
+      <LineId Id="428" Count="1" />
+      <LineId Id="433" Count="1" />
+      <LineId Id="426" Count="0" />
     </LineIds>
     <LineIds Name="S08_MainLine.ILC">
       <LineId Id="234" Count="4" />
@@ -661,6 +712,7 @@ END_IF
       <LineId Id="290" Count="0" />
       <LineId Id="245" Count="1" />
       <LineId Id="248" Count="4" />
+      <LineId Id="350" Count="0" />
       <LineId Id="345" Count="0" />
       <LineId Id="309" Count="4" />
       <LineId Id="316" Count="2" />

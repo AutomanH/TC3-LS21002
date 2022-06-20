@@ -4,7 +4,7 @@
     <Declaration><![CDATA[PROGRAM S14_LabelChecking
 VAR
 	//工站
-	station					: REFERENCE TO FB_Station:=fbstation[12];
+	station					: REFERENCE TO FB_Station:=fbstation[14];
 	
 	
 	
@@ -152,8 +152,6 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
-
-100://	
     station.iStepInit:=999;	
 999://初始化完成	
 	station.iStepInit:=0;
@@ -255,7 +253,7 @@ station.xCanRun :=TRUE ;
     </LineIds>
     <LineIds Name="S14_LabelChecking.FlowInit">
       <LineId Id="437" Count="9" />
-      <LineId Id="459" Count="7" />
+      <LineId Id="461" Count="5" />
       <LineId Id="436" Count="0" />
     </LineIds>
     <LineIds Name="S14_LabelChecking.General">

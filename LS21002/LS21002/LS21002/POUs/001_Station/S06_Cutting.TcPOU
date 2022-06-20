@@ -320,12 +320,28 @@ CASE station.iStepAuto OF
 	160://水平切膜气缸返回
 		 	fbHOZCyl.xAuto:=FALSE;
 			IF  fbHOZCyl.xHP_Delay THEN
-				station.iStepAuto :=200;		
-			END_IF 	
+				station.iStepAuto :=170;		
+			END_IF 
+	170://调整夹爪气缸松开
+				
+				fbGlampAdjustCyl_1.xAuto:=FALSE;
+				fbGlampAdjustCyl_2.xAuto:=FALSE;
+				fbGlampAdjustCyl_3.xAuto:=FALSE;
+			IF   fbGlampAdjustCyl_1.xHP_Delay AND
+				  fbGlampAdjustCyl_2.xHP_Delay  AND 
+				  fbGlampAdjustCyl_3.xHP_Delay   THEN
+					station.iStepAuto :=180;	
+			END_IF
+	180://顶升调整气缸收回
+				fbVTCAdjustCyl.xAuto:=FALSE;
+		IF fbVTCAdjustCyl.xHP_Delay THEN
+			station.iStepAuto :=200;	
+		END_IF	
+			
 	////产品流程结束	
 	200:////Restore_after_Estop_Process3 数据传输流程
 			IF  station.xRunning OR fbMachine[1].xTryRun THEN
-					station.iStepAuto :=999;
+					station.iStepAuto :=250;
 			ELSIF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
 					station.iStepAuto :=210; (*process not started*)
 			ELSIF  tsModuleProcess[3].xProcessStarted AND NOT  tsModuleProcess[3].xProcessCompleted THEN
@@ -333,7 +349,7 @@ CASE station.iStepAuto OF
 			ELSIF  tsModuleProcess[3].xProcessCompleted AND NOT tsModuleProcess[3].xQDataCompleted  THEN
 					station.iStepAuto :=230;(*process completed*)
 			ELSIF tsModuleProcess[3].xQDataCompleted THEN
-					station.iStepAuto :=999;(*Qdata completed *)
+					station.iStepAuto :=250;(*Qdata completed *)
 			ELSE
 					station.iStepAuto :=210; 
 			END_IF		
@@ -358,8 +374,21 @@ CASE station.iStepAuto OF
 			MEMSET(ADR(arProcessDataStation[2]),0,SIZEOF(arProcessDataStation[2]));
 			MEMSET(ADR(arProcessDataStation[3]),0,SIZEOF(arProcessDataStation[3]));
 			tsModuleProcess[3].xQDataCompleted:=TRUE;
-			station.iStepAuto:= 999;
-	
+			station.iStepAuto:= 250;
+	250://
+				station.xDone:=TRUE;
+				station.iStepAuto:= 260;
+				
+	260://夹爪松开			
+			fbGlampCyl_1.xauto:=FALSE;
+			IF	fbGlampCyl_1.xHP_Delay THEN
+					station.iStepAuto :=270;	
+			END_IF
+	270://伺服回初始位置		
+			fbROTAxisMove.xMoveAuto[1]:=TRUE;
+		 IF fbROTAxisMove.xMoveInPos[1] THEN
+			 station.iStepAuto :=999; 
+		 END_IF
 	999://----Single Run Finish----
 			
 		station.iStepAuto :=0;
@@ -368,7 +397,8 @@ CASE station.iStepAuto OF
 		END_IF
 		
 		station.xCycleEnable:=FALSE;	
-		station.xDone:=TRUE;
+		station.xDone:=TRUE;			
+		
 	ELSE
 		;	
 END_CASE
@@ -390,20 +420,23 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
-	station.iStepInit :=20;
+	FOR i:=1 TO gc_ModuleProNo BY 1 DO
+				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+	END_FOR
+	station.iStepInit :=40;
 
-30://切膜流程分析
-		IF   tsModuleProcess[2].xProcessStarted  AND  NOT tsModuleProcess[2].xProcessCompleted  THEN
-			station.iStepInit:=40;
-		ELSIF     tsModuleProcess[2].xProcessCompleted  THEN
-			station.iStepInit:=50;
-		ELSE(*未开始*)
-			station.iStepInit :=200;
-		END_IF
+//20://切膜流程分析
+//		IF   tsModuleProcess[2].xProcessStarted  AND  NOT tsModuleProcess[2].xProcessCompleted  THEN
+//			station.iStepInit:=40;
+//		ELSIF     tsModuleProcess[2].xProcessCompleted  THEN
+//			station.iStepInit:=50;
+//		ELSE(*未开始*)
+//			station.iStepInit :=200;
+//		END_IF
 
 40://水平切膜气缸伸出
-	fbHOZCyl.xAuto :=TRUE;
-	IF  fbHOZCyl.xWP_Delay THEN
+	fbHOZCyl.xInit :=TRUE;
+	IF  fbHOZCyl.xHP_Delay THEN
 		station.iStepInit :=50;
 	END_IF
 50://后侧夹爪气缸松开
@@ -730,6 +763,16 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="1810" Count="0" />
       <LineId Id="1816" Count="2" />
       <LineId Id="1815" Count="0" />
+      <LineId Id="2221" Count="0" />
+      <LineId Id="2224" Count="1" />
+      <LineId Id="2227" Count="0" />
+      <LineId Id="2229" Count="0" />
+      <LineId Id="2231" Count="3" />
+      <LineId Id="2223" Count="0" />
+      <LineId Id="2236" Count="0" />
+      <LineId Id="2239" Count="2" />
+      <LineId Id="2238" Count="0" />
+      <LineId Id="2222" Count="0" />
       <LineId Id="1665" Count="0" />
       <LineId Id="2118" Count="0" />
       <LineId Id="2185" Count="1" />
@@ -745,12 +788,22 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="2144" Count="0" />
       <LineId Id="2113" Count="0" />
       <LineId Id="1210" Count="0" />
+      <LineId Id="2202" Count="0" />
+      <LineId Id="2204" Count="5" />
+      <LineId Id="2201" Count="0" />
+      <LineId Id="2211" Count="0" />
+      <LineId Id="2218" Count="2" />
+      <LineId Id="2210" Count="0" />
       <LineId Id="1212" Count="2" />
       <LineId Id="1453" Count="2" />
-      <LineId Id="1215" Count="9" />
+      <LineId Id="1215" Count="2" />
+      <LineId Id="2199" Count="0" />
+      <LineId Id="1218" Count="6" />
     </LineIds>
     <LineIds Name="S06_Cutting.FlowInit">
       <LineId Id="437" Count="9" />
+      <LineId Id="596" Count="1" />
+      <LineId Id="595" Count="0" />
       <LineId Id="467" Count="0" />
       <LineId Id="584" Count="0" />
       <LineId Id="583" Count="0" />
