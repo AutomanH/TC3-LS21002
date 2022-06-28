@@ -2,6 +2,23 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
   <POU Name="FB_FlowLine" Id="{52997166-3b63-4e55-9278-d93ff937da70}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_FlowLine
+(*
+********************************************************************************
+* Name: FB_Camera
+*
+* Author:  AutomanH
+* Version: 1.0.0
+*
+* Description:
+*	Flow Line Program and motor control
+*
+* Remarks:
+*
+*
+* Revisions:
+*   V1.0.0 -Automanh 2022.06.08
+* 	V2.0.0-Automanh 2022.06.20,Add ACT_Motor();
+*********************************************************************************)
 VAR_INPUT
  arIReachedSensor:ARRAY[1..iColumnsNum] OF BOOL;
  arIVTCCylHPSensor:ARRAY[1..iColumnsNum] OF BOOL;
@@ -9,160 +26,297 @@ VAR_INPUT
  xIRunningPremit:BOOL;
  xIEmptyDone:BOOL;
  xITryRun:BOOL;
+ xIMotorEstop:BOOL;
+ xIInit:BOOL;
+ xIMotorStartButtonHmi:BOOL;
+ xIMotorStopButtonHmi:BOOL;
+ xIManualMode:BOOL;
+ xIAutoMode:BOOL;
 END_VAR
 VAR_OUTPUT
- xQStart:BOOL;//链板线启动
  arQVTCCylHPValve:ARRAY[1..iColumnsNum] OF BOOL;
  arQVTCCylWPValve:ARRAY[1..iColumnsNum] OF BOOL; 
- xQReady:BOOL;
+ xQMotorEstop:BOOL;
+ xQMotorStop:BOOL;
+ xQMotorStart:BOOL;
+ xQBusy:BOOL;
  xQError:BOOL;
 END_VAR
 VAR
+ 	//链板线电机启动
+ 	xMotorStart:BOOL;
+	xMotorStop:BOOL;
 	// 链板线步骤
 	bFlowLineStep: BYTE;
 	bFlowLineStepOld:BYTE;
+	bMotorCtrlStep:BYTE;
 	// 延时
 	arTonDelay: ARRAY[1..10] OF ton;
 	i:INT;
 	_xFirstCycle: BOOL;
+	stMotorStatus:DUT_Motor;
+	ModeSwitchR_TRIG:R_TRIG;
+	InitR_TRIG:R_TRIG;
+	bInitStep: BYTE;
 END_VAR
 VAR CONSTANT
  	iColumnsNum :INT:=4;
 END_VAR]]></Declaration>
     <Implementation>
-      <ST><![CDATA[(**************************************链板线程序********************************************)
-CASE bFlowLineStep OF
-0://启动
-	FOR i:=1 TO 10 BY 1 DO
-	 	arTonDelay[i](IN:=FALSE);
-	END_FOR
- 	IF	(xIRunningPremit OR NOT _xFirstCycle) AND NOT xIEmptyDone  THEN
-	 		xQStart:=TRUE;
-			_xFirstCycle:=TRUE;
-			bFlowLineStep:=bFlowLineStep +1;
-	ELSE
-	 		xQStart:=FALSE;
-	END_IF
-1://下压气缸回原
+      <ST><![CDATA[ACT_Motor();
+ACT_Flow();
+ACT_Manual();
+ACT_Init();]]></ST>
+    </Implementation>
+    <Action Name="ACT_Flow" Id="{8a8dac4c-17a0-452b-be41-4bef968f9fe3}">
+      <Implementation>
+        <ST><![CDATA[
+
+(**************************************链板线程序********************************************)
+	CASE bFlowLineStep OF
+	0://启动
+		FOR i:=1 TO 10 BY 1 DO
+			arTonDelay[i](IN:=FALSE);
+		END_FOR
+		IF	xIRunningPremit  AND NOT xIEmptyDone  THEN
+				bInitStep:=0;
+				xMotorStart:=TRUE;
+				xMotorStop:=FALSE;
+				_xFirstCycle:=TRUE;
+				xIRunningPremit:=FALSE;
+				xQBusy:=TRUE;
+				bFlowLineStep:=bFlowLineStep +1;
+		ELSE
+				xMotorStart:=FALSE;
+		END_IF
+	1://下压气缸回原
+				FOR  i:=1 TO iColumnsNum BY 1 DO
+					 arQVTCCylWPValve[i]:=FALSE;
+					 arQVTCCylHPValve[i]:=TRUE;
+				END_FOR 	
+				bFlowLineStep:=bFlowLineStep +1;
+	2://判断回原是否完成
+			arTonDelay[01](IN:=NOT xQError  , PT:=T#5S , Q=> , ET=> );
+			IF  NOT arTonDelay[01].Q THEN
+				FOR  i:=1 TO iColumnsNum BY 1 DO
+					IF  NOT arIVTCCylHPSensor[i] THEN
+						EXIT;	
+					 ELSIF  i  =iColumnsNum THEN
+							bFlowLineStep:=bFlowLineStep +1;
+					 END_IF
+				 END_FOR
+			ELSE
+				xQError:=TRUE;    
+				bFlowLineStepOld :=bFlowLineStep;
+			END_IF
+			
+	3://到位传感器检测
+		arTonDelay[01](IN:=FALSE);
+		arTonDelay[02](IN:=TRUE  , PT:=T#10S , Q=> , ET=> );
+		IF NOT xITryRun THEN
+			FOR  i:=1 TO iColumnsNum BY 1 DO
+				IF  NOT arIReachedSensor[i]  THEN
+					EXIT;
+				ELSIF   i =iColumnsNum THEN
+					bFlowLineStep:=bFlowLineStep +2;
+				ELSIF  arTonDelay[02].Q THEN
+				 bFlowLineStep:=bFlowLineStep +1;
+					arTonDelay[02](IN:=FALSE);
+				END_IF
+			END_FOR
+		ELSE
+				bFlowLineStep:=bFlowLineStep +2;
+		END_IF
+	//4://如果到位传感器只检测到一组，那么也可以进行
+	//		arTonDelay[02](IN:=FALSE);
+	//		FOR  i:=1 TO iColumnsNum BY 1 DO
+	//		 		IF arIReachedSensor[i] AND arIReachedSensor[i+2] THEN
+	//				 			bFlowLineStep:=bFlowLineStep +1;
+	//				ELSIF  i =iColumnsNum THEN
+	//				 			bFlowLineStep:=bFlowLineStep -1;
+	//				END_IF
+	//		END_FOR
+	5://下压气缸伸出
+					FOR  i:=1 TO iColumnsNum BY 1 DO
+							 arQVTCCylWPValve[i]:=TRUE;
+							 arQVTCCylHPValve[i]:=FALSE;
+					 
+					END_FOR
+						bFlowLineStep:=bFlowLineStep +1;
+	6://检测下压气缸到位
+			//	FOR  i:=1 TO iColumnsNum  BY 1 DO
+			//				IF  NOT   arIVTCCylWPSensor[i] OR  arIVTCCylHPSensor[i]  THEN
+			//					EXIT;
+			//				ELSIF  i=iColumnsNum THEN
+			//				 		bFlowLineStep:=bFlowLineStep +1;
+			//				END_IF
+			//	END_FOR   
+				bFlowLineStep:=bFlowLineStep +1;
+	7://延时2S
+				arTonDelay[3](IN:=TRUE  , PT:=T#2S , Q=> , ET=> );
+			IF  	arTonDelay[3].Q THEN
+						bFlowLineStep:=bFlowLineStep +1;
+						arTonDelay[3](IN:=FALSE);
+			END_IF	      
+	8://输出链板线Ready信号
+			 xQBusy:=FALSE;
+			 bFlowLineStep:=0;
+	END_CASE]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Init" Id="{6524b2a2-a9d5-4f5a-8fad-02d8e90a8192}">
+      <Implementation>
+        <ST><![CDATA[InitR_TRIG(CLK:= xIInit, Q=> );
+CASE bInitStep OF
+ 0:
+ 	IF	InitR_TRIG.Q THEN
+	 		bFlowLineStep:=0;
+			xQBusy:=FALSE;
+			bInitStep:=bInitStep +1;
+	 END_IF
+ 
+ 1://气缸回原
 			FOR  i:=1 TO iColumnsNum BY 1 DO
 			 	 arQVTCCylWPValve[i]:=FALSE;
 				 arQVTCCylHPValve[i]:=TRUE;
 			END_FOR 	
-			bFlowLineStep:=bFlowLineStep +1;
-2://判断回原是否完成
-		arTonDelay[01](IN:=NOT xQError  , PT:=T#5S , Q=> , ET=> );
-		IF  NOT arTonDelay[01].Q THEN
-			FOR  i:=1 TO iColumnsNum BY 1 DO
-			 	IF  NOT arIVTCCylHPSensor[i] THEN
-					EXIT;	
-				 ELSIF  i  =iColumnsNum THEN
-						bFlowLineStep:=bFlowLineStep +1;
-				 END_IF
-			 END_FOR
-		ELSE
-			xQError:=TRUE;    
-			bFlowLineStepOld :=bFlowLineStep;
-		END_IF
-		
-3://到位传感器检测
-	arTonDelay[01](IN:=FALSE);
-	arTonDelay[02](IN:=TRUE  , PT:=T#10S , Q=> , ET=> );
-	IF NOT xITryRun THEN
-		FOR  i:=1 TO iColumnsNum BY 1 DO
-			IF  NOT arIReachedSensor[i]  THEN
-				EXIT;
-			ELSIF   i =iColumnsNum THEN
-			 	bFlowLineStep:=bFlowLineStep +2;
-			ELSIF  arTonDelay[02].Q THEN
-			 bFlowLineStep:=bFlowLineStep +1;
-				arTonDelay[02](IN:=FALSE);
+				bInitStep:=bInitStep +1;
+ 2://链板线停止
+ 			xQMotorEstop:=FALSE;
+		  xQMotorStop:=FALSE;
+		  xQMotorStart:=FALSE;
+			xQBusy:=FALSE;
+			bInitStep:=0;
+
+END_CASE
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Manual" Id="{be38eeb0-0032-4be1-8538-9852e13dc970}">
+      <Implementation>
+        <ST><![CDATA[IF  (xMotorStart OR  xIAutoMode )  OR
+ 		(xIMotorStartButtonHmi AND xIManualMode) THEN
+			xQMotorStart:=TRUE;
+			xQMotorStop:=FALSE;
+ELSIF
+ 	 (xMotorStop OR  xIAutoMode )  OR
+ 	(xIMotorStopButtonHmi AND xIManualMode)	THEN
+		xQMotorStart:=FALSE;
+		xQMotorStop:=TRUE;
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Motor" Id="{849b814a-2f32-478a-9aea-f75e9105b6dc}">
+      <Implementation>
+        <ST><![CDATA[ModeSwitchR_TRIG(CLK:= xIManualMode XOR xIAutoMode , Q=> );
+CASE  bMotorCtrlStep  OF
+0://等待激活
+			IF   xIMotorEstop THEN
+			 		bMotorCtrlStep:=1;
+			ELSIF xMotorStop	 THEN
+			 		bMotorCtrlStep:=2;
+			ELSIF ModeSwitchR_TRIG.Q THEN
+			 		bMotorCtrlStep:=4;
+			ELSIF xMotorStart	 THEN
+			 		bMotorCtrlStep:=3;
 			END_IF
-		END_FOR
-	ELSE
-			bFlowLineStep:=bFlowLineStep +1;
-	END_IF
-4://如果到位传感器只检测到一组，那么也可以进行
-		arTonDelay[02](IN:=FALSE);
-		FOR  i:=1 TO iColumnsNum BY 1 DO
-		 		IF arIReachedSensor[i] AND arIReachedSensor[i+2] THEN
-				 			bFlowLineStep:=bFlowLineStep +1;
-				ELSIF  i =iColumnsNum THEN
-				 			bFlowLineStep:=bFlowLineStep -1;
-				END_IF
-		END_FOR
-5://下压气缸伸出
-				FOR  i:=1 TO iColumnsNum BY 1 DO
-						 arQVTCCylWPValve[i]:=TRUE;
-						 arQVTCCylHPValve[i]:=FALSE;
-				 
-				END_FOR
-					bFlowLineStep:=bFlowLineStep +1;
-6://检测下压气缸到位
-			FOR  i:=1 TO iColumnsNum  BY 1 DO
-						IF  NOT   arIVTCCylWPSensor[i] OR  arIVTCCylHPSensor[i]  THEN
-							EXIT;
-						ELSIF  i=iColumnsNum THEN
-						 		bFlowLineStep:=bFlowLineStep +1;
-						END_IF
-			END_FOR    
-7://延时2S
-			arTonDelay[3](IN:=TRUE  , PT:=T#2S , Q=> , ET=> );
-		IF  	arTonDelay[3].Q THEN
-		 			bFlowLineStep:=bFlowLineStep +1;
-				 	arTonDelay[3](IN:=FALSE);
-		END_IF	      
-8://输出链板线Ready信号
-		 xQReady:=TRUE;
-		 bFlowLineStep:=0;
+1://急停被拍下
+		xQMotorEstop:=TRUE;
+		xQMotorStart:=FALSE;
+		bMotorCtrlStep:=0;
+2://停止被按下
+		xQMotorStart:=FALSE;
+		bMotorCtrlStep:=0;
+3://启动被按下
+			
+			xQMotorStop:=FALSE;
+			xQMotorStart:=TRUE;
+			bMotorCtrlStep:=0;
+4://设备模式切换
+			
+			xQMotorStart:=FALSE;
+			xQMotorStop:=TRUE;
+			bMotorCtrlStep:=0;
+			bFlowLineStep:=0;
 END_CASE]]></ST>
-    </Implementation>
+      </Implementation>
+    </Action>
     <LineIds Name="FB_FlowLine">
-      <LineId Id="10" Count="2" />
-      <LineId Id="223" Count="2" />
-      <LineId Id="14" Count="1" />
-      <LineId Id="134" Count="0" />
-      <LineId Id="16" Count="3" />
-      <LineId Id="212" Count="0" />
-      <LineId Id="214" Count="0" />
-      <LineId Id="262" Count="0" />
-      <LineId Id="215" Count="0" />
-      <LineId Id="213" Count="0" />
-      <LineId Id="216" Count="0" />
-      <LineId Id="145" Count="0" />
-      <LineId Id="170" Count="0" />
-      <LineId Id="173" Count="0" />
-      <LineId Id="204" Count="0" />
-      <LineId Id="206" Count="3" />
-      <LineId Id="205" Count="0" />
-      <LineId Id="218" Count="0" />
-      <LineId Id="182" Count="1" />
-      <LineId Id="186" Count="0" />
-      <LineId Id="147" Count="0" />
-      <LineId Id="202" Count="0" />
-      <LineId Id="20" Count="0" />
-      <LineId Id="222" Count="0" />
-      <LineId Id="21" Count="15" />
-      <LineId Id="131" Count="0" />
-      <LineId Id="37" Count="6" />
-      <LineId Id="119" Count="0" />
-      <LineId Id="121" Count="0" />
-      <LineId Id="263" Count="1" />
-      <LineId Id="122" Count="0" />
-      <LineId Id="120" Count="0" />
-      <LineId Id="123" Count="0" />
-      <LineId Id="44" Count="0" />
-      <LineId Id="124" Count="0" />
-      <LineId Id="61" Count="0" />
-      <LineId Id="125" Count="0" />
-      <LineId Id="127" Count="1" />
-      <LineId Id="126" Count="0" />
-      <LineId Id="63" Count="0" />
-      <LineId Id="227" Count="1" />
-      <LineId Id="230" Count="0" />
-      <LineId Id="232" Count="1" />
-      <LineId Id="231" Count="0" />
-      <LineId Id="64" Count="2" />
       <LineId Id="84" Count="0" />
+      <LineId Id="294" Count="0" />
+      <LineId Id="326" Count="0" />
+      <LineId Id="353" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_FlowLine.ACT_Flow">
+      <LineId Id="2" Count="8" />
+      <LineId Id="94" Count="0" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="88" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="92" Count="1" />
+      <LineId Id="13" Count="65" />
+      <LineId Id="91" Count="0" />
+      <LineId Id="79" Count="8" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_FlowLine.ACT_Init">
+      <LineId Id="1" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="30" Count="1" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="19" Count="1" />
+      <LineId Id="24" Count="3" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="35" Count="0" />
+      <LineId Id="38" Count="2" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="4" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_FlowLine.ACT_Manual">
+      <LineId Id="1" Count="0" />
+      <LineId Id="7" Count="0" />
+      <LineId Id="4" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="12" Count="1" />
+      <LineId Id="3" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_FlowLine.ACT_Motor">
+      <LineId Id="39" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="14" Count="1" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="51" Count="1" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="24" Count="1" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="31" Count="1" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="54" Count="0" />
+      <LineId Id="49" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="3" Count="0" />
     </LineIds>
   </POU>
 </TcPlcObject>

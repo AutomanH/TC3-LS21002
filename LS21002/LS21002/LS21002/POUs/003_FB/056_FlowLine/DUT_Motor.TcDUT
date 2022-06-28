@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_Motor" Id="{a9523b3c-66f8-434b-9b48-8bb9aec5e221}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE DUT_Motor :
+(
+	eMotorinit := 0,
+	eMotorStart:=1,
+	eMotorEstop:=2,
+	eMotorStop:=3
+)BYTE;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

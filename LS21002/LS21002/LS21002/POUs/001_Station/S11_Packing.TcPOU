@@ -5,12 +5,15 @@
 VAR
  //工站
 	station					: REFERENCE TO FB_Station:=fbstation[11];
+	//200smart通讯
+	Modbus_200Smart	: REFERENCE TO FB_Modbus_200Smart:=fbModbus_200Smart;
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[FlowAuto();
 FlowInit();
-ILC();]]></ST>
+ILC();
+Mapping();]]></ST>
     </Implementation>
     <Action Name="FlowAuto" Id="{355e307b-1950-4a77-9294-826bb6ef49f8}">
       <Implementation>
@@ -45,8 +48,12 @@ CASE station.iStepAuto OF
 			station.iStepAuto:= 10;
 		END_IF
     10: //复位数据 
-			station.iStepAuto :=999;
-		
+			station.iStepAuto :=20;
+
+	 20:	
+				IF  sModbus_200SMART.iTemperatureReached  =1 THEN 
+						station.iStepAuto:= 999;
+					END_IF
 	999://----Single Run Finish----
 			
 		station.iStepAuto :=0;
@@ -59,7 +66,10 @@ CASE station.iStepAuto OF
 	ELSE
 		;	
 END_CASE
-END_IF]]></ST>
+END_IF
+
+
+]]></ST>
       </Implementation>
     </Action>
     <Action Name="FlowInit" Id="{c673a787-1107-4afb-9d85-43838d036e96}">
@@ -75,6 +85,11 @@ CASE station.iStepInit OF
   	END_IF	
 10://复位数据
   station.iStepInit:=999;	
+	
+//20://等待初始化完成
+//	IF  sModbus_200SMART.iInitCompleted =1 THEN
+//	 			station.iStepInit:=999;	
+//	END_IF
 999://初始化完成	
 	station.iStepInit:=0;
 	station.xInitDone:=TRUE;  
@@ -97,10 +112,21 @@ station.xCanRun :=TRUE ;
 ]]></ST>
       </Implementation>
     </Action>
+    <Action Name="Mapping" Id="{372d4704-d8d2-4ead-96ca-25f0ff3797db}">
+      <Implementation>
+        <ST><![CDATA[(**********配置*********)
+Modbus_200Smart.stPara.strSlaveIP:='192.168.1.2';
+Modbus_200Smart.stPara.iSlavePort:=502;
+Modbus_200Smart.stPara.bySlaveID:=1;
+
+]]></ST>
+      </Implementation>
+    </Action>
     <LineIds Name="S11_Packing">
       <LineId Id="5" Count="0" />
       <LineId Id="12" Count="0" />
       <LineId Id="11" Count="0" />
+      <LineId Id="21" Count="0" />
     </LineIds>
     <LineIds Name="S11_Packing.FlowAuto">
       <LineId Id="1155" Count="10" />
@@ -109,15 +135,21 @@ station.xCanRun :=TRUE ;
       <LineId Id="1184" Count="0" />
       <LineId Id="1256" Count="0" />
       <LineId Id="1970" Count="0" />
-      <LineId Id="1778" Count="0" />
+      <LineId Id="1975" Count="0" />
+      <LineId Id="1974" Count="0" />
+      <LineId Id="1979" Count="0" />
+      <LineId Id="1976" Count="1" />
       <LineId Id="1212" Count="2" />
       <LineId Id="1453" Count="2" />
       <LineId Id="1215" Count="5" />
       <LineId Id="1224" Count="0" />
+      <LineId Id="1972" Count="1" />
+      <LineId Id="1971" Count="0" />
     </LineIds>
     <LineIds Name="S11_Packing.FlowInit">
       <LineId Id="437" Count="9" />
       <LineId Id="459" Count="0" />
+      <LineId Id="467" Count="4" />
       <LineId Id="462" Count="4" />
       <LineId Id="436" Count="0" />
     </LineIds>
@@ -128,6 +160,13 @@ station.xCanRun :=TRUE ;
       <LineId Id="252" Count="0" />
       <LineId Id="320" Count="0" />
       <LineId Id="274" Count="0" />
+    </LineIds>
+    <LineIds Name="S11_Packing.Mapping">
+      <LineId Id="7" Count="0" />
+      <LineId Id="1" Count="1" />
+      <LineId Id="4" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="8" Count="0" />
     </LineIds>
   </POU>
 </TcPlcObject>

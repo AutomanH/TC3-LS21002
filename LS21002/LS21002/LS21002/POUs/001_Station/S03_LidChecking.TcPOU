@@ -28,7 +28,7 @@ VAR
 	//本地过程数据
 	arProcessDataStation : ARRAY [1..5] OF DUT_MainlineFixture;
 	
-	i,j: INT;
+	i,j,k: INT;
 	
 	// 循环计数
 	bCounter: BYTE;
@@ -47,6 +47,10 @@ VAR
 	tsModuleProcess:ARRAY[1..gc_ModuleProNo] OF DUT_Process;
 	xClearModuleProcessDone:BOOL;
 	bClearProcessStep	:BYTE;
+	// 测试使用，待删
+	xtest: BOOL;
+	// //待删
+	xnext: BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -174,24 +178,23 @@ CASE station.iStepAuto OF
 			station.iStepAuto:= 5;
 		END_IF		
 	 5://复位数据
-			IF  station.xSingleRunning THEN
+		
 				 FOR i:=1 TO gc_ModuleProNo BY 1 DO
 						 MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
 				 END_FOR
-			END_IF	
 			station.iStepAuto:= 10;
 	 10: //判断产品是否到该工位
-		IF fbMachine[1].xTryRun  THEN
-			IF NOT _FirstCycle[6] THEN
-					bCounter:=3;
-					bEndCounter:=0;
-				_FirstCycle[6]:=TRUE;
-			END_IF
-			station.iStepAuto:= 11;
-		ELSIF  station.xSingleRunning THEN
+		//	IF fbMachine[1].xTryRun  THEN
+		//	IF NOT _FirstCycle[6] THEN
+		//			bCounter:=3;
+		//			bEndCounter:=0;
+		//		_FirstCycle[6]:=TRUE;
+		//	END_IF
+		//	station.iStepAuto:= 11;
+		IF  station.xSingleRunning THEN
 			station.iStepAuto:= 11;
 		ELSE
-			IF   	 NOT  arMainlineFixtureData[arCurFixtureNumStation[5]].xMaterialOnOff AND
+			IF   NOT  arMainlineFixtureData[arCurFixtureNumStation[5]].xMaterialOnOff AND
 					 NOT arMainlineFixtureData[arCurFixtureNumStation[6]].xMaterialOnOff  AND 
 					 NOT arMainlineFixtureData[arCurFixtureNumStation[7]].xMaterialOnOff AND 
 					NOT	arMainlineFixtureData[arCurFixtureNumStation[8]].xMaterialOnOff AND
@@ -202,29 +205,31 @@ CASE station.iStepAuto OF
 							_FirstCycle[2]:=FALSE;
 							_FirstCycle[6]:=FALSE;
 							station.iStepAuto:= 999;
-						
+			ELSIF 			_FirstCycle[10]  THEN   //待删
+							station.iStepAuto:= 11;			//待删
 			ELSIF	 arMainlineFixtureData[arCurFixtureNumStation[5]].xMaterialOnOff AND    
 				    arMainlineFixtureData[arCurFixtureNumStation[6]].xMaterialOnOff (* AND 
 				NOT arMainlineFixtureData[arCurFixtureNumStation[7]].xMaterialOnOff AND 
 				NOT	arMainlineFixtureData[arCurFixtureNumStation[8]].xMaterialOnOff AND
-				NOT arMainlineFixtureData[arCurFixtureNumStation[9]].xMaterialOnOff*)  THEN
+				NOT arMainlineFixtureData[arCurFixtureNumStation[9]].xMaterialOnOff*) AND  NOT _FirstCycle[10]  THEN//这里的FirstCycle[10]待删  
 					IF  NOT _FirstCycle[1] THEN
 							bCounter:=1;
 							bEndCounter :=0;
 							_FirstCycle[1]:=TRUE;
 					END_IF
+					_FirstCycle[10]:=TRUE;//这里的FirstCycle[10]待删  
 					station.iStepAuto:= 11;
-			ELSIF   NOT arMainlineFixtureData[arCurFixtureNumStation[5]].xMaterialOnOff AND    
-				    NOT arMainlineFixtureData[arCurFixtureNumStation[6]].xMaterialOnOff  AND 
-						arMainlineFixtureData[arCurFixtureNumStation[7]].xMaterialOnOff AND 
-						arMainlineFixtureData[arCurFixtureNumStation[8]].xMaterialOnOff AND
-						arMainlineFixtureData[arCurFixtureNumStation[9]].xMaterialOnOff  THEN
-					IF  NOT _FirstCycle[2] THEN
-							bEndCounter:=1;
-							bCounter:=0;
-							_FirstCycle[2]:=TRUE;
-					END_IF
-					station.iStepAuto:= 11;
+		//	ELSIF   NOT arMainlineFixtureData[arCurFixtureNumStation[5]].xMaterialOnOff AND    
+		//		    NOT arMainlineFixtureData[arCurFixtureNumStation[6]].xMaterialOnOff  AND 
+		//				arMainlineFixtureData[arCurFixtureNumStation[7]].xMaterialOnOff AND 
+		//				arMainlineFixtureData[arCurFixtureNumStation[8]].xMaterialOnOff AND
+		//				arMainlineFixtureData[arCurFixtureNumStation[9]].xMaterialOnOff  THEN
+		//			IF  NOT _FirstCycle[2] THEN
+		//					bEndCounter:=1;
+		//					bCounter:=0;
+		//					_FirstCycle[2]:=TRUE;
+		//			END_IF
+		//			station.iStepAuto:= 11;
 			END_IF
 		END_IF
 	11://手动NOK按钮
@@ -235,7 +240,7 @@ CASE station.iStepAuto OF
 			END_IF
 			
 	20:////Restore_after_Estop_Process1 上载数据流程
-			IF   station.xSingleRunning OR  fbMachine[1].xTryRun THEN
+			IF   station.xSingleRunning  THEN//OR  fbMachine[1].xTryRun THEN
 				    station.iStepAuto :=40;
 			ELSIF tsModuleProcess[1].xProcessNotStarted AND NOT  tsModuleProcess[1].xProcessStarted THEN
 					station.iStepAuto :=21; (*process not started*)
@@ -465,7 +470,7 @@ CASE station.iStepAuto OF
 												arCameraResult[2,1,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
 											END_IF
 										END_IF	
-										IF   i =8 THEN
+										IF   i =4 THEN
 											station.iStepAuto:=160;
 										END_IF
 								END_FOR
@@ -911,7 +916,7 @@ CASE station.iStepAuto OF
 					station.iStepAuto:= 260;
 			END_IF
 		260:////Restore_after_Estop_Process4 数据传输流程
-			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+			IF  station.xSingleRunning  THEN //OR fbMachine[1].xTryRun THEN
 					station.iStepAuto :=999;
 			ELSIF tsModuleProcess[4].xProcessNotStarted AND NOT  tsModuleProcess[4].xProcessStarted THEN
 					station.iStepAuto :=270; (*process not started*)
@@ -940,10 +945,12 @@ CASE station.iStepAuto OF
 					FOR j :=1 TO 12 BY 1 DO 
 						IF bCounter = 2 OR bCounter = 3 OR bEndCounter =1 THEN
 							IF arProcessDataStation[4].stProcessData.arCameraResult[i,j]<> 1 THEN
+							 	arProcessDataStation[4].xMaterialOnOff:=TRUE;//待删
 								arProcessDataStation[4].stProduct.xLidChecking_NOK:=TRUE;
 								arProcessDataStation[4].stProduct.xLidChecking_OK:=FALSE;
 								EXIT;
 							ELSIF   i=4 AND j =12 THEN
+							 	arProcessDataStation[4].xMaterialOnOff:=TRUE;//待删
 								arProcessDataStation[4].stProduct.xLidChecking_NOK:=FALSE;
 								arProcessDataStation[4].stProduct.xLidChecking_OK:=TRUE;
 								
@@ -957,10 +964,12 @@ CASE station.iStepAuto OF
 					FOR j :=1 TO 12 BY 1 DO 
 						IF bCounter = 3  OR bEndCounter =2 THEN
 							IF arProcessDataStation[5].stProcessData.arCameraResult[i,j]<>1 THEN
+							 	arProcessDataStation[5].xMaterialOnOff:=TRUE;//待删
 								arProcessDataStation[5].stProduct.xLidChecking_NOK:=TRUE;
 								arProcessDataStation[5].stProduct.xLidChecking_OK:=FALSE;
 								EXIT;
 							ELSIF  i=4 AND j =12 THEN
+							 	arProcessDataStation[5].xMaterialOnOff:=TRUE;//待删
 								arProcessDataStation[5].stProduct.xLidChecking_NOK:=FALSE;
 								arProcessDataStation[5].stProduct.xLidChecking_OK:=TRUE; 
 							END_IF
@@ -1025,12 +1034,14 @@ ELSE
 //--------------------------------------------初始化步序----------------------------------
 CASE station.iStepInit OF	
  0://  
+ 
   	IF station.xIniting THEN	
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
 	FOR i:=2 TO 17 BY 1 DO
 		fbCamera[i].xlInit:=TRUE;
+		fbCamera[i].xlTrigger:=FALSE;
 	END_FOR
 	FOR i:=1 TO gc_ModuleProNo BY 1 DO
 				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
@@ -1114,7 +1125,43 @@ CASE bClearProcessStep OF
 END_CASE
 
 (*******************拍照结果放到HMI中**********************)
-MEMCPY(ADR(arCameraResultHmi),ADR(arCameraResult),SIZEOF(arCameraResultHmi));]]></ST>
+MEMCPY(ADR(arCameraResultHmi),ADR(arCameraResult),SIZEOF(arCameraResultHmi));
+//测试使用
+IF xtest THEN
+	MEMSET(ADR(arCameraResult),0,SIZEOF(arCameraResult));
+	MEMSET(ADR(arCameraResultHmi),0,SIZEOF(arCameraResultHmi));
+ELSIF xnext THEN	
+ 	IF 	bCounter =2 THEN 
+	 				FOR i:=1 TO 2 BY 1 DO
+							FOR j:=1 TO 4 BY 1 DO
+									 FOR k:=1 TO 12 BY 1 DO
+									MEMCPY(ADR(arCameraResult[i+2,j,k]),ADR(arCameraResult[i,j,k]),SIZEOF(arCameraResult[i,j,k]));
+									MEMSET(ADR(arCameraResult[i,j,k]),0,SIZEOF(arCameraResult[i,j,k]));	
+
+								END_FOR
+							END_FOR
+				END_FOR
+	END_IF
+	IF  bCounter =3 THEN 
+							FOR i:=1 TO 2 BY 1 DO
+									FOR j:=1 TO 4 BY 1 DO
+									 	FOR k:=1 TO 12 BY 1 DO
+											MEMCPY(ADR(arCameraResult[i+2,j,k]),ADR(arCameraResult[i,j,k]),SIZEOF(arCameraResult[i,j,k]));
+											MEMSET(ADR(arCameraResult[i,j,k]),0,SIZEOF(arCameraResult[i,j,k]));	
+								END_FOR
+							END_FOR
+							END_FOR
+								FOR j:=3 TO 3 BY 1 DO
+									FOR j:=1 TO 4 BY 1 DO
+									 	FOR k:=1 TO 12 BY 1 DO
+											MEMCPY(ADR(arCameraResult[i+2,j,k]),ADR(arCameraResult[i,j,k]),SIZEOF(arCameraResult[i,j,k]));
+								END_FOR
+								END_FOR
+								END_FOR
+ END_IF
+
+	xnext:=FALSE;
+END_IF]]></ST>
       </Implementation>
     </Action>
     <Action Name="ILC" Id="{b7f5a1ac-a880-4cb0-819a-4a4442b7778e}">
@@ -1163,7 +1210,16 @@ fbZAxisMove.xMoveILC[3] :=
 fbZAxisMove.xMoveILC[4] :=		
 fbZAxisMove.xMoveILC[5] := 		TRUE;
 
-]]></ST>
+//相机
+IF  station.xSingleRunning THEN 
+	 FOR  i:=1 TO 12 BY 1 DO
+			fbCamera[i].xIDeviceRunning:=TRUE;
+	 END_FOR
+ ELSE
+	 FOR  i:=1 TO 12 BY 1 DO
+			fbCamera[i].xIDeviceRunning:=FALSE;
+	 END_FOR
+END_IF]]></ST>
       </Implementation>
     </Action>
     <Action Name="TipAuto" Id="{22541172-1c77-494b-a7c8-1c43ec47b24b}">
@@ -1292,7 +1348,6 @@ QxS03HOZAdjustCyl_7HP	:=	fbHOZAdjustCyl_7.xHP_Valve	;
       <LineId Id="1167" Count="17" />
       <LineId Id="3236" Count="0" />
       <LineId Id="3724" Count="3" />
-      <LineId Id="3237" Count="0" />
       <LineId Id="1890" Count="0" />
       <LineId Id="1536" Count="0" />
       <LineId Id="3695" Count="2" />
@@ -1310,12 +1365,14 @@ QxS03HOZAdjustCyl_7HP	:=	fbHOZAdjustCyl_7.xHP_Valve	;
       <LineId Id="2217" Count="0" />
       <LineId Id="3706" Count="1" />
       <LineId Id="2216" Count="0" />
+      <LineId Id="3735" Count="0" />
       <LineId Id="1724" Count="0" />
       <LineId Id="2201" Count="3" />
       <LineId Id="1730" Count="1" />
       <LineId Id="2219" Count="0" />
       <LineId Id="1732" Count="0" />
       <LineId Id="1729" Count="0" />
+      <LineId Id="3734" Count="0" />
       <LineId Id="2221" Count="0" />
       <LineId Id="2208" Count="6" />
       <LineId Id="2220" Count="0" />
@@ -1623,16 +1680,22 @@ QxS03HOZAdjustCyl_7HP	:=	fbHOZAdjustCyl_7.xHP_Valve	;
       <LineId Id="3274" Count="0" />
       <LineId Id="2716" Count="0" />
       <LineId Id="2712" Count="0" />
-      <LineId Id="2808" Count="7" />
+      <LineId Id="2808" Count="4" />
+      <LineId Id="3736" Count="0" />
+      <LineId Id="2813" Count="2" />
       <LineId Id="3118" Count="0" />
+      <LineId Id="3737" Count="0" />
       <LineId Id="3120" Count="1" />
       <LineId Id="3119" Count="0" />
       <LineId Id="2816" Count="0" />
       <LineId Id="2840" Count="2" />
       <LineId Id="2775" Count="0" />
       <LineId Id="2838" Count="0" />
-      <LineId Id="2844" Count="6" />
+      <LineId Id="2844" Count="3" />
+      <LineId Id="3738" Count="0" />
+      <LineId Id="2848" Count="2" />
       <LineId Id="3123" Count="0" />
+      <LineId Id="3739" Count="0" />
       <LineId Id="3125" Count="1" />
       <LineId Id="2851" Count="3" />
       <LineId Id="3146" Count="0" />
@@ -1662,9 +1725,13 @@ QxS03HOZAdjustCyl_7HP	:=	fbHOZAdjustCyl_7.xHP_Valve	;
       <LineId Id="1218" Count="6" />
     </LineIds>
     <LineIds Name="S03_LidChecking.FlowInit">
-      <LineId Id="437" Count="9" />
+      <LineId Id="437" Count="5" />
+      <LineId Id="535" Count="0" />
+      <LineId Id="443" Count="3" />
       <LineId Id="475" Count="0" />
-      <LineId Id="530" Count="1" />
+      <LineId Id="530" Count="0" />
+      <LineId Id="537" Count="0" />
+      <LineId Id="531" Count="0" />
       <LineId Id="533" Count="1" />
       <LineId Id="532" Count="0" />
       <LineId Id="472" Count="0" />
@@ -1690,6 +1757,27 @@ QxS03HOZAdjustCyl_7HP	:=	fbHOZAdjustCyl_7.xHP_Valve	;
       <LineId Id="382" Count="21" />
       <LineId Id="381" Count="0" />
       <LineId Id="404" Count="0" />
+      <LineId Id="414" Count="0" />
+      <LineId Id="434" Count="0" />
+      <LineId Id="433" Count="0" />
+      <LineId Id="436" Count="1" />
+      <LineId Id="458" Count="0" />
+      <LineId Id="461" Count="3" />
+      <LineId Id="466" Count="3" />
+      <LineId Id="459" Count="0" />
+      <LineId Id="470" Count="0" />
+      <LineId Id="482" Count="0" />
+      <LineId Id="486" Count="4" />
+      <LineId Id="492" Count="0" />
+      <LineId Id="471" Count="0" />
+      <LineId Id="510" Count="0" />
+      <LineId Id="495" Count="3" />
+      <LineId Id="500" Count="0" />
+      <LineId Id="508" Count="1" />
+      <LineId Id="444" Count="0" />
+      <LineId Id="453" Count="0" />
+      <LineId Id="440" Count="0" />
+      <LineId Id="435" Count="0" />
     </LineIds>
     <LineIds Name="S03_LidChecking.ILC">
       <LineId Id="234" Count="4" />
@@ -1699,8 +1787,14 @@ QxS03HOZAdjustCyl_7HP	:=	fbHOZAdjustCyl_7.xHP_Valve	;
       <LineId Id="290" Count="0" />
       <LineId Id="245" Count="0" />
       <LineId Id="324" Count="17" />
-      <LineId Id="266" Count="0" />
-      <LineId Id="274" Count="0" />
+      <LineId Id="343" Count="0" />
+      <LineId Id="342" Count="0" />
+      <LineId Id="345" Count="1" />
+      <LineId Id="344" Count="0" />
+      <LineId Id="348" Count="0" />
+      <LineId Id="350" Count="0" />
+      <LineId Id="353" Count="1" />
+      <LineId Id="351" Count="1" />
     </LineIds>
     <LineIds Name="S03_LidChecking.TipAuto">
       <LineId Id="118" Count="0" />

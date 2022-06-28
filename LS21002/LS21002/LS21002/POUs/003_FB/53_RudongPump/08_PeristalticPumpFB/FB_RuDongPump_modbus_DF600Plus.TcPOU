@@ -298,9 +298,11 @@ _xAutoOpe:=
             stDeviceOpe.xPush_Auto[3] OR 			
             stDeviceOpe.xPush_Auto[4] OR 			
             stDeviceOpe.xPush_Auto[5] OR 						
-            stDeviceOpe.xStop_Auto;]]></ST>
+            stDeviceOpe.xStop_Auto;
+						
+]]></ST>
     </Implementation>
-    <Method Name="AbortAction" Id="{75f54d21-9a30-4716-929e-63751d862a5e}">
+    <Method Name="AbortAction" Id="{88779326-c726-4390-bf0a-611489faa5fc}">
       <Declaration><![CDATA[METHOD PROTECTED AbortAction
 VAR_INPUT
 END_VAR
@@ -320,7 +322,7 @@ xComplete:=1;
 eERRORID:=RudongPump_ERROR.No_ERROR;]]></ST>
       </Implementation>
     </Method>
-    <Action Name="ACT_GetModbusAdr" Id="{df5b6816-3481-4ebf-b8c5-96272dce7d9a}">
+    <Action Name="ACT_GetModbusAdr" Id="{c9433dc9-e601-4aab-b89d-5f1571c6f58d}">
       <Implementation>
         <ST><![CDATA[//
 (*************************检测配置参数是否匹配成功*********************************)
@@ -383,7 +385,7 @@ _aMBAddr[16]:=stModbusAddress.iStartStop_Address;
 _aMBAddr[17]:=stModbusAddress.iModuleStartStop_Address;]]></ST>
       </Implementation>
     </Action>
-    <Action Name="ACT_PumpPar" Id="{556fee99-b1e6-4180-8e43-bd43a41cb887}">
+    <Action Name="ACT_PumpPar" Id="{b8445706-fe3b-4b23-8926-358f63af5f99}">
       <Implementation>
         <ST><![CDATA[//
 (*************************检测配置参数是否匹配成功*********************************)
@@ -464,7 +466,35 @@ IF stRunPara.iPumpType=RudongPump_PumpType.DFPluse THEN
 		ELSE
 				eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;		
 		END_IF
-
+	//HandyPump01泵头
+ELSIF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.HandyPump01 THEN
+ 			IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P13 THEN//13#软管,三滚轮
+				IF rFluVolumeSet*1000/155<0.1 THEN
+					iMinRunTime:=	0.1;
+				ELSE
+					iMinRunTime:=	rFluVolumeSet*1000/155;
+				END_IF
+				iMaxRunTime:=	(rFluVolumeSet*1000/0.51)*0.2;	
+		
+	(*	IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P13 THEN//13#软管,三滚轮
+			iMinRunTime:=	(rFluVolumeSet/10)*60;
+			iMaxRunTime:=	(rFluVolumeSet/0.0033)*60;	
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P14 THEN//14#软管,三滚轮
+			iMinRunTime:=	(rFluVolumeSet/56)*60;
+			iMaxRunTime:=	(rFluVolumeSet/0.0187)*60;		
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P19 THEN//19#软管,三滚轮
+			iMinRunTime:=	(rFluVolumeSet/111)*60;
+			iMaxRunTime:=	(rFluVolumeSet/0.0371)*60;
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P16 THEN//16#软管,三滚轮
+			iMinRunTime:=	(rFluVolumeSet/190)*60;
+			iMaxRunTime:=	(rFluVolumeSet/0.0636)*60;		
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P25 THEN//25#软管,三滚轮
+			iMinRunTime:=	(rFluVolumeSet/365)*60;
+			iMaxRunTime:=	(rFluVolumeSet/0.1219)*60;
+	*)
+		ELSE
+				eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;						
+		END_IF
 	END_IF
 ELSE
 		eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;
@@ -664,7 +694,7 @@ END_IF
 ]]></ST>
       </Implementation>
     </Action>
-    <Action Name="ACTMap" Id="{5d354997-0cda-4e5f-87b6-7b87eec0069b}">
+    <Action Name="ACTMap" Id="{0a024eec-4c90-4be8-918f-6b5fb3d594c7}">
       <Implementation>
         <ST><![CDATA[//进行数据刷新(判断疏浚地址是否有效)
 
@@ -711,7 +741,7 @@ END_IF
 	
 
 xRunning:=(st_IOData.I_RunSignal=1) OR (st_IOData.I_CalSignal=1);//运行信号
-iPumpType:=RudongPump_PumpType.LabV;//蠕动泵类型
+iPumpType:=RudongPump_PumpType.DFPluse;//蠕动泵类型
 _fResetCheck(CLK:=xResetRequest);
 xRdyCmd := eState = STATE.DORMANT AND eERRORID = RudongPump_ERROR.No_ERROR;//检测是否允许指令控制(初始状态，没有报警发生)
 _rInit(CLK:= xIniting);//检测是否是初始化中，如果是的去切换模式
@@ -738,7 +768,7 @@ END_IF
 ]]></ST>
       </Implementation>
     </Action>
-    <Method Name="CmdCalParWrite" Id="{348d1ddb-46ba-4d80-a029-3bb36982284a}">
+    <Method Name="CmdCalParWrite" Id="{22a52990-8fab-4416-91fd-48f0ed263656}">
       <Declaration><![CDATA[METHOD PROTECTED CmdCalParWrite
 VAR_OUTPUT
 	xComplete: BOOL;
@@ -793,7 +823,7 @@ CASE _diCmdState OF
 END_CASE]]></ST>
       </Implementation>
     </Method>
-    <Method Name="CmdCalReset" Id="{630d18f9-e921-4b2c-b6f7-672e14e1be79}">
+    <Method Name="CmdCalReset" Id="{54f3d661-2c61-42db-881b-5c98f4c536cb}">
       <Declaration><![CDATA[METHOD PROTECTED CmdCalReset
 VAR_OUTPUT
 	xComplete: BOOL;
@@ -842,7 +872,7 @@ CASE _diCmdState OF
 END_CASE]]></ST>
       </Implementation>
     </Method>
-    <Method Name="CmdPumpCal" Id="{6871548c-8682-4243-92f6-3cd9757d092d}">
+    <Method Name="CmdPumpCal" Id="{1900013e-b42f-4581-9805-77d73d2b46b0}">
       <Declaration><![CDATA[METHOD PROTECTED CmdPumpCal
 VAR_OUTPUT
 	xComplete: BOOL;
@@ -1255,7 +1285,7 @@ CASE _diCmdState OF
 END_CASE]]></ST>
       </Implementation>
     </Method>
-    <Method Name="CmdRunAction" Id="{4bbd087c-472e-4e19-a01f-a85a2d4793a9}">
+    <Method Name="CmdRunAction" Id="{474ef5c0-7aa8-40b2-bfe1-3a2632249b7c}">
       <Declaration><![CDATA[METHOD PROTECTED CmdRunAction
 VAR_OUTPUT
 	xComplete: BOOL;
@@ -1488,7 +1518,7 @@ CASE _diCmdState OF
 				_tonTimeout(in:=FALSE);
 				_tonDelay(IN:=FALSE);
 				_tonCmdTimeout(IN:= FALSE); 
-				_diCmdState := _diCmdState+1;//切换状态
+				_diCmdState := _diCmdState+3;//切换状态
 			END_IF					
 		END_IF	
 		IF _rxState=999
@@ -1497,36 +1527,36 @@ CASE _diCmdState OF
 			_diCmdState := 999;
 		END_IF	
 
-	12://回吸角度		
-		_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
-		st_IOData.O_BackAngle := iBackAngle	;	
-		IF _tonDelay.Q
-		THEN	
-			_aExecute[8] := TRUE;//启动夹紧控制数据发送	
-			//复位定时器
-			_tonDelay(IN:=FALSE);
-			_tonCmdTimeout(in:=FALSE);
-			_tonTimeout(in:=FALSE);
-			_diCmdState := _diCmdState+1;//切换状态
-		END_IF
-		
-	13://等待回吸角度设定响应
-		IF NOT _aExecute[8]//
-		THEN	
-			_tonDelay(IN:=TRUE,PT:= T#50MS);
-			IF _tonDelay.Q
-			THEN	
-				_tonTimeout(in:=FALSE);
-				_tonDelay(IN:=FALSE);
-				_tonCmdTimeout(IN:= FALSE); 
-				_diCmdState :=  _diCmdState+1;//切换状态
-			END_IF					
-		END_IF	
-		IF _rxState=999
-		THEN
-			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
-			_diCmdState := 999;
-		END_IF	
+//	12://回吸角度		
+//		_tonDelay(IN:= TRUE,pt:=T#25MS);//保证执行的是最新的一次
+//		st_IOData.O_BackAngle := iBackAngle	;	
+//		IF _tonDelay.Q
+//		THEN	
+//			_aExecute[8] := TRUE;//启动夹紧控制数据发送	
+//			//复位定时器
+//			_tonDelay(IN:=FALSE);
+//			_tonCmdTimeout(in:=FALSE);
+//			_tonTimeout(in:=FALSE);
+//			_diCmdState := _diCmdState+1;//切换状态
+//		END_IF
+//		
+//	13://等待回吸角度设定响应
+//		IF NOT _aExecute[8]//
+//		THEN	
+//			_tonDelay(IN:=TRUE,PT:= T#50MS);
+//			IF _tonDelay.Q
+//			THEN	
+//				_tonTimeout(in:=FALSE);
+//				_tonDelay(IN:=FALSE);
+//				_tonCmdTimeout(IN:= FALSE); 
+//				_diCmdState :=  _diCmdState+1;//切换状态
+//			END_IF					
+//		END_IF	
+//		IF _rxState=999
+//		THEN
+//			eERRORID := RudongPump_ERROR.FLT_CMD_TIMEOUT;		
+//			_diCmdState := 999;
+//		END_IF	
 	
 		
 	14://启动设定		
@@ -1612,7 +1642,7 @@ CASE _diCmdState OF
 END_CASE]]></ST>
       </Implementation>
     </Method>
-    <Action Name="ConnectAction" Id="{3660a064-ce00-4094-b355-381446d45edd}">
+    <Action Name="ConnectAction" Id="{5d2f7d0a-9c5b-4bf9-84dd-2f610001d93f}">
       <Implementation>
         <ST><![CDATA[
 //_iChannelIndex := 16;
@@ -1781,7 +1811,7 @@ END_CASE
 ]]></ST>
       </Implementation>
     </Action>
-    <Method Name="CyclicAction" Id="{57b8178f-5b82-46af-b07c-84079b7ced7d}">
+    <Method Name="CyclicAction" Id="{7d2a67c3-b50f-4e47-a4fe-cfcb19c1c6fa}">
       <Declaration><![CDATA[METHOD PROTECTED CyclicAction
 VAR_INPUT
 END_VAR
@@ -1835,7 +1865,7 @@ END_VAR]]></Declaration>
 			_xCheckModbusRun := FALSE;
 			_xBusy:=_aWrite_VAR.bBusy OR _aRead_VAR.bBusy;
 			_xCheckModbusRun := _xBusy;	
-		//	ACT_PumpPar();//检查参数
+			ACT_PumpPar();//检查参数
 	
 			//检测是否有Modbus报错	
 			_xError:=_aWrite_VAR.berror OR _aRead_VAR.berror;			
@@ -1877,7 +1907,7 @@ IF xAbort OR xComplete OR eERRORID<>RudongPump_ERROR.No_ERROR THEN
 END_IF]]></ST>
       </Implementation>
     </Method>
-    <Method Name="HandleAbortedState" Id="{e6342fe4-d06e-4ca6-9608-01a94677f10e}">
+    <Method Name="HandleAbortedState" Id="{dadf80f0-62e9-4ff8-8c4a-fa466f7f6ada}">
       <Declaration><![CDATA[METHOD PRIVATE FINAL HandleAbortedState
 VAR_INPUT
 END_VAR
@@ -1899,7 +1929,7 @@ ELSE
 END_IF]]></ST>
       </Implementation>
     </Method>
-    <Method Name="HandleAbortingState" Id="{635a5fd7-d3e7-4f7e-a549-ffc8237cc2de}">
+    <Method Name="HandleAbortingState" Id="{d7a40772-be95-4876-84e7-16f61d6ed842}">
       <Declaration><![CDATA[METHOD PRIVATE FINAL HandleAbortingState
 VAR_INPUT
 END_VAR
@@ -1923,7 +1953,7 @@ END_IF
 ]]></ST>
       </Implementation>
     </Method>
-    <Method Name="HandleDoneState" Id="{a4cde038-7f87-4524-abb6-a007c8b5a340}">
+    <Method Name="HandleDoneState" Id="{e30b9edb-3b9c-4ef4-bb13-6f82e53ed115}">
       <Declaration><![CDATA[METHOD PRIVATE FINAL HandleDoneState
 VAR_INPUT
 END_VAR
@@ -1943,7 +1973,7 @@ ELSE
 END_IF]]></ST>
       </Implementation>
     </Method>
-    <Method Name="HandleDormantState" Id="{5134ea90-3f8a-4cef-a7b0-59f80d85c3d8}">
+    <Method Name="HandleDormantState" Id="{c648c15a-3e9e-460f-a199-e1d476c564fe}">
       <Declaration><![CDATA[METHOD PRIVATE FINAL HandleDormantState
 VAR_INPUT
 END_VAR
@@ -2057,7 +2087,7 @@ END_IF
 ]]></ST>
       </Implementation>
     </Method>
-    <Method Name="HandleErrorState" Id="{80df6926-edf1-4627-9792-ff4f065981c0}">
+    <Method Name="HandleErrorState" Id="{cfe352ed-d208-4842-ba27-3e083ff17289}">
       <Declaration><![CDATA[METHOD PRIVATE FINAL  HandleErrorState
 VAR_INPUT
 END_VAR
@@ -2076,7 +2106,7 @@ ELSE
 END_IF]]></ST>
       </Implementation>
     </Method>
-    <Method Name="HandleExecutingState" Id="{8fc16f52-44d0-44d3-a1d4-2ebfca99dd6f}">
+    <Method Name="HandleExecutingState" Id="{3d8664b4-81df-4ca7-a278-b03d113be187}">
       <Declaration><![CDATA[METHOD PRIVATE FINAL HandleExecutingState
 VAR_INPUT
 END_VAR
@@ -2104,7 +2134,7 @@ ELSIF xComplete THEN
 END_IF ]]></ST>
       </Implementation>
     </Method>
-    <Method Name="HandleResettingState" Id="{9bd277e5-ba2f-48e8-b9aa-7a84fd6c5838}">
+    <Method Name="HandleResettingState" Id="{9d8b47a4-eaa4-4210-9200-66fbb83f7c5d}">
       <Declaration><![CDATA[METHOD PRIVATE FINAL HandleResettingState
 VAR_INPUT
 END_VAR
@@ -2131,7 +2161,7 @@ END_IF
 ]]></ST>
       </Implementation>
     </Method>
-    <Method Name="JudgePar" Id="{f1dca6bf-f3c7-4e16-853b-6817780f5daa}">
+    <Method Name="JudgePar" Id="{0814cde9-9449-4e1b-8282-3520f878c414}">
       <Declaration><![CDATA[METHOD JudgePar : RudongPump_ERROR
 VAR_OUTPUT
 	eERRORID: RudongPump_ERROR;(*错误码*)
@@ -2140,7 +2170,7 @@ END_VAR]]></Declaration>
         <ST><![CDATA[]]></ST>
       </Implementation>
     </Method>
-    <Method Name="mCmdConfigureAction" Id="{f6f25400-b7df-487c-9b6b-d37865592e82}">
+    <Method Name="mCmdConfigureAction" Id="{f4f08faa-c21f-4b04-92d7-e6013f185091}">
       <Declaration><![CDATA[METHOD PROTECTED mCmdConfigureAction
 VAR_OUTPUT
 	xComplete: BOOL;
@@ -2218,7 +2248,7 @@ CASE _diCmdState OF
 END_CASE]]></ST>
       </Implementation>
     </Method>
-    <Method Name="mCmdFullSpeedStartAction" Id="{c6c7ce5f-f434-40c3-894e-b39bf7539c1c}">
+    <Method Name="mCmdFullSpeedStartAction" Id="{34a7ae41-1986-4389-854e-22ab41bf8e00}">
       <Declaration><![CDATA[METHOD PROTECTED mCmdFullSpeedStartAction
 VAR_OUTPUT
 	xComplete: BOOL;
@@ -2350,7 +2380,7 @@ CASE _diCmdState OF
 END_CASE]]></ST>
       </Implementation>
     </Method>
-    <Method Name="mCmdStopAction" Id="{18387d11-95a3-4623-bf1d-d459f3675a64}">
+    <Method Name="mCmdStopAction" Id="{b12ebfac-7c90-42e2-8a25-f496f99d1828}">
       <Declaration><![CDATA[METHOD PROTECTED mCmdStopAction
 VAR_OUTPUT
 	xComplete: BOOL;
@@ -2454,7 +2484,7 @@ CASE _diCmdState OF
 END_CASE]]></ST>
       </Implementation>
     </Method>
-    <Method Name="ResetAction" Id="{e09ec496-aeab-4867-951c-f5bbb85e269c}">
+    <Method Name="ResetAction" Id="{f74b90d7-da51-46a6-acb7-4f6849a272dc}">
       <Declaration><![CDATA[METHOD PROTECTED ResetAction
 VAR_INPUT
 END_VAR
@@ -2516,6 +2546,8 @@ xComplete:=1;
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus">
       <LineId Id="3" Count="111" />
       <LineId Id="2" Count="0" />
+      <LineId Id="298" Count="0" />
+      <LineId Id="300" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.AbortAction">
       <LineId Id="3" Count="5" />
@@ -2526,7 +2558,16 @@ xComplete:=1;
       <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.ACT_PumpPar">
-      <LineId Id="2" Count="275" />
+      <LineId Id="2" Count="78" />
+      <LineId Id="278" Count="1" />
+      <LineId Id="298" Count="0" />
+      <LineId Id="301" Count="4" />
+      <LineId Id="300" Count="0" />
+      <LineId Id="299" Count="0" />
+      <LineId Id="280" Count="14" />
+      <LineId Id="297" Count="0" />
+      <LineId Id="295" Count="1" />
+      <LineId Id="81" Count="196" />
       <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.ACTMap">

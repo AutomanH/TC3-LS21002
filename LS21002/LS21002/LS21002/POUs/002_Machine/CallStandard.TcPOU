@@ -91,7 +91,9 @@ ACT_PeristalticPump();
 ACT_TURINRobot();
 ACT_MT_MCK();
 ACT_Alive();
-ACT_EtherCATSlaveState();]]></ST>
+ACT_EtherCATSlaveState();
+ACT_FuShiPXF();
+ACT_M0dbus_200Smart();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{423c098f-672e-4e09-b9e7-666319181834}">
       <Implementation>
@@ -108,7 +110,7 @@ fbAlive[3].iAliveSingle:=sCamera_TO_Plc.iCameraAlive[3];
 fbAlive[4].iAliveSingle:=sPLC_From_PC.iPCAlive[1];
 fbAlive[5].iAliveSingle:=sPLC_From_PC.iPCAlive[1];
 fbAlive[6].iAliveSingle:=sPLC_From_PC.iPCAlive[1];
-fbAlive[7].iAliveSingle:=sPLC_From_200SMART.iStationAlive;
+fbAlive[7].iAliveSingle:=sModbus_200SMART.iAlive;
 FOR i:=1 TO gc_AliveNum DO
 		fbAlive[i](iAliveSingle:= , xQAlive=> , xQAliveError=> );
 END_FOR]]></ST>
@@ -153,7 +155,7 @@ FOR j:=1 TO gc_uiAxisNum DO
 	rVelocityVel:=stData.Axis[j].rVelocityVel , 
 	rVelocityAcc:=stData.Axis[j].rAcceleration , 
 	rVelocityDec:=stData.Axis[j].rDeceleration , 
-	xIRefSwitch:= arRefSwitchCheckSensor[j], 
+	xIRefSwitch:= arAxisSensorH[j], 
 	xIResetRefPosCheck:= , 
 	xPowerOn=> , 
 	xReady=> , 
@@ -222,16 +224,16 @@ home_method[9] :=23;
 home_method[10] := 23 ;
 home_method[11] :=23;
 home_method[12] := 23;
-home_method[13] :=23;
+home_method[13] :=27;
 home_method[14] := 27 ;
 home_method[15] :=27;
 home_method[16] := 23;
 
 
 
-home_method[17] :=23;
+home_method[17] :=27;
 fbAxisHome[17].iMode :=3;//雷赛伺服
-home_method[18] :=23;
+home_method[18] :=27;
 fbAxisHome[18].iMode :=3;
 home_method[19] :=23;
 fbAxisHome[19].iMode :=3;
@@ -265,11 +267,14 @@ cnSlaveAddr[19] := 1045 ;
 
 
 FOR  i:=1 TO gc_uiAxisNum BY 1 DO
-	if i<=16 then
+	IF i<=15 THEN
 	fbAxisHome[i].home_highspeed_set:= 150; //
 	fbAxisHome[i].home_lowspeed_set:= 5;
+	ELSIF i=16 THEN 
+	 fbAxisHome[i].home_highspeed_set:= 40; //
+	 fbAxisHome[i].home_lowspeed_set:= 5;
 	else
-		fbAxisHome[i].home_highspeed_set:= 100; //雷赛
+		fbAxisHome[i].home_highspeed_set:= 50; //雷赛
 		fbAxisHome[i].home_lowspeed_set:= 10;
 	END_IF
 		fbAxisHome[i].tTimeOutSet := T#60S;//超时时间设定
@@ -330,10 +335,12 @@ END_IF
 		xlTrigger:= , 
 		xlTriggerHmi:= , 
 		xlLight:= TRUE, 
-		xlReady:= , 
+		xlReady:=TRUE , 
 		xlAutoMode:=fbMachine[1].xAutoMode , 
 		xlManualMode:=fbMachine[1].xManualMode  , 
+		xITryRun:=fbMachine[1].xTryRun OR	axBypassSignal[3] , 
 		tlDelay:= stData.Camera[i].tDelay, 
+		xIDeviceRunning:=,
 		xQStart=> , 
 		xQLight=> , 
 		xQCompleted=> , 
@@ -341,36 +348,39 @@ END_IF
 		xQBusy=> , 
 		xQHmiAlarm=> , 
 		ilCompleted:=sCamera_To_PLC.iCompleted[i]);
+		
+		//延时设定
+		fbCamera[i].tlDelay:=fbCamera[1].tlDelay;
 END_FOR
+
+
 //上料工位相机光源触发
-QxCameraLight1Trigger:=fbCamera[1].xQLight	;
+IF   fbCamera[1].xQLight OR fbCamera[2].xQLight OR	
+ 			fbCamera[3].xQLight OR fbCamera[4].xQLight THEN
+			QxCameraLight1Trigger:=TRUE;
+ELSE
+ 			QxCameraLight1Trigger:=FALSE;
+END_IF
 //相机触发
 QxCamera1Trigger:=fbCamera[1].xQStart;
 
 
 
-//上料工位相机光源触发
-QxCameraLight1Trigger:=fbCamera[1].xQLight	;
-//相机触发
-QxCamera1Trigger:=fbCamera[1].xQStart;
 
 //光源控制器
-QxCameraLight2Trigger:=fbCamera[1].xQLight OR
-					   fbCamera[2].xQLight OR
-					   fbCamera[3].xQLight OR
-					   fbCamera[4].xQLight OR
-					   fbCamera[5].xQLight OR
-					   fbCamera[6].xQLight OR
-					   fbCamera[7].xQLight OR
-					   fbCamera[8].xQLight OR
-					   fbCamera[9].xQLight OR
-					   fbCamera[10].xQLight OR
-					   fbCamera[11].xQLight OR
-					   fbCamera[12].xQLight OR
-					   fbCamera[13].xQLight OR
-					   fbCamera[14].xQLight OR
-					   fbCamera[15].xQLight OR
-					   fbCamera[16].xQLight ;
+IF 			fbCamera[2].xQLight OR	fbCamera[3].xQLight OR
+				fbCamera[4].xQLight OR	fbCamera[5].xQLight OR
+			  fbCamera[6].xQLight OR	fbCamera[7].xQLight OR
+				fbCamera[8].xQLight OR	fbCamera[9].xQLight OR
+			 fbCamera[10].xQLight OR	fbCamera[11].xQLight OR
+			 fbCamera[12].xQLight OR	fbCamera[13].xQLight OR
+			 fbCamera[14].xQLight OR	fbCamera[15].xQLight OR
+				fbCamera[17].xQLight		 THEN
+					QxCameraLight2Trigger:=TRUE;	
+ELSE
+ 						QxCameraLight2Trigger:=FALSE;	
+END_IF 
+						 
 //相机触发
 QxCamera2Trigger	:= fbCamera[2].xQStart; 
 QxCamera3Trigger	:= fbCamera[3].xQStart; 
@@ -393,18 +403,18 @@ QxCamera17Trigger   := fbCamera[17].xQStart;
     </Action>
     <Action Name="ACT_Comm" Id="{b17cb29c-5b77-4461-9112-d1cc0492c03a}">
       <Implementation>
-        <ST><![CDATA[(*************************** Clock 1 Second Clock***********************************)
-tTonoff1s(IN:=NOT tTonOn1s.Q,PT:=T#1S);
-
-tTonOn1s(IN:= tTonOff1s.Q,PT:=T#1S);
-
-(****************************Alive bit************************************)
-IF  tTonoff1s.Q THEN
-	 sPLC_TO_PC.xPLCALive:=1 ;
-	
-ELSE
-	 sPLC_TO_PC.xPLCALive:=0;
-END_IF]]></ST>
+        <ST><![CDATA[//(*************************** Clock 1 Second Clock***********************************)
+//tTonoff1s(IN:=NOT tTonOn1s.Q,PT:=T#1S);
+//
+//tTonOn1s(IN:= tTonOff1s.Q,PT:=T#1S);
+//
+//(****************************Alive bit************************************)
+//IF  tTonoff1s.Q THEN
+//	 sPLC_TO_PC.xPLCALive:=1 ;
+//	
+//ELSE
+//	 sPLC_TO_PC.xPLCALive:=0;
+//END_IF]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_Cylinder" Id="{47c4f121-b56e-4fba-8775-97e3960514e4}">
@@ -459,11 +469,11 @@ END_FOR
       <Implementation>
         <ST><![CDATA[IF ( NOT _firstFuShiPXF) THEN
 fbTempretureControl[1].stSysPar.strSlaveIP:='192.168.1.90';
-fbTempretureControl[1].stSysPar.bySlaveID:=1;
-fbTempretureControl[1].stSysPar.iSlavePort:=1031;
-fbTempretureControl[2].stSysPar.strSlaveIP:='192.168.1.91';
-fbTempretureControl[2].stSysPar.bySlaveID:=1;
-fbTempretureControl[2].stSysPar.iSlavePort:=1031;
+fbTempretureControl[1].stSysPar.bySlaveID:=2;
+fbTempretureControl[1].stSysPar.iSlavePort:=1032;
+fbTempretureControl[2].stSysPar.strSlaveIP:='192.168.1.90';
+fbTempretureControl[2].stSysPar.bySlaveID:=3;
+fbTempretureControl[2].stSysPar.iSlavePort:=1033;
  _firstFuShiPXF := TRUE;
 ELSE
 FOR i:=1 TO gc_uiPXF5Num DO
@@ -482,6 +492,9 @@ END_FOR
 
 END_IF
 //温控器控制加热棒使能
+QxHeatRelayContorl1:=FALSE;//fbTempretureControl[1].xPowerOut;
+QxHeatRelayContorl2:=FALSE;//fbTempretureControl[2].xPowerOut;
+
 //QxEnableHeatingRod:=fbTempretureControl[1].xPowerOut AND fbTempretureControl[2].xPowerOut;
 //S04_FilmCovering.xHeatingDeviceReady:=fbTempretureControl[1].xRdy AND fbTempretureControl[2].xRdy;
 
@@ -510,6 +523,41 @@ FBGetTime(
 	o_DateAndTime=> );]]></ST>
       </Implementation>
     </Action>
+    <Action Name="ACT_M0dbus_200Smart" Id="{f9c3f295-f0f9-4ed8-a615-986545a73617}">
+      <Implementation>
+        <ST><![CDATA[fbModbus_200Smart.stPara.strSlaveIP:='192.168.1.2';
+fbModbus_200Smart.stPara.iSlavePort:=502;
+fbModbus_200Smart.stPara.bySlaveID:=1;
+fbModbus_200Smart(stPara:= , pSysTo200Smart:= , pSysFrom200Smart:= , st_IOData:=sModbus_200SMART );
+//Output-Mapping
+IF  fbMachine[1].xManualMode THEN
+sModbus_200SMART.iMachineMode:=1;
+ELSIF fbMachine[1].xAutoMode THEN
+sModbus_200SMART.iMachineMode:=2;
+END_IF
+IF  fbMachine[1].xRunning THEN 
+sModbus_200SMART.iMachineStart:=1;
+END_IF 
+IF fbMachine[1].xStop OR fbMachine[1].xPause THEN 
+sModbus_200SMART.iMachineStop:=1;
+ELSE
+ sModbus_200SMART.iMachineStop:=0;
+END_IF
+IF  fbMachine[1].xIniting THEN 
+	sModbus_200SMART.iMachineIniting:=1 ;
+ELSE
+	sModbus_200SMART.iMachineIniting:=0 ;
+END_IF
+IF fbStation[11].xDisabled THEN  
+	sModbus_200SMART.iMachineDisable:=1 ;
+ELSE
+ sModbus_200SMART.iMachineDisable:=1 ;
+END_IF
+
+
+]]></ST>
+      </Implementation>
+    </Action>
     <Action Name="ACT_Machine" Id="{bab62686-8cb4-497f-97e7-e00927dbc989}">
       <Implementation>
         <ST><![CDATA[
@@ -535,7 +583,6 @@ fbMachine[i](
 	xStopped=> , 
 	xPaused=> , 	
    );
-	 
 	END_FOR
 QxRedLamp:=
 QxRedLamp_1	 :=fbMachine[1].xLampRed;	
@@ -543,7 +590,6 @@ QxYellowLamp:=
 QxYellowLamp_1 :=fbMachine[1].xLampYellow 	;///初始化完成后也需要将黄灯常亮
 QxGreenLamp:=
 QxGreenLamp_1 :=fbMachine[1].xLampGreen;	
-(*
 IF  NOT   _BuzzerBypassButton  THEN
 	QxBuzzer:=fbMachine[1].xLampBuzzer;
 ELSE
@@ -554,7 +600,6 @@ IF  _BuzzerBypassButton THEN
 ELSE
 	_BuzzerBypassLamp:=FALSE;
 END_IF
-*)
 QxStartButtonLamp	:=fbMachine[1].xStartLight;
 QxStopButtonLamp	:=fbMachine[1].xStopLight;	
 QxResetButtonLamp	:=fbMachine[1].xResetLight;	
@@ -654,7 +699,7 @@ stData.RudongPump[1].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵�
 //如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
 stData.RudongPump[2].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
 stData.RudongPump[2].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
-stData.RudongPump[2].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+stData.RudongPump[2].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类
 //如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
 stData.RudongPump[3].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
 stData.RudongPump[3].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
@@ -665,12 +710,12 @@ stData.RudongPump[4].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定�
 stData.RudongPump[4].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
 //如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
 stData.RudongPump[5].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
-stData.RudongPump[5].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
-stData.RudongPump[5].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+stData.RudongPump[5].iPumpTypeSet:=RudongPump_PumpHeadType.HandyPump01;//设定泵泵头类型
+stData.RudongPump[5].iHosePipeTypeSet:=RudongPump_SoftPipeType.P13;//设定泵软管类型
 //如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
 stData.RudongPump[6].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
-stData.RudongPump[6].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
-stData.RudongPump[6].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+stData.RudongPump[6].iPumpTypeSet:=RudongPump_PumpHeadType.HandyPump01;//设定泵泵头类型
+stData.RudongPump[6].iHosePipeTypeSet:=RudongPump_SoftPipeType.P13;//设定泵软管类型
 //如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
 stData.RudongPump[7].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
 stData.RudongPump[7].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
@@ -713,7 +758,7 @@ FOR i :=1 TO gc_uiRudongPump BY 1 DO
 	xDeviceRunning:= , 
 	rSpeedRatio:= , 
 	sHmiError:= , 
-	xEStop:= fbMachine[1].xEStop OR TRUE, 
+	xEStop:= fbMachine[1].xEStop , 
 	stDeviceOpe:= , 
 	xDone=> , 
 	xBusy=> , 
@@ -723,6 +768,7 @@ FOR i :=1 TO gc_uiRudongPump BY 1 DO
 	xRudongPump_ERROR=> , 
 	eERRORID=> , 
 	xRdyCmd=> );
+
 END_FOR
 IF NOT _xCalFirstCycle THEN
 	fbAutoCal.stSysPar.fbMTMCK204C:=ADR	(fbMCK204W);
@@ -858,8 +904,8 @@ fb_Recipes[5].FileName:='\Hard Disk1\Recipefiles';
 	
 IF NOT xRGI4_First THEN
 	fbRGI_14_Modbus[1].stPara.bySlaveID := 1;
-	fbRGI_14_Modbus[1].stPara.strSlaveIP := '192.168.1.22';//从站IP地址
-	fbRGI_14_Modbus[1].stPara.iSlavePort := 1031;	
+	fbRGI_14_Modbus[1].stPara.strSlaveIP := '192.168.1.90';//从站IP地址
+	fbRGI_14_Modbus[1].stPara.iSlavePort := 1030;	
 	xRGI4_First := TRUE;
 ELSE
 	//进行函数调用
@@ -1254,6 +1300,8 @@ END_FOR]]></ST>
       <LineId Id="662" Count="0" />
       <LineId Id="858" Count="0" />
       <LineId Id="528" Count="0" />
+      <LineId Id="926" Count="0" />
+      <LineId Id="994" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.A_Input">
       <LineId Id="12" Count="2" />
@@ -1322,6 +1370,7 @@ END_FOR]]></ST>
       <LineId Id="1049" Count="0" />
       <LineId Id="1053" Count="0" />
       <LineId Id="1051" Count="1" />
+      <LineId Id="1077" Count="2" />
       <LineId Id="1054" Count="1" />
       <LineId Id="1057" Count="0" />
       <LineId Id="1056" Count="0" />
@@ -1339,25 +1388,37 @@ END_FOR]]></ST>
     </LineIds>
     <LineIds Name="CallStandard.ACT_Camera">
       <LineId Id="1" Count="0" />
-      <LineId Id="6" Count="12" />
+      <LineId Id="6" Count="7" />
+      <LineId Id="135" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="171" Count="0" />
+      <LineId Id="15" Count="3" />
       <LineId Id="21" Count="2" />
+      <LineId Id="141" Count="2" />
       <LineId Id="3" Count="0" />
+      <LineId Id="140" Count="0" />
+      <LineId Id="115" Count="0" />
       <LineId Id="65" Count="0" />
-      <LineId Id="59" Count="0" />
+      <LineId Id="150" Count="0" />
+      <LineId Id="154" Count="1" />
+      <LineId Id="162" Count="1" />
+      <LineId Id="153" Count="0" />
       <LineId Id="66" Count="0" />
       <LineId Id="64" Count="0" />
-      <LineId Id="68" Count="5" />
-      <LineId Id="67" Count="0" />
+      <LineId Id="157" Count="1" />
+      <LineId Id="156" Count="0" />
       <LineId Id="96" Count="1" />
       <LineId Id="75" Count="0" />
-      <LineId Id="98" Count="0" />
-      <LineId Id="100" Count="1" />
-      <LineId Id="103" Count="0" />
-      <LineId Id="105" Count="4" />
-      <LineId Id="113" Count="0" />
-      <LineId Id="110" Count="2" />
-      <LineId Id="104" Count="0" />
+      <LineId Id="169" Count="0" />
+      <LineId Id="100" Count="0" />
+      <LineId Id="107" Count="0" />
+      <LineId Id="109" Count="1" />
+      <LineId Id="112" Count="0" />
       <LineId Id="114" Count="0" />
+      <LineId Id="165" Count="0" />
+      <LineId Id="172" Count="1" />
+      <LineId Id="170" Count="0" />
+      <LineId Id="166" Count="0" />
       <LineId Id="76" Count="16" />
       <LineId Id="74" Count="0" />
     </LineIds>
@@ -1395,6 +1456,8 @@ END_FOR]]></ST>
       <LineId Id="260" Count="9" />
       <LineId Id="77" Count="3" />
       <LineId Id="277" Count="0" />
+      <LineId Id="292" Count="1" />
+      <LineId Id="291" Count="0" />
       <LineId Id="81" Count="2" />
       <LineId Id="1" Count="0" />
     </LineIds>
@@ -1407,14 +1470,38 @@ END_FOR]]></ST>
       <LineId Id="12" Count="5" />
       <LineId Id="10" Count="0" />
     </LineIds>
+    <LineIds Name="CallStandard.ACT_M0dbus_200Smart">
+      <LineId Id="2" Count="0" />
+      <LineId Id="4" Count="0" />
+      <LineId Id="8" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="12" Count="2" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="32" Count="1" />
+      <LineId Id="23" Count="1" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="27" Count="1" />
+      <LineId Id="38" Count="4" />
+      <LineId Id="26" Count="0" />
+    </LineIds>
     <LineIds Name="CallStandard.ACT_Machine">
-      <LineId Id="2" Count="24" />
+      <LineId Id="2" Count="22" />
+      <LineId Id="26" Count="0" />
       <LineId Id="50" Count="0" />
       <LineId Id="118" Count="0" />
       <LineId Id="120" Count="1" />
       <LineId Id="124" Count="0" />
       <LineId Id="52" Count="0" />
-      <LineId Id="75" Count="0" />
       <LineId Id="126" Count="0" />
       <LineId Id="76" Count="0" />
       <LineId Id="79" Count="1" />
@@ -1423,7 +1510,7 @@ END_FOR]]></ST>
       <LineId Id="68" Count="0" />
       <LineId Id="73" Count="1" />
       <LineId Id="69" Count="0" />
-      <LineId Id="54" Count="4" />
+      <LineId Id="55" Count="3" />
       <LineId Id="63" Count="0" />
       <LineId Id="49" Count="0" />
     </LineIds>
@@ -1494,6 +1581,7 @@ END_FOR]]></ST>
       <LineId Id="132" Count="0" />
       <LineId Id="71" Count="23" />
       <LineId Id="67" Count="0" />
+      <LineId Id="237" Count="0" />
       <LineId Id="70" Count="0" />
       <LineId Id="105" Count="26" />
       <LineId Id="65" Count="1" />

@@ -51,6 +51,10 @@ VAR
 	xPutBoxPermit: BOOL;
 	//首次循环
 	_FirstCycle: ARRAY[1..10]OF BOOL;
+	arxVacuum1_FeedValveWork: Array[1..2] of BOOL;
+	arxVacuum1_FeedValveBroken: ARRAY[1..2] of bool;
+	arxVacuumControlSensor: ARRAY[1..2] of BOOL;
+	arxBrokenVacuumSensor: ARRAY[1..2] of BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -77,7 +81,17 @@ fbVTCCyl_2.xHP_Sensor	:=	IxS08VTCCyl_2HP	;
 //传感器
 xBeltCardCheckSensor[1]:=IxBeltEntryCardCheckSensor1;
 xBeltCardCheckSensor[2]:=IxBeltEntryCardCheckSensor2;
-]]></ST>
+//真空吸
+arxVacuumControlSensorHMI[1]:=IxS08Vacuum1_Output1	;//	卡片搬运工位¶真空发生器1¶输出OUT1
+arxBrokenVacuumSensorHMI[1]:=IxS08Vacuum1_Output2	;//	卡片搬运工位¶真空发生器1¶输出OUT2
+arxVacuumControlSensorHMI[2]:=IxS08Vacuum2_Output1	;//	卡片搬运工位¶真空发生器2¶输出OUT1
+arxBrokenVacuumSensorHMI[2]:=IxS08Vacuum2_Output2	;//	卡片搬运工位¶真空发生器2¶输出OUT2
+
+
+arxVacuumControlSensor[1]:=IxS08Vacuum1_Output1	;//	卡片搬运工位¶真空发生器1¶输出OUT1
+arxBrokenVacuumSensor[1]:=IxS08Vacuum1_Output2	;//	卡片搬运工位¶真空发生器1¶输出OUT2
+arxVacuumControlSensor[2]:=IxS08Vacuum2_Output1	;//	卡片搬运工位¶真空发生器2¶输出OUT1
+arxBrokenVacuumSensor[2]:=IxS08Vacuum2_Output2	;//	卡片搬运工位¶真空发生器2¶输出OUT2]]></ST>
       </Implementation>
     </Action>
     <Action Name="Alarm" Id="{0a31e6b9-e40b-403d-b500-5fe16c4985f5}">
@@ -394,7 +408,7 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
-	station.iStepInit:=999;
+	station.iStepInit:=40;
 //20://检查是否需要破真空	
 //	IF tsModuleProcess[1].xProcessStarted AND
 //		 NOT tsModuleProcess[1].xProcessCompleted THEN
@@ -413,21 +427,21 @@ CASE station.iStepInit OF
 //		 xVacuum_BreakValveControl[2]:=FALSE;
 //		 station.iStepInit:=40;	
 //	END_IF
-//40://上Z轴上升
-//	fbVTCCyl_1.xInit:=TRUE;
-//	IF  fbVTCCyl_1.xHP_Delay THEN
-//		station.iStepInit:=50;	
-//	END_IF
-//50://下轴上升
-//	fbVTCCyl_2.xInit:=TRUE;
-//	IF  fbVTCCyl_2.xHP_Delay THEN
-//		station.iStepInit:=60;	
-//	END_IF
-//60://X轴气缸回原
-//	fbHOZCyl.xInit:=TRUE;
-//	IF  fbHOZCyl.xHP_Delay THEN
-//		station.iStepInit:=70;	
-//	END_IF		
+40://上Z轴上升
+	fbVTCCyl_1.xInit:=TRUE;
+	IF  fbVTCCyl_1.xHP_Delay THEN
+		station.iStepInit:=50;	
+	END_IF
+50://下轴上升
+	fbVTCCyl_2.xInit:=TRUE;
+	IF  fbVTCCyl_2.xHP_Delay THEN
+		station.iStepInit:=60;	
+	END_IF
+60://X轴气缸回原
+	fbHOZCyl.xInit:=TRUE;
+	IF  fbHOZCyl.xHP_Delay THEN
+		station.iStepInit:=999;	
+	END_IF		
 //70://卡片步进上电
 //	fbZAxisStepMotor1.xPowerInit:=TRUE;
 //	fbZAxisStepMotor2.xPowerInit:=TRUE;
@@ -512,46 +526,46 @@ station.adwAutoTip[1].01	:=	fbVTCCyl_1.xAutoTip	;
 station.adwAutoTip[1].02	:=	fbVTCCyl_2.xAutoTip	;	
 //------------------------------------------------AutoTip Servo--------------------------------
 //**************************************
-FOR i:= 1 TO 5 BY 1 DO 
-	IF fbROTAxisMove.xMoveAuto[i] THEN
-		fbROTAxisMove.iPosNumber := i ;
-	END_IF
-	IF fbZAxisStepMotor1.xMoveAuto[i] THEN
-		fbZAxisStepMotor1.iPosNumber := i ;
-	END_IF
-	IF fbZAxisStepMotor2.xMoveAuto[i] THEN
-		fbZAxisStepMotor2.iPosNumber := i ;
-	END_IF
-	
-END_FOR
-
-
-IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  THEN
-	  arTonDelay[01](IN:=True , PT:=T#1S , Q=> , ET=> );
-else
-	  arTonDelay[01](IN:=false);
-END_IF
-IF arTonDelay[1].Q  THEN 
-IF	fbROTAxisMove.iPosNumber=1 	AND NOT fbROTAxisMove.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].10:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
-if	fbROTAxisMove.iPosNumber=2	AND NOT fbROTAxisMove.xMoveInPos[2]	THEN 	station.adwAutoTip[1].11:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
-if	fbROTAxisMove.iPosNumber=3	AND NOT fbROTAxisMove.xMoveInPos[3]	THEN 	station.adwAutoTip[1].12:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
-if	fbROTAxisMove.iPosNumber=4	AND NOT fbROTAxisMove.xMoveInPos[4]	THEN 	station.adwAutoTip[1].13:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
-if	fbROTAxisMove.iPosNumber=5	AND NOT fbROTAxisMove.xMoveInPos[5]	THEN 	station.adwAutoTip[1].14:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
-if	fbZAxisStepMotor1.iPosNumber=1 	AND NOT fbZAxisStepMotor1.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].15:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
-if	fbZAxisStepMotor1.iPosNumber=2	AND NOT fbZAxisStepMotor1.xMoveInPos[2]	THEN 	station.adwAutoTip[1].16:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
-if	fbZAxisStepMotor1.iPosNumber=3	AND NOT fbZAxisStepMotor1.xMoveInPos[3]	THEN 	station.adwAutoTip[1].17:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
-if	fbZAxisStepMotor1.iPosNumber=4	AND NOT fbZAxisStepMotor1.xMoveInPos[4]	THEN 	station.adwAutoTip[1].18:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
-if	fbZAxisStepMotor1.iPosNumber=5	AND NOT fbZAxisStepMotor1.xMoveInPos[5]	THEN 	station.adwAutoTip[1].19:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
-if	fbZAxisStepMotor2.iPosNumber=1 	AND NOT fbZAxisStepMotor2.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].20:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
-if	fbZAxisStepMotor2.iPosNumber=2	AND NOT fbZAxisStepMotor2.xMoveInPos[2]	THEN 	station.adwAutoTip[1].21:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
-if	fbZAxisStepMotor2.iPosNumber=3	AND NOT fbZAxisStepMotor2.xMoveInPos[3]	THEN 	station.adwAutoTip[1].22:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
-if	fbZAxisStepMotor2.iPosNumber=4	AND NOT fbZAxisStepMotor2.xMoveInPos[4]	THEN 	station.adwAutoTip[1].23:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
-if	fbZAxisStepMotor2.iPosNumber=5	AND NOT fbZAxisStepMotor2.xMoveInPos[5]	THEN 	station.adwAutoTip[1].24:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
-
-	
-		
-END_IF
-]]></ST>
+//FOR i:= 1 TO 5 BY 1 DO 
+//	IF fbROTAxisMove.xMoveAuto[i] THEN
+//		fbROTAxisMove.iPosNumber := i ;
+//	END_IF
+//	IF fbZAxisStepMotor1.xMoveAuto[i] THEN
+//		fbZAxisStepMotor1.iPosNumber := i ;
+//	END_IF
+//	IF fbZAxisStepMotor2.xMoveAuto[i] THEN
+//		fbZAxisStepMotor2.iPosNumber := i ;
+//	END_IF
+//	
+//END_FOR
+//
+//
+//IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  THEN
+//	  arTonDelay[01](IN:=True , PT:=T#1S , Q=> , ET=> );
+//else
+//	  arTonDelay[01](IN:=false);
+//END_IF
+//IF arTonDelay[1].Q  THEN 
+//IF	fbROTAxisMove.iPosNumber=1 	AND NOT fbROTAxisMove.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].10:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
+//if	fbROTAxisMove.iPosNumber=2	AND NOT fbROTAxisMove.xMoveInPos[2]	THEN 	station.adwAutoTip[1].11:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
+//if	fbROTAxisMove.iPosNumber=3	AND NOT fbROTAxisMove.xMoveInPos[3]	THEN 	station.adwAutoTip[1].12:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
+//if	fbROTAxisMove.iPosNumber=4	AND NOT fbROTAxisMove.xMoveInPos[4]	THEN 	station.adwAutoTip[1].13:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
+//if	fbROTAxisMove.iPosNumber=5	AND NOT fbROTAxisMove.xMoveInPos[5]	THEN 	station.adwAutoTip[1].14:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
+//if	fbZAxisStepMotor1.iPosNumber=1 	AND NOT fbZAxisStepMotor1.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].15:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
+//if	fbZAxisStepMotor1.iPosNumber=2	AND NOT fbZAxisStepMotor1.xMoveInPos[2]	THEN 	station.adwAutoTip[1].16:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
+//if	fbZAxisStepMotor1.iPosNumber=3	AND NOT fbZAxisStepMotor1.xMoveInPos[3]	THEN 	station.adwAutoTip[1].17:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
+//if	fbZAxisStepMotor1.iPosNumber=4	AND NOT fbZAxisStepMotor1.xMoveInPos[4]	THEN 	station.adwAutoTip[1].18:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
+//if	fbZAxisStepMotor1.iPosNumber=5	AND NOT fbZAxisStepMotor1.xMoveInPos[5]	THEN 	station.adwAutoTip[1].19:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
+//if	fbZAxisStepMotor2.iPosNumber=1 	AND NOT fbZAxisStepMotor2.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].20:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
+//if	fbZAxisStepMotor2.iPosNumber=2	AND NOT fbZAxisStepMotor2.xMoveInPos[2]	THEN 	station.adwAutoTip[1].21:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
+//if	fbZAxisStepMotor2.iPosNumber=3	AND NOT fbZAxisStepMotor2.xMoveInPos[3]	THEN 	station.adwAutoTip[1].22:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
+//if	fbZAxisStepMotor2.iPosNumber=4	AND NOT fbZAxisStepMotor2.xMoveInPos[4]	THEN 	station.adwAutoTip[1].23:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
+//if	fbZAxisStepMotor2.iPosNumber=5	AND NOT fbZAxisStepMotor2.xMoveInPos[5]	THEN 	station.adwAutoTip[1].24:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
+//
+//	
+//		
+//END_IF
+//]]></ST>
       </Implementation>
     </Action>
     <Action Name="TipManual" Id="{bfbca7f7-f29c-4c3f-9863-da81fea994f1}">
@@ -576,8 +590,36 @@ QxS08VTCCyl_1WP	:=	fbVTCCyl_1.xWP_Valve	;
 QxS08VTCCyl_1HP	:=	fbVTCCyl_1.xHP_Valve	;
 QxS08VTCCyl_2WP	:=	fbVTCCyl_2.xWP_Valve	;
 QxS08VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
-		
-			]]></ST>
+
+//真空吸
+IF (fbMachine[1].xAutoMode AND  arxVacuum1_FeedValveWork[1]) OR (fbMachine[1].xManualMode AND 	arxVacuumControlHMI[1]) THEN 
+	QxVacuum1_FeedValveControl	:= TRUE ;//	卡片搬运工位¶真空发生器1¶供给阀控制
+	QxVacuum1_BreakValveControl:=FALSE;//	卡片搬运工位¶真空发生器1¶破坏阀控制
+(*ELSIF arxVacuumControlSensor[1] THEN
+ 	QxVacuum1_FeedValveControl	:= FALSE ;//	卡片搬运工位¶真空发生器1¶供给阀控制
+*)	
+ELSIF  (fbMachine[1].xAutoMode AND  arxVacuum1_FeedValveBroken[1]) OR	(fbMachine[1].xManualMode AND  arxBrokenVacuumHMI[1]) THEN 
+	QxVacuum1_FeedValveControl	:= FALSE ;//	卡片搬运工位¶真空发生器1¶供给阀控制
+	QxVacuum1_BreakValveControl:=TRUE;//	卡片搬运工位¶真空发生器1¶破坏阀控制
+(*ELSIF arxBrokenVacuumSensor[1] THEN
+ 	QxVacuum1_BreakValveControl	:= FALSE ;//	卡片搬运工位¶真空发生器1¶破坏阀控制
+	*)
+END_IF 
+
+//真空吸
+IF  (fbMachine[1].xAutoMode AND  arxVacuum1_FeedValveWork[2]) OR (fbMachine[1].xManualMode AND 	arxVacuumControlHMI[2]) THEN 
+	QxVacuum2_FeedValveControl	:= TRUE ;//	卡片搬运工位¶真空发生器1¶供给阀控制
+	QxVacuum2_BreakValveControl:=FALSE;//	卡片搬运工位¶真空发生器1¶破坏阀控制
+(*ELSIF  arxVacuumControlSensor[2] THEN
+ 	QxVacuum2_FeedValveControl	:= FALSE ;//	卡片搬运工位¶真空发生器1¶供给阀控制
+*)
+ELSIF  (fbMachine[1].xAutoMode AND  arxVacuum1_FeedValveBroken[2]) OR	(fbMachine[1].xManualMode AND  arxBrokenVacuumHMI[2]) THEN 
+	QxVacuum2_FeedValveControl	:= FALSE ;//	卡片搬运工位¶真空发生器1¶供给阀控制
+	QxVacuum2_BreakValveControl:=TRUE;//	卡片搬运工位¶真空发生器1¶破坏阀控制
+(*ELSIF  arxBrokenVacuumSensor[2] THEN
+ 	QxVacuum2_BreakValveControl	:= FALSE ;//	卡片搬运工位¶真空发生器1¶破坏阀控制
+*)
+END_IF ]]></ST>
       </Implementation>
     </Action>
     <LineIds Name="S09_CardCarrying">
@@ -588,7 +630,14 @@ QxS08VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
       <LineId Id="28" Count="0" />
       <LineId Id="72" Count="5" />
       <LineId Id="55" Count="0" />
-      <LineId Id="80" Count="1" />
+      <LineId Id="80" Count="2" />
+      <LineId Id="89" Count="2" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="99" Count="0" />
+      <LineId Id="98" Count="0" />
+      <LineId Id="96" Count="0" />
+      <LineId Id="92" Count="0" />
+      <LineId Id="94" Count="0" />
       <LineId Id="8" Count="0" />
     </LineIds>
     <LineIds Name="S09_CardCarrying.Alarm">
@@ -826,8 +875,28 @@ QxS08VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
     <LineIds Name="S09_CardCarrying.Z_Output">
       <LineId Id="2" Count="0" />
       <LineId Id="27" Count="5" />
-      <LineId Id="36" Count="0" />
-      <LineId Id="35" Count="0" />
+      <LineId Id="82" Count="0" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="65" Count="0" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="49" Count="0" />
+      <LineId Id="84" Count="1" />
+      <LineId Id="96" Count="0" />
+      <LineId Id="43" Count="0" />
+      <LineId Id="95" Count="0" />
+      <LineId Id="52" Count="3" />
+      <LineId Id="71" Count="1" />
+      <LineId Id="70" Count="0" />
+      <LineId Id="56" Count="2" />
+      <LineId Id="87" Count="1" />
+      <LineId Id="86" Count="0" />
+      <LineId Id="50" Count="0" />
     </LineIds>
   </POU>
 </TcPlcObject>

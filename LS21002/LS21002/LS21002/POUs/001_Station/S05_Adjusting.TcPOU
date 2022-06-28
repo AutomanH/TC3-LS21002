@@ -131,15 +131,15 @@ CASE station.iStepAuto OF
 		END_IF
     10: //复位数据 
 			arTonDelay[02](IN:= FALSE); 
-			IF  station.xSingleRunning THEN
+		//	IF  station.xSingleRunning THEN
 				 FOR i:=1 TO gc_ModuleProNo BY 1 DO
 						 MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
 				 END_FOR
-			END_IF
+	//		END_IF
 			station.iStepAuto:=20;
 			
 	20:////Restore_after_Estop_Process1 上载数据流程
-			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+			IF  station.xSingleRunning THEN //OR fbMachine[1].xTryRun THEN
 					station.iStepAuto:= 50;
 			ELSIF tsModuleProcess[1].xProcessNotStarted AND NOT  tsModuleProcess[1].xProcessStarted THEN
 					station.iStepAuto :=21; (*process not started*)
@@ -164,16 +164,22 @@ CASE station.iStepAuto OF
 		tsModuleProcess[1].xQDataCompleted:=TRUE;
 		station.iStepAuto:= 40;
 	40: //判断产品状态
-		IF	NOT fbMachine[1].xTryRun THEN
+		//IF	NOT fbMachine[1].xTryRun THEN
 			IF  arProcessDataStation[1].xMaterialOnOff   AND
 				 arProcessDataStation[2].xMaterialOnOff  THEN
 				station.iStepAuto:= 50;
 			ELSE
 				station.iStepAuto:= 999;
 			END_IF	
-		ELSE
-		 	station.iStepAuto:= 50;
-		END_IF
+	//45://等待切莫工位允许信号
+	//				 IF   xS05WorkPermit THEN
+	//								station.iStepAuto:= 50;
+	//								xS05WorkPermit:=FALSE;
+	//					END_IF
+				
+	//	ELSE
+	//	 	station.iStepAuto:= 50;
+	//	END_IF
 	/////产品流程开始	
 	50:////Restore_after_Estop_Process2 调整流程
 			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
@@ -189,9 +195,9 @@ CASE station.iStepAuto OF
 			ELSE
 					station.iStepAuto :=60; 
 			END_IF	
-	60://
+	60://等待
 				 tsModuleProcess[2].xProcessNotStarted:=TRUE;
-				 station.iStepAuto :=70; 
+							 station.iStepAuto :=70; 
 	70://Z轴伺服下降
 			 tsModuleProcess[2].xProcessStarted:=TRUE;
 			fbZAxisMove_1.xMoveAuto[2]:=TRUE;
@@ -225,7 +231,7 @@ CASE station.iStepAuto OF
 	
 	////产品流程结束	
 	200:////Restore_after_Estop_Process3 数据传输流程
-			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+			IF  station.xSingleRunning  THEN //OR fbMachine[1].xTryRun THEN
 					station.iStepAuto :=999;
 			ELSIF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
 					station.iStepAuto :=210; (*process not started*)
@@ -250,8 +256,8 @@ CASE station.iStepAuto OF
 			tsModuleProcess[3].xProcessCompleted:=TRUE;
 			station.iStepAuto :=240; 
  	240://本地数据清除
-			MEMSET(ADR(arProcessDataStation[1]),0,SIZEOF(arProcessDataStation[1]));
-			MEMSET(ADR(arProcessDataStation[2]),0,SIZEOF(arProcessDataStation[2]));
+	//		MEMSET(ADR(arProcessDataStation[1]),0,SIZEOF(arProcessDataStation[1]));
+	//		MEMSET(ADR(arProcessDataStation[2]),0,SIZEOF(arProcessDataStation[2]));
 			tsModuleProcess[3].xQDataCompleted:=TRUE;
 			station.iStepAuto:= 999;
 	999://----Single Run Finish----
@@ -465,6 +471,12 @@ END_IF
       <LineId Id="1687" Count="3" />
       <LineId Id="1827" Count="0" />
       <LineId Id="1694" Count="5" />
+      <LineId Id="1833" Count="0" />
+      <LineId Id="1835" Count="0" />
+      <LineId Id="1838" Count="0" />
+      <LineId Id="1840" Count="0" />
+      <LineId Id="1837" Count="0" />
+      <LineId Id="1834" Count="0" />
       <LineId Id="1828" Count="2" />
       <LineId Id="1557" Count="0" />
       <LineId Id="1709" Count="0" />

@@ -1,0 +1,101 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_Modbus_200Smart" Id="{66da7a51-bb0e-43c3-bde8-bcaf8272e8b8}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Modbus_200Smart
+VAR_INPUT
+	stPara       : ST_Sys_Para;//系统参数	
+END_VAR
+VAR_IN_OUT
+	st_IOData: DUT_200SMART;
+END_VAR
+VAR
+ {attribute 'tc_no_symbol'}
+	_aRead_VAR: ARRAY[1..5] OF FB_MBReadRegs;
+	{attribute 'tc_no_symbol'}
+	_aWtirt_VAR: ARRAY[1..5] OF FB_MBWriteRegs;
+	{attribute 'tc_no_symbol'}
+	pSysTo200Smart :  ARRAY[1..12] OF WORD;//Cx5130 to 200smart 数据
+	{attribute 'tc_no_symbol'}
+	pSysFrom200Smart :ARRAY[1..12] OF WORD ;//Cx5130 from 200smart 数据
+END_VAR]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ACT_Connect();
+ACT_Mapping();]]></ST>
+    </Implementation>
+    <Action Name="ACT_Connect" Id="{75e70141-3b31-4df4-b602-04a821c14204}">
+      <Implementation>
+        <ST><![CDATA[//读取200smart数据
+_aRead_VAR[1](
+	sIPAddr:= stPara.strSlaveIP, 
+	nTCPPort:= stPara.iSlavePort, 
+	nUnitID:= stPara.bySlaveID, 
+	nQuantity:= 7, 
+	nMBAddr:= 0, 
+	cbLength:= 14,
+	pDestAddr:= ADR(pSysFrom200Smart), 
+	bExecute:= stSysPulse.xP10ms, 
+	tTimeout:=T#1S , 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> , 
+	cbRead=> );
+	
+//写入200smart数据
+_aWtirt_VAR[1](
+	sIPAddr:=stPara.strSlaveIP , 
+	nTCPPort:=stPara.iSlavePort , 
+	nUnitID:=stPara.bySlaveID , 
+	nQuantity:= 5, 
+	nMBAddr:= 11, 
+	cbLength:= 10,
+	pSrcAddr:= ADR(pSysTo200Smart), 
+	bExecute:=stSysPulse.xP10ms ,  
+	tTimeout:=T#1S , 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> );]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Mapping" Id="{6073abb3-8e90-4594-810b-a553bd7b47b9}">
+      <Implementation>
+        <ST><![CDATA[st_IOData.iAlive           :=pSysFrom200Smart[1];
+st_IOData.iInitCompleted 	 :=pSysFrom200Smart[2];
+st_IOData.iStatus        	 :=pSysFrom200Smart[3];
+st_IOData.iResult       	 :=pSysFrom200Smart[4];
+st_IOData.iError         	 :=pSysFrom200Smart[5];
+st_IOData.iBeltEnterEnable :=pSysFrom200Smart[6];
+st_IOData.iTemperatureReached:=pSysFrom200Smart[7];
+st_IOData.iRev2         	 :=pSysFrom200Smart[8];
+st_IOData.iRev3        		 :=pSysFrom200Smart[9];
+st_IOData.iRev4         	  :=pSysFrom200Smart[10];
+st_IOData.iRev5		        :=pSysFrom200Smart[11];
+//
+pSysTo200Smart[1]:=st_IOData.iMachineMode	;
+pSysTo200Smart[2]:=st_IOData.iMachineIniting	;
+pSysTo200Smart[3]:=st_IOData.iMachineStart	;
+pSysTo200Smart[4]:=st_IOData.iMachineStop	;
+pSysTo200Smart[5]:=st_IOData.iMachineEstop	;
+pSysTo200Smart[6]:=st_IOData.iMachineDisable	;
+pSysTo200Smart[7]:=st_IOData.iRev6;
+pSysTo200Smart[8]:=st_IOData.iRev7	;
+pSysTo200Smart[9]:=st_IOData.iRev8	;
+pSysTo200Smart[10]:=st_IOData.iRev9	;
+pSysTo200Smart[11]:=st_IOData.iRev10	;
+pSysTo200Smart[12]:=st_IOData.iRev11	;]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="FB_Modbus_200Smart">
+      <LineId Id="9" Count="0" />
+      <LineId Id="63" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Modbus_200Smart.ACT_Connect">
+      <LineId Id="2" Count="14" />
+      <LineId Id="32" Count="13" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Modbus_200Smart.ACT_Mapping">
+      <LineId Id="1" Count="12" />
+      <LineId Id="28" Count="10" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

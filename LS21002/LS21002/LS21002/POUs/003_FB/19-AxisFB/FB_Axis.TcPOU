@@ -34,8 +34,8 @@ VAR_INPUT
 	
 	xPowerInit						: BOOL;					//使能初始化执行
 	xHomeAuto							: BOOL;					//原点搜索自动执行
-	xReferenceAuto						:BOOL;					//原点搜索自动执行(用于AxisHome）
-	xReferenceHmi						:BOOL;					//原点搜索自动执行(用于AxisHome）
+	xReferenceAuto				:BOOL;					//原点搜索自动执行(用于AxisHome）
+	xReferenceHmi					:BOOL;					//原点搜索自动执行(用于AxisHome）
 	xCalibrationCam				: BOOL;					//原点校准
 	xJogForwardAuto				: BOOL;					//Jog+自动执行
 	xJogBackwardsAuto			: BOOL;					//Jog-自动执行
@@ -724,6 +724,7 @@ fbJog(
 	Error=>,
 	ErrorID=>
 );
+
 IF NOT xAutoMode  THEN
 	xJogForwardAuto:=FALSE;
 	xJogBackwardsAuto:=FALSE;
@@ -1098,7 +1099,9 @@ xVelocityAble:= NOT xVelocityAble;]]></ST>
       <LineId Id="33" Count="0" />
     </LineIds>
     <LineIds Name="FB_Axis.ACT_Jog">
-      <LineId Id="2" Count="34" />
+      <LineId Id="2" Count="33" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="36" Count="0" />
       <LineId Id="39" Count="1" />
       <LineId Id="37" Count="1" />
     </LineIds>

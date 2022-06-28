@@ -12,7 +12,8 @@ END_VAR
 VAR
 	i,j : INT ;
 	_xMaterialOnFlag : BOOL ;//环形线
-	
+	MachineLampR_TRIG:R_TRIG;
+	MachineLampF_TRIG:F_TRIG;
 	
 	tTimeoutAlarm: TON;
 	tCounterR_TRIG: R_TRIG;
@@ -37,7 +38,11 @@ Z_Output();
     </Implementation>
     <Action Name="A_Input" Id="{0714662c-3b58-40cf-a1d8-1883f3374852}">
       <Implementation>
-        <ST><![CDATA[]]></ST>
+        <ST><![CDATA[FOR i:=1 TO gc_uiAxisNum BY 1 DO
+	arAxisSensorP[i]:=arAxisSensor[i].0;
+	arAxisSensorN[i]:=arAxisSensor[i].1;
+	arAxisSensorH[i]:=arAxisSensor[i].2;
+END_FOR]]></ST>
       </Implementation>
     </Action>
     <Action Name="Alarm" Id="{040003db-0126-4202-b8aa-167197bcc773}">
@@ -59,14 +64,16 @@ fbMachine[1].dwMessage[1].05			:=	fbMachine[1].xEmptying;			//设备清料中
 IF NOT IxSafetyRelayOK THEN 
 	fbMachine[1].dwAlarm[1].03:=TRUE; //[M01.03] 设备急停被按下
 END_IF
-
+IF   sModbus_200SMART.iStatus =3 THEN 
+ 		fbMachine[1].dwAlarm[1].04:=TRUE; //[M01.04] 热缩封膜机急停被按下
+END_IF
 //心跳
 //	IF  fbAlive[1].xQAliveError THEN
 //		fbMachine[1].dwAlarm[1].05:=TRUE; //[M01.05] 未检测到相机心跳1
 //	END_IF
 //	IF  fbAlive[2].xQAliveError THEN
 //		fbMachine[1].dwAlarm[1].06:=TRUE; //[M01.06] 未检测到相机心跳2
-//	END_IF
+//	END_IF\
 //	IF  fbAlive[3].xQAliveError THEN
 //		fbMachine[1].dwAlarm[1].07:=TRUE; //[M01.07] 未检测到相机心跳3
 //	END_IF
@@ -79,19 +86,19 @@ END_IF
 //	IF  fbAlive[6].xQAliveError THEN
 //		fbMachine[1].dwAlarm[1].10:=TRUE; //[M01.10] 未检测到工控机3心跳
 //	END_IF
-//	IF  fbAlive[7].xQAliveError THEN
-//		fbMachine[1].dwAlarm[1].11:=TRUE; //[M01.11] 未检测到热缩封膜机心跳
-//	END_IF
+	IF  fbAlive[7].xQAliveError THEN
+		fbMachine[1].dwAlarm[1].11:=TRUE; //[M01.11] 未检测到热缩封膜机心跳
+	END_IF
 ////模块状态
-//	IF  fbEhterCATSlaveMonitor[1].xQError THEN
-//		fbMachine[1].dwAlarm[1].12:=TRUE; //[M01.05] ET01电柜EtherCAT总线报错
-//	END_IF
-//	IF  fbEhterCATSlaveMonitor[2].xQError THEN
-//		fbMachine[1].dwAlarm[1].13:=TRUE; //[M01.05] ET02电柜EtherCAT总线报错
-//	END_IF
-//	IF  fbEhterCATSlaveMonitor[3].xQError THEN
-//		fbMachine[1].dwAlarm[1].14:=TRUE; //[M01.05] ET03电柜EtherCAT总线报错
-//	END_IF
+	IF  fbEhterCATSlaveMonitor[1].xQError THEN
+		fbMachine[1].dwAlarm[1].12:=TRUE; //[M01.05] ET01电柜EtherCAT总线报错
+	END_IF
+	IF  fbEhterCATSlaveMonitor[2].xQError THEN
+		fbMachine[1].dwAlarm[1].13:=TRUE; //[M01.05] ET02电柜EtherCAT总线报错
+	END_IF
+	IF  fbEhterCATSlaveMonitor[3].xQError THEN
+		fbMachine[1].dwAlarm[1].14:=TRUE; //[M01.05] ET03电柜EtherCAT总线报错
+	END_IF
 //		IF  fbEhterCATSlaveMonitor[4].xQError THEN
 //		fbMachine[1].dwAlarm[1].15:=TRUE; //[M01.05] ET04电柜EtherCAT总线报错
 //	END_IF
@@ -211,15 +218,6 @@ END_IF
 *)
 
 
-//**********************设备有料标志位*********
-_xMaterialOnFlag := FALSE ;
-FOR i:=1 TO 40 BY 1 DO 
- IF arMainlineFixtureData[i].xMaterialOnOff  THEN 
-	  _xMaterialOnFlag := TRUE ;
- END_IF
-END_FOR
-
-
 ]]></ST>
       </Implementation>
     </Action>
@@ -285,7 +283,7 @@ fbMachine[1].xAirOn :=  IxAirPressure OR true;
 fbMachine[1].xSafety:=fbMachine[1].xDoorClosed 
 						AND fbMachine[1].xEStop 
 						AND fbMachine[1].xAirOn 
-						AND fbMachine[1].xKey ;]]></ST>
+						AND fbMachine[1].xKey  AND   sModbus_200SMART.iStatus <>3;]]></ST>
       </Implementation>
     </Action>
     <Action Name="Timeout" Id="{21e89cc2-bcd2-45fb-a2b6-ed65b1837306}">
@@ -331,7 +329,18 @@ fbMachine[1].xTip                      :=(fbMachine[1].xManualTip OR fbMachine[1
     </Action>
     <Action Name="Z_Output" Id="{99e18fa8-8f26-440f-bf00-acd6707ee93a}">
       <Implementation>
-        <ST><![CDATA[]]></ST>
+        <ST><![CDATA[////设备照明
+MachineLampR_TRIG(CLK:= xMachineLamp, Q=> );
+MachineLampF_TRIG(CLK:= xMachineLamp, Q=> );
+IF  MachineLampR_TRIG.Q THEN
+ 	QxMachineLamp1Control:=TRUE	;//	日光灯1控制
+  QxMachineLamp2Control:=TRUE	;//	日光灯2控制
+	QxMachineLamp3Contorl:=TRUE	;//	日光灯控制
+ELSIF   MachineLampF_TRIG.Q THEN
+  QxMachineLamp1Control:=FALSE	;//	日光灯1控制
+  QxMachineLamp2Control:=FALSE	;//	日光灯2控制
+	QxMachineLamp3Contorl:=FALSE	;//	日光灯控制
+END_IF]]></ST>
       </Implementation>
     </Action>
     <LineIds Name="ControlMachine">
@@ -345,7 +354,9 @@ fbMachine[1].xTip                      :=(fbMachine[1].xManualTip OR fbMachine[1
       <LineId Id="51" Count="0" />
     </LineIds>
     <LineIds Name="ControlMachine.A_Input">
-      <LineId Id="1" Count="0" />
+      <LineId Id="7" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="9" Count="2" />
     </LineIds>
     <LineIds Name="ControlMachine.Alarm">
       <LineId Id="2" Count="0" />
@@ -357,6 +368,8 @@ fbMachine[1].xTip                      :=(fbMachine[1].xManualTip OR fbMachine[1
       <LineId Id="371" Count="2" />
       <LineId Id="370" Count="0" />
       <LineId Id="246" Count="0" />
+      <LineId Id="379" Count="0" />
+      <LineId Id="375" Count="0" />
       <LineId Id="93" Count="0" />
       <LineId Id="184" Count="0" />
       <LineId Id="193" Count="0" />
@@ -397,7 +410,7 @@ fbMachine[1].xTip                      :=(fbMachine[1].xManualTip OR fbMachine[1
     </LineIds>
     <LineIds Name="ControlMachine.EmptyDone">
       <LineId Id="299" Count="2" />
-      <LineId Id="303" Count="22" />
+      <LineId Id="303" Count="13" />
       <LineId Id="298" Count="0" />
     </LineIds>
     <LineIds Name="ControlMachine.General">
@@ -440,7 +453,15 @@ fbMachine[1].xTip                      :=(fbMachine[1].xManualTip OR fbMachine[1
       <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="ControlMachine.Z_Output">
-      <LineId Id="1" Count="0" />
+      <LineId Id="1" Count="1" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="3" Count="1" />
+      <LineId Id="7" Count="0" />
+      <LineId Id="6" Count="0" />
+      <LineId Id="8" Count="0" />
+      <LineId Id="13" Count="1" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="5" Count="0" />
     </LineIds>
   </POU>
 </TcPlcObject>

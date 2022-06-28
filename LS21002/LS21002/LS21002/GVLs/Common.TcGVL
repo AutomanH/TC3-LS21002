@@ -7,6 +7,7 @@
     abClearMaterialOver  : ARRAY [1..16] OF BOOL;//
    //工站产品状态
 	arMainlineFixtureData :  ARRAY [1..gc_MainLineFixtureNumber] OF DUT_MainlineFixture;
+	arBeltLineFixtureData	:	ARRAY[1..gc_BeltLineFixtureNumber] OF DUT_BeltLineFixture;
 	
 	arRobot2ProductStatus :  DUT_Robot2;
  	arMainLineFixturePos 	 		: ARRAY [0..50] OF REAL;

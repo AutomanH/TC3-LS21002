@@ -40,7 +40,9 @@ VAR
 	xClearModuleProcessDone:BOOL;
 	bClearProcessStep	:BYTE;
 	// //首次循环
-	_FirstCycle: ARRAY[1..10] of bool;
+	_FirstCycle: ARRAY[1..10] OF BOOL;
+	//深孔板到位传感器
+	xSensorReached:ARRAY[1..2] OF BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -66,24 +68,25 @@ fbHOZAdjustCyl_3.xHP_Sensor	:=	IxS02HOZAdjustCyl_3HP	AND IxS02HOZAdjustCyl_4HP;;
 fbROTCyl.xWP_Sensor	:=	IxS02ROTCylWP	;
 fbROTCyl.xHP_Sensor	:=	IxS02ROTCylHP	;
 
-]]></ST>
+xSensorReached[1]:=IxS02Sensor1Reached	;//	注液工位¶到位传感器1
+xSensorReached[2]:=IxS02Sensor2Reached	;//	注液工位¶到位传感器2]]></ST>
       </Implementation>
     </Action>
     <Action Name="Alarm" Id="{830c4921-b54b-4c6d-a396-f5d5eb2c5278}">
       <Implementation>
         <ST><![CDATA[station.adwAlarm[1].00	:=	station.xInitTimeout	;//	S02 初始化超时
-station.adwAlarm[1].01	:=	fbRudongPump[1].xError	;//	S02注液工位蠕动泵1报错
-station.adwAlarm[1].02	:=	fbRudongPump[2].xError	;//	S02注液工位蠕动泵2报错
-station.adwAlarm[1].03	:=	fbRudongPump[3].xError	;//	S02注液工位蠕动泵3报错
-station.adwAlarm[1].04	:=	fbRudongPump[4].xError	;//	S02注液工位蠕动泵4报错
-station.adwAlarm[1].05	:=	fbRudongPump[5].xError	;//	S02注液工位蠕动泵5报错
-station.adwAlarm[1].06	:=	fbRudongPump[6].xError	;//	S02注液工位蠕动泵6报错
-station.adwAlarm[1].07	:=	fbRudongPump[7].xError	;//	S02注液工位蠕动泵7报错
-station.adwAlarm[1].08	:=	fbRudongPump[8].xError	;//	S02注液工位蠕动泵8报错
-station.adwAlarm[1].09	:=	fbRudongPump[9].xError	;//	S02注液工位蠕动泵9报错
-station.adwAlarm[1].10	:=	fbRudongPump[10].xError	;//	S02注液工位蠕动泵10报错
-station.adwAlarm[1].11	:=	fbRudongPump[11].xError	;//	S02注液工位蠕动泵11报错
-station.adwAlarm[1].12	:=	fbRudongPump[12].xError	;//	S02注液工位蠕动泵12报错
+//station.adwAlarm[1].01	:=	fbRudongPump[1].xError	;//	S02注液工位蠕动泵1报错
+//station.adwAlarm[1].02	:=	fbRudongPump[2].xError	;//	S02注液工位蠕动泵2报错
+//station.adwAlarm[1].03	:=	fbRudongPump[3].xError	;//	S02注液工位蠕动泵3报错
+//station.adwAlarm[1].04	:=	fbRudongPump[4].xError	;//	S02注液工位蠕动泵4报错
+//station.adwAlarm[1].05	:=	fbRudongPump[5].xError	;//	S02注液工位蠕动泵5报错
+//station.adwAlarm[1].06	:=	fbRudongPump[6].xError	;//	S02注液工位蠕动泵6报错
+//station.adwAlarm[1].07	:=	fbRudongPump[7].xError	;//	S02注液工位蠕动泵7报错
+//station.adwAlarm[1].08	:=	fbRudongPump[8].xError	;//	S02注液工位蠕动泵8报错
+//station.adwAlarm[1].09	:=	fbRudongPump[9].xError	;//	S02注液工位蠕动泵9报错
+//station.adwAlarm[1].10	:=	fbRudongPump[10].xError	;//	S02注液工位蠕动泵10报错
+//station.adwAlarm[1].11	:=	fbRudongPump[11].xError	;//	S02注液工位蠕动泵11报错
+//station.adwAlarm[1].12	:=	fbRudongPump[12].xError	;//	S02注液工位蠕动泵12报错
 station.adwAlarm[1].13	:=	fbHOZAdjustCyl_1.xHP_Off 	;//	S02上层水平调整气缸1原点未到位
 station.adwAlarm[1].14	:=	fbHOZAdjustCyl_1.xWP_Off 	;//	S02上层水平调整气缸1动点未到位
 station.adwAlarm[1].15	:=	fbHOZAdjustCyl_3.xHP_Off	;//	S02下层水平调整气缸1原点未到位
@@ -111,7 +114,7 @@ station.adwAlarm[1].31	:=	fbMKC204C.xError	;//	S03注液工位称重设备报警
       <Implementation>
         <ST><![CDATA[
 (*arTonDelay[01](IN:=, PT:=T#1S , Q=> , ET=> );*)//TipAuto使用
-arTonDelay[02](IN:= , PT:=T#1S , Q=> , ET=> );
+arTonDelay[02](IN:= , PT:=T#1S , Q=> , ET=> );//注液延时使用
 arTonDelay[03](IN:= , PT:=T#10S , Q=> , ET=> );
 arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[05](IN:= , PT:=T#0.1S , Q=> , ET=> );
@@ -172,11 +175,9 @@ CASE station.iStepAuto OF
 			station.iStepAuto:= 10;
 		END_IF
     10: //复位数据 
-			IF  station.xSingleRunning THEN
-				 FOR i:=1 TO gc_ModuleProNo BY 1 DO
-						 MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
-				 END_FOR
-			END_IF
+			FOR i:=1 TO gc_ModuleProNo BY 1 DO
+				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+			END_FOR
 			station.iStepAuto:=15;
 	
 	15://程序分类选择
@@ -192,7 +193,7 @@ CASE station.iStepAuto OF
 		 			station.iStepAuto:=20;
 		 END_IF
 	20:////Restore_after_Estop_Process1 上载数据流程
-			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+			IF  station.xSingleRunning THEN  //OR fbMachine[1].xTryRun THEN
 					station.iStepAuto :=45; 
 			ELSIF tsModuleProcess[1].xProcessNotStarted AND NOT  tsModuleProcess[1].xProcessStarted THEN
 					station.iStepAuto :=21; (*process not started*)
@@ -218,16 +219,17 @@ CASE station.iStepAuto OF
 
 	/////产品流程开始	
 	30: //判断产品状态
-		IF NOT  fbMachine[1].xTryRun THEN
-			 IF  arProcessDataStation[1].xMaterialOnOff   AND
-					arProcessDataStation[2].xMaterialOnOff  THEN
-				 station.iStepAuto:= 40;
+	//	IF NOT  fbMachine[1].xTryRun THEN
+			 IF ( arProcessDataStation[1].xMaterialOnOff   AND
+					arProcessDataStation[2].xMaterialOnOff ) OR
+			 ( xSensorReached[1] AND   xSensorReached[2])  THEN
+				 station.iStepAuto:= 40;                      
 			 ELSE
-				 station.iStepAuto:= 999;
+				 station.iStepAuto:= 998;
 			 END_IF
-		ELSE
-		 		station.iStepAuto:= 40;
-		END_IF
+	//	ELSE
+	//	 		station.iStepAuto:= 40;
+	//	END_IF
 		 	
 	40://写入NOK按钮
 		IF   arManualNOKHmiButton[2]  AND NOT station.xSingleRunning THEN
@@ -299,31 +301,55 @@ CASE station.iStepAuto OF
 			END_IF
 	130://开始注液
 		  tsModuleProcess[bXCounter+1].xProcessStarted:=TRUE;
-		 FOR i:=1 TO  12 BY 1 DO
-				fbRudongPump[i].stDeviceOpe.xPull_Auto[1]:=TRUE;
+		 FOR i:=1 TO  11 BY 1 DO
+				IF  i MOD 2 = 0  THEN
+						fbRudongPump[i].stDeviceOpe.xPull_Auto[1]:=TRUE;
+				ELSE	
+				 		fbRudongPump[i].stDeviceOpe.xPush_Auto[1]:=TRUE;
+				END_IF
 		 END_FOR
 		station.iStepAuto:= 140;
 	140://注液结束
-		
-				 FOR i:=1 TO 12 BY 1 DO
-					 IF   NOT fbRudongPump[i].xDone  THEN
-						 EXIT;
-					 ELSE fbRudongPump[i].xExecute:=FALSE;
+					arTonDelay[02](IN:=FALSE );
+					 IF    fbRudongPump[1].xdone AND
+								fbRudongPump[2].xDone AND
+								fbRudongPump[3].xDone AND
+								 fbRudongPump[4].xDone AND
+									fbRudongPump[5].xDone AND
+									fbRudongPump[6].xDone AND
+									fbRudongPump[7].xDone AND
+								 fbRudongPump[8].xDone AND
+									fbRudongPump[9].xDone AND
+									fbRudongPump[10].xDone AND
+									fbRudongPump[11].xDone THEN
+								/// fbRudongPump[12].xDone	THEN						
+						 station.iStepAuto:=141;	
 					 END_IF
-					 IF	i=12 THEN 
-						 station.iStepAuto:=145;	
-					 END_IF
-			 	END_FOR 
+	141://复位		
+			 FOR   i:=1 TO 11 BY 1DO
+							IF   fbRudongPump[i].xDone THEN
+									fbRudongPump[i].xExecute:=FALSE;
+							END_IF
+				END_FOR
+				 station.iStepAuto:=142;	
+	142://延时1S
+			arTonDelay[02](IN:=TRUE , PT:=T#1S , Q=> , ET=> );
+			IF   arTonDelay[02].Q THEN
+			 			arTonDelay[02](IN:=FALSE );
+			 			 station.iStepAuto:=145;	
+			END_IF
 	
 	145://注液完成
 		tsModuleProcess[bXCounter+1].xProcessCompleted:=TRUE;
 		 station.iStepAuto:=150;	
 	150://写入结果
+				arProcessDataStation[bXCounter].xMaterialOnOff:=TRUE;
 				arProcessDataStation[bXCounter].stProduct.xlidInjecting_OK:=TRUE;
 				arProcessDataStation[bXCounter].stProduct.xlidInjecting_NOK:=FALSE;	
 			 tsModuleProcess[bXCounter].xQDataCompleted:=TRUE;
 			 station.iStepAuto:=160;
 	155://注液失败
+				arProcessDataStation[bXCounter].xMaterialOnOff:=TRUE;
 				arProcessDataStation[bXCounter].stProduct.xlidInjecting_OK:=FALSE;
 				arProcessDataStation[bXCounter].stProduct.xlidInjecting_NOK:=TRUE;	
 				station.iStepAuto:=160;
@@ -366,7 +392,7 @@ CASE station.iStepAuto OF
 		station.iStepAuto:= 220;
 		
 	220://Restore_after_Estop_Process4 数据传输 
-			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
+			IF  station.xSingleRunning THEN // OR fbMachine[1].xTryRun THEN
 					station.iStepAuto :=998; 
 			ELSIF tsModuleProcess[4].xProcessNotStarted AND NOT  tsModuleProcess[4].xProcessStarted THEN
 					station.iStepAuto :=550; (*process not started*)
@@ -390,8 +416,8 @@ CASE station.iStepAuto OF
 			tsModuleProcess[4].xProcessCompleted :=TRUE;
 			station.iStepAuto:= 570;
  	570://本地数据清除
-			MEMSET(ADR(arProcessDataStation[1]),0,SIZEOF(arProcessDataStation[1]));
-			MEMSET(ADR(arProcessDataStation[2]),0,SIZEOF(arProcessDataStation[2]));
+			//MEMSET(ADR(arProcessDataStation[1]),0,SIZEOF(arProcessDataStation[1]));
+			//MEMSET(ADR(arProcessDataStation[2]),0,SIZEOF(arProcessDataStation[2]));
 			tsModuleProcess[4].xQDataCompleted:=TRUE;
 			arManualNOKHmiButton[2]:=FALSE;
 			station.iStepAuto:= 998;
@@ -519,6 +545,9 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
+	FOR   i:=1 TO 12 BY 1	DO
+	 	fbRudongPump[i].xExecute:=FALSE;
+	END_FOR
 	FOR i:=1 TO gc_ModuleProNo BY 1 DO
 				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
 	END_FOR
@@ -613,7 +642,10 @@ CASE bClearProcessStep OF
 			bClearProcessStep:=0;
 END_CASE
 
-]]></ST>
+//测试
+FOR  i:=1 TO 12 BY 1 DO
+fbRudongPump[i].xNeedConfigurePara:=FALSE; 
+END_FOR]]></ST>
       </Implementation>
     </Action>
     <Action Name="ILC" Id="{ee8acce8-8d32-4f66-8513-5ca456ae67c2}">
@@ -660,20 +692,20 @@ fbStirAxis.xMoveILC[3] :=
 fbStirAxis.xMoveILC[4] :=					
 fbStirAxis.xMoveILC[5] := 		TRUE			;
 ///蠕动泵
-fbRudongPumpModbusTcp[1].xDeviceRunning:=
-fbRudongPumpModbusTcp[2].xDeviceRunning:=
-fbRudongPumpModbusTcp[3].xDeviceRunning:=
-fbRudongPumpModbusTcp[4].xDeviceRunning:=
-fbRudongPumpModbusTcp[5].xDeviceRunning:=
-fbRudongPumpModbusTcp[6].xDeviceRunning:=
-fbRudongPumpModbusTcp[7].xDeviceRunning:=
-fbRudongPumpModbusTcp[8].xDeviceRunning:=
-fbRudongPumpModbusTcp[9].xDeviceRunning:=
-fbRudongPumpModbusTcp[10].xDeviceRunning:=
-fbRudongPumpModbusTcp[11].xDeviceRunning:=
-fbRudongPumpModbusTcp[12].xDeviceRunning:=station.xSingleRunning;
+fbRudongPump[1].xDeviceRunning:=
+fbRudongPump[2].xDeviceRunning:=
+fbRudongPump[3].xDeviceRunning:=
+fbRudongPump[4].xDeviceRunning:=
+fbRudongPump[5].xDeviceRunning:=
+fbRudongPump[6].xDeviceRunning:=
+fbRudongPump[7].xDeviceRunning:=
+fbRudongPump[8].xDeviceRunning:=
+fbRudongPump[9].xDeviceRunning:=
+fbRudongPump[10].xDeviceRunning:=
+fbRudongPump[11].xDeviceRunning:=
+fbRudongPump[12].xDeviceRunning:=station.xSingleRunning OR station.xRunning OR station.xIniting;
 //称
-fbMKC204C.xDeviceRunning:=station.xSingleRunning;]]></ST>
+fbMKC204C.xDeviceRunning:=station.xSingleRunning OR station.xRunning OR station.xIniting;;]]></ST>
       </Implementation>
     </Action>
     <Action Name="TipAuto" Id="{889933b8-f42f-422c-ac8e-18312c628f99}">
@@ -776,7 +808,7 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="56" Count="1" />
       <LineId Id="60" Count="1" />
       <LineId Id="64" Count="1" />
-      <LineId Id="67" Count="0" />
+      <LineId Id="67" Count="1" />
       <LineId Id="40" Count="0" />
     </LineIds>
     <LineIds Name="S02_LidInjecting.Alarm">
@@ -794,8 +826,8 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="1161" Count="4" />
       <LineId Id="1167" Count="17" />
       <LineId Id="1256" Count="0" />
-      <LineId Id="2265" Count="3" />
-      <LineId Id="2264" Count="0" />
+      <LineId Id="2282" Count="1" />
+      <LineId Id="2281" Count="0" />
       <LineId Id="1259" Count="0" />
       <LineId Id="2179" Count="0" />
       <LineId Id="2003" Count="1" />
@@ -826,6 +858,7 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="1952" Count="0" />
       <LineId Id="2272" Count="0" />
       <LineId Id="1956" Count="1" />
+      <LineId Id="2294" Count="0" />
       <LineId Id="1965" Count="0" />
       <LineId Id="1970" Count="1" />
       <LineId Id="1949" Count="0" />
@@ -869,27 +902,37 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="1544" Count="0" />
       <LineId Id="1776" Count="0" />
       <LineId Id="1780" Count="0" />
+      <LineId Id="2284" Count="0" />
       <LineId Id="1784" Count="0" />
+      <LineId Id="2285" Count="2" />
       <LineId Id="1782" Count="0" />
       <LineId Id="1774" Count="0" />
       <LineId Id="1650" Count="0" />
       <LineId Id="2277" Count="0" />
-      <LineId Id="1798" Count="1" />
-      <LineId Id="1974" Count="0" />
-      <LineId Id="1972" Count="1" />
-      <LineId Id="1801" Count="0" />
+      <LineId Id="1799" Count="0" />
+      <LineId Id="2344" Count="6" />
+      <LineId Id="2352" Count="2" />
+      <LineId Id="2351" Count="0" />
       <LineId Id="1975" Count="0" />
       <LineId Id="1805" Count="0" />
-      <LineId Id="1654" Count="0" />
+      <LineId Id="2356" Count="0" />
+      <LineId Id="2359" Count="3" />
+      <LineId Id="2358" Count="0" />
+      <LineId Id="2363" Count="0" />
+      <LineId Id="2288" Count="3" />
+      <LineId Id="2293" Count="0" />
+      <LineId Id="2292" Count="0" />
       <LineId Id="2280" Count="0" />
       <LineId Id="1655" Count="0" />
       <LineId Id="1821" Count="1" />
       <LineId Id="1653" Count="0" />
+      <LineId Id="2295" Count="0" />
       <LineId Id="1807" Count="0" />
       <LineId Id="1816" Count="0" />
       <LineId Id="1827" Count="0" />
       <LineId Id="1546" Count="0" />
       <LineId Id="1847" Count="0" />
+      <LineId Id="2300" Count="0" />
       <LineId Id="1853" Count="1" />
       <LineId Id="1859" Count="0" />
       <LineId Id="1660" Count="0" />
@@ -1008,6 +1051,7 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
     </LineIds>
     <LineIds Name="S02_LidInjecting.FlowInit">
       <LineId Id="437" Count="9" />
+      <LineId Id="601" Count="2" />
       <LineId Id="599" Count="1" />
       <LineId Id="598" Count="0" />
       <LineId Id="470" Count="0" />
@@ -1056,6 +1100,7 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="423" Count="0" />
       <LineId Id="433" Count="0" />
       <LineId Id="432" Count="0" />
+      <LineId Id="434" Count="2" />
     </LineIds>
     <LineIds Name="S02_LidInjecting.ILC">
       <LineId Id="234" Count="4" />

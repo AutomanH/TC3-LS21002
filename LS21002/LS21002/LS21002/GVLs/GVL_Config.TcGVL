@@ -15,7 +15,8 @@
 	gc_uiTURINRobot_Num             	    : INT :=1 ;   //图灵机械手
 	gc_uiCameraNum							: INT:= 18;//相机个数
 	gc_uiRudongPump							:INT := 12;//蠕动泵控制器个数
-	gc_MainLineFixtureNumber				:INT:=40;//主流线的位置数
+	gc_MainLineFixtureNumber				:INT:=43;//主流线的位置数
+	gc_BeltLineFixtureNumber				:INT:=6;//皮带线的位置数
 	gc_MainLineAxisPositionOffset			:REAL:=36;//主流线位置偏移
 	gc_StepHistory							:INT:=500;//step log数量
 	gc_RecipeNum							:WORD:=1;//保存配方数量

@@ -51,11 +51,18 @@ VAR
 	iPickPartPosChoose:WORD;
 	//已经放完的孔板位置
 	xPutBeltLineCompleted:ARRAY[1..2] OF BOOL;
+	//主流线传感器
+	xMainLineSensorReached:ARRAY[1..2] OF BOOL;
 
 	// 临时
 	bRobotStep: BYTE;
 	// 临时
 	xRobotStartTryRun: BOOL;
+	test: BOOL;
+	EstopR_TRIG: R_TRIG;
+	MachineInitR_TRIG: R_TRIG;
+	_FirstPosChoose: WORD;
+	_SecondPosChoose: WORD;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -79,7 +86,8 @@ xNGPosCheckSensor[2]:=IxS07CheckSensor2;	(*NG流道传感器,中间传感器**)
 xNGPosCheckSensor[3]:=IxS07CheckSensor3; 	(*NG流道传感器，满料传感器*)
 
 
-
+xMainLineSensorReached[1]:=IxLineEndSensor1Reached	;//	主流线尾端¶到位检测传感器1
+xMainLineSensorReached[2]:=IxLineEndSensor2Reached	;//	主流线尾端¶到位检测传感器2
 
 //入料线体深孔板检测
 xBeltBoxCheckSensor[1]:=IxBeltEntryBoxCheckSensor1	;
@@ -100,14 +108,23 @@ station.adwAlarm[1].00:=station.xInitTimeout;	  			//S07BoxCarrying 初始化超
 station.adwAlarm[1].04	:=	fbClamp.xError	;//	S07孔板搬运工位夹爪报错
 //station.adwAlarm[1].05	:=	fbNGStepMotor.xError	;//	S07孔板搬运工位NG流道伺服报错
 //station.adwAlarm[1].06	:=	fbNGStepMotor.xNotPowerOn	;//	S07孔板搬运工位NG流道伺服未使能
-//station.adwAlarm[1].07	:=	fbNGStepMotor.xMoveTimeout	;//	S07孔板搬运工位NG流道伺服移动超时]]></ST>
+//station.adwAlarm[1].07	:=	fbNGStepMotor.xMoveTimeout	;//	S07孔板搬运工位NG流道伺服移动超时
+IF 	station.xRunning AND	xMainLineSensorReached[2]  THEN 	
+	arTonDelay[03](IN:= TRUE   , PT:=T#1S , Q=> , ET=> );
+	IF  arTonDelay[03].Q THEN 
+				station.adwAlarm[1].08	:=	TRUE 	;//	主流线结尾处检测到深孔板，请检查
+	END_IF
+ELSE
+ arTonDelay[03](IN:= FALSE);
+END_IF
+]]></ST>
       </Implementation>
     </Action>
     <Action Name="Delay" Id="{2db4a02f-a342-4718-bc45-d3fd6620ccc0}">
       <Implementation>
         <ST><![CDATA[(*arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );*)//TipAuto使用
 (*arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );*)//NG流道使用
-arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
+arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );//尾端传感器报警用
 arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[05](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[06](IN:= , PT:=T#0.1S , Q=> , ET=> );
@@ -152,6 +169,7 @@ CASE station.iStepAuto OF
 			AND NOT station.xSingleRunning 
 		THEN
 			station.xDone:=TRUE;
+			xS07MainlineRunPermit:=TRUE;
 		END_IF
 		
 		IF  station.xSingleRunning 
@@ -172,15 +190,15 @@ CASE station.iStepAuto OF
 			END_IF
 			station.iStepAuto:=10;
 	10: //判断产品是否到该工位
-		IF  fbMachine[1].xTryRun OR station.xSingleRunning THEN
+		IF  fbMachine[1].xTryRun THEN //OR station.xSingleRunning THEN
 			station.iStepAuto:= 20;
 		ELSE
 			IF   	 NOT  arMainlineFixtureData[arCurFixtureNumStation[17]].xMaterialOnOff AND
 					 NOT  arMainlineFixtureData[arCurFixtureNumStation[18]].xMaterialOnOff THEN
 							station.iStepAuto:= 999;
 							xS07MainlineRunPermit:=TRUE;		
-			ELSIF		arMainlineFixtureData[arCurFixtureNumStation[17]].xMaterialOnOff AND    
-						arMainlineFixtureData[arCurFixtureNumStation[18]].xMaterialOnOff THEN
+			ELSIF		( arMainlineFixtureData[arCurFixtureNumStation[17]].xMaterialOnOff AND    
+						arMainlineFixtureData[arCurFixtureNumStation[18]].xMaterialOnOff  )AND  xMainLineSensorReached[1]  (* AND  fbStation[8].xDone*) THEN
 							station.iStepAuto:= 20;
 			END_IF
 		END_IF
@@ -203,16 +221,13 @@ CASE station.iStepAuto OF
 				station.iStepAuto:= 30;
 	30://上载产品数据
 				tsModuleProcess[1].xProcessStarted	:=TRUE;
-				MEMCPY(ADR(arProcessDataStation[1]),ADR(arMainlineFixtureData[arCurFixtureNumStation[17]]),SIZEOF(arMainlineFixtureData[arCurFixtureNumStation[14]]));
-				MEMCPY(ADR(arProcessDataStation[2]),ADR(arMainlineFixtureData[arCurFixtureNumStation[18]]),SIZEOF(arMainlineFixtureData[arCurFixtureNumStation[15]]));
+				MEMCPY(ADR(arProcessDataStation[1]),ADR(arMainlineFixtureData[arCurFixtureNumStation[17]]),SIZEOF(arMainlineFixtureData[arCurFixtureNumStation[17]]));
+				MEMCPY(ADR(arProcessDataStation[2]),ADR(arMainlineFixtureData[arCurFixtureNumStation[18]]),SIZEOF(arMainlineFixtureData[arCurFixtureNumStation[18]]));
 				tsModuleProcess[1].xProcessCompleted	:=TRUE;
 				station.iStepAuto:= 40;		
 	/////产品流程开始	
 	40:	//机械手循环开始  总数为2  最多3
-			IF  bRobCounter >2 OR  NOT  _FirstCycle[1] THEN
 			 	bRobCounter :=1;
-			 _FirstCycle[1]:=TRUE;
-			END_IF
 				station.iStepAuto:= 50;
 	50:////Restore_after_Estop_Process2 /Process3机械手第1/2次取料流程
 			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
@@ -280,7 +295,11 @@ CASE station.iStepAuto OF
 								xS07MainlineRunPermit:=TRUE;
 					END_IF
 					stToRobot1.xClampPartDone:=FALSE;
-					station.iStepAuto :=100;
+					station.iStepAuto :=97;
+	97://检查是否允许放料条件
+				IF	fbStation[8].xDone  THEN 
+						station.iStepAuto :=100;
+				END_IF
 	100:
 			////Restore_after_Estop_Process4/Process5 机械手第1/2次放料流程
 			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
@@ -308,11 +327,12 @@ CASE station.iStepAuto OF
 					ELSIF  arProcessDataStation[1].stProduct.xPart_NG  THEN
 					 		iPutPartPosChoose :=stPutPartPosChoose.NGPositon;(*NG位置*)
 					END_IF
+					_FirstPosChoose:=iPutPartPosChoose;//记录第一次放置的位置
 			ELSIF  bRobCounter =2 THEN
 			 		IF   arProcessDataStation[2].stProduct.xALL_OK  THEN 
 					 		IF    NOT xPutBeltLineCompleted[1]  AND  NOT  xPutBeltLineCompleted[2] THEN
 					 					iPutPartPosChoose :=stPutPartPosChoose.CardPositon_1;(*卡片1位置 *)
-							ELSIF  NOT xPutBeltLineCompleted[1]  AND  NOT  xPutBeltLineCompleted[2] THEN
+							ELSIF   xPutBeltLineCompleted[1]  AND  NOT  xPutBeltLineCompleted[2] THEN
 							 			iPutPartPosChoose :=stPutPartPosChoose.CardPostion_2;(*卡片2位置 *)
 							ELSIF	  xPutBeltLineCompleted[1] AND xPutBeltLineCompleted[2] THEN 
 							 				iPutPartPosChoose :=stPutPartPosChoose.BufferPostion;(*buffer位置 *)
@@ -320,8 +340,18 @@ CASE station.iStepAuto OF
 					ELSIF  arProcessDataStation[2].stProduct.xPart_NG  THEN
 					 		iPutPartPosChoose :=stPutPartPosChoose.NGPositon;(*NG位置*)
 					END_IF
+							_SecondPosChoose:=iPutPartPosChoose;//记录第二次放置位置
 			 END_IF
-			station.iStepAuto :=115;	
+			station.iStepAuto :=111;	
+		111://如果第二次和第一次放置的位置相同，请检查程序
+					IF		bRobCounter =2 THEN
+					 				IF _SecondPosChoose=_FirstPosChoose AND 
+										_FirstPosChoose<>stPutPartPosChoose.NGPositon	AND 
+										_SecondPosChoose<>stPutPartPosChoose.NGPositon THEN 
+										station.iStepAuto :=111;	
+									END_IF
+					END_IF
+						station.iStepAuto :=115;	
 		115://检查放料是否被允许
 				IF   iPutPartPosChoose  =stPutPartPosChoose.CardPositon_1 OR 
 					   iPutPartPosChoose  =stPutPartPosChoose.CardPostion_2 THEN
@@ -526,7 +556,11 @@ CASE station.iStepAuto OF
 			FOR i:=1 TO gc_ModuleProNo BY 1 DO
 				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
 			END_FOR
-			station.iStepAuto:=999;
+			IF    xPutBeltLineCompleted[1] AND  xPutBeltLineCompleted[2] THEN 
+					 xPutBeltLineCompleted[1] :=FALSE;
+					 xPutBeltLineCompleted[2] :=FALSE;
+					station.iStepAuto:=999;
+			END_IF 
 //	310://查看皮带线上是否放满两个深孔板
 //		IF  xBeltBoxCheckSensor[1] AND xBeltBoxCheckSensor[2] AND
 //			xPutBeltLineCompleted[1] AND xPutBeltLineCompleted[2] THEN	
@@ -612,6 +646,8 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
+	fbClamp.xExecute :=FALSE;
+	fbClamp.stOper.xInitControl:=FALSE ;	
 	FOR i:=1 TO gc_ModuleProNo BY 1 DO
 				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
 			END_FOR
@@ -628,17 +664,23 @@ CASE station.iStepInit OF
 //	END_IF
 30://判断电动夹爪是否可以初始化
 	IF    (tsModuleProcess[4].xProcessStarted AND  NOT tsModuleProcess[4].xProcessCompleted) OR
-		  (tsModuleProcess[5].xProcessStarted AND  NOT tsModuleProcess[5].xProcessCompleted) THEN
+		  (tsModuleProcess[5].xProcessStarted AND  NOT tsModuleProcess[5].xProcessCompleted)  OR test THEN
 			station.iStepInit :=50;(*电动夹爪不能初始h化*)
 	ELSE
 			station.iStepInit :=40;
 	END_IF
-//40://大寰夹爪初始化
-//		fbClamp.stOper.xInitControl:=TRUE ;	
-//		 IF fbClamp.xDone  THEN 
-//			fbClamp.xExecute :=FALSE;
-//			station.iStepInit:=50;
-//		 END_IF	
+40://大寰夹爪初始化
+		fbClamp.stOper.xInitControl:=TRUE ;	
+		 IF fbClamp.xDone  THEN 
+				fbClamp.xExecute :=FALSE;
+				station.iStepInit:=45;
+		 END_IF	
+45://大寰夹爪张开
+			fbClamp.stOper.aReleaseControl[1]:=TRUE ;
+				IF fbClamp.xDone  THEN 
+					fbClamp.xExecute :=FALSE ;
+					station.iStepInit:= 50;
+				END_IF		
 50:  //机械手初始化
 		fbRobot.xInitExte := TRUE ;	
 		station.iStepInit:=60;		
@@ -677,7 +719,14 @@ END_IF
     </Action>
     <Action Name="General" Id="{aae3ce53-6436-4399-85d9-97f8ae30c4fd}">
       <Implementation>
-        <ST><![CDATA[]]></ST>
+        <ST><![CDATA[EstopR_TRIG(CLK:= NOT  fbMachine[1].xEStop , Q=> );
+IF  EstopR_TRIG.Q THEN 
+		xS07MainlineRunPermit:=FALSE;
+END_IF
+MachineInitR_TRIG(CLK:=fbMachine[1].xIniting , Q=> );
+IF MachineInitR_TRIG.Q THEN
+		bRobCounter :=0;
+END_IF]]></ST>
       </Implementation>
     </Action>
     <Action Name="ILC" Id="{846afd3f-54e8-4211-93f3-82cb70e642fc}">
@@ -690,7 +739,7 @@ station.xCanRun :=TRUE ;
 fbNGStepMotor.xRunILC := TRUE;
 fbNGStepMotor.xMoveILC[1] :=TRUE;
 //大寰夹爪
-fbClamp.xDeviceRunning:=station.xSingleRunning;
+fbClamp.xDeviceRunning:=station.xSingleRunning OR   station.xIniting OR   station.xRunning ;
 ]]></ST>
       </Implementation>
     </Action>
@@ -829,7 +878,9 @@ END_CASE
       <LineId Id="40" Count="0" />
       <LineId Id="107" Count="0" />
       <LineId Id="106" Count="0" />
-      <LineId Id="109" Count="2" />
+      <LineId Id="109" Count="1" />
+      <LineId Id="113" Count="0" />
+      <LineId Id="111" Count="0" />
       <LineId Id="108" Count="0" />
       <LineId Id="102" Count="0" />
       <LineId Id="41" Count="0" />
@@ -844,6 +895,14 @@ END_CASE
       <LineId Id="266" Count="0" />
       <LineId Id="268" Count="0" />
       <LineId Id="270" Count="4" />
+      <LineId Id="276" Count="0" />
+      <LineId Id="278" Count="0" />
+      <LineId Id="282" Count="0" />
+      <LineId Id="275" Count="0" />
+      <LineId Id="280" Count="0" />
+      <LineId Id="285" Count="1" />
+      <LineId Id="279" Count="0" />
+      <LineId Id="281" Count="0" />
     </LineIds>
     <LineIds Name="S07_BoxCarrying.Delay">
       <LineId Id="64" Count="10" />
@@ -853,16 +912,16 @@ END_CASE
     <LineIds Name="S07_BoxCarrying.FlowAuto">
       <LineId Id="2830" Count="5" />
       <LineId Id="3663" Count="0" />
-      <LineId Id="2836" Count="22" />
+      <LineId Id="2836" Count="9" />
+      <LineId Id="3711" Count="0" />
+      <LineId Id="2846" Count="12" />
       <LineId Id="3659" Count="3" />
       <LineId Id="3658" Count="0" />
       <LineId Id="2860" Count="14" />
       <LineId Id="3251" Count="1" />
       <LineId Id="2875" Count="21" />
-      <LineId Id="3707" Count="0" />
       <LineId Id="2898" Count="0" />
-      <LineId Id="3710" Count="0" />
-      <LineId Id="3708" Count="1" />
+      <LineId Id="3709" Count="0" />
       <LineId Id="2902" Count="0" />
       <LineId Id="3253" Count="1" />
       <LineId Id="2903" Count="10" />
@@ -896,6 +955,9 @@ END_CASE
       <LineId Id="3705" Count="1" />
       <LineId Id="3704" Count="0" />
       <LineId Id="3702" Count="1" />
+      <LineId Id="3734" Count="1" />
+      <LineId Id="3738" Count="0" />
+      <LineId Id="3737" Count="0" />
       <LineId Id="3002" Count="0" />
       <LineId Id="3004" Count="0" />
       <LineId Id="3257" Count="1" />
@@ -910,6 +972,7 @@ END_CASE
       <LineId Id="3639" Count="0" />
       <LineId Id="3638" Count="0" />
       <LineId Id="3610" Count="2" />
+      <LineId Id="3712" Count="0" />
       <LineId Id="3598" Count="0" />
       <LineId Id="3613" Count="0" />
       <LineId Id="3625" Count="0" />
@@ -918,8 +981,17 @@ END_CASE
       <LineId Id="3641" Count="2" />
       <LineId Id="3626" Count="0" />
       <LineId Id="3615" Count="1" />
-      <LineId Id="3599" Count="1" />
+      <LineId Id="3599" Count="0" />
+      <LineId Id="3713" Count="0" />
+      <LineId Id="3600" Count="0" />
       <LineId Id="3550" Count="0" />
+      <LineId Id="3715" Count="0" />
+      <LineId Id="3717" Count="1" />
+      <LineId Id="3724" Count="1" />
+      <LineId Id="3727" Count="0" />
+      <LineId Id="3722" Count="0" />
+      <LineId Id="3719" Count="0" />
+      <LineId Id="3726" Count="0" />
       <LineId Id="3574" Count="0" />
       <LineId Id="3580" Count="16" />
       <LineId Id="3573" Count="0" />
@@ -984,7 +1056,13 @@ END_CASE
       <LineId Id="3479" Count="0" />
       <LineId Id="3474" Count="1" />
       <LineId Id="3472" Count="0" />
-      <LineId Id="3150" Count="28" />
+      <LineId Id="3150" Count="25" />
+      <LineId Id="3732" Count="0" />
+      <LineId Id="3728" Count="0" />
+      <LineId Id="3730" Count="0" />
+      <LineId Id="3176" Count="0" />
+      <LineId Id="3733" Count="0" />
+      <LineId Id="3177" Count="1" />
       <LineId Id="3652" Count="0" />
       <LineId Id="3655" Count="0" />
       <LineId Id="3180" Count="0" />
@@ -997,6 +1075,8 @@ END_CASE
     </LineIds>
     <LineIds Name="S07_BoxCarrying.FlowInit">
       <LineId Id="437" Count="9" />
+      <LineId Id="724" Count="0" />
+      <LineId Id="740" Count="0" />
       <LineId Id="721" Count="1" />
       <LineId Id="720" Count="0" />
       <LineId Id="706" Count="0" />
@@ -1008,8 +1088,12 @@ END_CASE
       <LineId Id="616" Count="1" />
       <LineId Id="622" Count="0" />
       <LineId Id="619" Count="0" />
-      <LineId Id="688" Count="11" />
+      <LineId Id="688" Count="6" />
+      <LineId Id="725" Count="4" />
       <LineId Id="687" Count="0" />
+      <LineId Id="731" Count="0" />
+      <LineId Id="736" Count="3" />
+      <LineId Id="730" Count="0" />
       <LineId Id="634" Count="1" />
       <LineId Id="716" Count="0" />
       <LineId Id="638" Count="3" />
@@ -1027,7 +1111,13 @@ END_CASE
       <LineId Id="436" Count="0" />
     </LineIds>
     <LineIds Name="S07_BoxCarrying.General">
-      <LineId Id="381" Count="0" />
+      <LineId Id="383" Count="0" />
+      <LineId Id="386" Count="0" />
+      <LineId Id="384" Count="0" />
+      <LineId Id="387" Count="0" />
+      <LineId Id="392" Count="1" />
+      <LineId Id="391" Count="0" />
+      <LineId Id="394" Count="0" />
     </LineIds>
     <LineIds Name="S07_BoxCarrying.ILC">
       <LineId Id="234" Count="2" />

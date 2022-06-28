@@ -1415,6 +1415,15 @@ External Setpoint Generation:
 			</ArrayInfo>
 		</DataType>
 		<DataType>
+			<Name GUID="{E9CF5D9E-C580-19C9-FC05-64C9A7B03B21}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..19] OF UDINT</Name>
+			<BitSize>608</BitSize>
+			<BaseType GUID="{18071995-0000-0000-0000-000000000008}">UDINT</BaseType>
+			<ArrayInfo>
+				<LBound>1</LBound>
+				<Elements>19</Elements>
+			</ArrayInfo>
+		</DataType>
+		<DataType>
 			<Name GUID="{FEB96C23-0E04-CC01-F84E-3246D8F89D97}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..100] OF BOOL</Name>
 			<BitSize>800</BitSize>
 			<BaseType GUID="{18071995-0000-0000-0000-000000000030}">BOOL</BaseType>
@@ -3634,9 +3643,7 @@ External Setpoint Generation:
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
-						<EncPara ScaleFactorNumerator="18.22123708" ScaleFactorDenominator="4194304" MaxCount="#xffffffff">
-							<ParameterChanged>35</ParameterChanged>
-						</EncPara>
+						<EncPara ScaleFactorNumerator="18.22123708" ScaleFactorDenominator="4194304" MaxCount="#xffffffff"/>
 						<Vars VarGrpType="1">
 							<Name>Inputs</Name>
 							<Var>
@@ -3781,7 +3788,7 @@ External Setpoint Generation:
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
-						<EncPara ScaleFactorNumerator="10" ScaleFactorDenominator="4194304" MaxCount="#xffffffff"/>
+						<EncPara ScaleFactorNumerator="20" ScaleFactorDenominator="4194304" MaxCount="#xffffffff"/>
 						<Vars VarGrpType="1">
 							<Name>Inputs</Name>
 							<Var>
@@ -4447,6 +4454,10 @@ External Setpoint Generation:
 						<Var>
 							<Name>GVL_Standard.Axis[19].NcToPlc</Name>
 							<Type GUID="{10036166-C9D3-404B-BDD3-323034AAA7F4}" Namespace="MC">NCTOPLC_AXIS_REF</Type>
+						</Var>
+						<Var>
+							<Name>GVL_Standard.arAxisSensor</Name>
+							<Type GUID="{E9CF5D9E-C580-19C9-FC05-64C9A7B03B21}">ARRAY [1..19] OF UDINT</Type>
 						</Var>
 						<Var>
 							<Name>GVL_Standard.fbEhterCATSlaveMonitor[1].axIState</Name>
@@ -5734,7 +5745,7 @@ External Setpoint Generation:
 								<SyncMan>0020140126000100010000002200ce051401002026010000</SyncMan>
 								<SyncMan>0028140122000100020000002200ce051401002822010000</SyncMan>
 								<SyncMan>001018006400010003000000000000000000001064000000</SyncMan>
-								<SyncMan>001818002000010004000000000000000000001820000000</SyncMan>
+								<SyncMan>00181c002000010004000000000000000000001820000000</SyncMan>
 								<Fmmu>0000000000000000001000020100000001000000000000000000000000000000</Fmmu>
 								<Fmmu>0000000000000000001800010100000002000000000000000000000000000000</Fmmu>
 								<Fmmu>00000000000000000d0800010100000003000000000000000000000000000000</Fmmu>
@@ -5772,6 +5783,9 @@ External Setpoint Generation:
 									</Entry>
 									<Entry Name="Torque actual value" Index="#x6077">
 										<Type>INT</Type>
+									</Entry>
+									<Entry Name="Digital inputs" Index="#x60fd">
+										<Type>UDINT</Type>
 									</Entry>
 								</Pdo>
 								<Pdo Name="2nd Transmit PDO Mapping" Index="#x1a01" Flags="#x0000">
@@ -5945,7 +5959,7 @@ External Setpoint Generation:
 								<SyncMan>0020140126000100010000002200ce051401002026010000</SyncMan>
 								<SyncMan>0028140122000100020000002200ce051401002822010000</SyncMan>
 								<SyncMan>001018006400010003000000000000000000001064000000</SyncMan>
-								<SyncMan>001818002000010004000000000000000000001820000000</SyncMan>
+								<SyncMan>00181c002000010004000000000000000000001820000000</SyncMan>
 								<Fmmu>0000000000000000001000020100000001000000000000000000000000000000</Fmmu>
 								<Fmmu>0000000000000000001800010100000002000000000000000000000000000000</Fmmu>
 								<Fmmu>00000000000000000d0800010100000003000000000000000000000000000000</Fmmu>
@@ -5983,6 +5997,9 @@ External Setpoint Generation:
 									</Entry>
 									<Entry Name="Torque actual value" Index="#x6077">
 										<Type>INT</Type>
+									</Entry>
+									<Entry Name="Digital inputs" Index="#x60fd">
+										<Type>UDINT</Type>
 									</Entry>
 								</Pdo>
 								<Pdo Name="2nd Transmit PDO Mapping" Index="#x1a01" Flags="#x0000">
@@ -6156,7 +6173,7 @@ External Setpoint Generation:
 								<SyncMan>0020140126000100010000002200ce051401002026010000</SyncMan>
 								<SyncMan>0028140122000100020000002200ce051401002822010000</SyncMan>
 								<SyncMan>001018006400010003000000000000000000001064000000</SyncMan>
-								<SyncMan>001818002000010004000000000000000000001820000000</SyncMan>
+								<SyncMan>00181c002000010004000000000000000000001820000000</SyncMan>
 								<Fmmu>0000000000000000001000020100000001000000000000000000000000000000</Fmmu>
 								<Fmmu>0000000000000000001800010100000002000000000000000000000000000000</Fmmu>
 								<Fmmu>00000000000000000d0800010100000003000000000000000000000000000000</Fmmu>
@@ -6194,6 +6211,9 @@ External Setpoint Generation:
 									</Entry>
 									<Entry Name="Torque actual value" Index="#x6077">
 										<Type>INT</Type>
+									</Entry>
+									<Entry Name="Digital inputs" Index="#x60fd">
+										<Type>UDINT</Type>
 									</Entry>
 								</Pdo>
 								<Pdo Name="2nd Transmit PDO Mapping" Index="#x1a01" Flags="#x0000">
@@ -6367,7 +6387,7 @@ External Setpoint Generation:
 								<SyncMan>0020140126000100010000002200ce051401002026010000</SyncMan>
 								<SyncMan>0028140122000100020000002200ce051401002822010000</SyncMan>
 								<SyncMan>001018006400010003000000000000000000001064000000</SyncMan>
-								<SyncMan>001818002000010004000000000000000000001820000000</SyncMan>
+								<SyncMan>00181c002000010004000000000000000000001820000000</SyncMan>
 								<Fmmu>0000000000000000001000020100000001000000000000000000000000000000</Fmmu>
 								<Fmmu>0000000000000000001800010100000002000000000000000000000000000000</Fmmu>
 								<Fmmu>00000000000000000d0800010100000003000000000000000000000000000000</Fmmu>
@@ -6405,6 +6425,9 @@ External Setpoint Generation:
 									</Entry>
 									<Entry Name="Torque actual value" Index="#x6077">
 										<Type>INT</Type>
+									</Entry>
+									<Entry Name="Digital inputs" Index="#x60fd">
+										<Type>UDINT</Type>
 									</Entry>
 								</Pdo>
 								<Pdo Name="2nd Transmit PDO Mapping" Index="#x1a01" Flags="#x0000">
@@ -6578,7 +6601,7 @@ External Setpoint Generation:
 								<SyncMan>0020140126000100010000002200ce051401002026010000</SyncMan>
 								<SyncMan>0028140122000100020000002200ce051401002822010000</SyncMan>
 								<SyncMan>001018006400010003000000000000000000001064000000</SyncMan>
-								<SyncMan>001818002000010004000000000000000000001820000000</SyncMan>
+								<SyncMan>00181c002000010004000000000000000000001820000000</SyncMan>
 								<Fmmu>0000000000000000001000020100000001000000000000000000000000000000</Fmmu>
 								<Fmmu>0000000000000000001800010100000002000000000000000000000000000000</Fmmu>
 								<Fmmu>00000000000000000d0800010100000003000000000000000000000000000000</Fmmu>
@@ -6616,6 +6639,9 @@ External Setpoint Generation:
 									</Entry>
 									<Entry Name="Torque actual value" Index="#x6077">
 										<Type>INT</Type>
+									</Entry>
+									<Entry Name="Digital inputs" Index="#x60fd">
+										<Type>UDINT</Type>
 									</Entry>
 								</Pdo>
 								<Pdo Name="2nd Transmit PDO Mapping" Index="#x1a01" Flags="#x0000">
@@ -6789,7 +6815,7 @@ External Setpoint Generation:
 								<SyncMan>0020140126000100010000002200ce051401002026010000</SyncMan>
 								<SyncMan>0028140122000100020000002200ce051401002822010000</SyncMan>
 								<SyncMan>001018006400010003000000000000000000001064000000</SyncMan>
-								<SyncMan>001818002000010004000000000000000000001820000000</SyncMan>
+								<SyncMan>00181c002000010004000000000000000000001820000000</SyncMan>
 								<Fmmu>0000000000000000001000020100000001000000000000000000000000000000</Fmmu>
 								<Fmmu>0000000000000000001800010100000002000000000000000000000000000000</Fmmu>
 								<Fmmu>00000000000000000d0800010100000003000000000000000000000000000000</Fmmu>
@@ -6827,6 +6853,9 @@ External Setpoint Generation:
 									</Entry>
 									<Entry Name="Torque actual value" Index="#x6077">
 										<Type>INT</Type>
+									</Entry>
+									<Entry Name="Digital inputs" Index="#x60fd">
+										<Type>UDINT</Type>
 									</Entry>
 								</Pdo>
 								<Pdo Name="2nd Transmit PDO Mapping" Index="#x1a01" Flags="#x0000">
@@ -7000,7 +7029,7 @@ External Setpoint Generation:
 								<SyncMan>0020140126000100010000002200ce051401002026010000</SyncMan>
 								<SyncMan>0028140122000100020000002200ce051401002822010000</SyncMan>
 								<SyncMan>001018006400010003000000000000000000001064000000</SyncMan>
-								<SyncMan>001818002000010004000000000000000000001820000000</SyncMan>
+								<SyncMan>00181c002000010004000000000000000000001820000000</SyncMan>
 								<Fmmu>0000000000000000001000020100000001000000000000000000000000000000</Fmmu>
 								<Fmmu>0000000000000000001800010100000002000000000000000000000000000000</Fmmu>
 								<Fmmu>00000000000000000d0800010100000003000000000000000000000000000000</Fmmu>
@@ -7038,6 +7067,9 @@ External Setpoint Generation:
 									</Entry>
 									<Entry Name="Torque actual value" Index="#x6077">
 										<Type>INT</Type>
+									</Entry>
+									<Entry Name="Digital inputs" Index="#x60fd">
+										<Type>UDINT</Type>
 									</Entry>
 								</Pdo>
 								<Pdo Name="2nd Transmit PDO Mapping" Index="#x1a01" Flags="#x0000">
@@ -7211,7 +7243,7 @@ External Setpoint Generation:
 								<SyncMan>0020140126000100010000002200ce051401002026010000</SyncMan>
 								<SyncMan>0028140122000100020000002200ce051401002822010000</SyncMan>
 								<SyncMan>001018006400010003000000000000000000001064000000</SyncMan>
-								<SyncMan>001818002000010004000000000000000000001820000000</SyncMan>
+								<SyncMan>00181c002000010004000000000000000000001820000000</SyncMan>
 								<Fmmu>0000000000000000001000020100000001000000000000000000000000000000</Fmmu>
 								<Fmmu>0000000000000000001800010100000002000000000000000000000000000000</Fmmu>
 								<Fmmu>00000000000000000d0800010100000003000000000000000000000000000000</Fmmu>
@@ -7249,6 +7281,9 @@ External Setpoint Generation:
 									</Entry>
 									<Entry Name="Torque actual value" Index="#x6077">
 										<Type>INT</Type>
+									</Entry>
+									<Entry Name="Digital inputs" Index="#x60fd">
+										<Type>UDINT</Type>
 									</Entry>
 								</Pdo>
 								<Pdo Name="2nd Transmit PDO Mapping" Index="#x1a01" Flags="#x0000">
@@ -7520,7 +7555,7 @@ External Setpoint Generation:
 								<SyncMan>0020140126000100010000002200ce051401002026010000</SyncMan>
 								<SyncMan>0028140122000100020000002200ce051401002822010000</SyncMan>
 								<SyncMan>001018006400010003000000000000000000001064000000</SyncMan>
-								<SyncMan>001818002000010004000000000000000000001820000000</SyncMan>
+								<SyncMan>00181c002000010004000000000000000000001820000000</SyncMan>
 								<Fmmu>0000000000000000001000020100000001000000000000000000000000000000</Fmmu>
 								<Fmmu>0000000000000000001800010100000002000000000000000000000000000000</Fmmu>
 								<Fmmu>00000000000000000d0800010100000003000000000000000000000000000000</Fmmu>
@@ -7558,6 +7593,9 @@ External Setpoint Generation:
 									</Entry>
 									<Entry Name="Torque actual value" Index="#x6077">
 										<Type>INT</Type>
+									</Entry>
+									<Entry Name="Digital inputs" Index="#x60fd">
+										<Type>UDINT</Type>
 									</Entry>
 								</Pdo>
 								<Pdo Name="2nd Transmit PDO Mapping" Index="#x1a01" Flags="#x0000">
@@ -8625,7 +8663,7 @@ External Setpoint Generation:
 								<SyncMan>0020140126000100010000002200ce051401002026010000</SyncMan>
 								<SyncMan>0028140122000100020000002200ce051401002822010000</SyncMan>
 								<SyncMan>001018006400010003000000000000000000001064000000</SyncMan>
-								<SyncMan>001818002000010004000000000000000000001820000000</SyncMan>
+								<SyncMan>001820002000010004000000000000000000001820000000</SyncMan>
 								<Fmmu>0000000000000000001000020100000001000000000000000000000000000000</Fmmu>
 								<Fmmu>0000000000000000001800010100000002000000000000000000000000000000</Fmmu>
 								<Fmmu>00000000000000000d0800010100000003000000000000000000000000000000</Fmmu>
@@ -8663,6 +8701,12 @@ External Setpoint Generation:
 									</Entry>
 									<Entry Name="Torque actual value" Index="#x6077">
 										<Type>INT</Type>
+									</Entry>
+									<Entry Name="Control effort" Index="#x60fa">
+										<Type>DINT</Type>
+									</Entry>
+									<Entry Name="Digital inputs" Index="#x60fd">
+										<Type>UDINT</Type>
 									</Entry>
 								</Pdo>
 								<Pdo Name="2nd Transmit PDO Mapping" Index="#x1a01" Flags="#x0000">
@@ -8836,7 +8880,7 @@ External Setpoint Generation:
 								<SyncMan>0020140126000100010000002200ce051401002026010000</SyncMan>
 								<SyncMan>0028140122000100020000002200ce051401002822010000</SyncMan>
 								<SyncMan>001018006400010003000000000000000000001064000000</SyncMan>
-								<SyncMan>001818002000010004000000000000000000001820000000</SyncMan>
+								<SyncMan>00181c002000010004000000000000000000001820000000</SyncMan>
 								<Fmmu>0000000000000000001000020100000001000000000000000000000000000000</Fmmu>
 								<Fmmu>0000000000000000001800010100000002000000000000000000000000000000</Fmmu>
 								<Fmmu>00000000000000000d0800010100000003000000000000000000000000000000</Fmmu>
@@ -8874,6 +8918,9 @@ External Setpoint Generation:
 									</Entry>
 									<Entry Name="Torque actual value" Index="#x6077">
 										<Type>INT</Type>
+									</Entry>
+									<Entry Name="Digital inputs" Index="#x60fd">
+										<Type>UDINT</Type>
 									</Entry>
 								</Pdo>
 								<Pdo Name="2nd Transmit PDO Mapping" Index="#x1a01" Flags="#x0000">
@@ -9047,7 +9094,7 @@ External Setpoint Generation:
 								<SyncMan>0020140126000100010000002200ce051401002026010000</SyncMan>
 								<SyncMan>0028140122000100020000002200ce051401002822010000</SyncMan>
 								<SyncMan>001018006400010003000000000000000000001064000000</SyncMan>
-								<SyncMan>001818002000010004000000000000000000001820000000</SyncMan>
+								<SyncMan>00181c002000010004000000000000000000001820000000</SyncMan>
 								<Fmmu>0000000000000000001000020100000001000000000000000000000000000000</Fmmu>
 								<Fmmu>0000000000000000001800010100000002000000000000000000000000000000</Fmmu>
 								<Fmmu>00000000000000000d0800010100000003000000000000000000000000000000</Fmmu>
@@ -9085,6 +9132,9 @@ External Setpoint Generation:
 									</Entry>
 									<Entry Name="Torque actual value" Index="#x6077">
 										<Type>INT</Type>
+									</Entry>
+									<Entry Name="Digital inputs" Index="#x60fd">
+										<Type>UDINT</Type>
 									</Entry>
 								</Pdo>
 								<Pdo Name="2nd Transmit PDO Mapping" Index="#x1a01" Flags="#x0000">
@@ -9258,7 +9308,7 @@ External Setpoint Generation:
 								<SyncMan>0020140126000100010000002200ce051401002026010000</SyncMan>
 								<SyncMan>0028140122000100020000002200ce051401002822010000</SyncMan>
 								<SyncMan>001018006400010003000000000000000000001064000000</SyncMan>
-								<SyncMan>001818002000010004000000000000000000001820000000</SyncMan>
+								<SyncMan>00181c002000010004000000000000000000001820000000</SyncMan>
 								<Fmmu>0000000000000000001000020100000001000000000000000000000000000000</Fmmu>
 								<Fmmu>0000000000000000001800010100000002000000000000000000000000000000</Fmmu>
 								<Fmmu>00000000000000000d0800010100000003000000000000000000000000000000</Fmmu>
@@ -9296,6 +9346,9 @@ External Setpoint Generation:
 									</Entry>
 									<Entry Name="Torque actual value" Index="#x6077">
 										<Type>INT</Type>
+									</Entry>
+									<Entry Name="Digital inputs" Index="#x60fd">
+										<Type>UDINT</Type>
 									</Entry>
 								</Pdo>
 								<Pdo Name="2nd Transmit PDO Mapping" Index="#x1a01" Flags="#x0000">
@@ -9469,7 +9522,7 @@ External Setpoint Generation:
 								<SyncMan>0020140126000100010000002200ce051401002026010000</SyncMan>
 								<SyncMan>0028140122000100020000002200ce051401002822010000</SyncMan>
 								<SyncMan>001018006400010003000000000000000000001064000000</SyncMan>
-								<SyncMan>001818002000010004000000000000000000001820000000</SyncMan>
+								<SyncMan>00181c002000010004000000000000000000001820000000</SyncMan>
 								<Fmmu>0000000000000000001000020100000001000000000000000000000000000000</Fmmu>
 								<Fmmu>0000000000000000001800010100000002000000000000000000000000000000</Fmmu>
 								<Fmmu>00000000000000000d0800010100000003000000000000000000000000000000</Fmmu>
@@ -9507,6 +9560,9 @@ External Setpoint Generation:
 									</Entry>
 									<Entry Name="Torque actual value" Index="#x6077">
 										<Type>INT</Type>
+									</Entry>
+									<Entry Name="Digital inputs" Index="#x60fd">
+										<Type>UDINT</Type>
 									</Entry>
 								</Pdo>
 								<Pdo Name="2nd Transmit PDO Mapping" Index="#x1a01" Flags="#x0000">
@@ -9680,7 +9736,7 @@ External Setpoint Generation:
 								<SyncMan>0020140126000100010000002200ce051401002026010000</SyncMan>
 								<SyncMan>0028140122000100020000002200ce051401002822010000</SyncMan>
 								<SyncMan>001018006400010003000000000000000000001064000000</SyncMan>
-								<SyncMan>001818002000010004000000000000000000001820000000</SyncMan>
+								<SyncMan>00181c002000010004000000000000000000001820000000</SyncMan>
 								<Fmmu>0000000000000000001000020100000001000000000000000000000000000000</Fmmu>
 								<Fmmu>0000000000000000001800010100000002000000000000000000000000000000</Fmmu>
 								<Fmmu>00000000000000000d0800010100000003000000000000000000000000000000</Fmmu>
@@ -9718,6 +9774,9 @@ External Setpoint Generation:
 									</Entry>
 									<Entry Name="Torque actual value" Index="#x6077">
 										<Type>INT</Type>
+									</Entry>
+									<Entry Name="Digital inputs" Index="#x60fd">
+										<Type>UDINT</Type>
 									</Entry>
 								</Pdo>
 								<Pdo Name="2nd Transmit PDO Mapping" Index="#x1a01" Flags="#x0000">
@@ -9891,7 +9950,7 @@ External Setpoint Generation:
 								<SyncMan>0020140126000100010000002200ce051401002026010000</SyncMan>
 								<SyncMan>0028140122000100020000002200ce051401002822010000</SyncMan>
 								<SyncMan>001018006400010003000000000000000000001064000000</SyncMan>
-								<SyncMan>001818002000010004000000000000000000001820000000</SyncMan>
+								<SyncMan>00181c002000010004000000000000000000001820000000</SyncMan>
 								<Fmmu>0000000000000000001000020100000001000000000000000000000000000000</Fmmu>
 								<Fmmu>0000000000000000001800010100000002000000000000000000000000000000</Fmmu>
 								<Fmmu>00000000000000000d0800010100000003000000000000000000000000000000</Fmmu>
@@ -9929,6 +9988,9 @@ External Setpoint Generation:
 									</Entry>
 									<Entry Name="Torque actual value" Index="#x6077">
 										<Type>INT</Type>
+									</Entry>
+									<Entry Name="Digital inputs" Index="#x60fd">
+										<Type>UDINT</Type>
 									</Entry>
 								</Pdo>
 								<Pdo Name="2nd Transmit PDO Mapping" Index="#x1a01" Flags="#x0000">
@@ -11024,78 +11086,97 @@ External Setpoint Generation:
 				<Link VarA="PlcTask Outputs^IO.ET01_Output[6]" VarB="Channel 9^Output" Size="1" OffsA="8"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 30 (MR-JET-G-N1)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[1]" VarB="1st Transmit PDO Mapping^Digital inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[1]" VarB="1st Receive PDO Mapping^Controlword"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[1]" VarB="1st Receive PDO Mapping^Modes of operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 31 (MR-JET-G-N1)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[2]" VarB="1st Transmit PDO Mapping^Digital inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[2]" VarB="1st Receive PDO Mapping^Controlword"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[2]" VarB="1st Receive PDO Mapping^Modes of operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 32 (MR-JET-G-N1)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[3]" VarB="1st Transmit PDO Mapping^Digital inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[3]" VarB="1st Receive PDO Mapping^Controlword"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[3]" VarB="1st Receive PDO Mapping^Modes of operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 33 (MR-JET-G-N1)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[4]" VarB="1st Transmit PDO Mapping^Digital inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[4]" VarB="1st Receive PDO Mapping^Controlword"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[4]" VarB="1st Receive PDO Mapping^Modes of operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 34 (MR-JET-G-N1)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[5]" VarB="1st Transmit PDO Mapping^Digital inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[5]" VarB="1st Receive PDO Mapping^Controlword"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[5]" VarB="1st Receive PDO Mapping^Modes of operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 35 (MR-JET-G-N1)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[6]" VarB="1st Transmit PDO Mapping^Digital inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[6]" VarB="1st Receive PDO Mapping^Controlword"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[6]" VarB="1st Receive PDO Mapping^Modes of operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 36 (MR-JET-G-N1)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[7]" VarB="1st Transmit PDO Mapping^Digital inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[7]" VarB="1st Receive PDO Mapping^Controlword"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[7]" VarB="1st Receive PDO Mapping^Modes of operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 37 (MR-JET-G-N1)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[8]" VarB="1st Transmit PDO Mapping^Digital inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[8]" VarB="1st Receive PDO Mapping^Controlword"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[8]" VarB="1st Receive PDO Mapping^Modes of operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 40 (MR-JET-G-N1)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[9]" VarB="1st Transmit PDO Mapping^Digital inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[9]" VarB="1st Receive PDO Mapping^Controlword"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[9]" VarB="1st Receive PDO Mapping^Modes of operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 52 (MR-JET-G-N1)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[10]" VarB="1st Transmit PDO Mapping^Digital inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[10]" VarB="1st Receive PDO Mapping^Controlword"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[10]" VarB="1st Receive PDO Mapping^Modes of operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 53 (MR-JET-G-N1)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[11]" VarB="1st Transmit PDO Mapping^Digital inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[11]" VarB="1st Receive PDO Mapping^Controlword"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[11]" VarB="1st Receive PDO Mapping^Modes of operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 54 (MR-JET-G-N1)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[12]" VarB="1st Transmit PDO Mapping^Digital inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[12]" VarB="1st Receive PDO Mapping^Controlword"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[12]" VarB="1st Receive PDO Mapping^Modes of operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 55 (MR-JET-G-N1)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[13]" VarB="1st Transmit PDO Mapping^Digital inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[13]" VarB="1st Receive PDO Mapping^Controlword"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[13]" VarB="1st Receive PDO Mapping^Modes of operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 56 (MR-JET-G-N1)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[14]" VarB="1st Transmit PDO Mapping^Digital inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[14]" VarB="1st Receive PDO Mapping^Controlword"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[14]" VarB="1st Receive PDO Mapping^Modes of operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 57 (MR-JET-G-N1)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[15]" VarB="1st Transmit PDO Mapping^Digital inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[15]" VarB="1st Receive PDO Mapping^Controlword"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[15]" VarB="1st Receive PDO Mapping^Modes of operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 58 (MR-JET-G-N1)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[16]" VarB="1st Transmit PDO Mapping^Digital inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[16]" VarB="1st Receive PDO Mapping^Controlword"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[16]" VarB="1st Receive PDO Mapping^Modes of operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 59 (DM3C-EC556)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[17]" VarB="Transmit PDO 1^Digital Inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[17]" VarB="Receive PDO 1^Control Word"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[17]" VarB="Receive PDO 1^Modes of Operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 60 (DM3C-EC556)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[18]" VarB="Transmit PDO 1^Digital Inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[18]" VarB="Receive PDO 1^Control Word"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[18]" VarB="Receive PDO 1^Modes of Operation"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Drive 61 (DM3C-EC870)">
+				<Link VarA="PlcTask Inputs^GVL_Standard.arAxisSensor[19]" VarB="Transmit PDO 1^Digital Inputs"/>
 				<Link VarA="PlcTask Outputs^CallStandard.controlword[19]" VarB="Receive PDO 1^Control Word"/>
 				<Link VarA="PlcTask Outputs^CallStandard.sModeOperation[19]" VarB="Receive PDO 1^Modes of Operation"/>
 			</OwnerB>
@@ -11490,14 +11571,20 @@ External Setpoint Generation:
 				<Link VarA="PlcTask Outputs^GVL_Standard.Axis[16].PlcToNc" VarB="Inputs^FromPlc"/>
 			</OwnerB>
 			<OwnerB Name="TINC^NC-Task 1 SAF^Axes^Axis 17">
+				<Link VarA="PlcTask Inputs^CallStandard.nctrl1[17]" VarB="Drive^Outputs^Out^nCtrl1"/>
+				<Link VarA="PlcTask Inputs^CallStandard.nctrl2[17]" VarB="Drive^Outputs^Out^nCtrl2"/>
 				<Link VarA="PlcTask Inputs^GVL_Standard.Axis[17].NcToPlc" VarB="Outputs^ToPlc"/>
 				<Link VarA="PlcTask Outputs^GVL_Standard.Axis[17].PlcToNc" VarB="Inputs^FromPlc"/>
 			</OwnerB>
 			<OwnerB Name="TINC^NC-Task 1 SAF^Axes^Axis 18">
+				<Link VarA="PlcTask Inputs^CallStandard.nctrl1[18]" VarB="Drive^Outputs^Out^nCtrl1"/>
+				<Link VarA="PlcTask Inputs^CallStandard.nctrl2[18]" VarB="Drive^Outputs^Out^nCtrl2"/>
 				<Link VarA="PlcTask Inputs^GVL_Standard.Axis[18].NcToPlc" VarB="Outputs^ToPlc"/>
 				<Link VarA="PlcTask Outputs^GVL_Standard.Axis[18].PlcToNc" VarB="Inputs^FromPlc"/>
 			</OwnerB>
 			<OwnerB Name="TINC^NC-Task 1 SAF^Axes^Axis 19">
+				<Link VarA="PlcTask Inputs^CallStandard.nctrl1[19]" VarB="Drive^Outputs^Out^nCtrl1"/>
+				<Link VarA="PlcTask Inputs^CallStandard.nctrl2[19]" VarB="Drive^Outputs^Out^nCtrl2"/>
 				<Link VarA="PlcTask Inputs^GVL_Standard.Axis[19].NcToPlc" VarB="Outputs^ToPlc"/>
 				<Link VarA="PlcTask Outputs^GVL_Standard.Axis[19].PlcToNc" VarB="Inputs^FromPlc"/>
 			</OwnerB>
