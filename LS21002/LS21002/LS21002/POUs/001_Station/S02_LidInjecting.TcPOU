@@ -113,16 +113,16 @@ station.adwAlarm[1].31	:=	fbMKC204C.xError	;//	S03注液工位称重设备报警
     <Action Name="Delay" Id="{7f460a8e-34d3-43b7-a3e6-d254bf0f5a76}">
       <Implementation>
         <ST><![CDATA[
-(*arTonDelay[01](IN:=, PT:=T#1S , Q=> , ET=> );*)//TipAuto使用
+arTonDelay[01](IN:=, PT:=T#1S , Q=> , ET=> );
 arTonDelay[02](IN:= , PT:=T#1S , Q=> , ET=> );//注液延时使用
 arTonDelay[03](IN:= , PT:=T#10S , Q=> , ET=> );
 arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[05](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[06](IN:= , PT:=T#0.1S , Q=> , ET=> );
-arTonDelay[07](IN:= , PT:=T#0.1S , Q=> , ET=> );
-arTonDelay[08](IN:= , PT:=T#0.1S , Q=> , ET=> );
-arTonDelay[09](IN:= , PT:=T#0.1S , Q=> , ET=> );
-arTonDelay[10](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[07](IN:=NOT  fbXAxisMove.xbusy, PT:=T#0.1S , Q=> , ET=> );//TipAuto使用
+arTonDelay[08](IN:=NOT  fbYAxisMove.xbusy , PT:=T#0.1S , Q=> , ET=> );//TipAuto使用
+arTonDelay[09](IN:= NOT  fbZAxisMove.xbusy, PT:=T#0.1S , Q=> , ET=> );//TipAuto使用
+arTonDelay[10](IN:= NOT fbStirAxis.xbusy, PT:=T#0.1S , Q=> , ET=> );//TipAuto使用
 
 
 
@@ -301,7 +301,7 @@ CASE station.iStepAuto OF
 			END_IF
 	130://开始注液
 		  tsModuleProcess[bXCounter+1].xProcessStarted:=TRUE;
-		 FOR i:=1 TO  11 BY 1 DO
+		 FOR i:=1 TO  12 BY 1 DO
 				IF  i MOD 2 = 0  THEN
 						fbRudongPump[i].stDeviceOpe.xPull_Auto[1]:=TRUE;
 				ELSE	
@@ -321,12 +321,12 @@ CASE station.iStepAuto OF
 								 fbRudongPump[8].xDone AND
 									fbRudongPump[9].xDone AND
 									fbRudongPump[10].xDone AND
-									fbRudongPump[11].xDone THEN
-								/// fbRudongPump[12].xDone	THEN						
+									fbRudongPump[11].xDone AND
+								 fbRudongPump[12].xDone	THEN						
 						 station.iStepAuto:=141;	
 					 END_IF
 	141://复位		
-			 FOR   i:=1 TO 11 BY 1DO
+			 FOR   i:=1 TO 12 BY 1DO
 							IF   fbRudongPump[i].xDone THEN
 									fbRudongPump[i].xExecute:=FALSE;
 							END_IF
@@ -736,37 +736,33 @@ FOR i:= 1 TO 5 BY 1 DO
 END_FOR
 
 
-IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  THEN
-	  arTonDelay[01](IN:=True , PT:=T#1S , Q=> , ET=> );
-else
-	  arTonDelay[01](IN:=false);
-END_IF
-IF arTonDelay[1].Q  THEN 
+IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning AND arTonDelay[7].Q  THEN
 		IF fbXAxisMove.iPosNumber=1 AND NOT fbXAxisMove.xMoveInPos[1] THEN station.adwAutoTip[1].10:=TRUE; END_IF//轴伺服自动时位置不在位置1	
 		IF fbXAxisMove.iPosNumber=2 AND NOT fbXAxisMove.xMoveInPos[2] THEN station.adwAutoTip[1].11:=TRUE; END_IF//轴伺服自动时位置不在位置2	
 		IF fbXAxisMove.iPosNumber=3 AND NOT fbXAxisMove.xMoveInPos[3] THEN station.adwAutoTip[1].12:=TRUE; END_IF//轴伺服自动时位置不在位置3	
 		IF fbXAxisMove.iPosNumber=4 AND NOT fbXAxisMove.xMoveInPos[4] THEN station.adwAutoTip[1].13:=TRUE; END_IF//轴伺服自动时位置不在位置4	
 		IF fbXAxisMove.iPosNumber=5 AND NOT fbXAxisMove.xMoveInPos[5] THEN station.adwAutoTip[1].14:=TRUE; END_IF//轴伺服自动时位置不在位置5	
-		
-		
+END_IF		
+IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning AND arTonDelay[8].Q  THEN		
 		IF fbYAxisMove.iPosNumber=1 AND NOT fbYAxisMove.xMoveInPos[1] THEN station.adwAutoTip[1].15:=TRUE; END_IF//轴伺服自动时位置不在位置1	
 		IF fbYAxisMove.iPosNumber=2 AND NOT fbYAxisMove.xMoveInPos[2] THEN station.adwAutoTip[1].16:=TRUE; END_IF//轴伺服自动时位置不在位置2	
 		IF fbYAxisMove.iPosNumber=3 AND NOT fbYAxisMove.xMoveInPos[3] THEN station.adwAutoTip[1].17:=TRUE; END_IF//轴伺服自动时位置不在位置3	
 		IF fbYAxisMove.iPosNumber=4 AND NOT fbYAxisMove.xMoveInPos[4] THEN station.adwAutoTip[1].18:=TRUE; END_IF//轴伺服自动时位置不在位置4	
 		IF fbYAxisMove.iPosNumber=5 AND NOT fbYAxisMove.xMoveInPos[5] THEN station.adwAutoTip[1].19:=TRUE; END_IF//轴伺服自动时位置不在位置5	
-		
+END_IF	
+IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning AND arTonDelay[9].Q  THEN	
 		IF fbZAxisMove.iPosNumber=1 AND NOT fbZAxisMove.xMoveInPos[1] THEN station.adwAutoTip[1].20:=TRUE; END_IF//轴伺服自动时位置不在位置1	
 		IF fbZAxisMove.iPosNumber=2 AND NOT fbZAxisMove.xMoveInPos[2] THEN station.adwAutoTip[1].21:=TRUE; END_IF//轴伺服自动时位置不在位置2	
 		IF fbZAxisMove.iPosNumber=3 AND NOT fbZAxisMove.xMoveInPos[3] THEN station.adwAutoTip[1].22:=TRUE; END_IF//轴伺服自动时位置不在位置3	
 		IF fbZAxisMove.iPosNumber=4 AND NOT fbZAxisMove.xMoveInPos[4] THEN station.adwAutoTip[1].23:=TRUE; END_IF//轴伺服自动时位置不在位置4	
 		IF fbZAxisMove.iPosNumber=5 AND NOT fbZAxisMove.xMoveInPos[5] THEN station.adwAutoTip[1].24:=TRUE; END_IF//轴伺服自动时位置不在位置5	
-		
+END_IF
+IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning AND arTonDelay[10].Q  THEN		
 		IF fbStirAxis.iPosNumber=1 AND NOT fbStirAxis.xMoveInPos[1] THEN station.adwAutoTip[1].25:=TRUE; END_IF//轴伺服自动时位置不在位置1	
 		IF fbStirAxis.iPosNumber=2 AND NOT fbStirAxis.xMoveInPos[2] THEN station.adwAutoTip[1].26:=TRUE; END_IF//轴伺服自动时位置不在位置2	
 		IF fbStirAxis.iPosNumber=3 AND NOT fbStirAxis.xMoveInPos[3] THEN station.adwAutoTip[1].27:=TRUE; END_IF//轴伺服自动时位置不在位置3	
 		IF fbStirAxis.iPosNumber=4 AND NOT fbStirAxis.xMoveInPos[4] THEN station.adwAutoTip[1].28:=TRUE; END_IF//轴伺服自动时位置不在位置4	
-		IF fbStirAxis.iPosNumber=5 AND NOT fbStirAxis.xMoveInPos[5] THEN station.adwAutoTip[1].29:=TRUE; END_IF//轴伺服自动时位置不在位置5
-		
+		IF fbStirAxis.iPosNumber=5 AND NOT fbStirAxis.xMoveInPos[5] THEN station.adwAutoTip[1].29:=TRUE; END_IF//轴伺服自动时位置不在位置5	
 END_IF
 ]]></ST>
       </Implementation>
@@ -1126,12 +1122,14 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="184" Count="0" />
       <LineId Id="188" Count="1" />
       <LineId Id="187" Count="0" />
-      <LineId Id="157" Count="20" />
+      <LineId Id="157" Count="3" />
+      <LineId Id="166" Count="11" />
       <LineId Id="190" Count="0" />
+      <LineId Id="210" Count="0" />
       <LineId Id="192" Count="5" />
+      <LineId Id="211" Count="0" />
       <LineId Id="199" Count="3" />
       <LineId Id="191" Count="0" />
-      <LineId Id="204" Count="0" />
       <LineId Id="178" Count="0" />
       <LineId Id="183" Count="0" />
     </LineIds>

@@ -1,0 +1,65 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_ATV12" Id="{d669fbb7-caf8-4327-b90f-618dfaca3e74}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ATV12
+(*
+********************************************************************************
+* Name: FB_Encoder
+*
+* Author:  AutomanH
+* Version: 1.0.0
+*
+* Description:
+*   Schneider ATV12 
+* Remarks:
+*
+* Revisions:
+* 
+*********************************************************************************)
+VAR_INPUT
+ xIMotorStart:BOOL; //电机启动
+ xIMotorStartHMI:BOOL;
+ xIMotorStop:BOOL; //电机停止
+ xIMotorStopHMI:BOOL;
+ xIAutoMode:BOOL;
+ xIManualMode:BOOL;
+ xIDeviceRunning:BOOL;
+END_VAR
+VAR_OUTPUT
+ xQMotorStart:BOOL;//变频器电机启动
+ arxQMotorSpeedCmd:ARRAY[1..2] OF BOOL;//预制速度
+ xQRev:BOOL;//备用
+END_VAR
+VAR
+ 	MotorStartR_TRIG:R_TRIG;
+	MotorStopR_TRIG:R_TRIG;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[//变频器（2线 漏型）
+MotorStartR_TRIG(CLK:=( xIManualMode AND   xIMotorStartHMI ) OR ( (xIAutoMode OR xIDeviceRunning ) AND   xIMotorStart) , Q=> );
+MotorStopR_TRIG(CLK:= ( xIManualMode AND   xIMotorStopHMI ) OR ((xIAutoMode OR xIDeviceRunning ) AND xIMotorStop), Q=> );
+IF  MotorStartR_TRIG.Q THEN
+			xQMotorStart	:=TRUE;//	热缩封膜出料线体¶电机正转/停止
+			xIMotorStopHMI:=FALSE;
+			xIMotorStop:=FALSE;
+ELSIF	MotorStopR_TRIG.Q	 THEN
+			xQMotorStart	:=FALSE;//	热缩封膜出料线体¶电机正转/停止
+			xIMotorStartHMI:=FALSE;
+			xIMotorStart:=FALSE;
+END_IF
+	
+	arxQMotorSpeedCmd[1]	:=FALSE;//	热缩封膜出料线体¶电机（预约速度20HZ)
+	arxQMotorSpeedCmd[2]	:=TRUE;//	热缩封膜出料线体¶电机（预约速度50HZ）
+	
+	
+	xQRev	:=FALSE;//	热缩封膜出料线体¶电机（未使用）]]></ST>
+    </Implementation>
+    <LineIds Name="FB_ATV12">
+      <LineId Id="29" Count="13" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="44" Count="1" />
+      <LineId Id="43" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

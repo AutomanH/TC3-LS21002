@@ -5,12 +5,34 @@
 VAR
  //工站
 	station					: REFERENCE TO FB_Station:=fbstation[12];
+	//变频器
+	ATV12						: REFERENCE TO FB_ATV12:=fbATV12;
+	// 支线电机启动
+	xPreLineMoveStart: BOOL;
+	// 支线电机停止
+	xPreLineMoveStop: BOOL;
+	MotorStartR_TRIG: R_TRIG;
+	MotorStopR_TRIG: R_TRIG;
 END_VAR]]></Declaration>
     <Implementation>
-      <ST><![CDATA[FlowAuto();
+      <ST><![CDATA[A_Input();
+FlowAuto();
 FlowInit();
-ILC();]]></ST>
+ILC();
+
+Z_Output();]]></ST>
     </Implementation>
+    <Action Name="A_Input" Id="{329a0dfa-30d3-446b-bc5c-165dca73422f}">
+      <Implementation>
+        <ST><![CDATA[//变频器
+
+  
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
     <Action Name="FlowAuto" Id="{adb8cf0c-6f6a-47e5-91ad-cc437d88c4a9}">
       <Implementation>
         <ST><![CDATA[
@@ -44,17 +66,19 @@ CASE station.iStepAuto OF
 			station.iStepAuto:= 10;
 		END_IF
     10: //复位数据 
-			station.iStepAuto :=999;
+			station.iStepAuto :=20;
+		20://启动皮带线
+			ATV12.xIMotorStart:=TRUE;
+			station.iStepAuto :=999;		
 		
-	999://----Single Run Finish----
-			
-		station.iStepAuto :=0;
-		IF NOT station.xSingleContinuousRun THEN
-			station.xSingleRunFlag:=FALSE;
-		END_IF
-		
-		station.xCycleEnable:=FALSE;	
-		(*station.xDone:=TRUE;*)
+	 999://----Single Run Finish----
+		 station.iStepAuto :=0;
+		 IF NOT station.xSingleContinuousRun THEN
+			 station.xSingleRunFlag:=FALSE;
+		 END_IF
+		 
+		 station.xCycleEnable:=FALSE;	
+		 (*station.xDone:=TRUE;*)
 	ELSE
 		;	
 END_CASE
@@ -73,7 +97,10 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
-  station.iStepInit:=999;	
+  station.iStepInit:=20;	
+20://停止皮带线
+		ATV12.xIMotorStop:=TRUE;
+		 station.iStepInit:=999;	
 999://初始化完成	
 	station.iStepInit:=0;
 	station.xInitDone:=TRUE;  
@@ -90,14 +117,28 @@ station.xCanRun :=TRUE ;
 
 //---------------------------------------------------气缸动作条件-------------------------------------------
 
-
-]]></ST>
+//变频器
+ATV12.xIDeviceRunning:=station.xSingleRunning;]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="Z_Output" Id="{eb8fc7d1-9c6e-4f90-8618-41d6bdeef2f9}">
+      <Implementation>
+        <ST><![CDATA[]]></ST>
       </Implementation>
     </Action>
     <LineIds Name="S12_PreLine">
+      <LineId Id="18" Count="0" />
       <LineId Id="5" Count="0" />
       <LineId Id="13" Count="0" />
       <LineId Id="9" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="19" Count="0" />
+    </LineIds>
+    <LineIds Name="S12_PreLine.A_Input">
+      <LineId Id="79" Count="0" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="10" Count="3" />
+      <LineId Id="8" Count="0" />
     </LineIds>
     <LineIds Name="S12_PreLine.FlowAuto">
       <LineId Id="1155" Count="10" />
@@ -107,7 +148,10 @@ station.xCanRun :=TRUE ;
       <LineId Id="1256" Count="0" />
       <LineId Id="1970" Count="0" />
       <LineId Id="1778" Count="0" />
-      <LineId Id="1212" Count="2" />
+      <LineId Id="1972" Count="1" />
+      <LineId Id="1971" Count="0" />
+      <LineId Id="1212" Count="0" />
+      <LineId Id="1214" Count="0" />
       <LineId Id="1453" Count="2" />
       <LineId Id="1215" Count="5" />
       <LineId Id="1224" Count="0" />
@@ -115,6 +159,9 @@ station.xCanRun :=TRUE ;
     <LineIds Name="S12_PreLine.FlowInit">
       <LineId Id="437" Count="9" />
       <LineId Id="459" Count="0" />
+      <LineId Id="467" Count="0" />
+      <LineId Id="469" Count="0" />
+      <LineId Id="471" Count="0" />
       <LineId Id="462" Count="4" />
       <LineId Id="436" Count="0" />
     </LineIds>
@@ -123,6 +170,9 @@ station.xCanRun :=TRUE ;
       <LineId Id="313" Count="0" />
       <LineId Id="302" Count="0" />
       <LineId Id="274" Count="0" />
+    </LineIds>
+    <LineIds Name="S12_PreLine.Z_Output">
+      <LineId Id="46" Count="0" />
     </LineIds>
   </POU>
 </TcPlcObject>

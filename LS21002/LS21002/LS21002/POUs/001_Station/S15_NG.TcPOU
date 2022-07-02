@@ -6,8 +6,8 @@ VAR
 	//工站
 	station					: REFERENCE TO FB_Station:=fbstation[15];
 	//气缸
-	fbHOZCyl_1			:REFERENCE TO FB_Cylinder:=fbCylinder[27];	//	分料气缸1
-	fbHOZCyl_2			:REFERENCE TO FB_Cylinder:=fbCylinder[28];	//	分料气缸2
+	fbHOZCyl_1			:REFERENCE TO FB_Cylinder:=fbCylinder[39];	//	分料气缸1
+	fbHOZCyl_2			:REFERENCE TO FB_Cylinder:=fbCylinder[40];	//	分料气缸2
 	
 	
 	//延时
@@ -37,7 +37,10 @@ Z_Output();]]></ST>
     <Action Name="A_Input" Id="{03aa5434-4f82-4612-9525-5439c5ebc821}">
       <Implementation>
         <ST><![CDATA[//气缸
-
+fbHOZCyl_1.xWP_Sensor:=IxS13HOZCyl_1WP	;//	NG推料气缸1¶动点
+fbHOZCyl_1.xHP_Sensor:=IxS13HOZCyl_1HP	;//	NG推料气缸1¶原点
+fbHOZCyl_2.xWP_Sensor:=IxS13HOZCyl_2WP	;//	NG推料气缸2¶动点
+fbHOZCyl_2.xHP_Sensor:=IxS13HOZCyl_2HP	;//	NG推料气缸2¶原点
 
 
   
@@ -176,7 +179,11 @@ END_IF
 station.xCanRun :=TRUE ;
 
 //---------------------------------------------------气缸动作条件-------------------------------------------
+fbHOZCyl_1.xOffILC	:=	TRUE	;
+fbHOZCyl_1.xOnILC	:=	TRUE; 
 
+fbHOZCyl_2.xOffILC	:=	TRUE	;
+fbHOZCyl_2.xOnILC	:=	TRUE; 
 
 //---------------------------------------------------伺服动作条件-------------------------------------------
 
@@ -210,6 +217,10 @@ station.xCanRun :=TRUE ;
     <Action Name="Z_Output" Id="{110fb2aa-1edf-4d7b-ba77-793b2ec8f7a5}">
       <Implementation>
         <ST><![CDATA[(**************************气缸输出********************************)
+QxS13HOZCyl_1WP	:=fbHOZCyl_1.xWP_Valve;//	NG推料气缸1¶动点
+QxS13HOZCyl_1HP	:=fbHOZCyl_1.xHP_Valve;//	NG推料气缸1¶原点
+QxS13HOZCyl_2WP	:=fbHOZCyl_2.xWP_Valve;//	NG推料气缸2¶动点
+QxS13HOZCyl_2HP	:=fbHOZCyl_2.xHP_Valve;//	NG推料气缸2¶原点
 
   ]]></ST>
       </Implementation>
@@ -220,6 +231,7 @@ station.xCanRun :=TRUE ;
     </LineIds>
     <LineIds Name="S15_NG.A_Input">
       <LineId Id="28" Count="0" />
+      <LineId Id="56" Count="2" />
       <LineId Id="55" Count="0" />
       <LineId Id="40" Count="1" />
       <LineId Id="10" Count="3" />
@@ -264,6 +276,7 @@ station.xCanRun :=TRUE ;
     </LineIds>
     <LineIds Name="S15_NG.ILC">
       <LineId Id="234" Count="4" />
+      <LineId Id="308" Count="3" />
       <LineId Id="302" Count="0" />
       <LineId Id="307" Count="0" />
       <LineId Id="290" Count="0" />
@@ -288,6 +301,8 @@ station.xCanRun :=TRUE ;
     </LineIds>
     <LineIds Name="S15_NG.Z_Output">
       <LineId Id="2" Count="0" />
+      <LineId Id="22" Count="2" />
+      <LineId Id="21" Count="0" />
       <LineId Id="19" Count="1" />
     </LineIds>
   </POU>

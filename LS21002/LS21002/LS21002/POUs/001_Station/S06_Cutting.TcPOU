@@ -110,7 +110,7 @@ station.adwAlarm[1].18	:=	fbGlampAdjustCyl_3.xWP_Off	;//	S06切膜工位调整�
     </Action>
     <Action Name="Delay" Id="{2180e573-4097-44e6-ba89-ef43671eb619}">
       <Implementation>
-        <ST><![CDATA[(*arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );*)//TipAuto使用
+        <ST><![CDATA[arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );
 arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
 arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
@@ -119,6 +119,7 @@ arTonDelay[06](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[07](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[08](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[09](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[10](IN:= NOT fbROTAxisMove.xbusy , PT:=T#0.1S , Q=> , ET=> );//TipAuto使用
 
 
 
@@ -591,15 +592,15 @@ fbROTAxisMove.xMoveILC[1] :=fbHOZReachedCyl_1.xHP_Delay AND fbHOZReachedCyl_2.xH
       <Implementation>
         <ST><![CDATA[
 //------------------------------------------------AutoTip Cylinder--------------------------------
-station.adwAutoTip[1].00	:=	fbGlampCyl_1.xAutoTip	;
-station.adwAutoTip[1].01	:=	fbGlampCyl_2.xAutoTip	;
-station.adwAutoTip[1].02	:=	fbHOZReachedCyl_1.xAutoTip	;
-station.adwAutoTip[1].03	:=	fbHOZReachedCyl_2.xAutoTip	;
-station.adwAutoTip[1].04	:=	fbHOZCyl.xAutoTip	;
-station.adwAutoTip[1].05	:=	fbVTCAdjustCyl.xAutoTip	;
-station.adwAutoTip[1].06	:=	fbGlampAdjustCyl_1.xAutoTip	;
-station.adwAutoTip[1].07	:=	fbGlampAdjustCyl_2.xAutoTip	;
-station.adwAutoTip[1].08	:=	fbGlampAdjustCyl_3.xAutoTip	;
+//station.adwAutoTip[1].00	:=	fbGlampCyl_1.xAutoTip	;
+//station.adwAutoTip[1].01	:=	fbGlampCyl_2.xAutoTip	;
+//station.adwAutoTip[1].02	:=	fbHOZReachedCyl_1.xAutoTip	;
+//station.adwAutoTip[1].03	:=	fbHOZReachedCyl_2.xAutoTip	;
+//station.adwAutoTip[1].04	:=	fbHOZCyl.xAutoTip	;
+//station.adwAutoTip[1].05	:=	fbVTCAdjustCyl.xAutoTip	;
+//station.adwAutoTip[1].06	:=	fbGlampAdjustCyl_1.xAutoTip	;
+//station.adwAutoTip[1].07	:=	fbGlampAdjustCyl_2.xAutoTip	;
+//station.adwAutoTip[1].08	:=	fbGlampAdjustCyl_3.xAutoTip	;
 
 //------------------------------------------------AutoTip Servo--------------------------------
 //**************************************
@@ -611,12 +612,7 @@ FOR i:= 1 TO 5 BY 1 DO
 END_FOR
 
 
-IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  THEN
-	  arTonDelay[01](IN:=True , PT:=T#1S , Q=> , ET=> );
-else
-	  arTonDelay[01](IN:=false);
-END_IF
-IF arTonDelay[1].Q  THEN 
+IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  AND arTonDelay[10].Q THEN
 		IF	fbROTAxisMove.iPosNumber=1 	AND NOT fbROTAxisMove.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].10:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
 		if	fbROTAxisMove.iPosNumber=2	AND NOT fbROTAxisMove.xMoveInPos[2]	THEN 	station.adwAutoTip[1].11:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
 		if	fbROTAxisMove.iPosNumber=3	AND NOT fbROTAxisMove.xMoveInPos[3]	THEN 	station.adwAutoTip[1].12:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
@@ -680,7 +676,9 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="266" Count="0" />
     </LineIds>
     <LineIds Name="S06_Cutting.Delay">
-      <LineId Id="64" Count="10" />
+      <LineId Id="64" Count="7" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="72" Count="2" />
       <LineId Id="44" Count="13" />
       <LineId Id="40" Count="0" />
     </LineIds>
@@ -895,7 +893,7 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="145" Count="0" />
       <LineId Id="148" Count="5" />
       <LineId Id="187" Count="0" />
-      <LineId Id="157" Count="8" />
+      <LineId Id="157" Count="3" />
       <LineId Id="214" Count="4" />
       <LineId Id="191" Count="0" />
       <LineId Id="183" Count="0" />

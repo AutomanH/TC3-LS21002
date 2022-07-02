@@ -93,6 +93,7 @@ VAR
 	_rAcceleration : REAL:=5000;
 	_rTempAcceleration : REAL;
 	_rLastRotatePos : REAL;
+	diOldStep:DINT;
 END_VAR
 VAR_TEMP
 	xAgain: BOOL;
@@ -552,6 +553,7 @@ END_IF
 CASE _diCmdState OF
 	0://判断是否已经处于目标位置或者夹取完成状态，防止出现重复触发情况
 		_diCmdState := _diCmdState + 1;
+			diOldStep:=_diCmdState;
 		_tonDelay(IN:= FALSE);
 		IF eCmd = ERG_20_CMD.Cmd_RotateAbsRelease//只有绝对松瓶盖定位是有可能处于目标完成状态的，判断是否已经到目标位置
 		THEN
@@ -573,6 +575,7 @@ CASE _diCmdState OF
 			END_IF
 		END_IF
 	1://传送参数
+			diOldStep:=_diCmdState;
 		IF NOT _aRead_VAR.bExecute//等待最后接收结束
 		THEN
 	    _tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的都是当次任务 			
@@ -588,6 +591,7 @@ CASE _diCmdState OF
 			END_IF			
 		END_IF	
 	2://设置读取参数
+			diOldStep:=_diCmdState;
 		_tonDelay(IN:= NOT _aEnableSignal[2],PT:=T#200MS);//等待设备运行起来
 		_tonCmdTimeout(IN:= _aEnableSignal[2],pt:=T#2S);
 		IF _tonDelay.Q//等待电动夹爪开始响应
@@ -601,11 +605,13 @@ CASE _diCmdState OF
 			_diCmdState := 999;
 		END_IF	
 	3://设置读取参数反馈
+			diOldStep:=_diCmdState;
 		_tonCmdTimeout(in:=FALSE);
 		_tonDelay(IN:= FALSE);
 	  _aEnableSignal[4] := TRUE;   
 		_diCmdState := _diCmdState +1;//
 	4:
+		diOldStep:=_diCmdState;
 		_tonTimeout(in:=TRUE,pt:=T#20S); 
 		_tonCmdTimeout(IN:= TRUE,pt:=T#2S);
 		//进行数据刷新		
@@ -662,6 +668,7 @@ CASE _diCmdState OF
 			_diCmdState := 999;
 		END_IF
 	5://报警再次确定
+			diOldStep:=_diCmdState;
 		_tonDelay(IN:= TRUE,pt:=T#40MS);
 		IF _tonDelay.Q//做延时刷新
 		THEN			
@@ -1678,6 +1685,7 @@ xComplete:=1;
       <LineId Id="22" Count="1" />
       <LineId Id="350" Count="0" />
       <LineId Id="367" Count="0" />
+      <LineId Id="620" Count="0" />
       <LineId Id="489" Count="0" />
       <LineId Id="352" Count="7" />
       <LineId Id="366" Count="0" />
@@ -1689,6 +1697,7 @@ xComplete:=1;
       <LineId Id="559" Count="0" />
       <LineId Id="555" Count="0" />
       <LineId Id="24" Count="0" />
+      <LineId Id="621" Count="0" />
       <LineId Id="368" Count="1" />
       <LineId Id="488" Count="0" />
       <LineId Id="595" Count="1" />
@@ -1701,11 +1710,16 @@ xComplete:=1;
       <LineId Id="493" Count="0" />
       <LineId Id="492" Count="0" />
       <LineId Id="370" Count="0" />
-      <LineId Id="377" Count="5" />
+      <LineId Id="377" Count="0" />
+      <LineId Id="622" Count="0" />
+      <LineId Id="378" Count="4" />
       <LineId Id="384" Count="6" />
       <LineId Id="415" Count="0" />
+      <LineId Id="619" Count="0" />
       <LineId Id="475" Count="0" />
-      <LineId Id="417" Count="6" />
+      <LineId Id="417" Count="3" />
+      <LineId Id="618" Count="0" />
+      <LineId Id="421" Count="2" />
       <LineId Id="425" Count="1" />
       <LineId Id="505" Count="22" />
       <LineId Id="613" Count="0" />
@@ -1716,7 +1730,9 @@ xComplete:=1;
       <LineId Id="576" Count="0" />
       <LineId Id="536" Count="9" />
       <LineId Id="375" Count="0" />
-      <LineId Id="578" Count="4" />
+      <LineId Id="578" Count="0" />
+      <LineId Id="623" Count="0" />
+      <LineId Id="579" Count="3" />
       <LineId Id="577" Count="0" />
       <LineId Id="116" Count="0" />
       <LineId Id="210" Count="0" />

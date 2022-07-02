@@ -6,7 +6,9 @@ VAR
 	//工站
 	station					: REFERENCE TO FB_Station:=fbstation[14];
 	
-	
+//气缸
+	fbHOZCyl_1			:REFERENCE TO FB_Cylinder:=fbCylinder[37];	//	推料气缸1
+	fbHOZCyl_2			:REFERENCE TO FB_Cylinder:=fbCylinder[38];	//	推料气缸2
 	
 	//延时
 	arTonDelay :ARRAY[1..20] OF TON;
@@ -34,7 +36,10 @@ Z_Output();]]></ST>
     <Action Name="A_Input" Id="{56ab53d4-cea4-4110-a800-d493a02bd0e3}">
       <Implementation>
         <ST><![CDATA[//气缸
-
+fbHOZCyl_1.xWP_Sensor:=					IxS12HOZCyl_1WP;//	贴标检测工位¶推料气缸1¶动点
+fbHOZCyl_1.xHP_Sensor:=					IxS12HOZCyl_1HP;//	贴标检测工位¶推料气缸1¶原点
+fbHOZCyl_2.xWP_Sensor:=					IxS12HOZCyl_2WP;//	贴标检测工位¶推料气缸2¶动点
+fbHOZCyl_2.xHP_Sensor:=					IxS12HOZCyl_2HP;//	贴标检测工位¶推料气缸2¶原点
 
 
 
@@ -174,6 +179,11 @@ END_IF
 station.xCanRun :=TRUE ;
 
 //---------------------------------------------------气缸动作条件-------------------------------------------
+fbHOZCyl_1.xOffILC	:=	TRUE	;
+fbHOZCyl_1.xOnILC	:=	TRUE; 
+
+fbHOZCyl_2.xOffILC	:=	TRUE	;
+fbHOZCyl_2.xOnILC	:=	TRUE; 
 
 
 //---------------------------------------------------伺服动作条件-------------------------------------------
@@ -208,6 +218,10 @@ station.xCanRun :=TRUE ;
     <Action Name="Z_Output" Id="{c52e7128-5f2e-405f-a9f7-d94ed1c780d1}">
       <Implementation>
         <ST><![CDATA[(**************************气缸输出********************************)
+QxS12HOZCyl_1WP	:=fbHOZCyl_1.xWP_Valve;//	贴标检测工位¶推料气缸1¶动点
+QxS12HOZCyl_1HP	:=fbHOZCyl_1.xHP_Valve;//	贴标检测工位¶推料气缸1¶原点
+QxS12HOZCyl_2WP	:=fbHOZCyl_2.xWP_Valve;//	贴标检测工位¶推料气缸2¶动点
+QxS12HOZCyl_2HP	:=fbHOZCyl_2.xHP_Valve;//	贴标检测工位¶推料气缸2¶原点
 ]]></ST>
       </Implementation>
     </Action>
@@ -217,6 +231,8 @@ station.xCanRun :=TRUE ;
     </LineIds>
     <LineIds Name="S14_LabelChecking.A_Input">
       <LineId Id="28" Count="0" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="67" Count="1" />
       <LineId Id="54" Count="0" />
       <LineId Id="65" Count="0" />
       <LineId Id="55" Count="0" />
@@ -262,6 +278,7 @@ station.xCanRun :=TRUE ;
     </LineIds>
     <LineIds Name="S14_LabelChecking.ILC">
       <LineId Id="234" Count="4" />
+      <LineId Id="308" Count="4" />
       <LineId Id="302" Count="0" />
       <LineId Id="307" Count="0" />
       <LineId Id="290" Count="0" />
@@ -287,6 +304,8 @@ station.xCanRun :=TRUE ;
     </LineIds>
     <LineIds Name="S14_LabelChecking.Z_Output">
       <LineId Id="2" Count="0" />
+      <LineId Id="24" Count="2" />
+      <LineId Id="23" Count="0" />
       <LineId Id="20" Count="0" />
     </LineIds>
   </POU>

@@ -70,13 +70,13 @@ station.adwAlarm[1].00:=station.xInitTimeout;	  			//S08Label 初始化超时
 station.adwAlarm[1].01	:=	fbMainLineAxis.xError	;//	S08主流线旋转伺服报错
 station.adwAlarm[1].02	:=	fbMainLineAxis.xNotPowerOn	;//	S08主流线旋转伺服未使能
 station.adwAlarm[1].03	:=	fbMainLineAxis.xMoveTimeout	;//	S08主流线旋转伺服移动超时
-
+(*station.adwAlarm[1].04	:=	TRUE;//	S08主流线有残余产品*)
 ]]></ST>
       </Implementation>
     </Action>
     <Action Name="Delay" Id="{ac664b08-062a-4507-a761-4db17fdfcccc}">
       <Implementation>
-        <ST><![CDATA[(*arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );*)//TipAuto使用
+        <ST><![CDATA[arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );
 (*arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );*)//自动程序用
 arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
 arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
@@ -85,8 +85,7 @@ arTonDelay[06](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[07](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[08](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[09](IN:= , PT:=T#0.1S , Q=> , ET=> );
-
-
+arTonDelay[10](IN:= NOT fbMainLineAxis.xbusy , PT:=T#0.1S , Q=> , ET=> );//TipAuto使用
 
 
 
@@ -193,7 +192,7 @@ CASE station.iStepAuto OF
 	   	station.iStepAuto:= 110;
 	
 	110:
-	 	arTonDelay[02](IN:= TRUE , PT:=T#50MS , Q=> , ET=> );
+	 	 arTonDelay[02](IN:= TRUE , PT:=T#50MS , Q=> , ET=> );
 		   IF arTonDelay[02].Q THEN
        		station.iStepAuto:=130;
 			arTonDelay[02](IN:=FALSE, PT:=T#50MS , Q=> , ET=> );
@@ -265,6 +264,9 @@ CASE station.iStepAuto OF
 			FOR  i:= 1 TO 6 BY 1 DO 
 				fbStation[i].xDone:=FALSE;
 			END_FOR
+			IF NOT  S07_BoxCarrying.xBeltLineControl THEN
+			 	fbStation[7].xDone:=FALSE;
+			END_IF
 			xS07MainlineRunPermit:=FALSE;
 			station.iStepAuto:=500;	
 	500://清除本站过程记录及数据
@@ -323,7 +325,7 @@ CASE station.iStepInit OF
 			//END_FOR
 				station.iStepInit:=35;
 35://传感器检测
-		IF    IxS01Sensor1Reached  OR
+		IF   IxS01Sensor1Reached  OR
 			  IxS01Sensor2Reached  OR
 			  IxS02Sensor1Reached  OR
 			  IxS02Sensor2Reached  OR  
@@ -331,9 +333,9 @@ CASE station.iStepInit OF
 			  IxS04Sensor2Reached  OR
 			  IxLineEndSensor1Reached OR
 			  IxLineEndSensor2Reached OR	
-              IxLineEndCheckSensor1	 OR
-              IxLineEndCheckSensor2	THEN
-			  	station.iStepInit:=100;	
+        IxLineEndCheckSensor1	 OR
+        IxLineEndCheckSensor2	THEN
+			  	station.adwAlarm[1].04	:=	TRUE;//	S08主流线有残余产品,请检查
 		ELSE
 		 		station.iStepInit:=40;	
 		END_IF
@@ -511,12 +513,7 @@ FOR i:= 1 TO 5 BY 1 DO
 END_FOR
 
 
-IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  THEN
-	  arTonDelay[01](IN:=True , PT:=T#1S , Q=> , ET=> );
-else
-	  arTonDelay[01](IN:=false);
-END_IF
-IF arTonDelay[1].Q  THEN 
+IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning AND arTonDelay[10].Q   THEN
 	IF	fbMainLineAxis.iPosNumber=1 	AND NOT fbMainLineAxis.xMoveInPos[1] THEN 	station.adwAutoTip[1].10:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
 	IF	fbMainLineAxis.iPosNumber=2	AND NOT fbMainLineAxis.xMoveInPos[2]	THEN 	station.adwAutoTip[1].11:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
 	IF	fbMainLineAxis.iPosNumber=3	AND NOT fbMainLineAxis.xMoveInPos[3]	THEN 	station.adwAutoTip[1].12:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
@@ -565,7 +562,8 @@ END_IF
       <LineId Id="266" Count="0" />
     </LineIds>
     <LineIds Name="S08_MainLine.Delay">
-      <LineId Id="64" Count="10" />
+      <LineId Id="64" Count="8" />
+      <LineId Id="74" Count="0" />
       <LineId Id="44" Count="13" />
       <LineId Id="40" Count="0" />
     </LineIds>
@@ -650,6 +648,7 @@ END_IF
       <LineId Id="1561" Count="1" />
       <LineId Id="1667" Count="0" />
       <LineId Id="1623" Count="0" />
+      <LineId Id="1717" Count="2" />
       <LineId Id="1693" Count="0" />
       <LineId Id="1563" Count="0" />
       <LineId Id="1552" Count="0" />
@@ -770,7 +769,7 @@ END_IF
       <LineId Id="148" Count="4" />
       <LineId Id="187" Count="0" />
       <LineId Id="210" Count="0" />
-      <LineId Id="157" Count="8" />
+      <LineId Id="157" Count="3" />
       <LineId Id="205" Count="4" />
       <LineId Id="178" Count="0" />
       <LineId Id="183" Count="0" />

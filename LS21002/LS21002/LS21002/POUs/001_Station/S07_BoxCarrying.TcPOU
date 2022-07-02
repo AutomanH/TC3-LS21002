@@ -63,6 +63,8 @@ VAR
 	MachineInitR_TRIG: R_TRIG;
 	_FirstPosChoose: WORD;
 	_SecondPosChoose: WORD;
+	// 皮带线控制Done信号
+	xBeltLineControl: BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -122,7 +124,7 @@ END_IF
     </Action>
     <Action Name="Delay" Id="{2db4a02f-a342-4718-bc45-d3fd6620ccc0}">
       <Implementation>
-        <ST><![CDATA[(*arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );*)//TipAuto使用
+        <ST><![CDATA[arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );
 (*arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );*)//NG流道使用
 arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );//尾端传感器报警用
 arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
@@ -131,6 +133,7 @@ arTonDelay[06](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[07](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[08](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[09](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[10](IN:= NOT fbNGStepMotor.xbusy  , PT:=T#0.1S , Q=> , ET=> );//TipAuto使用
 
 
 
@@ -196,9 +199,11 @@ CASE station.iStepAuto OF
 			IF   	 NOT  arMainlineFixtureData[arCurFixtureNumStation[17]].xMaterialOnOff AND
 					 NOT  arMainlineFixtureData[arCurFixtureNumStation[18]].xMaterialOnOff THEN
 							station.iStepAuto:= 999;
+							xBeltLineControl:=FALSE;
 							xS07MainlineRunPermit:=TRUE;		
 			ELSIF		( arMainlineFixtureData[arCurFixtureNumStation[17]].xMaterialOnOff AND    
 						arMainlineFixtureData[arCurFixtureNumStation[18]].xMaterialOnOff  )AND  xMainLineSensorReached[1]  (* AND  fbStation[8].xDone*) THEN
+							xBeltLineControl:=TRUE;
 							station.iStepAuto:= 20;
 			END_IF
 		END_IF
@@ -758,12 +763,7 @@ FOR i:= 1 TO 5 BY 1 DO
 END_FOR
 
 
-IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  THEN
-	  arTonDelay[01](IN:=True , PT:=T#1S , Q=> , ET=> );
-else
-	  arTonDelay[01](IN:=false);
-END_IF
-IF arTonDelay[1].Q  THEN 
+IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning AND  arTonDelay[10].Q   THEN
 		IF	fbNGStepMotor.iPosNumber=1 	AND NOT fbNGStepMotor.xMoveInPos[1] THEN 	station.adwAutoTip[1].10:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
 		IF	fbNGStepMotor.iPosNumber=2	AND NOT fbNGStepMotor.xMoveInPos[2]	THEN 	station.adwAutoTip[1].11:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
 		IF	fbNGStepMotor.iPosNumber=3	AND NOT fbNGStepMotor.xMoveInPos[3]	THEN 	station.adwAutoTip[1].12:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
@@ -905,7 +905,9 @@ END_CASE
       <LineId Id="281" Count="0" />
     </LineIds>
     <LineIds Name="S07_BoxCarrying.Delay">
-      <LineId Id="64" Count="10" />
+      <LineId Id="64" Count="7" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="72" Count="2" />
       <LineId Id="44" Count="13" />
       <LineId Id="40" Count="0" />
     </LineIds>
@@ -917,7 +919,11 @@ END_CASE
       <LineId Id="2846" Count="12" />
       <LineId Id="3659" Count="3" />
       <LineId Id="3658" Count="0" />
-      <LineId Id="2860" Count="14" />
+      <LineId Id="2860" Count="7" />
+      <LineId Id="3739" Count="0" />
+      <LineId Id="2868" Count="2" />
+      <LineId Id="3740" Count="0" />
+      <LineId Id="2871" Count="3" />
       <LineId Id="3251" Count="1" />
       <LineId Id="2875" Count="21" />
       <LineId Id="2898" Count="0" />
@@ -1132,7 +1138,7 @@ END_CASE
       <LineId Id="219" Count="0" />
       <LineId Id="148" Count="5" />
       <LineId Id="187" Count="0" />
-      <LineId Id="157" Count="8" />
+      <LineId Id="157" Count="3" />
       <LineId Id="214" Count="4" />
       <LineId Id="191" Count="0" />
       <LineId Id="183" Count="0" />

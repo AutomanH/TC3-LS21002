@@ -5,7 +5,8 @@
 VAR
 	//工站
 	station					: REFERENCE TO FB_Station:=fbstation[13];
-	
+	//气缸
+	fbHOZCyl_1			:REFERENCE TO FB_Cylinder:=fbCylinder[36];	//	分料气缸1
 	//延时
 	arTonDelay :ARRAY[1..20] OF TON;
 	//返回值
@@ -31,7 +32,8 @@ Z_Output();]]></ST>
     <Action Name="A_Input" Id="{08bf5b2d-c23a-4b9f-bc0b-d78d0ef357a0}">
       <Implementation>
         <ST><![CDATA[//气缸
-
+fbHOZCyl_1.xWP_Sensor:=	IxS11HOZCylWP	;//	贴标处推料气缸¶动点
+fbHOZCyl_1.xHP_Sensor:=	IxS11HOZCylHP	;//	贴标处推料气缸¶原点
 
   
 
@@ -166,6 +168,8 @@ END_IF
 station.xCanRun :=TRUE ;
 
 //---------------------------------------------------气缸动作条件-------------------------------------------
+fbHOZCyl_1.xOffILC	:=	TRUE	;
+fbHOZCyl_1.xOnILC	:=	TRUE; 
 
 
 //---------------------------------------------------伺服动作条件-------------------------------------------
@@ -199,6 +203,8 @@ station.xCanRun :=TRUE ;
     <Action Name="Z_Output" Id="{58bab82e-5ef1-477c-83be-2769659c9d33}">
       <Implementation>
         <ST><![CDATA[(**************************气缸输出********************************)
+QxS11HOZCylWP	:=fbHOZCyl_1.xWP_Valve;//	贴标处推料气缸¶动点
+QxS11HOZCylHP	:=fbHOZCyl_1.xHP_Valve;//	贴标处推料气缸¶原点
 ]]></ST>
       </Implementation>
     </Action>
@@ -208,6 +214,7 @@ station.xCanRun :=TRUE ;
     </LineIds>
     <LineIds Name="S13_Labeling.A_Input">
       <LineId Id="28" Count="0" />
+      <LineId Id="42" Count="0" />
       <LineId Id="40" Count="1" />
       <LineId Id="10" Count="3" />
       <LineId Id="8" Count="0" />
@@ -247,7 +254,9 @@ station.xCanRun :=TRUE ;
       <LineId Id="381" Count="0" />
     </LineIds>
     <LineIds Name="S13_Labeling.ILC">
-      <LineId Id="234" Count="5" />
+      <LineId Id="234" Count="4" />
+      <LineId Id="308" Count="1" />
+      <LineId Id="239" Count="0" />
       <LineId Id="307" Count="0" />
       <LineId Id="290" Count="0" />
       <LineId Id="244" Count="0" />
@@ -271,6 +280,7 @@ station.xCanRun :=TRUE ;
     </LineIds>
     <LineIds Name="S13_Labeling.Z_Output">
       <LineId Id="2" Count="0" />
+      <LineId Id="21" Count="1" />
       <LineId Id="20" Count="0" />
     </LineIds>
   </POU>

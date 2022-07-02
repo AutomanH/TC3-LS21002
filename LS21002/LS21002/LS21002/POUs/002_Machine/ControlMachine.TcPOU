@@ -60,6 +60,7 @@ fbMachine[1].dwMessage[1].05			:=	fbMachine[1].xEmptying;			//设备清料中
 //	fbMachine[1].dwAlarm[1].00:=TRUE; //[M01.00] 设备气压报警
 //	;
 //END_IF
+
 //急停被按下
 IF NOT IxSafetyRelayOK THEN 
 	fbMachine[1].dwAlarm[1].03:=TRUE; //[M01.03] 设备急停被按下
@@ -68,15 +69,15 @@ IF   sModbus_200SMART.iStatus =3 THEN
  		fbMachine[1].dwAlarm[1].04:=TRUE; //[M01.04] 热缩封膜机急停被按下
 END_IF
 //心跳
-//	IF  fbAlive[1].xQAliveError THEN
-//		fbMachine[1].dwAlarm[1].05:=TRUE; //[M01.05] 未检测到相机心跳1
-//	END_IF
-//	IF  fbAlive[2].xQAliveError THEN
-//		fbMachine[1].dwAlarm[1].06:=TRUE; //[M01.06] 未检测到相机心跳2
-//	END_IF\
-//	IF  fbAlive[3].xQAliveError THEN
-//		fbMachine[1].dwAlarm[1].07:=TRUE; //[M01.07] 未检测到相机心跳3
-//	END_IF
+	IF  fbAlive[1].xQAliveError THEN
+		fbMachine[1].dwAlarm[1].05:=TRUE; //[M01.05] 未检测到相机心跳1
+	END_IF
+	IF  fbAlive[2].xQAliveError THEN
+		fbMachine[1].dwAlarm[1].06:=TRUE; //[M01.06] 未检测到相机心跳2
+	END_IF
+	IF  fbAlive[3].xQAliveError THEN
+		fbMachine[1].dwAlarm[1].07:=TRUE; //[M01.07] 未检测到相机心跳3
+	END_IF
 //	IF  fbAlive[4].xQAliveError THEN
 //		fbMachine[1].dwAlarm[1].08:=TRUE; //[M01.08] 未检测到工控机1心跳
 //	END_IF
@@ -99,9 +100,9 @@ END_IF
 	IF  fbEhterCATSlaveMonitor[3].xQError THEN
 		fbMachine[1].dwAlarm[1].14:=TRUE; //[M01.05] ET03电柜EtherCAT总线报错
 	END_IF
-//		IF  fbEhterCATSlaveMonitor[4].xQError THEN
-//		fbMachine[1].dwAlarm[1].15:=TRUE; //[M01.05] ET04电柜EtherCAT总线报错
-//	END_IF
+	IF  fbEhterCATSlaveMonitor[4].xQError THEN
+		fbMachine[1].dwAlarm[1].15:=TRUE; //[M01.05] ET04电柜EtherCAT总线报错
+	END_IF
 
 	
 	
@@ -365,6 +366,7 @@ END_IF]]></ST>
       <LineId Id="10" Count="0" />
       <LineId Id="85" Count="3" />
       <LineId Id="11" Count="0" />
+      <LineId Id="380" Count="0" />
       <LineId Id="371" Count="2" />
       <LineId Id="370" Count="0" />
       <LineId Id="246" Count="0" />

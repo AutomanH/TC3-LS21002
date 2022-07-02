@@ -75,7 +75,7 @@ station.adwAlarm[1].00:=station.xInitTimeout;	  			//S09CardCarrying 初始化�
     </Action>
     <Action Name="Delay" Id="{3e6d0638-113c-4b73-a71d-99982a90a940}">
       <Implementation>
-        <ST><![CDATA[(*arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );*)//TipAuto使用
+        <ST><![CDATA[arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );
 (*arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );*)//已被使用
 arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
 arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
@@ -84,6 +84,7 @@ arTonDelay[06](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[07](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[08](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[09](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[10](IN:= NOT fbROTAxisMove.xbusy , PT:=T#0.1S , Q=> , ET=> );//TipAuto使用
 
 
 
@@ -111,7 +112,7 @@ IF NOT station.xInitDone
 THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
-ELSIF station.xRunning   OR   xNotStop
+ELSIF station.xRunning   OR (tsModuleProcess[1].xProcessStarted AND NOT tsModuleProcess[1].xProcessCompleted)
 THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
 CASE station.iStepAuto OF	  
@@ -143,7 +144,7 @@ CASE station.iStepAuto OF
 			END_IF
 			station.iStepAuto:=15;
 	15://等待工位完成信号
-		IF  NOT  fbMachine[1].xTryRun THEN 
+		IF  NOT  fbMachine[1].xTryRun AND  NOT station.xSingleRunning THEN 
 			IF  S07_BoxCarrying.station.xDone  AND 
 				S09_CardCarrying.station.xDone AND xBoxSensorReached[1] AND  xBoxSensorReached[2] THEN
 					station.iStepAuto:=20;
@@ -153,68 +154,30 @@ CASE station.iStepAuto OF
 		END_IF
 		
 	20://等待热缩封膜机允许入料
-		IF  arBeltLineFixtureData[5].xMaterialOnOff AND 
-		 		arBeltLineFixtureData[6].xMaterialOnOff THEN  
-					 IF  xBeltMovingEnable AND 
-							 arBeltLineFixtureData[5].stProduct.xCardLoading_OK AND 
-								arBeltLineFixtureData[5].stProduct.xBoxLoading_OK	 THEN
+		IF  NOT station.xSingleRunning  THEN
+				 IF  arBeltLineFixtureData[5].xMaterialOnOff AND 
+						 arBeltLineFixtureData[6].xMaterialOnOff THEN  
+								IF  xBeltMovingEnable AND 
+										arBeltLineFixtureData[5].stProduct.xCardLoading_OK AND 
+										 arBeltLineFixtureData[5].stProduct.xBoxLoading_OK	 THEN
+									station.iStepAuto:=25;
+								END_IF
+				 ELSE
 						 station.iStepAuto:=25;
-					 END_IF
+				 END_IF
 		ELSE
-		 		station.iStepAuto:=25;
+		 		 station.iStepAuto:=25;
 		END_IF
 	25://不允许各工位放料
 				station.xDone :=FALSE;
-				station.iStepAuto:=80;
-	//30://读取原点偏移量
-	//	 IF NOT _FirstCycle[1] THEN
-	//	   stData.Axis[16].rMovePosition[2] := stData.Axis[16].rMovePosition[1] ;
-	//	   _FirstCycle[1] := TRUE ;
-	//	 END_IF
-	//	   station.iStepAuto:=40;	
-	//40:////Restore_after_Estop_Process1 皮带线移动流程
-	//		IF tsModuleProcess[1].xProcessNotStarted AND NOT  tsModuleProcess[1].xProcessStarted THEN
-	//				station.iStepAuto :=50; (*process not started*)
-	//		ELSIF  tsModuleProcess[1].xProcessStarted AND NOT  tsModuleProcess[1].xProcessCompleted THEN
-	//			 station.iStepAuto := 60;(*process started*)
-	//		ELSIF  tsModuleProcess[1].xProcessCompleted AND NOT tsModuleProcess[1].xQDataCompleted  THEN
-	//				station.iStepAuto := 150 ;(*process completed*)
-	//		ELSIF tsModuleProcess[1].xQDataCompleted THEN
-	//				station.iStepAuto :=160;(*Qdata completed *)
-	//		ELSE
-	//				station.iStepAuto :=50; 
-	//		END_IF		   
-	//50://储存当前位置
-	//		tsModuleProcess[1].xProcessNotStarted:=TRUE;
-	//		stData.Axis[15].rMovePosition[3]:=fbROTAxisMove.rActPos;
-	//		station.iStepAuto:=70;
-	//60://判断伺服位置是否合理
-	//		IF      ( ABS(stData.Axis[15].rMovePosition[3]+stData.Axis[15].rRelativeDistance))+0.1>=ABS(stData.Axis[15].rMovePosition[2]) AND 
-	//				  ( ABS(stData.Axis[15].rMovePosition[3]+stData.Axis[15].rRelativeDistance))-0.1<=ABS(stData.Axis[15].rMovePosition[2]) THEN
-	//				  station.iStepAuto:=80;(*伺服已经移动过了*)
-	//		ELSIF  ABS(stData.Axis[15].rMovePosition[3])+0.1>=ABS(stData.Axis[15].rMovePosition[2]) AND 
-	//			   ABS(stData.Axis[15].rMovePosition[3])-0.1<=ABS(stData.Axis[15].rMovePosition[2]) THEN
-	//			     station.iStepAuto:=70;(*伺服需要移动*)
-	//			
-	//		END_IF
-	//70://数据更新 位置
-	//	tsModuleProcess[1].xProcessStarted:=TRUE;
-	//	stData.Axis[16].rMovePosition[2] := stData.Axis[16].rMovePosition[2] +stData.Axis[16].rRelativeDistance ;
-	//	arTonDelay[02](IN:= FALSE , PT:=T#50MS , Q=> , ET=> );
-	//   	station.iStepAuto:= 80;
-	//
-	//80:
-	// 	arTonDelay[02](IN:= TRUE , PT:=T#50MS , Q=> , ET=> );
-	//	   IF arTonDelay[02].Q THEN
-  //     		station.iStepAuto:=90;
-	//		arTonDelay[02](IN:=FALSE, PT:=T#50MS , Q=> , ET=> );
-  //     	   END_IF
+				station.iStepAuto:=80;	   
 	80://伺服电机给定jog速度
-				xNotStop:=TRUE;//待删
+				tsModuleProcess[1].xProcessNotStarted:=TRUE;
 			 stData.Axis[16].rJogVelocity :=10;  
 			 rStartPoition:=fbROTAxisMove.rActPos;
 				station.iStepAuto:=90;
 	90:  //jog到接近点
+			tsModuleProcess[1].xProcessStarted:=TRUE;
 			IF  fbMachine[1].xAutoMode THEN
 				fbROTAxisMove.xJogForwardAuto := TRUE ;
 			ELSE
@@ -243,14 +206,16 @@ CASE station.iStepAuto OF
 				END_IF			
 				 tsModuleProcess[1].xProcessCompleted:=TRUE;
 	110://数据传递
-			tsModuleProcess[1].xQDataCompleted:=TRUE;
+			tsModuleProcess[1].xProcessCompleted:=TRUE;
 			 station.iStepAuto:=160;
 	160://启动各个工位
-			fbStation[7].xDone:=FALSE;
+				IF   S07_BoxCarrying.xBeltLineControl THEN
+			 		fbStation[7].xDone:=FALSE;
+				END_IF
 			fbStation[9].xDone:=FALSE;
+	
 			station.iStepAuto:=500;	
 	500://清除本站过程记录
-			xNotStop:=FALSE;//待删
 			FOR i:=1 TO gc_ModuleProNo BY 1 DO
 				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
 			END_FOR
@@ -295,7 +260,15 @@ CASE station.iStepInit OF
 		 fbROTAxisMove.xReferenceAuto  := FALSE ;
 		 station.iStepInit:=50;  
 	END_IF
-50://伺服去待机点
+50: //再次伺服回原点，保证位置
+	fbROTAxisMove.xReferenceAuto := TRUE ;
+	station.iStepInit:=60;
+60://伺服回原点完成
+	IF  fbAxisHome[16].home_done THEN 
+		 fbROTAxisMove.xReferenceAuto  := FALSE ;
+		 station.iStepInit:=70;  
+	END_IF	
+70://伺服去待机点
 	fbROTAxisMove.xMoveAuto[1]:=TRUE;
 	IF  fbROTAxisMove.xMoveInPos[1] THEN
 		 station.iStepInit:=999; 
@@ -398,17 +371,12 @@ FOR i:= 1 TO 5 BY 1 DO
 END_FOR
 
 
-IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  THEN
-	  arTonDelay[01](IN:=True , PT:=T#1S , Q=> , ET=> );
-else
-	  arTonDelay[01](IN:=false);
-END_IF
-IF arTonDelay[1].Q  THEN 
-IF	fbROTAxisMove.iPosNumber=1 	AND NOT fbROTAxisMove.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].10:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
-if	fbROTAxisMove.iPosNumber=2	AND NOT fbROTAxisMove.xMoveInPos[2]	THEN 	station.adwAutoTip[1].11:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
-if	fbROTAxisMove.iPosNumber=3	AND NOT fbROTAxisMove.xMoveInPos[3]	THEN 	station.adwAutoTip[1].12:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
-if	fbROTAxisMove.iPosNumber=4	AND NOT fbROTAxisMove.xMoveInPos[4]	THEN 	station.adwAutoTip[1].13:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
-IF	fbROTAxisMove.iPosNumber=5	AND NOT fbROTAxisMove.xMoveInPos[5]	THEN 	station.adwAutoTip[1].14:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
+IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning AND arTonDelay[10].Q   THEN
+	IF	fbROTAxisMove.iPosNumber=1 	AND NOT fbROTAxisMove.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].10:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
+	if	fbROTAxisMove.iPosNumber=2	AND NOT fbROTAxisMove.xMoveInPos[2]	THEN 	station.adwAutoTip[1].11:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
+	if	fbROTAxisMove.iPosNumber=3	AND NOT fbROTAxisMove.xMoveInPos[3]	THEN 	station.adwAutoTip[1].12:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
+	if	fbROTAxisMove.iPosNumber=4	AND NOT fbROTAxisMove.xMoveInPos[4]	THEN 	station.adwAutoTip[1].13:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
+	IF	fbROTAxisMove.iPosNumber=5	AND NOT fbROTAxisMove.xMoveInPos[5]	THEN 	station.adwAutoTip[1].14:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
 END_IF
 ]]></ST>
       </Implementation>
@@ -452,7 +420,9 @@ END_IF
       <LineId Id="266" Count="0" />
     </LineIds>
     <LineIds Name="S10_BeltCarrying.Delay">
-      <LineId Id="64" Count="10" />
+      <LineId Id="64" Count="7" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="72" Count="2" />
       <LineId Id="44" Count="13" />
       <LineId Id="40" Count="0" />
     </LineIds>
@@ -473,6 +443,7 @@ END_IF
       <LineId Id="1787" Count="0" />
       <LineId Id="2003" Count="3" />
       <LineId Id="1950" Count="0" />
+      <LineId Id="2042" Count="0" />
       <LineId Id="1960" Count="0" />
       <LineId Id="1964" Count="0" />
       <LineId Id="1952" Count="0" />
@@ -481,17 +452,17 @@ END_IF
       <LineId Id="1953" Count="1" />
       <LineId Id="1965" Count="1" />
       <LineId Id="1963" Count="0" />
+      <LineId Id="2043" Count="2" />
       <LineId Id="1936" Count="0" />
       <LineId Id="1943" Count="0" />
       <LineId Id="1946" Count="0" />
-      <LineId Id="1790" Count="5" />
-      <LineId Id="1797" Count="36" />
       <LineId Id="1969" Count="0" />
-      <LineId Id="2024" Count="0" />
+      <LineId Id="2033" Count="0" />
       <LineId Id="1972" Count="0" />
       <LineId Id="1974" Count="0" />
       <LineId Id="1970" Count="0" />
       <LineId Id="1834" Count="0" />
+      <LineId Id="2034" Count="0" />
       <LineId Id="2007" Count="0" />
       <LineId Id="1975" Count="0" />
       <LineId Id="2008" Count="2" />
@@ -514,11 +485,11 @@ END_IF
       <LineId Id="1843" Count="0" />
       <LineId Id="1848" Count="1" />
       <LineId Id="1909" Count="0" />
+      <LineId Id="2031" Count="1" />
       <LineId Id="1901" Count="0" />
       <LineId Id="1949" Count="0" />
-      <LineId Id="1904" Count="1" />
-      <LineId Id="2025" Count="0" />
-      <LineId Id="1906" Count="2" />
+      <LineId Id="2026" Count="0" />
+      <LineId Id="1904" Count="4" />
       <LineId Id="1777" Count="1" />
       <LineId Id="1212" Count="0" />
       <LineId Id="1214" Count="0" />
@@ -533,9 +504,10 @@ END_IF
       <LineId Id="553" Count="1" />
       <LineId Id="558" Count="0" />
       <LineId Id="556" Count="0" />
-      <LineId Id="560" Count="3" />
-      <LineId Id="568" Count="2" />
+      <LineId Id="578" Count="6" />
       <LineId Id="567" Count="0" />
+      <LineId Id="588" Count="6" />
+      <LineId Id="585" Count="0" />
       <LineId Id="571" Count="2" />
       <LineId Id="577" Count="0" />
       <LineId Id="575" Count="0" />
@@ -566,7 +538,7 @@ END_IF
       <LineId Id="141" Count="0" />
       <LineId Id="148" Count="5" />
       <LineId Id="187" Count="0" />
-      <LineId Id="157" Count="8" />
+      <LineId Id="157" Count="3" />
       <LineId Id="208" Count="4" />
       <LineId Id="178" Count="0" />
       <LineId Id="183" Count="0" />

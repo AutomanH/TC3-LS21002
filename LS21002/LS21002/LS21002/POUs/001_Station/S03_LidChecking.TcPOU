@@ -117,15 +117,17 @@ station.adwAlarm[1].17	:=	fbZAxisMove.xMoveTimeout	;//	S03液位检测Z轴伺服
     </Action>
     <Action Name="Delay" Id="{c3be7dc0-30a5-4d49-9e30-1bde31c71398}">
       <Implementation>
-        <ST><![CDATA[(*arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );*)//TipAuto使用
+        <ST><![CDATA[arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );
 arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
 arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[05](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[06](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[07](IN:= , PT:=T#0.1S , Q=> , ET=> );
-arTonDelay[08](IN:= , PT:=T#0.1S , Q=> , ET=> );
-arTonDelay[09](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[08](IN:=NOT fbXAxisMove.xbusy , PT:=T#0.1S , Q=> , ET=> );//TipAuto使用
+arTonDelay[09](IN:= NOT fbYAxisMove.xbusy, PT:=T#0.1S , Q=> , ET=> );//TipAuto使用
+arTonDelay[10](IN:=NOT fbZAxisMove.xbusy , PT:=T#0.1S , Q=> , ET=> );//TipAuto使用
+
 
 
 
@@ -495,7 +497,7 @@ CASE station.iStepAuto OF
 												arCameraResult[3,1,6+bYCounter]:=1;
 												arCameraResult[4,4,3+bYCounter]:=1;
 												arCameraResult[4,4,9+bYCounter]:=1;
-												arCameraResult[4,2,3+bYCounter]:=1;
+												arCameraResult[4,2,bYCounter]:=1;
 												arCameraResult[4,2,6+bYCounter]:=1;	
 												station.iStepAuto:=160;
 							ELSE
@@ -532,7 +534,8 @@ CASE station.iStepAuto OF
 											ELSIF i =14 THEN
 												arCameraResult[4,4,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
 											ELSIF i =15 THEN
-												arCameraResult[4,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+										//		arCameraResult[4,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												arCameraResult[4,2,bYCounter]:=sCamera_To_Plc.iS03Result[i];
 											ELSIF i =16 THEN
 												arCameraResult[4,2,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
 											END_IF	
@@ -545,18 +548,18 @@ CASE station.iStepAuto OF
 							
 					ELSIF bXCounter =2 THEN
 							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
-											arCameraResult[2,3,bYCounter]:=1;	
-											arCameraResult[2,3,6+bYCounter]:=1;	
-											arCameraResult[2,1,3+bYCounter]:=1;
-											arCameraResult[2,1,9+bYCounter]:=1;
-											arCameraResult[3,4,bYCounter]:=1;
-											arCameraResult[3,4,6+bYCounter]:=1;
-											arCameraResult[3,2,3+bYCounter]:=1;
-											arCameraResult[3,2,9+bYCounter]:=1;	
-											arCameraResult[4,3,3+bYCounter]:=1;	
-											arCameraResult[4,3,9+bYCounter]:=1;	
-											arCameraResult[4,1,bYCounter]:=1;
-											arCameraResult[4,1,6+bYCounter]:=1;
+											arCameraResult[2,3,bYCounter]:=1;															           
+											arCameraResult[2,3,6+bYCounter]:=1;	    											
+											arCameraResult[2,1,3+bYCounter]:=1;     											
+											arCameraResult[2,1,9+bYCounter]:=1;     											
+											arCameraResult[3,4,bYCounter]:=1;       											
+											arCameraResult[3,4,6+bYCounter]:=1;     											
+											arCameraResult[3,2,3+bYCounter]:=1;     											
+											arCameraResult[3,2,9+bYCounter]:=1;	    											
+											arCameraResult[4,3,3+bYCounter]:=1;	    											
+											arCameraResult[4,3,9+bYCounter]:=1;	    											
+											arCameraResult[4,1,bYCounter]:=1;       											
+											arCameraResult[4,1,6+bYCounter]:=1;     											
 											station.iStepAuto:=160;
 							ELSE
 								FOR i:=1 TO  12 BY 1 DO
@@ -614,7 +617,7 @@ CASE station.iStepAuto OF
 											arCameraResult[3,1,6+bYCounter]:=1;
 											arCameraResult[4,4,3+bYCounter]:=1;
 											arCameraResult[4,4,9+bYCounter]:=1;
-											arCameraResult[4,2,3+bYCounter]:=1;
+											arCameraResult[4,2,bYCounter]:=1;
 											arCameraResult[4,2,6+bYCounter]:=1;	
 											station.iStepAuto:=160;
 							ELSE
@@ -651,7 +654,8 @@ CASE station.iStepAuto OF
 												ELSIF i =14 THEN    
 													arCameraResult[4,4,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
 												ELSIF i =15 THEN    
-													arCameraResult[4,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												//	arCameraResult[4,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+													arCameraResult[4,2,bYCounter]:=sCamera_To_Plc.iS03Result[i];
 												ELSIF i =16 THEN   
 													arCameraResult[4,2,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
 												END_IF	
@@ -664,7 +668,7 @@ CASE station.iStepAuto OF
 					ELSIF bXCounter =2 THEN
 							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
 								
-												arCameraResult[2,3,bYCounter]:=1;	
+											arCameraResult[2,3,bYCounter]:=1;	
 											arCameraResult[2,3,6+bYCounter]:=1;	
 											arCameraResult[2,1,3+bYCounter]:=1;
 											arCameraResult[2,1,9+bYCounter]:=1;
@@ -678,11 +682,11 @@ CASE station.iStepAuto OF
 											arCameraResult[4,1,6+bYCounter]:=1;
 											arCameraResult[5,4,3+bYCounter]:=1;
 											arCameraResult[5,4,9+bYCounter]:=1;
-											arCameraResult[5,2,3+bYCounter]:=1;
+											arCameraResult[5,2,bYCounter]:=1;
 											arCameraResult[5,2,6+bYCounter]:=1;	
 											station.iStepAuto:=160;
 							ELSE
-								FOR i:=1 TO  12 BY 1 DO
+								FOR i:=1 TO  16 BY 1 DO
 									IF fbCamera[i].xQBusy THEN	
 											EXIT;
 									ELSE
@@ -715,12 +719,13 @@ CASE station.iStepAuto OF
 											ELSIF i =14 THEN    
 												arCameraResult[5,4,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
 											ELSIF i =15 THEN    
-												arCameraResult[5,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												//arCameraResult[5,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
+												arCameraResult[5,2,bYCounter]:=sCamera_To_Plc.iS03Result[i];
 											ELSIF i =16 THEN   
 												arCameraResult[5,2,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
 											END_IF	
 									END_IF
-									IF  i =12 THEN
+									IF  i =16 THEN
 										station.iStepAuto:=160;	
 									END_IF
 								END_FOR	
@@ -1137,27 +1142,17 @@ ELSIF xnext THEN
 									 FOR k:=1 TO 12 BY 1 DO
 									MEMCPY(ADR(arCameraResult[i+2,j,k]),ADR(arCameraResult[i,j,k]),SIZEOF(arCameraResult[i,j,k]));
 									MEMSET(ADR(arCameraResult[i,j,k]),0,SIZEOF(arCameraResult[i,j,k]));	
-
 								END_FOR
 							END_FOR
 				END_FOR
 	END_IF
 	IF  bCounter =3 THEN 
-							FOR i:=1 TO 2 BY 1 DO
 									FOR j:=1 TO 4 BY 1 DO
 									 	FOR k:=1 TO 12 BY 1 DO
-											MEMCPY(ADR(arCameraResult[i+2,j,k]),ADR(arCameraResult[i,j,k]),SIZEOF(arCameraResult[i,j,k]));
-											MEMSET(ADR(arCameraResult[i,j,k]),0,SIZEOF(arCameraResult[i,j,k]));	
+											MEMCPY(ADR(arCameraResult[5,j,k]),ADR(arCameraResult[3,j,k]),SIZEOF(arCameraResult[3,j,k]));
+											MEMSET(ADR(arCameraResult[3,j,k]),0,SIZEOF(arCameraResult[3,j,k]));	
 								END_FOR
 							END_FOR
-							END_FOR
-								FOR j:=3 TO 3 BY 1 DO
-									FOR j:=1 TO 4 BY 1 DO
-									 	FOR k:=1 TO 12 BY 1 DO
-											MEMCPY(ADR(arCameraResult[i+2,j,k]),ADR(arCameraResult[i,j,k]),SIZEOF(arCameraResult[i,j,k]));
-								END_FOR
-								END_FOR
-								END_FOR
  END_IF
 
 	xnext:=FALSE;
@@ -1212,11 +1207,11 @@ fbZAxisMove.xMoveILC[5] := 		TRUE;
 
 //相机
 IF  station.xSingleRunning THEN 
-	 FOR  i:=1 TO 12 BY 1 DO
+	 FOR  i:=2 TO 17 BY 1 DO
 			fbCamera[i].xIDeviceRunning:=TRUE;
 	 END_FOR
  ELSE
-	 FOR  i:=1 TO 12 BY 1 DO
+	 FOR  i:=2 TO 17 BY 1 DO
 			fbCamera[i].xIDeviceRunning:=FALSE;
 	 END_FOR
 END_IF]]></ST>
@@ -1247,29 +1242,22 @@ FOR i:= 1 TO 5 BY 1 DO
 	IF fbZAxisMove.xMoveAuto[i] THEN
 		fbZAxisMove.iPosNumber := i ;
 	END_IF
-	
 END_FOR
-
-
-IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  THEN
-	  arTonDelay[01](IN:=True , PT:=T#1S , Q=> , ET=> );
-else
-	  arTonDelay[01](IN:=false);
-END_IF
-IF arTonDelay[1].Q  THEN 
+IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  AND arTonDelay[08].Q  THEN
 		IF fbXAxisMove.iPosNumber=1 AND NOT fbXAxisMove.xMoveInPos[1] THEN station.adwAutoTip[1].10:=TRUE; END_IF//轴伺服自动时位置不在位置1	
 		IF fbXAxisMove.iPosNumber=2 AND NOT fbXAxisMove.xMoveInPos[2] THEN station.adwAutoTip[1].11:=TRUE; END_IF//轴伺服自动时位置不在位置2	
 		IF fbXAxisMove.iPosNumber=3 AND NOT fbXAxisMove.xMoveInPos[3] THEN station.adwAutoTip[1].12:=TRUE; END_IF//轴伺服自动时位置不在位置3	
 		IF fbXAxisMove.iPosNumber=4 AND NOT fbXAxisMove.xMoveInPos[4] THEN station.adwAutoTip[1].13:=TRUE; END_IF//轴伺服自动时位置不在位置4	
 		IF fbXAxisMove.iPosNumber=5 AND NOT fbXAxisMove.xMoveInPos[5] THEN station.adwAutoTip[1].14:=TRUE; END_IF//轴伺服自动时位置不在位置5	
-		
-		
+END_IF 		
+IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  AND arTonDelay[09].Q  THEN		
 		IF fbYAxisMove.iPosNumber=1 AND NOT fbYAxisMove.xMoveInPos[1] THEN station.adwAutoTip[1].15:=TRUE; END_IF//轴伺服自动时位置不在位置1	
 		IF fbYAxisMove.iPosNumber=2 AND NOT fbYAxisMove.xMoveInPos[2] THEN station.adwAutoTip[1].16:=TRUE; END_IF//轴伺服自动时位置不在位置2	
 		IF fbYAxisMove.iPosNumber=3 AND NOT fbYAxisMove.xMoveInPos[3] THEN station.adwAutoTip[1].17:=TRUE; END_IF//轴伺服自动时位置不在位置3	
 		IF fbYAxisMove.iPosNumber=4 AND NOT fbYAxisMove.xMoveInPos[4] THEN station.adwAutoTip[1].18:=TRUE; END_IF//轴伺服自动时位置不在位置4	
 		IF fbYAxisMove.iPosNumber=5 AND NOT fbYAxisMove.xMoveInPos[5] THEN station.adwAutoTip[1].19:=TRUE; END_IF//轴伺服自动时位置不在位置5	
-		
+END_IF 
+IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  AND arTonDelay[10].Q  THEN		
 		IF fbZAxisMove.iPosNumber=1 AND NOT fbZAxisMove.xMoveInPos[1] THEN station.adwAutoTip[1].20:=TRUE; END_IF//轴伺服自动时位置不在位置1	
 		IF fbZAxisMove.iPosNumber=2 AND NOT fbZAxisMove.xMoveInPos[2] THEN station.adwAutoTip[1].21:=TRUE; END_IF//轴伺服自动时位置不在位置2	
 		IF fbZAxisMove.iPosNumber=3 AND NOT fbZAxisMove.xMoveInPos[3] THEN station.adwAutoTip[1].22:=TRUE; END_IF//轴伺服自动时位置不在位置3	
@@ -1337,7 +1325,10 @@ QxS03HOZAdjustCyl_7HP	:=	fbHOZAdjustCyl_7.xHP_Valve	;
       <LineId Id="266" Count="0" />
     </LineIds>
     <LineIds Name="S03_LidChecking.Delay">
-      <LineId Id="64" Count="10" />
+      <LineId Id="64" Count="8" />
+      <LineId Id="78" Count="0" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="73" Count="1" />
       <LineId Id="44" Count="13" />
       <LineId Id="40" Count="0" />
     </LineIds>
@@ -1523,7 +1514,9 @@ QxS03HOZAdjustCyl_7HP	:=	fbHOZAdjustCyl_7.xHP_Valve	;
       <LineId Id="3449" Count="0" />
       <LineId Id="3688" Count="0" />
       <LineId Id="3370" Count="0" />
-      <LineId Id="3374" Count="40" />
+      <LineId Id="3374" Count="33" />
+      <LineId Id="3740" Count="0" />
+      <LineId Id="3408" Count="6" />
       <LineId Id="3371" Count="2" />
       <LineId Id="2016" Count="0" />
       <LineId Id="3456" Count="0" />
@@ -1566,7 +1559,9 @@ QxS03HOZAdjustCyl_7HP	:=	fbHOZAdjustCyl_7.xHP_Valve	;
       <LineId Id="2153" Count="0" />
       <LineId Id="3690" Count="0" />
       <LineId Id="3495" Count="0" />
-      <LineId Id="3498" Count="40" />
+      <LineId Id="3498" Count="33" />
+      <LineId Id="3808" Count="0" />
+      <LineId Id="3532" Count="6" />
       <LineId Id="3496" Count="1" />
       <LineId Id="2158" Count="0" />
       <LineId Id="3539" Count="0" />
@@ -1587,7 +1582,9 @@ QxS03HOZAdjustCyl_7HP	:=	fbHOZAdjustCyl_7.xHP_Valve	;
       <LineId Id="2198" Count="0" />
       <LineId Id="3691" Count="0" />
       <LineId Id="3540" Count="0" />
-      <LineId Id="3545" Count="40" />
+      <LineId Id="3545" Count="33" />
+      <LineId Id="3807" Count="0" />
+      <LineId Id="3579" Count="6" />
       <LineId Id="3543" Count="0" />
       <LineId Id="3541" Count="0" />
       <LineId Id="2116" Count="0" />
@@ -1762,18 +1759,16 @@ QxS03HOZAdjustCyl_7HP	:=	fbHOZAdjustCyl_7.xHP_Valve	;
       <LineId Id="433" Count="0" />
       <LineId Id="436" Count="1" />
       <LineId Id="458" Count="0" />
-      <LineId Id="461" Count="3" />
-      <LineId Id="466" Count="3" />
+      <LineId Id="461" Count="2" />
+      <LineId Id="513" Count="0" />
+      <LineId Id="464" Count="0" />
+      <LineId Id="468" Count="1" />
       <LineId Id="459" Count="0" />
       <LineId Id="470" Count="0" />
       <LineId Id="482" Count="0" />
-      <LineId Id="486" Count="4" />
+      <LineId Id="487" Count="3" />
       <LineId Id="492" Count="0" />
       <LineId Id="471" Count="0" />
-      <LineId Id="510" Count="0" />
-      <LineId Id="495" Count="3" />
-      <LineId Id="500" Count="0" />
-      <LineId Id="508" Count="1" />
       <LineId Id="444" Count="0" />
       <LineId Id="453" Count="0" />
       <LineId Id="440" Count="0" />
@@ -1804,9 +1799,11 @@ QxS03HOZAdjustCyl_7HP	:=	fbHOZAdjustCyl_7.xHP_Valve	;
       <LineId Id="148" Count="8" />
       <LineId Id="185" Count="1" />
       <LineId Id="184" Count="0" />
-      <LineId Id="187" Count="0" />
-      <LineId Id="157" Count="20" />
+      <LineId Id="157" Count="0" />
+      <LineId Id="160" Count="0" />
+      <LineId Id="166" Count="11" />
       <LineId Id="190" Count="0" />
+      <LineId Id="213" Count="0" />
       <LineId Id="192" Count="4" />
       <LineId Id="178" Count="0" />
       <LineId Id="183" Count="0" />

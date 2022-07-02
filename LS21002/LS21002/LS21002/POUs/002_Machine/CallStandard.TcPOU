@@ -93,7 +93,10 @@ ACT_MT_MCK();
 ACT_Alive();
 ACT_EtherCATSlaveState();
 ACT_FuShiPXF();
-ACT_M0dbus_200Smart();]]></ST>
+ACT_M0dbus_200Smart();
+ACT_Encoder();
+ACT_ATV12();
+ACT_SmcVacuum();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{423c098f-672e-4e09-b9e7-666319181834}">
       <Implementation>
@@ -114,6 +117,24 @@ fbAlive[7].iAliveSingle:=sModbus_200SMART.iAlive;
 FOR i:=1 TO gc_AliveNum DO
 		fbAlive[i](iAliveSingle:= , xQAlive=> , xQAliveError=> );
 END_FOR]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_ATV12" Id="{358b2a77-3c2f-478c-a126-fc126863896c}">
+      <Implementation>
+        <ST><![CDATA[fbATV12(
+	xIMotorStart:= , 
+	xIMotorStartHMI:= , 
+	xIMotorStop:= , 
+	xIMotorStopHMI:= , 
+	xIAutoMode:=	fbMachine[1].xAutoMode , 
+	xIManualMode:= fbMachine[1].xManualMode, 
+	xIDeviceRunning:= , 
+	xQMotorStart=>QxMotorForward, //	热缩封膜出料线体¶电机正转/停止 , 
+	arxQMotorSpeedCmd=> , 
+	xQRev=>QxMotorStop	);//	热缩封膜出料线体¶电机（未使用） 
+	
+	QxMotorBackward	:=fbATV12.arxQMotorSpeedCmd[1];//	热缩封膜出料线体¶电机（预约速度20HZ)
+	QxMotorReserve	:=fbATV12.arxQMotorSpeedCmd[2];//	热缩封膜出料线体¶电机（预约速度50HZ）]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_Axis" Id="{bbaeb5df-675a-4409-9a50-2a8bdac269a5}">
@@ -270,12 +291,15 @@ FOR  i:=1 TO gc_uiAxisNum BY 1 DO
 	IF i<=15 THEN
 	fbAxisHome[i].home_highspeed_set:= 150; //
 	fbAxisHome[i].home_lowspeed_set:= 5;
+	fbAxisHome[i].numerator:=60;
 	ELSIF i=16 THEN 
 	 fbAxisHome[i].home_highspeed_set:= 40; //
 	 fbAxisHome[i].home_lowspeed_set:= 5;
+	 fbAxisHome[i].numerator:=60;
 	else
-		fbAxisHome[i].home_highspeed_set:= 50; //雷赛
-		fbAxisHome[i].home_lowspeed_set:= 10;
+		fbAxisHome[i].home_highspeed_set:=5; //雷赛
+		fbAxisHome[i].home_lowspeed_set:= 1;
+		fbAxisHome[i].numerator:=2;
 	END_IF
 		fbAxisHome[i].tTimeOutSet := T#60S;//超时时间设定
 END_FOR
@@ -305,7 +329,7 @@ FOR  i:=1  TO gc_uiAxisNum BY 1 DO
 	    home_highspeed_set:= , 
 	    home_lowspeed_set:= , 
 	    home_offset_set:= 0,
-	    numerator:= 60, 
+	    numerator:= , 
 	    denominator:= 4194304, 
 		home_done=> , 
 		home_error=> , 
@@ -313,6 +337,12 @@ FOR  i:=1  TO gc_uiAxisNum BY 1 DO
 	    error_id=> );
 
 END_FOR
+
+
+
+
+
+
 
 
  
@@ -355,11 +385,12 @@ END_FOR
 
 
 //上料工位相机光源触发
-IF   fbCamera[1].xQLight OR fbCamera[2].xQLight OR	
- 			fbCamera[3].xQLight OR fbCamera[4].xQLight THEN
+IF   fbCamera[1].xQLight  THEN
 			QxCameraLight1Trigger:=TRUE;
+			QxCameraLight2Trigger:=TRUE;
 ELSE
  			QxCameraLight1Trigger:=FALSE;
+			QxCameraLight2Trigger:=FALSE;
 END_IF
 //相机触发
 QxCamera1Trigger:=fbCamera[1].xQStart;
@@ -375,10 +406,10 @@ IF 			fbCamera[2].xQLight OR	fbCamera[3].xQLight OR
 			 fbCamera[10].xQLight OR	fbCamera[11].xQLight OR
 			 fbCamera[12].xQLight OR	fbCamera[13].xQLight OR
 			 fbCamera[14].xQLight OR	fbCamera[15].xQLight OR
-				fbCamera[17].xQLight		 THEN
-					QxCameraLight2Trigger:=TRUE;	
+				fbCamera[17].xQLight	OR TRUE THEN
+					QxCameraLight3Trigger:=TRUE;	
 ELSE
- 						QxCameraLight2Trigger:=FALSE;	
+ 						QxCameraLight3Trigger:=FALSE;	
 END_IF 
 						 
 //相机触发
@@ -447,6 +478,17 @@ fbCylinder[i](
 	xHP_Delay=> , 
 	xWP_Delay=> );
 END_FOR]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Encoder" Id="{f1ea336b-559f-45dc-b193-b39e15392513}">
+      <Implementation>
+        <ST><![CDATA[fbEncoder(
+	xIErrorReset:= , 
+	tDelay:=T#500MS, 
+	xQBusy=> , 
+	xQError=> , 
+	iQErrorNo=> , 
+	rQBeltSpeed=> );]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_EtherCATSlaveState" Id="{82baf70d-045c-409e-acbd-7228533e07f2}">
@@ -967,6 +1009,38 @@ IF xRecipeRGI14ParSetButton THEN
 END_IF]]></ST>
       </Implementation>
     </Action>
+    <Action Name="ACT_SmcVacuum" Id="{5bb7a1f9-f204-464c-ba7f-304e79743d64}">
+      <Implementation>
+        <ST><![CDATA[
+FOR   i:=1 TO gc_uiValveNum BY 1 DO
+ fbSmcVacuum[i](
+	 xIAutoMode:=fbMachine[1].xAutoMode , 
+	 xIManualMode:=fbMachine[1].xManualMode , 
+	 xIVacuumWork:= , 
+	 xIVacuumBroken:= , 
+	 xIVacuumWorkHMI:= , 
+	 xIVacuumBrokenHMI:= , 
+	 xIDeviceRunning:= , 
+	 xIVacuumWorkReached:= , 
+	 xIVacuumBrokenReached:= , 
+	 xQVacuumFeedValve=> , 
+	 xQVacuumBrokenValve=> );
+END_FOR
+
+//真空吸反馈信号
+fbSmcVacuum[1].xIVacuumWorkReached:=IxS08Vacuum1_Output1	;//	卡片搬运工位¶真空发生器1¶输出OUT1
+fbSmcVacuum[1].xIVacuumBrokenReached:=IxS08Vacuum1_Output2	;//	卡片搬运工位¶真空发生器1¶输出OUT2
+fbSmcVacuum[2].xIVacuumWorkReached:=IxS08Vacuum2_Output1	;//	卡片搬运工位¶真空发生器2¶输出OUT1
+fbSmcVacuum[2].xIVacuumBrokenReached:=IxS08Vacuum2_Output2	;//	卡片搬运工位¶真空发生器2¶输出OUT2
+//真空吸输出信号
+
+QxVacuum1_FeedValveControl:=fbSmcVacuum[1].xQVacuumFeedValve;
+QxVacuum1_BreakValveControl:=fbSmcVacuum[1].xQVacuumBrokenValve;
+QxVacuum2_FeedValveControl:=fbSmcVacuum[2].xQVacuumFeedValve;
+QxVacuum2_BreakValveControl:=fbSmcVacuum[2].xQVacuumBrokenValve;
+]]></ST>
+      </Implementation>
+    </Action>
     <Action Name="ACT_Station" Id="{3999f035-149a-4ac3-bc26-3846c7e0b5a6}">
       <Implementation>
         <ST><![CDATA[//上电复位
@@ -1302,6 +1376,8 @@ END_FOR]]></ST>
       <LineId Id="528" Count="0" />
       <LineId Id="926" Count="0" />
       <LineId Id="994" Count="0" />
+      <LineId Id="1062" Count="0" />
+      <LineId Id="1130" Count="1" />
     </LineIds>
     <LineIds Name="CallStandard.A_Input">
       <LineId Id="12" Count="2" />
@@ -1314,6 +1390,12 @@ END_FOR]]></ST>
       <LineId Id="3" Count="0" />
       <LineId Id="1" Count="0" />
       <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_ATV12">
+      <LineId Id="2" Count="9" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="14" Count="1" />
+      <LineId Id="13" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.ACT_Axis">
       <LineId Id="13" Count="0" />
@@ -1370,9 +1452,12 @@ END_FOR]]></ST>
       <LineId Id="1049" Count="0" />
       <LineId Id="1053" Count="0" />
       <LineId Id="1051" Count="1" />
+      <LineId Id="1087" Count="0" />
       <LineId Id="1077" Count="2" />
+      <LineId Id="1088" Count="0" />
       <LineId Id="1054" Count="1" />
       <LineId Id="1057" Count="0" />
+      <LineId Id="1089" Count="0" />
       <LineId Id="1056" Count="0" />
       <LineId Id="1058" Count="0" />
       <LineId Id="998" Count="0" />
@@ -1382,7 +1467,9 @@ END_FOR]]></ST>
       <LineId Id="1063" Count="0" />
       <LineId Id="1072" Count="0" />
       <LineId Id="1075" Count="1" />
-      <LineId Id="897" Count="29" />
+      <LineId Id="897" Count="19" />
+      <LineId Id="1080" Count="6" />
+      <LineId Id="918" Count="8" />
       <LineId Id="1048" Count="0" />
       <LineId Id="927" Count="0" />
     </LineIds>
@@ -1400,8 +1487,10 @@ END_FOR]]></ST>
       <LineId Id="115" Count="0" />
       <LineId Id="65" Count="0" />
       <LineId Id="150" Count="0" />
-      <LineId Id="154" Count="1" />
+      <LineId Id="155" Count="0" />
+      <LineId Id="174" Count="0" />
       <LineId Id="162" Count="1" />
+      <LineId Id="175" Count="0" />
       <LineId Id="153" Count="0" />
       <LineId Id="66" Count="0" />
       <LineId Id="64" Count="0" />
@@ -1434,6 +1523,10 @@ END_FOR]]></ST>
       <LineId Id="2" Count="17" />
       <LineId Id="64" Count="0" />
       <LineId Id="20" Count="7" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_Encoder">
+      <LineId Id="11" Count="5" />
       <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.ACT_EtherCATSlaveState">
@@ -1627,6 +1720,19 @@ END_FOR]]></ST>
       <LineId Id="50" Count="15" />
       <LineId Id="67" Count="2" />
       <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_SmcVacuum">
+      <LineId Id="13" Count="1" />
+      <LineId Id="2" Count="10" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="17" Count="1" />
+      <LineId Id="25" Count="2" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="32" Count="3" />
     </LineIds>
     <LineIds Name="CallStandard.ACT_Station">
       <LineId Id="2" Count="35" />

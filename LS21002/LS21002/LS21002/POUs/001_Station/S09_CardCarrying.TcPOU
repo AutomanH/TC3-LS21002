@@ -13,7 +13,6 @@ VAR
 
 
 	//伺服
-	fbROTAxisMove	 :REFERENCE TO FB_Axis:=fbAxis[16];	//	出料线体伺服
 	fbZAxisStepMotor1	 :REFERENCE TO FB_Axis:=fbAxis[17];	//	卡片顶升步进
 	fbZAxisStepMotor2	 :REFERENCE TO FB_Axis:=fbAxis[18];	//	卡片顶升步进
 	
@@ -31,20 +30,20 @@ VAR
 	i: INT;
 	
 	// //破真空
-	xVacuum_BreakValveControl:ARRAY[1..2]OF BOOL;
+	arxVacuum_BreakValveControl:ARRAY[1..2]OF BOOL;
 	// //破真空完成
-	xVacuum_BreakCompleted:ARRAY[1..2] OF BOOL;
+	arxVacuum_BreakCompleted:ARRAY[1..2] OF BOOL;
 	// //卡片到位传感器
-	xCardSensorReached: ARRAY[1..2] of bool;
+	arxCardSensorReached: ARRAY[1..2] OF BOOL;
 	// //卡片存在检测
-	xCardCheckSensor: ARRAY[1..2] of bool;
+	arxCardCheckSensor: ARRAY[1..2] OF BOOL;
 	
 	 //报警屏蔽
 	_AlarmDisable: BOOL;
 	// //真空吸动作
-	xVacuum_WorkValveControl: ARRAY[1..2] OF BOOL;
+	arxVacuum_WorkValveControl: ARRAY[1..2] OF BOOL;
 	// //真空吸到达真空
-	xVacuumWorkCompleted:ARRAY[1..2] OF BOOL;
+	arxVacuumWorkCompleted:ARRAY[1..2] OF BOOL;
 	// //皮带线上检测卡片
 	xBeltCardCheckSensor:ARRAY[1..2] OF BOOL;
 	// //允许机械手放置深孔板
@@ -55,6 +54,8 @@ VAR
 	arxVacuum1_FeedValveBroken: ARRAY[1..2] of bool;
 	arxVacuumControlSensor: ARRAY[1..2] of BOOL;
 	arxBrokenVacuumSensor: ARRAY[1..2] of BOOL;
+	VacuumR_TRIG: ARRAY[1..2] of R_TRIG;
+	VacuumBrokenR_TRIG: ARRAY[1..2] of R_TRIG;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -79,19 +80,17 @@ fbVTCCyl_1.xHP_Sensor	:=	IxS08VTCCyl_1HP	;
 fbVTCCyl_2.xWP_Sensor	:=	IxS08VTCCyl_2WP	;
 fbVTCCyl_2.xHP_Sensor	:=	IxS08VTCCyl_2HP	;
 //传感器
-xBeltCardCheckSensor[1]:=IxBeltEntryCardCheckSensor1;
-xBeltCardCheckSensor[2]:=IxBeltEntryCardCheckSensor2;
-//真空吸
-arxVacuumControlSensorHMI[1]:=IxS08Vacuum1_Output1	;//	卡片搬运工位¶真空发生器1¶输出OUT1
-arxBrokenVacuumSensorHMI[1]:=IxS08Vacuum1_Output2	;//	卡片搬运工位¶真空发生器1¶输出OUT2
-arxVacuumControlSensorHMI[2]:=IxS08Vacuum2_Output1	;//	卡片搬运工位¶真空发生器2¶输出OUT1
-arxBrokenVacuumSensorHMI[2]:=IxS08Vacuum2_Output2	;//	卡片搬运工位¶真空发生器2¶输出OUT2
+xBeltCardCheckSensor[1]:= IxBeltEntryCardCheckSensor1;
+xBeltCardCheckSensor[2]:= IxBeltEntryCardCheckSensor2;
 
+//卡片检测
+arxCardCheckSensor[1] := IxS08CardChcekSensor1;//	卡片工位¶有无传感器1
+arxCardCheckSensor[2] :=  IxS08CardChcekSensor2;//	卡片工位¶有无传感器2
 
-arxVacuumControlSensor[1]:=IxS08Vacuum1_Output1	;//	卡片搬运工位¶真空发生器1¶输出OUT1
-arxBrokenVacuumSensor[1]:=IxS08Vacuum1_Output2	;//	卡片搬运工位¶真空发生器1¶输出OUT2
-arxVacuumControlSensor[2]:=IxS08Vacuum2_Output1	;//	卡片搬运工位¶真空发生器2¶输出OUT1
-arxBrokenVacuumSensor[2]:=IxS08Vacuum2_Output2	;//	卡片搬运工位¶真空发生器2¶输出OUT2]]></ST>
+arxCardSensorReached[1] := NOT IxS08CardSensor1Reached	;//	卡片工位¶产品到位传感器1
+arxCardSensorReached[2] := NOT  IxS08CardSensor2Reached	;//	卡片工位¶产品到位传感器2
+
+]]></ST>
       </Implementation>
     </Action>
     <Action Name="Alarm" Id="{0a31e6b9-e40b-403d-b500-5fe16c4985f5}">
@@ -103,7 +102,7 @@ station.adwAlarm[1].00:=station.xInitTimeout;	  			//S09CardCarrying 初始化�
     </Action>
     <Action Name="Delay" Id="{7954a2d3-613f-47d1-88d7-daa2a45cb229}">
       <Implementation>
-        <ST><![CDATA[(*arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );*)//TipAuto使用
+        <ST><![CDATA[arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );
 arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
 arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
@@ -111,7 +110,8 @@ arTonDelay[05](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[06](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[07](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[08](IN:= , PT:=T#0.1S , Q=> , ET=> );
-arTonDelay[09](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[09](IN:=NOT fbZAxisStepMotor1.xbusy  , PT:=T#0.1S , Q=> , ET=> );//TipAuto使用
+arTonDelay[10](IN:= NOT  fbZAxisStepMotor2.xbusy , PT:=T#0.1S , Q=> , ET=> );//TipAuto使用
 
 
 
@@ -139,8 +139,9 @@ IF NOT station.xInitDone
 THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
-	station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
-ELSIF station.xRunning  
+ELSIF station.xRunning  OR
+ (tsModuleProcess[1].xProcessStarted AND NOT tsModuleProcess[1].xProcessCompleted) OR//卡片步进JOG
+ (tsModuleProcess[2].xProcessStarted AND NOT tsModuleProcess[2].xProcessCompleted) 
 THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
 CASE station.iStepAuto OF	  
@@ -163,19 +164,21 @@ CASE station.iStepAuto OF
 			//station.xDone:= FALSE;  
 			station.iStepAuto:= 10;
 		END_IF
-    10: //复位数据 
+  10: //复位数据 
 			fbZAxisStepMotor1.xJogForwardAuto:=FALSE;
 			fbZAxisStepMotor2.xJogForwardAuto:=FALSE;
+			fbZAxisStepMotor1.xJogForwardHMI:=FALSE;
+			fbZAxisStepMotor2.xJogForwardHMI:=FALSE;
 			IF  station.xSingleRunning THEN
 				 FOR i:=1 TO gc_ModuleProNo BY 1 DO
 						 MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
 				 END_FOR
 			END_IF
-			station.iStepAuto:=20;
+			station.iStepAuto:=20;	
 	20://检查卡片是否在位
 			_AlarmDisable:=FALSE;
-			IF  xCardCheckSensor[1] AND
-				xCardCheckSensor[2] THEN
+			IF arxCardCheckSensor[1] AND
+				arxCardCheckSensor[2] THEN
 				station.iStepAuto:=30;
  			ELSE
 				station.iStepAuto:=25;
@@ -193,31 +196,43 @@ CASE station.iStepAuto OF
 				_AlarmDisable:=TRUE;
 			END_IF
 				station.iStepAuto:=20;
-			
-	30://步进上升等待到达传感器
-		IF 	NOT 	xCardSensorReached[1]  THEN
-			fbZAxisStepMotor1.xJogForwardAuto:=TRUE;
-		ELSE
-			fbZAxisStepMotor1.xJogForwardAuto:=FALSE;
-		END_IF
-		IF 	NOT 	xCardSensorReached[2]  THEN
-			fbZAxisStepMotor2.xJogForwardAuto:=TRUE;
-		ELSE
-			fbZAxisStepMotor2.xJogForwardAuto:=FALSE;
-		END_IF
-		IF  xCardSensorReached[1] AND 
-			xCardSensorReached[2] THEN
-			station.iStepAuto:=35;
-		END_IF
-	35://判断流程
-		IF  tsModuleProcess[1].xProcessCompleted AND 
-			tsModuleProcess[2].xProcessCompleted THEN
-			station.iStepAuto:=170;
-		ELSE
+	30://步进JOG流程开始
+			tsModuleProcess[1].xProcessNotStarted:=TRUE;
+			stData.Axis[17].rJogVelocity :=5;  
+			stData.Axis[18].rJogVelocity :=5;  
+			station.iStepAuto:=31;
+	31://步进上升等待到达传感器
+			tsModuleProcess[1].xProcessStarted:=TRUE;
+			IF  NOT station.xSingleRunning THEN 
+					IF 	NOT arxCardSensorReached[1]  THEN
+						fbZAxisStepMotor1.xJogForwardAuto:=TRUE;
+					ELSE
+						fbZAxisStepMotor1.xJogForwardAuto:=FALSE;
+					END_IF
+					IF 	NOT 	arxCardSensorReached[2]  THEN
+						fbZAxisStepMotor2.xJogForwardAuto:=TRUE;
+					ELSE
+						fbZAxisStepMotor2.xJogForwardAuto:=FALSE;
+					END_IF
+			ELSE
+			 		IF 	NOT arxCardSensorReached[1]   THEN
+						fbZAxisStepMotor1.xJogForwardHmi:=TRUE;
+					ELSE
+						fbZAxisStepMotor1.xJogForwardHmi:=FALSE;
+					END_IF
+					IF 	NOT 	arxCardSensorReached[2]   THEN
+						fbZAxisStepMotor2.xJogForwardHmi:=TRUE;
+					ELSE
+						fbZAxisStepMotor2.xJogForwardHmi:=FALSE;
+					END_IF
+			END_IF
+			IF  arxCardSensorReached[1]  AND 
+				arxCardSensorReached[2]  THEN
+				station.iStepAuto:=35;
+			END_IF
+	35://步进JOG流程完成
+		tsModuleProcess[1].xProcessCompleted:=TRUE;
 			station.iStepAuto:=40;
-		END_IF
-	
-		station.iStepAuto:=40;
 	40://X轴气缸伸出
 		fbHOZCyl.xAuto :=TRUE;
 		IF fbHOZCyl.xWP_Delay THEN
@@ -231,59 +246,26 @@ CASE station.iStepAuto OF
 	60://下Z轴下降
 		fbVTCCyl_2.xAuto:=TRUE;
 		IF fbVTCCyl_2.xWP_Delay THEN
-			station.iStepAuto:=70;	
+			station.iStepAuto:=90;	
 		END_IF
-
-	70:////Restore_after_Estop_Process1 取卡片流程
-			IF tsModuleProcess[1].xProcessNotStarted AND NOT  tsModuleProcess[1].xProcessStarted THEN
-					station.iStepAuto :=80; (*process not started*)
-			ELSIF  tsModuleProcess[1].xProcessStarted AND NOT  tsModuleProcess[1].xProcessCompleted THEN
-				 station.iStepAuto := 80;(*process started*)
-			ELSIF  tsModuleProcess[1].xProcessCompleted AND NOT tsModuleProcess[1].xQDataCompleted  THEN
-					station.iStepAuto := 105 ;(*process completed*)
-			ELSIF tsModuleProcess[1].xQDataCompleted THEN
-					station.iStepAuto :=105;(*Qdata completed *)
-			ELSE
-					station.iStepAuto :=80; 
-			END_IF	
-	80://
-				tsModuleProcess[1].xProcessNotStarted:=TRUE;
-				station.iStepAuto:= 90;
 	90://真空吸动作
-				tsModuleProcess[1].xProcessStarted:=TRUE;
-				xVacuum_BreakValveControl[1]:=FALSE;
-				xVacuum_BreakValveControl[2]:=FALSE;
-				xVacuum_WorkValveControl[1]:=TRUE;
-				xVacuum_WorkValveControl[2]:=TRUE;
-			IF    xVacuumWorkCompleted[1] AND xVacuumWorkCompleted[2] THEN
-				station.iStepAuto:= 100;
-			END_IF
+			fbSmcVacuum[1].xIVacuumWork:=TRUE;
+			fbSmcVacuum[2].xIVacuumWork:=TRUE;
+			IF  fbSmcVacuum[1].xIVacuumWorkReached AND 
+			 		fbSmcVacuum[2].xIVacuumWorkReached THEN
+						station.iStepAuto:= 100;
+				END_IF
 	100://真空吸动作完成
-			tsModuleProcess[1].xProcessCompleted:=TRUE;
 			station.iStepAuto:= 110;
-	105://上Z轴上升
+	110://上Z轴上升
 			fbVTCCyl_1.xAuto:=FALSE;
 		IF fbVTCCyl_1.xHP_Delay THEN
-			station.iStepAuto:=110;	
+			station.iStepAuto:=120;	
 		END_IF
-	110:////Restore_after_Estop_Process2 抖动流程
-			IF tsModuleProcess[2].xProcessNotStarted AND NOT  tsModuleProcess[2].xProcessStarted THEN
-					station.iStepAuto :=130; (*process not started*)
-			ELSIF  tsModuleProcess[2].xProcessStarted AND NOT  tsModuleProcess[2].xProcessCompleted THEN
-				 station.iStepAuto := 130;(*process started*)
-			ELSIF  tsModuleProcess[2].xProcessCompleted AND NOT tsModuleProcess[2].xQDataCompleted  THEN
-					station.iStepAuto := 160 ;(*process completed*)
-			ELSIF tsModuleProcess[2].xQDataCompleted THEN
-					station.iStepAuto :=160;(*Qdata completed *)
-			ELSE
-					station.iStepAuto :=120; 
-			END_IF	
 	120://
-				tsModuleProcess[2].xProcessNotStarted:=TRUE;
 				station.iStepAuto:= 130;
 				
 	130://	开始抖动流程
-				tsModuleProcess[2].xProcessStarted:=TRUE;	
 				fbVTCCyl_2.xAuto:=FALSE;
 				IF fbVTCCyl_2.xHP_Delay THEN
 					station.iStepAuto:=140;	
@@ -294,36 +276,25 @@ CASE station.iStepAuto OF
 					station.iStepAuto:=150;	
 				END_IF		
 	150://抖动完成
-			tsModuleProcess[2].xProcessCompleted:=TRUE;		
 			station.iStepAuto:=160;		
 	160://下Z轴上升
 				fbVTCCyl_2.xAuto:=FALSE;
 				IF fbVTCCyl_2.xHP_Delay THEN
 					station.iStepAuto:=165;	
 				END_IF	
-				
 	165://检查是否允许放卡片
-			IF  NOT xBeltCardCheckSensor[1] AND 
-				NOT xBeltCardCheckSensor[2] AND 
-				NOT  station.xdone 			AND
-				(NOT _FirstCycle[1] OR S10_BeltCarrying.station.xDone )THEN 
-				station.iStepAuto:=170;
-				_FirstCycle[1]:=TRUE;
-			END_IF
-	170:////Restore_after_Estop_Process3 放料流程
-			IF tsModuleProcess[3].xProcessNotStarted AND NOT  tsModuleProcess[3].xProcessStarted THEN
-					station.iStepAuto :=190; (*process not started*)
-			ELSIF  tsModuleProcess[3].xProcessStarted AND NOT  tsModuleProcess[3].xProcessCompleted THEN
-				 station.iStepAuto := 190;(*process started*)
-			ELSIF  tsModuleProcess[3].xProcessCompleted AND NOT tsModuleProcess[3].xQDataCompleted  THEN
-					station.iStepAuto := 250 ;(*process completed*)
-			ELSIF tsModuleProcess[3].xQDataCompleted THEN
-					station.iStepAuto :=250;(*Qdata completed *)
-			ELSE
-					station.iStepAuto :=180; 
-			END_IF	
+			 IF   NOT   station.xSingleRunning THEN 
+					 IF  NOT xBeltCardCheckSensor[1] AND 
+						 NOT xBeltCardCheckSensor[2] AND 
+						 NOT  station.xdone 			AND
+						 (NOT _FirstCycle[1] OR S10_BeltCarrying.station.xDone )THEN 
+						 station.iStepAuto:=180;
+						 _FirstCycle[1]:=TRUE;
+					 END_IF
+			 ELSE
+					 station.iStepAuto:=180;
+			 END_IF
 	180:
-				tsModuleProcess[3].xProcessNotStarted:=TRUE;
 				station.iStepAuto:= 190;
 	190://Y轴回原点
 				fbHOZCyl.xAuto:=FALSE;
@@ -333,7 +304,7 @@ CASE station.iStepAuto OF
 	200://上Z轴气缸下降
 				fbVTCCyl_1.xAuto:=TRUE;
 				IF fbVTCCyl_1.xWP_Delay THEN
-					station.iStepAuto:=210;	
+					station.iStepAuto:=220;	
 				END_IF							
 	220://下Z轴气缸下降
 				fbVTCCyl_2.xAuto:=TRUE;
@@ -341,19 +312,13 @@ CASE station.iStepAuto OF
 					station.iStepAuto:=230;	
 				END_IF			
 	230://破真空
-				tsModuleProcess[3].xProcessStarted:=TRUE;
-			   xVacuum_BreakValveControl[1]:=TRUE;
-				xVacuum_BreakValveControl[2]:=TRUE;
-				xVacuum_WorkValveControl[1]:=FALSE;
-				xVacuum_WorkValveControl[2]:=FALSE;
-			IF   xVacuum_BreakCompleted[1] AND 
-				 xVacuum_BreakCompleted[2] THEN
-				 xVacuum_BreakValveControl[1]:=FALSE;
-				 xVacuum_BreakValveControl[2]:=FALSE;
+				fbSmcVacuum[1].xIVacuumBroken:=TRUE;
+				fbSmcVacuum[2].xIVacuumBroken:=TRUE;
+				IF  fbSmcVacuum[1].xIVacuumBrokenReached AND 
+				 		fbSmcVacuum[2].xIVacuumBrokenReached THEN
 				 station.iStepAuto:=240;		
-			END_IF
+				END_IF
 	240://流程完成
-				tsModuleProcess[3].xProcessCompleted:=TRUE;
 				 station.iStepAuto:=250;
 	250://上Z轴上升
 				fbVTCCyl_1.xAuto:=FALSE;
@@ -408,7 +373,11 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
-	station.iStepInit:=40;
+			fbZAxisStepMotor1.xJogForwardAuto:=FALSE;
+			fbZAxisStepMotor2.xJogForwardAuto:=FALSE;
+			fbZAxisStepMotor1.xJogForwardHMI:=FALSE;
+			fbZAxisStepMotor2.xJogForwardHMI:=FALSE;
+			station.iStepInit:=30;
 //20://检查是否需要破真空	
 //	IF tsModuleProcess[1].xProcessStarted AND
 //		 NOT tsModuleProcess[1].xProcessCompleted THEN
@@ -416,17 +385,13 @@ CASE station.iStepInit OF
 //	ELSE
 //		station.iStepInit:=40;	
 //	END_IF
-//30://破真空
-//		xVacuum_WorkValveControl[1]:=FALSE;
-//		xVacuum_WorkValveControl[2]:=FALSE;
-//		xVacuum_BreakValveControl[1]:=TRUE;
-//		xVacuum_BreakValveControl[2]:=TRUE;
-//	IF   xVacuum_BreakCompleted[1] AND 
-//		 xVacuum_BreakCompleted[2] THEN
-//		 xVacuum_BreakValveControl[1]:=FALSE;
-//		 xVacuum_BreakValveControl[2]:=FALSE;
-//		 station.iStepInit:=40;	
-//	END_IF
+30://破真空
+			fbSmcVacuum[1].xIVacuumBroken:=TRUE;
+			fbSmcVacuum[2].xIVacuumBroken:=TRUE;
+		IF  fbSmcVacuum[1].xIVacuumBrokenReached AND 
+				 fbSmcVacuum[2].xIVacuumBrokenReached THEN
+				station.iStepInit:=40;	
+				END_IF
 40://上Z轴上升
 	fbVTCCyl_1.xInit:=TRUE;
 	IF  fbVTCCyl_1.xHP_Delay THEN
@@ -440,33 +405,36 @@ CASE station.iStepInit OF
 60://X轴气缸回原
 	fbHOZCyl.xInit:=TRUE;
 	IF  fbHOZCyl.xHP_Delay THEN
-		station.iStepInit:=999;	
+		station.iStepInit:=70;	
 	END_IF		
-//70://卡片步进上电
-//	fbZAxisStepMotor1.xPowerInit:=TRUE;
-//	fbZAxisStepMotor2.xPowerInit:=TRUE;
-//	IF		fbZAxisStepMotor1.xPowerOn AND
-//		    fbZAxisStepMotor2.xPowerOn THEN
-//			station.iStepInit:=80;	
-//	END_IF
-//80://回原点
-//	fbZAxisStepMotor1.xReferenceAuto:=TRUE;
-//	fbZAxisStepMotor2.xReferenceAuto:=TRUE;
-//	station.iStepinit:=90;
-//90:
-//   IF  fbAxisHome[17].home_done  AND 
-//		fbAxisHome[18].home_done THEN 
-//		 fbZAxisStepMotor1.xReferenceAuto:=FALSE;
-//		fbZAxisStepMotor2.xReferenceAuto:=FALSE;
-//		 station.iStepInit:=100;  
-//	END_IF
-//100://去待机位置
-//	 fbZAxisStepMotor1.xMoveAuto[1]:=TRUE;
-//	  fbZAxisStepMotor2.xMoveAuto[1]:=TRUE;
-//	IF    fbZAxisStepMotor1.xMoveInPos[1] AND 
-//		fbZAxisStepMotor2.xMoveInPos[1] THEN
-//		 station.iStepInit:=999;  
-//	END_IF
+70://卡片步进上电
+	fbZAxisStepMotor1.xPowerInit:=TRUE;
+	fbZAxisStepMotor2.xPowerInit:=TRUE;
+	IF		fbZAxisStepMotor1.xPowerOn AND
+		    fbZAxisStepMotor2.xPowerOn THEN
+			station.iStepInit:=80;	
+	END_IF
+80://回原点
+	fbZAxisStepMotor1.xReferenceAuto:=TRUE;
+	fbZAxisStepMotor2.xReferenceAuto:=TRUE;
+	station.iStepinit:=90;
+90:
+   IF  fbAxisHome[17].home_done  AND 
+		fbAxisHome[18].home_done THEN 
+		fbZAxisStepMotor1.xAlarmResetHmi:=TRUE;
+		fbZAxisStepMotor2.xAlarmResetHmi:=TRUE;
+		 fbZAxisStepMotor1.xReferenceAuto:=FALSE;
+		fbZAxisStepMotor2.xReferenceAuto:=FALSE;
+		 station.iStepInit:=100;  
+	END_IF
+
+100://参考点
+			 fbZAxisStepMotor1.xMoveAuto[1]:=TRUE;
+			 fbZAxisStepMotor2.xMoveAuto[1]:=TRUE;
+			IF    fbZAxisStepMotor1.xMoveInPos[1] AND 
+				fbZAxisStepMotor2.xMoveInPos[1] THEN
+				station.iStepInit:=999;
+			END_IF
 999://初始化完成	
 	station.iStepInit:=0;
 	station.xInitDone:=TRUE;  
@@ -514,7 +482,11 @@ fbZAxisStepMotor2.xMoveILC[2] :=
 fbZAxisStepMotor2.xMoveILC[3] :=
 fbZAxisStepMotor2.xMoveILC[4] :=
 fbZAxisStepMotor2.xMoveILC[5] := TRUE ;
-]]></ST>
+
+
+
+fbSmcVacuum[1].xIDeviceRunning:=TRUE;
+fbSmcVacuum[2].xIDeviceRunning:=TRUE;]]></ST>
       </Implementation>
     </Action>
     <Action Name="TipAuto" Id="{95719469-7bab-4353-9341-e6e5d4586814}">
@@ -526,46 +498,32 @@ station.adwAutoTip[1].01	:=	fbVTCCyl_1.xAutoTip	;
 station.adwAutoTip[1].02	:=	fbVTCCyl_2.xAutoTip	;	
 //------------------------------------------------AutoTip Servo--------------------------------
 //**************************************
-//FOR i:= 1 TO 5 BY 1 DO 
-//	IF fbROTAxisMove.xMoveAuto[i] THEN
-//		fbROTAxisMove.iPosNumber := i ;
-//	END_IF
-//	IF fbZAxisStepMotor1.xMoveAuto[i] THEN
-//		fbZAxisStepMotor1.iPosNumber := i ;
-//	END_IF
-//	IF fbZAxisStepMotor2.xMoveAuto[i] THEN
-//		fbZAxisStepMotor2.iPosNumber := i ;
-//	END_IF
-//	
-//END_FOR
-//
-//
-//IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  THEN
-//	  arTonDelay[01](IN:=True , PT:=T#1S , Q=> , ET=> );
-//else
-//	  arTonDelay[01](IN:=false);
-//END_IF
-//IF arTonDelay[1].Q  THEN 
-//IF	fbROTAxisMove.iPosNumber=1 	AND NOT fbROTAxisMove.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].10:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
-//if	fbROTAxisMove.iPosNumber=2	AND NOT fbROTAxisMove.xMoveInPos[2]	THEN 	station.adwAutoTip[1].11:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
-//if	fbROTAxisMove.iPosNumber=3	AND NOT fbROTAxisMove.xMoveInPos[3]	THEN 	station.adwAutoTip[1].12:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
-//if	fbROTAxisMove.iPosNumber=4	AND NOT fbROTAxisMove.xMoveInPos[4]	THEN 	station.adwAutoTip[1].13:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
-//if	fbROTAxisMove.iPosNumber=5	AND NOT fbROTAxisMove.xMoveInPos[5]	THEN 	station.adwAutoTip[1].14:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
-//if	fbZAxisStepMotor1.iPosNumber=1 	AND NOT fbZAxisStepMotor1.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].15:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
-//if	fbZAxisStepMotor1.iPosNumber=2	AND NOT fbZAxisStepMotor1.xMoveInPos[2]	THEN 	station.adwAutoTip[1].16:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
-//if	fbZAxisStepMotor1.iPosNumber=3	AND NOT fbZAxisStepMotor1.xMoveInPos[3]	THEN 	station.adwAutoTip[1].17:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
-//if	fbZAxisStepMotor1.iPosNumber=4	AND NOT fbZAxisStepMotor1.xMoveInPos[4]	THEN 	station.adwAutoTip[1].18:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
-//if	fbZAxisStepMotor1.iPosNumber=5	AND NOT fbZAxisStepMotor1.xMoveInPos[5]	THEN 	station.adwAutoTip[1].19:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
-//if	fbZAxisStepMotor2.iPosNumber=1 	AND NOT fbZAxisStepMotor2.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].20:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
-//if	fbZAxisStepMotor2.iPosNumber=2	AND NOT fbZAxisStepMotor2.xMoveInPos[2]	THEN 	station.adwAutoTip[1].21:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
-//if	fbZAxisStepMotor2.iPosNumber=3	AND NOT fbZAxisStepMotor2.xMoveInPos[3]	THEN 	station.adwAutoTip[1].22:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
-//if	fbZAxisStepMotor2.iPosNumber=4	AND NOT fbZAxisStepMotor2.xMoveInPos[4]	THEN 	station.adwAutoTip[1].23:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
-//if	fbZAxisStepMotor2.iPosNumber=5	AND NOT fbZAxisStepMotor2.xMoveInPos[5]	THEN 	station.adwAutoTip[1].24:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
-//
-//	
-//		
-//END_IF
-//]]></ST>
+FOR i:= 1 TO 5 BY 1 DO 
+	IF fbZAxisStepMotor1.xMoveAuto[i] THEN
+		fbZAxisStepMotor1.iPosNumber := i ;
+	END_IF
+	IF fbZAxisStepMotor2.xMoveAuto[i] THEN
+		fbZAxisStepMotor2.iPosNumber := i ;
+	END_IF
+	
+END_FOR
+
+
+IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning AND arTonDelay[09].Q THEN
+	IF	fbZAxisStepMotor1.iPosNumber=1 	AND NOT fbZAxisStepMotor1.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].15:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
+	if	fbZAxisStepMotor1.iPosNumber=2	AND NOT fbZAxisStepMotor1.xMoveInPos[2]	THEN 	station.adwAutoTip[1].16:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
+	if	fbZAxisStepMotor1.iPosNumber=3	AND NOT fbZAxisStepMotor1.xMoveInPos[3]	THEN 	station.adwAutoTip[1].17:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
+	if	fbZAxisStepMotor1.iPosNumber=4	AND NOT fbZAxisStepMotor1.xMoveInPos[4]	THEN 	station.adwAutoTip[1].18:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
+	IF	fbZAxisStepMotor1.iPosNumber=5	AND NOT fbZAxisStepMotor1.xMoveInPos[5]	THEN 	station.adwAutoTip[1].19:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
+END_IF
+IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning AND arTonDelay[10].Q THEN
+	IF	fbZAxisStepMotor2.iPosNumber=1 	AND NOT fbZAxisStepMotor2.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].20:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
+	if	fbZAxisStepMotor2.iPosNumber=2	AND NOT fbZAxisStepMotor2.xMoveInPos[2]	THEN 	station.adwAutoTip[1].21:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
+	if	fbZAxisStepMotor2.iPosNumber=3	AND NOT fbZAxisStepMotor2.xMoveInPos[3]	THEN 	station.adwAutoTip[1].22:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
+	if	fbZAxisStepMotor2.iPosNumber=4	AND NOT fbZAxisStepMotor2.xMoveInPos[4]	THEN 	station.adwAutoTip[1].23:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
+	if	fbZAxisStepMotor2.iPosNumber=5	AND NOT fbZAxisStepMotor2.xMoveInPos[5]	THEN 	station.adwAutoTip[1].24:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
+END_IF
+]]></ST>
       </Implementation>
     </Action>
     <Action Name="TipManual" Id="{bfbca7f7-f29c-4c3f-9863-da81fea994f1}">
@@ -589,37 +547,7 @@ QxS08HOZCylHP	:=	fbHOZCyl.xHP_Valve	;
 QxS08VTCCyl_1WP	:=	fbVTCCyl_1.xWP_Valve	;
 QxS08VTCCyl_1HP	:=	fbVTCCyl_1.xHP_Valve	;
 QxS08VTCCyl_2WP	:=	fbVTCCyl_2.xWP_Valve	;
-QxS08VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
-
-//真空吸
-IF (fbMachine[1].xAutoMode AND  arxVacuum1_FeedValveWork[1]) OR (fbMachine[1].xManualMode AND 	arxVacuumControlHMI[1]) THEN 
-	QxVacuum1_FeedValveControl	:= TRUE ;//	卡片搬运工位¶真空发生器1¶供给阀控制
-	QxVacuum1_BreakValveControl:=FALSE;//	卡片搬运工位¶真空发生器1¶破坏阀控制
-(*ELSIF arxVacuumControlSensor[1] THEN
- 	QxVacuum1_FeedValveControl	:= FALSE ;//	卡片搬运工位¶真空发生器1¶供给阀控制
-*)	
-ELSIF  (fbMachine[1].xAutoMode AND  arxVacuum1_FeedValveBroken[1]) OR	(fbMachine[1].xManualMode AND  arxBrokenVacuumHMI[1]) THEN 
-	QxVacuum1_FeedValveControl	:= FALSE ;//	卡片搬运工位¶真空发生器1¶供给阀控制
-	QxVacuum1_BreakValveControl:=TRUE;//	卡片搬运工位¶真空发生器1¶破坏阀控制
-(*ELSIF arxBrokenVacuumSensor[1] THEN
- 	QxVacuum1_BreakValveControl	:= FALSE ;//	卡片搬运工位¶真空发生器1¶破坏阀控制
-	*)
-END_IF 
-
-//真空吸
-IF  (fbMachine[1].xAutoMode AND  arxVacuum1_FeedValveWork[2]) OR (fbMachine[1].xManualMode AND 	arxVacuumControlHMI[2]) THEN 
-	QxVacuum2_FeedValveControl	:= TRUE ;//	卡片搬运工位¶真空发生器1¶供给阀控制
-	QxVacuum2_BreakValveControl:=FALSE;//	卡片搬运工位¶真空发生器1¶破坏阀控制
-(*ELSIF  arxVacuumControlSensor[2] THEN
- 	QxVacuum2_FeedValveControl	:= FALSE ;//	卡片搬运工位¶真空发生器1¶供给阀控制
-*)
-ELSIF  (fbMachine[1].xAutoMode AND  arxVacuum1_FeedValveBroken[2]) OR	(fbMachine[1].xManualMode AND  arxBrokenVacuumHMI[2]) THEN 
-	QxVacuum2_FeedValveControl	:= FALSE ;//	卡片搬运工位¶真空发生器1¶供给阀控制
-	QxVacuum2_BreakValveControl:=TRUE;//	卡片搬运工位¶真空发生器1¶破坏阀控制
-(*ELSIF  arxBrokenVacuumSensor[2] THEN
- 	QxVacuum2_BreakValveControl	:= FALSE ;//	卡片搬运工位¶真空发生器1¶破坏阀控制
-*)
-END_IF ]]></ST>
+QxS08VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;]]></ST>
       </Implementation>
     </Action>
     <LineIds Name="S09_CardCarrying">
@@ -630,32 +558,36 @@ END_IF ]]></ST>
       <LineId Id="28" Count="0" />
       <LineId Id="72" Count="5" />
       <LineId Id="55" Count="0" />
-      <LineId Id="80" Count="2" />
-      <LineId Id="89" Count="2" />
-      <LineId Id="84" Count="0" />
-      <LineId Id="99" Count="0" />
-      <LineId Id="98" Count="0" />
-      <LineId Id="96" Count="0" />
-      <LineId Id="92" Count="0" />
-      <LineId Id="94" Count="0" />
+      <LineId Id="80" Count="1" />
       <LineId Id="8" Count="0" />
+      <LineId Id="100" Count="0" />
+      <LineId Id="102" Count="0" />
+      <LineId Id="101" Count="0" />
+      <LineId Id="109" Count="1" />
+      <LineId Id="107" Count="0" />
+      <LineId Id="104" Count="0" />
+      <LineId Id="103" Count="0" />
     </LineIds>
     <LineIds Name="S09_CardCarrying.Alarm">
       <LineId Id="176" Count="1" />
       <LineId Id="266" Count="0" />
     </LineIds>
     <LineIds Name="S09_CardCarrying.Delay">
-      <LineId Id="64" Count="10" />
+      <LineId Id="64" Count="6" />
+      <LineId Id="75" Count="0" />
+      <LineId Id="71" Count="3" />
       <LineId Id="44" Count="13" />
       <LineId Id="40" Count="0" />
     </LineIds>
     <LineIds Name="S09_CardCarrying.FlowAuto">
-      <LineId Id="1155" Count="5" />
-      <LineId Id="1253" Count="0" />
-      <LineId Id="1161" Count="4" />
+      <LineId Id="1155" Count="6" />
+      <LineId Id="1804" Count="0" />
+      <LineId Id="1806" Count="0" />
+      <LineId Id="1162" Count="3" />
       <LineId Id="1167" Count="17" />
       <LineId Id="1256" Count="0" />
       <LineId Id="1481" Count="1" />
+      <LineId Id="1838" Count="1" />
       <LineId Id="1785" Count="3" />
       <LineId Id="1784" Count="0" />
       <LineId Id="1259" Count="0" />
@@ -673,8 +605,13 @@ END_IF ]]></ST>
       <LineId Id="1544" Count="0" />
       <LineId Id="1542" Count="1" />
       <LineId Id="1546" Count="0" />
-      <LineId Id="1456" Count="0" />
+      <LineId Id="1794" Count="0" />
+      <LineId Id="1796" Count="0" />
+      <LineId Id="1798" Count="1" />
+      <LineId Id="1795" Count="0" />
       <LineId Id="1431" Count="0" />
+      <LineId Id="1797" Count="0" />
+      <LineId Id="1825" Count="0" />
       <LineId Id="1460" Count="0" />
       <LineId Id="1464" Count="0" />
       <LineId Id="1473" Count="1" />
@@ -682,18 +619,16 @@ END_IF ]]></ST>
       <LineId Id="1465" Count="1" />
       <LineId Id="1475" Count="1" />
       <LineId Id="1467" Count="0" />
+      <LineId Id="1826" Count="0" />
+      <LineId Id="1828" Count="8" />
+      <LineId Id="1827" Count="0" />
+      <LineId Id="1837" Count="0" />
       <LineId Id="1483" Count="0" />
       <LineId Id="1486" Count="0" />
       <LineId Id="1484" Count="1" />
       <LineId Id="1707" Count="0" />
       <LineId Id="1709" Count="0" />
-      <LineId Id="1715" Count="0" />
-      <LineId Id="1717" Count="0" />
-      <LineId Id="1714" Count="0" />
-      <LineId Id="1716" Count="0" />
-      <LineId Id="1712" Count="0" />
-      <LineId Id="1710" Count="0" />
-      <LineId Id="1708" Count="0" />
+      <LineId Id="1807" Count="0" />
       <LineId Id="1551" Count="0" />
       <LineId Id="1555" Count="0" />
       <LineId Id="1552" Count="0" />
@@ -703,51 +638,35 @@ END_IF ]]></ST>
       <LineId Id="1566" Count="3" />
       <LineId Id="1558" Count="0" />
       <LineId Id="1572" Count="2" />
-      <LineId Id="1571" Count="0" />
-      <LineId Id="1565" Count="0" />
-      <LineId Id="1492" Count="13" />
-      <LineId Id="1490" Count="0" />
-      <LineId Id="1547" Count="0" />
-      <LineId Id="1575" Count="0" />
-      <LineId Id="1584" Count="1" />
-      <LineId Id="1576" Count="1" />
+      <LineId Id="1801" Count="0" />
+      <LineId Id="1800" Count="0" />
       <LineId Id="1549" Count="0" />
+      <LineId Id="1857" Count="2" />
       <LineId Id="1580" Count="0" />
       <LineId Id="1579" Count="0" />
       <LineId Id="1491" Count="0" />
-      <LineId Id="1586" Count="0" />
       <LineId Id="1459" Count="0" />
       <LineId Id="1609" Count="0" />
       <LineId Id="1612" Count="2" />
       <LineId Id="1611" Count="0" />
-      <LineId Id="1591" Count="10" />
-      <LineId Id="1590" Count="0" />
-      <LineId Id="1603" Count="1" />
+      <LineId Id="1603" Count="0" />
       <LineId Id="1602" Count="0" />
       <LineId Id="1605" Count="1" />
-      <LineId Id="1615" Count="0" />
       <LineId Id="1617" Count="2" />
       <LineId Id="1616" Count="0" />
       <LineId Id="1607" Count="0" />
       <LineId Id="1621" Count="2" />
       <LineId Id="1620" Count="0" />
-      <LineId Id="1625" Count="1" />
+      <LineId Id="1625" Count="0" />
       <LineId Id="1608" Count="0" />
       <LineId Id="1627" Count="3" />
       <LineId Id="1588" Count="0" />
-      <LineId Id="1729" Count="0" />
-      <LineId Id="1727" Count="1" />
-      <LineId Id="1733" Count="0" />
-      <LineId Id="1783" Count="0" />
-      <LineId Id="1739" Count="0" />
-      <LineId Id="1737" Count="0" />
-      <LineId Id="1772" Count="0" />
+      <LineId Id="1727" Count="0" />
+      <LineId Id="1821" Count="0" />
+      <LineId Id="1815" Count="5" />
       <LineId Id="1735" Count="0" />
-      <LineId Id="1634" Count="10" />
-      <LineId Id="1633" Count="0" />
-      <LineId Id="1646" Count="0" />
-      <LineId Id="1645" Count="0" />
-      <LineId Id="1647" Count="1" />
+      <LineId Id="1822" Count="2" />
+      <LineId Id="1646" Count="2" />
       <LineId Id="1660" Count="2" />
       <LineId Id="1659" Count="0" />
       <LineId Id="1649" Count="0" />
@@ -757,11 +676,11 @@ END_IF ]]></ST>
       <LineId Id="1668" Count="2" />
       <LineId Id="1667" Count="0" />
       <LineId Id="1652" Count="0" />
-      <LineId Id="1675" Count="0" />
-      <LineId Id="1685" Count="3" />
-      <LineId Id="1691" Count="4" />
-      <LineId Id="1673" Count="0" />
-      <LineId Id="1753" Count="1" />
+      <LineId Id="1692" Count="0" />
+      <LineId Id="1852" Count="2" />
+      <LineId Id="1695" Count="0" />
+      <LineId Id="1856" Count="0" />
+      <LineId Id="1753" Count="0" />
       <LineId Id="1752" Count="0" />
       <LineId Id="1741" Count="0" />
       <LineId Id="1743" Count="2" />
@@ -786,18 +705,15 @@ END_IF ]]></ST>
     </LineIds>
     <LineIds Name="S09_CardCarrying.FlowInit">
       <LineId Id="437" Count="9" />
+      <LineId Id="575" Count="2" />
+      <LineId Id="574" Count="0" />
       <LineId Id="467" Count="0" />
       <LineId Id="469" Count="1" />
       <LineId Id="473" Count="1" />
       <LineId Id="472" Count="0" />
       <LineId Id="477" Count="2" />
-      <LineId Id="548" Count="1" />
-      <LineId Id="482" Count="0" />
-      <LineId Id="487" Count="0" />
-      <LineId Id="483" Count="0" />
-      <LineId Id="488" Count="0" />
-      <LineId Id="550" Count="1" />
-      <LineId Id="484" Count="1" />
+      <LineId Id="578" Count="4" />
+      <LineId Id="485" Count="0" />
       <LineId Id="489" Count="0" />
       <LineId Id="495" Count="0" />
       <LineId Id="492" Count="0" />
@@ -818,15 +734,14 @@ END_IF ]]></ST>
       <LineId Id="528" Count="0" />
       <LineId Id="533" Count="0" />
       <LineId Id="536" Count="0" />
+      <LineId Id="572" Count="1" />
       <LineId Id="534" Count="0" />
       <LineId Id="537" Count="0" />
       <LineId Id="535" Count="0" />
       <LineId Id="529" Count="0" />
-      <LineId Id="539" Count="0" />
-      <LineId Id="544" Count="1" />
-      <LineId Id="541" Count="0" />
-      <LineId Id="546" Count="1" />
-      <LineId Id="543" Count="0" />
+      <LineId Id="559" Count="0" />
+      <LineId Id="553" Count="5" />
+      <LineId Id="552" Count="0" />
       <LineId Id="462" Count="4" />
       <LineId Id="436" Count="0" />
     </LineIds>
@@ -844,22 +759,24 @@ END_IF ]]></ST>
       <LineId Id="260" Count="5" />
       <LineId Id="254" Count="0" />
       <LineId Id="267" Count="1" />
-      <LineId Id="324" Count="5" />
+      <LineId Id="324" Count="8" />
       <LineId Id="274" Count="0" />
+      <LineId Id="333" Count="0" />
     </LineIds>
     <LineIds Name="S09_CardCarrying.TipAuto">
       <LineId Id="118" Count="0" />
       <LineId Id="141" Count="0" />
       <LineId Id="205" Count="2" />
-      <LineId Id="148" Count="8" />
+      <LineId Id="148" Count="2" />
+      <LineId Id="154" Count="2" />
       <LineId Id="185" Count="1" />
       <LineId Id="184" Count="0" />
       <LineId Id="187" Count="0" />
-      <LineId Id="157" Count="8" />
-      <LineId Id="208" Count="14" />
-      <LineId Id="196" Count="0" />
-      <LineId Id="191" Count="0" />
-      <LineId Id="204" Count="0" />
+      <LineId Id="157" Count="3" />
+      <LineId Id="213" Count="4" />
+      <LineId Id="223" Count="0" />
+      <LineId Id="225" Count="0" />
+      <LineId Id="218" Count="4" />
       <LineId Id="178" Count="0" />
       <LineId Id="183" Count="0" />
     </LineIds>
@@ -875,28 +792,6 @@ END_IF ]]></ST>
     <LineIds Name="S09_CardCarrying.Z_Output">
       <LineId Id="2" Count="0" />
       <LineId Id="27" Count="5" />
-      <LineId Id="82" Count="0" />
-      <LineId Id="37" Count="0" />
-      <LineId Id="42" Count="0" />
-      <LineId Id="39" Count="0" />
-      <LineId Id="46" Count="0" />
-      <LineId Id="61" Count="0" />
-      <LineId Id="63" Count="0" />
-      <LineId Id="65" Count="0" />
-      <LineId Id="48" Count="0" />
-      <LineId Id="47" Count="0" />
-      <LineId Id="49" Count="0" />
-      <LineId Id="84" Count="1" />
-      <LineId Id="96" Count="0" />
-      <LineId Id="43" Count="0" />
-      <LineId Id="95" Count="0" />
-      <LineId Id="52" Count="3" />
-      <LineId Id="71" Count="1" />
-      <LineId Id="70" Count="0" />
-      <LineId Id="56" Count="2" />
-      <LineId Id="87" Count="1" />
-      <LineId Id="86" Count="0" />
-      <LineId Id="50" Count="0" />
     </LineIds>
   </POU>
 </TcPlcObject>

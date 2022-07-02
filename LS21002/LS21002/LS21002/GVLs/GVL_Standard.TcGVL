@@ -24,6 +24,9 @@
 	fbAlive					 :ARRAY[1..gc_AliveNum] OF FB_Alive;
 	fbEhterCATSlaveMonitor	:ARRAY[1..gc_uiSlaveNum] OF FB_EtherCatSlaveMonitor;
 	fbModbus_200Smart				:FB_Modbus_200Smart;
+	fbEncoder								:FB_Encoder;
+	fbATV12									:FB_ATV12;
+	fbSmcVacuum							:ARRAY[1..gc_uiValveNum] OF FB_SmcVacuum;
    xNot_power					: ARRAY[1..gc_uiAxisNum] OF BOOL;//设原点时断使能
 	cnSlaveAddr	        : ARRAY[1..gc_uiAxisNum] OF UINT;//伺服的从站地址
 	sDeviceNetId AT%I* : AmsNetID ; //设备的ethercat地址
@@ -47,15 +50,13 @@
 	aReleaseControl: INT;
 	arFlowLineControl  :  ARRAY[1..2] OF BOOL; //[1]-启动   [2]-停止
 	arAxisSensor	 AT%I*:ARRAY[1..gc_uiAxisNum] OF UDINT;
+	
 	arAxisSensorN:ARRAY[1..gc_uiAxisNum] OF BOOL;//负极限
 	arAxisSensorP:ARRAY[1..gc_uiAxisNum] OF BOOL;//正极限
 	arAxisSensorH:ARRAY[1..gc_uiAxisNum] OF BOOL;//原点
 	
 	xS05WorkPermit : BOOL;//切莫工位允许调整工位动作
-	arxVacuumControlHMI:ARRAY[1..2] OF BOOL;//真空吸动作
-	arxBrokenVacuumHMI:ARRAY[1..2] OF BOOL;//破真空
-	arxVacuumControlSensorHMI:ARRAY[1..2] OF BOOL;//真空吸动作反馈
-	arxBrokenVacuumSensorHMI:ARRAY[1..2] OF BOOL;//破真空反馈
+	
 END_VAR
 
 VAR_GLOBAL 

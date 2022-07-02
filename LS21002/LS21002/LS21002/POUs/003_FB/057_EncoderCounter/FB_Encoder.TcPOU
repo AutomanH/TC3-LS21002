@@ -11,7 +11,6 @@
 *
 * Description:
 *   Counter for a function block
-*
 * Remarks:
 *
 * Revisions:
@@ -19,37 +18,38 @@
 *********************************************************************************)
 VAR_INPUT
 	xIErrorReset:				BOOL	:= FALSE;		(* Input: Errors will been reset *)
-	xIResetValue:				BOOL	:= FALSE;		(* Input: Set value*)
-	rScalingFactor:				REAL;					(* Input: Flowmeter scaling factor (ml/INC)*)
-	rGreaseDensity:				REAL;					(* Input: Grease density form ZPoint*)
-	rOffsetValue:				REAL;					(* Input: OffsetValue,constant*)
-
+	tDelay				:			TIME;
 END_VAR
 VAR_OUTPUT
 	xQBusy:					BOOL	:= FALSE;	(* Output: True, as long as the block has not yet fulfilled its work *)
 	xQError:					BOOL	:= FALSE;	(* Output: Group error for the FB *)
 	iQErrorNo:					INT		:= 0;		(* Output: Error ID (defined below) *)
-	rBeltSpeed:			REAL;				(*Output: Belt Speed*)
+	rQBeltSpeed:			REAL;				(*Output: Belt Speed*)
 END_VAR
 VAR
-	IudiCounterValue				AT%I*	:UINT;
-	QxSetCounter					AT%Q*	: BOOL;
-	QudiSetCounterValue			AT%Q*	:UINT;
-	iStep: INT;
+	QiCounterCmd					AT%Q*	:UINT;
+	IudiCounterValue			AT%I*	:DINT;
+	iResetStep: INT;
+	iCounterStep:INT;
 	TonWaitResetCounter:					TON;
-	iCounterValue:REAL;(*counter in 50ms*)
+	TonCounterCycleTime:					TON;
+	iCounterValue:			DINT;(*counter in one cylce*)
+	xResetValue:				BOOL	:= FALSE;		(* Input: Set value Cmd*)
+	xStartCounter:			BOOL 	:=FALSE;		(*Input:Counter Start Cmd*)
 END_VAR
 VAR CONSTANT
- PR :REAL:=600.0;//分辨率
- PI:REAL:=3.1415926;//圆周率
- D:REAL:=100.0;//轮子直径
- 
+	 PR :REAL:=600.0;//分辨率
+	 PI:REAL:=3.1415926;//圆周率
+	 D:REAL:=50.0;//轮子直径
+	iMaxCounter:DINT:=2880000; 
+	iStartCounterCmd:UINT:=1;
+	iResetCounterCmd:UINT:=2;
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[AC_ResetValue();
 AC_ActualValue();
-
+AC_Counter();
 (* call the actions *)
 AC_ErrorReset();
 
@@ -58,14 +58,38 @@ xQError := iQErrorNo <> 0;]]></ST>
     </Implementation>
     <Action Name="AC_ActualValue" Id="{2eb47830-b5db-4cac-bb6b-e83c7a654144}">
       <Implementation>
-        <ST><![CDATA[(*rActGreaseAmount:=ABS(rGreaseDensity*(rScalingFactor*IudiCounterValue*rOffsetValue));*)
-rBeltSpeed:=(PI*D*iCounterValue)/PR;
-]]></ST>
+        <ST><![CDATA[rQBeltSpeed:=(PI*D)*(iCounterValue*2)/(PR*4.15);]]></ST>
       </Implementation>
     </Action>
     <Action Name="AC_Counter" Id="{a86e5d13-d0b1-44f5-a35c-5f35b93063d3}">
       <Implementation>
-        <ST><![CDATA[]]></ST>
+        <ST><![CDATA[CASE iCounterStep  OF
+ 0://wait Counter Start
+ 		xStartCounter:=TRUE;
+		TonCounterCycleTime(IN:=FALSE);
+ 		IF	xStartCounter THEN
+		 	iCounterStep:=iCounterStep +1;
+		END_IF
+ 1://Counter 
+ 		TonCounterCycleTime(IN:=TRUE , PT:=tDelay, Q=> , ET=> );
+ 		QiCounterCmd:=iStartCounterCmd;
+		IF  TonCounterCycleTime.Q  THEN
+		 	TonCounterCycleTime(IN:=FALSE);
+		 	xStartCounter:=FALSE;
+			 QiCounterCmd:=0;
+			 iCounterValue:=iMaxCounter -IudiCounterValue;
+				iCounterStep:=iCounterStep +1;
+		END_IF
+	2://Reset Counter
+			xResetValue:=TRUE;
+			IF xQBusy THEN
+				 	iCounterStep:=iCounterStep +1;
+			END_IF
+ 	3://Counter Again
+			IF NOT  xQBusy THEN
+				 	iCounterStep:=0;
+			END_IF
+END_CASE]]></ST>
       </Implementation>
     </Action>
     <Action Name="AC_ErrorReset" Id="{91a2a1a8-7df7-470d-8342-13a8159907b5}">
@@ -80,30 +104,29 @@ xIErrorReset	:= FALSE;]]></ST>
     <Action Name="AC_ResetValue" Id="{958608ce-7b4b-4ed1-8f0f-fee19f73612c}">
       <Implementation>
         <ST><![CDATA[
-CASE iStep OF
+CASE iResetStep OF
 	0:
-		IF xIResetValue THEN
+		IF xResetValue THEN
 			xQBusy:=TRUE;
-			iStep:=10;
+			iResetStep:=iResetStep +1;
 		END_IF
-	10:
+	1:
 		TonWaitResetCounter(IN:= FALSE , PT:=T#500ms);
-		xIResetValue:=FALSE;
-		QudiSetCounterValue:=0;
-		QxSetCounter:=TRUE;
-		iStep:=20;
-	20:
+		xResetValue:=FALSE;
+		QiCounterCmd:=iResetCounterCmd;
+		iResetStep:=iResetStep +1;
+	2:
 		TonWaitResetCounter(IN:=TRUE , PT:=T#500ms);
 		IF IudiCounterValue=0 THEN
-			QxSetCounter:=FALSE;
-			iStep:=30;
+			QiCounterCmd:=0;
+			iResetStep:=iResetStep +1;
 		ELSIF TonWaitResetCounter.Q THEN
-			QxSetCounter:=FALSE;
-			iStep:=10;
+			QiCounterCmd:=0;
+			iResetStep:=iResetStep -1;
 		END_IF
-	30:
+	3:
 		xQBusy:=FALSE;
-		iStep:=0;
+		iResetStep:=0;
 END_CASE]]></ST>
       </Implementation>
     </Action>
@@ -112,17 +135,35 @@ END_CASE]]></ST>
       <LineId Id="9" Count="0" />
     </LineIds>
     <LineIds Name="FB_Encoder.AC_ActualValue">
-      <LineId Id="1" Count="2" />
+      <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_Encoder.AC_Counter">
-      <LineId Id="1" Count="0" />
+      <LineId Id="1" Count="1" />
+      <LineId Id="35" Count="1" />
+      <LineId Id="13" Count="2" />
+      <LineId Id="6" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="16" Count="1" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="24" Count="2" />
+      <LineId Id="29" Count="1" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="33" Count="1" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="3" Count="0" />
     </LineIds>
     <LineIds Name="FB_Encoder.AC_ErrorReset">
       <LineId Id="2" Count="3" />
       <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="FB_Encoder.AC_ResetValue">
-      <LineId Id="2" Count="24" />
+      <LineId Id="2" Count="10" />
+      <LineId Id="14" Count="12" />
       <LineId Id="1" Count="0" />
     </LineIds>
   </POU>

@@ -262,6 +262,12 @@
     <Compile Include="POUs\003_FB\057_EncoderCounter\FB_Encoder.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\003_FB\058_ATV\FB_ATV12.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\059_Vacuum\FB_SmcVacuum.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\003_FB\05_StationFB\E_State.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -629,6 +635,8 @@
     <Folder Include="POUs\003_FB\056_FlowLine" />
     <Folder Include="POUs\003_FB\057_EncoderCounter" />
     <Folder Include="POUs\003_FB\042_200Smart" />
+    <Folder Include="POUs\003_FB\058_ATV" />
+    <Folder Include="POUs\003_FB\059_Vacuum" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB\DUTs" />
     <Folder Include="POUs\004_FC\001_Parallel" />

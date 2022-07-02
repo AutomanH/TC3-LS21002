@@ -79,7 +79,7 @@ station.adwAlarm[1].12	:=	fbThermostat_2.xError	;//	S04热封铝膜工位温控�
     </Action>
     <Action Name="Delay" Id="{26e43c03-7b70-412e-9d66-6498126722fc}">
       <Implementation>
-        <ST><![CDATA[(*arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );*)//TipAuto使用
+        <ST><![CDATA[arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[02](IN:=  , PT:=stData.Thermostat[1].tTON_Delay , Q=> , ET=> );//热熔延时时间
 arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
 arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
@@ -87,7 +87,8 @@ arTonDelay[05](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[06](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[07](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[08](IN:= , PT:=T#0.1S , Q=> , ET=> );
-arTonDelay[09](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[09](IN:= NOT fbZAxisMove_1.xbusy, PT:=T#0.1S , Q=> , ET=> );//TipAuto使用
+arTonDelay[10](IN:= NOT fbZAxisMove_2.xbusy, PT:=T#0.1S , Q=> , ET=> );//TipAuto使用
 
 
 
@@ -467,25 +468,19 @@ FOR i:= 1 TO 5 BY 1 DO
 	
 END_FOR
 
-IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  THEN
-	  arTonDelay[01](IN:=True , PT:=T#1S , Q=> , ET=> );
-else
-	  arTonDelay[01](IN:=false);
-END_IF
-IF arTonDelay[1].Q  THEN 
+IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning AND arTonDelay[9].Q  THEN
 	IF	fbZAxisMove_1.iPosNumber=1 	AND NOT fbZAxisMove_1.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].10:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
 	if	fbZAxisMove_1.iPosNumber=2	AND NOT fbZAxisMove_1.xMoveInPos[2]	THEN 	station.adwAutoTip[1].11:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
 	if	fbZAxisMove_1.iPosNumber=3	AND NOT fbZAxisMove_1.xMoveInPos[3]	THEN 	station.adwAutoTip[1].12:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
 	if	fbZAxisMove_1.iPosNumber=4	AND NOT fbZAxisMove_1.xMoveInPos[4]	THEN 	station.adwAutoTip[1].13:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
-	if	fbZAxisMove_1.iPosNumber=5	AND NOT fbZAxisMove_1.xMoveInPos[5]	THEN 	station.adwAutoTip[1].14:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
+	IF	fbZAxisMove_1.iPosNumber=5	AND NOT fbZAxisMove_1.xMoveInPos[5]	THEN 	station.adwAutoTip[1].14:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
+END_IF
+IF  fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning AND arTonDelay[10].Q  THEN
 	IF	fbZAxisMove_2.iPosNumber=1 	AND NOT fbZAxisMove_2.xMoveInPos[1] 	THEN 	station.adwAutoTip[1].15:=TRUE	;	END_IF//轴伺服自动时位置不在位置1
 	if	fbZAxisMove_2.iPosNumber=2	AND NOT fbZAxisMove_2.xMoveInPos[2]	THEN 	station.adwAutoTip[1].16:=TRUE	;	END_IF//轴伺服自动时位置不在位置2
 	if	fbZAxisMove_2.iPosNumber=3	AND NOT fbZAxisMove_2.xMoveInPos[3]	THEN 	station.adwAutoTip[1].17:=TRUE	;	END_IF//轴伺服自动时位置不在位置3
 	if	fbZAxisMove_2.iPosNumber=4	AND NOT fbZAxisMove_2.xMoveInPos[4]	THEN 	station.adwAutoTip[1].18:=TRUE	;	END_IF//轴伺服自动时位置不在位置4
 	if	fbZAxisMove_2.iPosNumber=5	AND NOT fbZAxisMove_2.xMoveInPos[5]	THEN 	station.adwAutoTip[1].19:=TRUE	;	END_IF//轴伺服自动时位置不在位置5
-	
-	
-		
 END_IF
 
 ]]></ST>
@@ -535,7 +530,9 @@ QxS04HOZAdjustCyl_3HP	:=	fbHOZAdjustCyl_3.xHP_Valve	;
       <LineId Id="266" Count="0" />
     </LineIds>
     <LineIds Name="S04_AluCovering.Delay">
-      <LineId Id="64" Count="10" />
+      <LineId Id="64" Count="6" />
+      <LineId Id="76" Count="0" />
+      <LineId Id="71" Count="3" />
       <LineId Id="44" Count="13" />
       <LineId Id="40" Count="0" />
     </LineIds>
@@ -678,10 +675,11 @@ QxS04HOZAdjustCyl_3HP	:=	fbHOZAdjustCyl_3.xHP_Valve	;
       <LineId Id="145" Count="0" />
       <LineId Id="209" Count="8" />
       <LineId Id="223" Count="1" />
-      <LineId Id="226" Count="6" />
-      <LineId Id="259" Count="9" />
-      <LineId Id="278" Count="0" />
-      <LineId Id="256" Count="2" />
+      <LineId Id="226" Count="1" />
+      <LineId Id="259" Count="4" />
+      <LineId Id="280" Count="1" />
+      <LineId Id="264" Count="4" />
+      <LineId Id="258" Count="0" />
       <LineId Id="178" Count="0" />
       <LineId Id="183" Count="0" />
     </LineIds>
