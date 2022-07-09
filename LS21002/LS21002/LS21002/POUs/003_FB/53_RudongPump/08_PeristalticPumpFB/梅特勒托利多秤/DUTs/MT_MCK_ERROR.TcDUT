@@ -21,8 +21,6 @@ TYPE MT_MCK_ERROR :
   	FLT_CmdFeedback     				:= 24,(* 指令反馈错误 *)	
   	FLT_TOverMax     					:= 25, (* 去皮超出上限 *) 	
   	FLT_TOverMin     					:= 26(* 去皮低于上限 *)	
-	
-	
 )INT;
 END_TYPE
 ]]></Declaration>

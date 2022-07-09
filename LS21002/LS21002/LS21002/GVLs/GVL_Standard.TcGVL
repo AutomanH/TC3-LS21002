@@ -26,6 +26,7 @@
 	fbModbus_200Smart				:FB_Modbus_200Smart;
 	fbEncoder								:FB_Encoder;
 	fbATV12									:FB_ATV12;
+	fbMCK										 :FB_MT_MKC_New;
 	fbSmcVacuum							:ARRAY[1..gc_uiValveNum] OF FB_SmcVacuum;
    xNot_power					: ARRAY[1..gc_uiAxisNum] OF BOOL;//设原点时断使能
 	cnSlaveAddr	        : ARRAY[1..gc_uiAxisNum] OF UINT;//伺服的从站地址
@@ -56,6 +57,9 @@
 	arAxisSensorH:ARRAY[1..gc_uiAxisNum] OF BOOL;//原点
 	
 	xS05WorkPermit : BOOL;//切莫工位允许调整工位动作
+	
+	rRudongPumpVolume:REAL;//蠕动泵设定量
+	rMckVolume			:REAL;//称测量的量
 	
 END_VAR
 

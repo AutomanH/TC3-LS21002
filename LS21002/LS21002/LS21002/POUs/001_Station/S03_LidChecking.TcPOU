@@ -156,7 +156,7 @@ THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
 	station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
-ELSIF station.xRunning  OR (tsModuleProcess[bXCounter+1].xProcessStarted AND NOT tsModuleProcess[bXCounter+1].xProcessCompleted)
+ELSIF station.xRunning  OR (tsModuleProcess[bXCounter+1].xProcessStarted AND NOT tsModuleProcess[bXCounter+1].xProcessCompleted)//相机检测流程
 THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
 CASE station.iStepAuto OF	  
@@ -335,11 +335,14 @@ CASE station.iStepAuto OF
 			IF  fbZAxisMove.xMoveInPos[2] THEN
 				station.iStepAuto:= 95;
 			END_IF			 
-		95://X轴移动到拍照位置1/2
+		95://X轴移动到拍照位置1/2,Y轴到拍照位置1
 				fbXAxisMove.xMoveAuto[bXCounter+1]:=TRUE;
-				IF  fbXAxisMove.xMoveInPos[bXCounter+1] THEN
+				fbYAxisMove.xMoveAuto[2]:=TRUE;
+				IF  fbXAxisMove.xMoveInPos[bXCounter+1]  AND 
+					  fbYAxisMove.xMoveInPos[2]   THEN
 					station.iStepAuto:= 100;
 				END_IF
+			
 		100://设定Y轴循环开始 总次数为3
 				 bYCounter:=1;
 				station.iStepAuto:= 110;	
@@ -423,7 +426,7 @@ CASE station.iStepAuto OF
 											station.iStepAuto:=160;
 							ELSE
 								FOR i:=1 TO  8 BY 1 DO
-										IF  fbCamera[i].xQBusy THEN	
+										IF  fbCamera[i+1].xQBusy THEN	
 												EXIT;
 										ELSE
 												IF  i =1 THEN
@@ -459,7 +462,7 @@ CASE station.iStepAuto OF
 											station.iStepAuto:=160;
 							ELSE
 								FOR i:=1 TO 4 BY 1	DO
-										IF  fbCamera[i].xQBusy THEN	
+										IF  fbCamera[i+1].xQBusy THEN	
 											EXIT;
 										ELSE
 											IF  i =1 THEN
@@ -502,7 +505,7 @@ CASE station.iStepAuto OF
 												station.iStepAuto:=160;
 							ELSE
 								FOR i:=1 TO  16 BY 1 DO
-									IF  fbCamera[i].xQBusy THEN	
+									IF  fbCamera[i+1].xQBusy THEN	
 											EXIT;
 									ELSE
 											IF  i =1 THEN
@@ -563,7 +566,7 @@ CASE station.iStepAuto OF
 											station.iStepAuto:=160;
 							ELSE
 								FOR i:=1 TO  12 BY 1 DO
-									IF  fbCamera[i].xQBusy THEN	
+									IF  fbCamera[i+1].xQBusy THEN	
 											EXIT;
 									ELSE
 											IF  i =1 THEN
@@ -622,7 +625,7 @@ CASE station.iStepAuto OF
 											station.iStepAuto:=160;
 							ELSE
 								FOR i:=1 TO  16 BY 1 DO
-										IF  fbCamera[i].xQBusy THEN	
+										IF  fbCamera[i+1].xQBusy THEN	
 												EXIT;
 										ELSE
 												IF  i =1 THEN
@@ -687,7 +690,7 @@ CASE station.iStepAuto OF
 											station.iStepAuto:=160;
 							ELSE
 								FOR i:=1 TO  16 BY 1 DO
-									IF fbCamera[i].xQBusy THEN	
+									IF fbCamera[i+1].xQBusy THEN	
 											EXIT;
 									ELSE
 											IF  i =1 THEN
@@ -748,7 +751,7 @@ CASE station.iStepAuto OF
 											station.iStepAuto:=160;
 							ELSE
 								FOR i:=9 TO  16 BY 1 DO
-									IF  fbCamera[i].xQBusy THEN	
+									IF  fbCamera[i+1].xQBusy THEN	
 											EXIT;
 									ELSE
 											IF i =9 THEN
@@ -793,7 +796,7 @@ CASE station.iStepAuto OF
 											station.iStepAuto:=160;
 							ELSE
 								FOR i:=5 TO 16 BY 1	DO
-										IF  fbCamera[i].xQBusy THEN	
+										IF  fbCamera[i+1].xQBusy THEN	
 											EXIT;
 										ELSE
 											IF  i =5 THEN
@@ -840,7 +843,7 @@ CASE station.iStepAuto OF
 												station.iStepAuto:=160;
 							ELSE
 								FOR i:=13 TO  16 BY 1 DO
-									IF  fbCamera[i].xQBusy THEN	
+									IF  fbCamera[i+1].xQBusy THEN	
 											EXIT;
 									ELSE
 											IF  i =13 THEN
@@ -874,12 +877,12 @@ CASE station.iStepAuto OF
 		190:///X轴拍照流程完成
 				 tsModuleProcess[bXCounter+1].xProcessCompleted:=TRUE;
 				 tsModuleProcess[bXCounter+1].xQDataCompleted:=TRUE;
-					station.iStepAuto:=200; 
-		200://Y轴回拍照位置1
-				fbYAxisMove.xMoveAuto[2]:=TRUE;
-				IF  fbYAxisMove.xMoveInPos[2] THEN
-					station.iStepAuto:=210;
-				END_IF
+					station.iStepAuto:=210; 
+	//	200://Y轴回拍照位置1
+	//			fbYAxisMove.xMoveAuto[2]:=TRUE;
+	//			IF  fbYAxisMove.xMoveInPos[2] THEN
+	//				station.iStepAuto:=210;
+	//			END_IF
 		210://X循环 +1 
 			bXCounter :=bXCounter +1;
 			station.iStepAuto:=220;
@@ -911,15 +914,9 @@ CASE station.iStepAuto OF
 				//	fbHOZAdjustCyl_6.xHP_Delay AND
 					fbHOZAdjustCyl_7.xHP_Delay THEN
 				//	fbHOZAdjustCyl_8.xHP_Delay THEN
-					station.iStepAuto:=250;	
+					station.iStepAuto:=260;	
 				END_IF
-		250://XY轴回参考点
-				fbXAxisMove.xMoveAuto[1]:=TRUE;
-				fbYAxisMove.xMoveAuto[1]:=TRUE;
-			IF	fbxAxisMove.xMoveInPos[1] AND 
-				fbYAxisMove.xMoveInPos[1] THEN
-					station.iStepAuto:= 260;
-			END_IF
+
 		260:////Restore_after_Estop_Process4 数据传输流程
 			IF  station.xSingleRunning  THEN //OR fbMachine[1].xTryRun THEN
 					station.iStepAuto :=999;
@@ -1014,7 +1011,7 @@ CASE station.iStepAuto OF
 	////产品流程结束
 	999://----Single Run Finish----
 		arManualNOKHmiButton[3]:=FALSE;
-		station.iStepAuto :=0;
+		station.iStepAuto :=1000;
 		IF NOT station.xSingleContinuousRun THEN
 			station.xSingleRunFlag:=FALSE;
 		END_IF
@@ -1022,6 +1019,17 @@ CASE station.iStepAuto OF
 		station.xCycleEnable:=FALSE;	
 		station.xDone:=TRUE;
 		station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
+	1000://XY轴回参考点
+				fbXAxisMove.xMoveAuto[1]:=TRUE;
+				fbYAxisMove.xMoveAuto[1]:=TRUE;
+			IF	fbxAxisMove.xMoveInPos[1] AND 
+				fbYAxisMove.xMoveInPos[1] THEN
+					station.iStepAuto:= 0;
+			END_IF		
+		
+		
+		
+		
 	ELSE
 		;	
 END_CASE
@@ -1415,8 +1423,13 @@ QxS03HOZAdjustCyl_7HP	:=	fbHOZAdjustCyl_7.xHP_Valve	;
       <LineId Id="3207" Count="3" />
       <LineId Id="3164" Count="0" />
       <LineId Id="1761" Count="0" />
-      <LineId Id="1771" Count="2" />
+      <LineId Id="1771" Count="0" />
+      <LineId Id="3815" Count="0" />
+      <LineId Id="1772" Count="0" />
+      <LineId Id="3816" Count="0" />
+      <LineId Id="1773" Count="0" />
       <LineId Id="1769" Count="0" />
+      <LineId Id="3817" Count="0" />
       <LineId Id="1765" Count="0" />
       <LineId Id="1944" Count="0" />
       <LineId Id="1781" Count="0" />
@@ -1658,10 +1671,7 @@ QxS03HOZAdjustCyl_7HP	:=	fbHOZAdjustCyl_7.xHP_Valve	;
       <LineId Id="2623" Count="0" />
       <LineId Id="2625" Count="16" />
       <LineId Id="2624" Count="0" />
-      <LineId Id="2642" Count="2" />
-      <LineId Id="1567" Count="0" />
-      <LineId Id="2646" Count="0" />
-      <LineId Id="2649" Count="1" />
+      <LineId Id="2650" Count="0" />
       <LineId Id="3132" Count="0" />
       <LineId Id="3270" Count="0" />
       <LineId Id="3273" Count="0" />
@@ -1719,6 +1729,8 @@ QxS03HOZAdjustCyl_7HP	:=	fbHOZAdjustCyl_7.xHP_Valve	;
       <LineId Id="1453" Count="2" />
       <LineId Id="1215" Count="2" />
       <LineId Id="1451" Count="0" />
+      <LineId Id="3823" Count="5" />
+      <LineId Id="3818" Count="4" />
       <LineId Id="1218" Count="6" />
     </LineIds>
     <LineIds Name="S03_LidChecking.FlowInit">

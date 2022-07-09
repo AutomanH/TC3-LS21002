@@ -89,7 +89,8 @@ ACT_Camera();
 ACT_PeristalticPump();
 //ACT_PeristalticPump_1();
 ACT_TURINRobot();
-ACT_MT_MCK();
+//ACT_MT_MCK();
+ACT_MT_MCK_1();
 ACT_Alive();
 ACT_EtherCATSlaveState();
 ACT_FuShiPXF();
@@ -406,7 +407,7 @@ IF 			fbCamera[2].xQLight OR	fbCamera[3].xQLight OR
 			 fbCamera[10].xQLight OR	fbCamera[11].xQLight OR
 			 fbCamera[12].xQLight OR	fbCamera[13].xQLight OR
 			 fbCamera[14].xQLight OR	fbCamera[15].xQLight OR
-				fbCamera[17].xQLight	OR TRUE THEN
+				fbCamera[17].xQLight THEN
 					QxCameraLight3Trigger:=TRUE;	
 ELSE
  						QxCameraLight3Trigger:=FALSE;	
@@ -534,8 +535,8 @@ END_FOR
 
 END_IF
 //温控器控制加热棒使能
-QxHeatRelayContorl1:=FALSE;//fbTempretureControl[1].xPowerOut;
-QxHeatRelayContorl2:=FALSE;//fbTempretureControl[2].xPowerOut;
+QxHeatRelayContorl1:=fbTempretureControl[1].xPowerOut;
+QxHeatRelayContorl2:=fbTempretureControl[2].xPowerOut;
 
 //QxEnableHeatingRod:=fbTempretureControl[1].xPowerOut AND fbTempretureControl[2].xPowerOut;
 //S04_FilmCovering.xHeatingDeviceReady:=fbTempretureControl[1].xRdy AND fbTempretureControl[2].xRdy;
@@ -682,6 +683,33 @@ fbMCK204W(
 ]]></ST>
       </Implementation>
     </Action>
+    <Action Name="ACT_MT_MCK_1" Id="{ff6064f6-d518-4bc2-b24f-0523ce6bbbbb}">
+      <Implementation>
+        <ST><![CDATA[fbMCK.stSysPar.sRemoteHost:='192.168.1.72';
+fbMCK.stSysPar.nRemotePort:=1030;
+fbMCK.stSysPar.bySlaveID:=1;
+
+fbMCK(
+	xIReset:= , 
+	xIInit:= , 
+	iICodeLEN:= 20, 
+	iICodePOS:= 1, 
+	xIDeviceRunning:= TRUE, 
+	xManualMode:=fbMachine[1].xManualMode , 
+	xAutoMode:=fbMachine[1].xAutoMode , 
+	stDeviceOpe:= , 
+	stpar:= , 
+	stSysPar:= , 
+	xQRdyCmd=> , 
+	xQDone=> , 
+	strQBarCode=> , 
+	xQBusy=> , 
+	xQError=> , 
+	xQNoRead=> , 
+	iQErrorNo=> , 
+	stParOut=> );]]></ST>
+      </Implementation>
+    </Action>
     <Action Name="ACT_PeristalticPump" Id="{118cab21-fbc1-437a-8471-f769fdf59f60}">
       <Implementation>
         <ST><![CDATA[fbRudongPump[1].stPara.strSlaveIP:='192.168.1.60';
@@ -812,34 +840,35 @@ FOR i :=1 TO gc_uiRudongPump BY 1 DO
 	xRdyCmd=> );
 
 END_FOR
-IF NOT _xCalFirstCycle THEN
-	fbAutoCal.stSysPar.fbMTMCK204C:=ADR	(fbMCK204W);
-	fbAutoCal.stSysPar.fbRuDongPump:=ADR(fbRudongPump);
-	fbAutoCal.stparIn.iContinuesInjectNum:=5;//连续加液20次
-	fbAutoCal.stparIn.rDensity:=1;//密度为1
-	fbAutoCal.stparIn.tSteadyTime:=5;//稳定5秒
-	fbAutoCal.stparIn.iPumpController:=12;//控制器个数
-	_xCalFirstCycle:=TRUE;
-ELSE
-	fbAutoCal(
-		xExecute:= , 
-		xAbort:= , 
-		xEstop:= fbMachine[1].xEStop OR TRUE , 
-		xDeviceRunning:= , 
-		xResetRequest:= , 
-		stDeviceOpe:= , 
-		stparIn:= , 
-		stSysPar:= , 
-		xAutoMode:= , 
-		xIniting:= , 
-		xDone=> , 
-		xBusy=> , 
-		xError=> , 
-		eERRORID=> , 
-		xRdyCmd=> , 
-		xRdy=> , 
-		stParOut=> );	
-END_IF
+//IF NOT _xCalFirstCycle THEN
+////	fbAutoCal.stSysPar.fbMTMCK204C:=ADR	(fbMCK204W);
+//	fbAutoCal.stSysPar.fbMTMCK204C:=ADR	(fbMCK);
+//	fbAutoCal.stSysPar.fbRuDongPump:=ADR(fbRudongPump[1]);
+//	fbAutoCal.stparIn.iContinuesInjectNum:=5;//连续加液次数
+//	fbAutoCal.stparIn.rDensity:=1;//密度为1
+//	fbAutoCal.stparIn.tSteadyTime:=5;//稳定5秒
+//	fbAutoCal.stparIn.iPumpController:=1;//控制器个数
+//	_xCalFirstCycle:=TRUE;
+//ELSE
+//	fbAutoCal(
+//		xExecute:= , 
+//		xAbort:= , 
+//		xEstop:= fbMachine[1].xEStop, 
+//		xDeviceRunning:= , 
+//		xResetRequest:= , 
+//		stDeviceOpe:= , 
+//		stparIn:= , 
+//		stSysPar:= , 
+//		xAutoMode:= , 
+//		xIniting:= , 
+//		xDone=> , 
+//		xBusy=> , 
+//		xError=> , 
+//		eERRORID=> , 
+//		xRdyCmd=> , 
+//		xRdy=> , 
+//		stParOut=> );	
+//END_IF
 
 ]]></ST>
       </Implementation>
@@ -1028,10 +1057,10 @@ FOR   i:=1 TO gc_uiValveNum BY 1 DO
 END_FOR
 
 //真空吸反馈信号
-fbSmcVacuum[1].xIVacuumWorkReached:=IxS08Vacuum1_Output1	;//	卡片搬运工位¶真空发生器1¶输出OUT1
-fbSmcVacuum[1].xIVacuumBrokenReached:=IxS08Vacuum1_Output2	;//	卡片搬运工位¶真空发生器1¶输出OUT2
-fbSmcVacuum[2].xIVacuumWorkReached:=IxS08Vacuum2_Output1	;//	卡片搬运工位¶真空发生器2¶输出OUT1
-fbSmcVacuum[2].xIVacuumBrokenReached:=IxS08Vacuum2_Output2	;//	卡片搬运工位¶真空发生器2¶输出OUT2
+fbSmcVacuum[1].xIVacuumWorkReached:=	IxS08Vacuum1_Output2	;//	卡片搬运工位¶真空发生器1¶输出OUT1
+fbSmcVacuum[1].xIVacuumBrokenReached:=IxS08Vacuum1_Output1;//	卡片搬运工位¶真空发生器1¶输出OUT2
+fbSmcVacuum[2].xIVacuumWorkReached:=IxS08Vacuum2_Output2	;//	卡片搬运工位¶真空发生器2¶输出OUT1
+fbSmcVacuum[2].xIVacuumBrokenReached:=IxS08Vacuum2_Output1	;//	卡片搬运工位¶真空发生器2¶输出OUT2
 //真空吸输出信号
 
 QxVacuum1_FeedValveControl:=fbSmcVacuum[1].xQVacuumFeedValve;
@@ -1087,8 +1116,7 @@ FOR i:=1 TO gc_uiStationNum DO
 		StepAutoTransR_TRIG[i](CLK:=FALSE );						
 	END_IF
 	
-	 arStepAuto.Staion[i].History[gc_StepHistory]:=CONCAT(CONCAT(CONCAT('AutoStep:=' ,INT_TO_STRING(fbstation[k].iStepAuto)),'\\'),strLocalDateTime);
-	 
+	 arStepAuto.Staion[i].History[gc_StepHistory]:=CONCAT(CONCAT(CONCAT('AutoStep:=' ,INT_TO_STRING(fbstation[i].iStepAuto)),'\\'),strLocalDateTime);
 	 
 	 
 	 StepInitTransR_TRIG[i](CLK:=fbstation[i].xQStepInitTrans , Q=> );
@@ -1098,7 +1126,8 @@ FOR i:=1 TO gc_uiStationNum DO
 		END_FOR	
 		StepInitTransR_TRIG[i](CLK:=FALSE );										
 	END_IF
-	 	 arStepinit.Staion[i].History[gc_StepHistory]:=CONCAT(CONCAT(CONCAT('InitStep:=' ,INT_TO_STRING(fbstation[i].iStepInit)),'\\'),strLocalDateTime);;
+	
+	 	 arStepinit.Staion[i].History[gc_StepHistory]:=CONCAT(CONCAT(CONCAT('InitStep:=' ,INT_TO_STRING(fbstation[i].iStepInit)),'\\'),strLocalDateTime);
 END_FOR
 ]]></ST>
       </Implementation>
@@ -1372,6 +1401,7 @@ END_FOR]]></ST>
       <LineId Id="727" Count="0" />
       <LineId Id="791" Count="0" />
       <LineId Id="662" Count="0" />
+      <LineId Id="1199" Count="0" />
       <LineId Id="858" Count="0" />
       <LineId Id="528" Count="0" />
       <LineId Id="926" Count="0" />
@@ -1617,6 +1647,15 @@ END_FOR]]></ST>
       <LineId Id="55" Count="0" />
       <LineId Id="59" Count="0" />
     </LineIds>
+    <LineIds Name="CallStandard.ACT_MT_MCK_1">
+      <LineId Id="130" Count="1" />
+      <LineId Id="133" Count="0" />
+      <LineId Id="132" Count="0" />
+      <LineId Id="109" Count="1" />
+      <LineId Id="112" Count="8" />
+      <LineId Id="123" Count="6" />
+      <LineId Id="59" Count="0" />
+    </LineIds>
     <LineIds Name="CallStandard.ACT_PeristalticPump">
       <LineId Id="20" Count="0" />
       <LineId Id="61" Count="1" />
@@ -1676,7 +1715,9 @@ END_FOR]]></ST>
       <LineId Id="67" Count="0" />
       <LineId Id="237" Count="0" />
       <LineId Id="70" Count="0" />
-      <LineId Id="105" Count="26" />
+      <LineId Id="105" Count="1" />
+      <LineId Id="238" Count="0" />
+      <LineId Id="107" Count="24" />
       <LineId Id="65" Count="1" />
       <LineId Id="19" Count="0" />
     </LineIds>
@@ -1744,11 +1785,12 @@ END_FOR]]></ST>
       <LineId Id="63" Count="0" />
       <LineId Id="81" Count="0" />
       <LineId Id="64" Count="0" />
-      <LineId Id="75" Count="2" />
+      <LineId Id="76" Count="1" />
       <LineId Id="66" Count="0" />
       <LineId Id="68" Count="3" />
       <LineId Id="79" Count="0" />
       <LineId Id="72" Count="0" />
+      <LineId Id="82" Count="0" />
       <LineId Id="67" Count="0" />
       <LineId Id="74" Count="0" />
       <LineId Id="1" Count="0" />

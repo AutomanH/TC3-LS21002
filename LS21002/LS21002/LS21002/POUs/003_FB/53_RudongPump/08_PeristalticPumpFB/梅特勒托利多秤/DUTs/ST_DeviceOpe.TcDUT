@@ -18,9 +18,6 @@ STRUCT
 	xAcquireWeight_Stop_HMI,xAcquireWeight_Stop_Auto				:BOOL;//中断连续获取重量,SI
 	xRestart_HMI,xRestart_Auto										:BOOL;//重启秤体	
 
-
-
-
 END_STRUCT
 END_TYPE
 ]]></Declaration>

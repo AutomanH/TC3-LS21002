@@ -30,20 +30,25 @@ VacuumBrokenR_TRIG(CLK:= ((xIAutoMode OR xIDeviceRunning )AND  xIVacuumBroken) O
 IF	VacuumR_TRIG.Q THEN 
 	xQVacuumFeedValve	:= TRUE ;//	卡片搬运工位¶真空发生器1¶供给阀控制
 	xQVacuumBrokenValve:=FALSE;//	卡片搬运工位¶真空发生器1¶破坏阀控制
-	xIVacuumWork:=FALSE;
-	xIVacuumWorkHMI:=FALSE;
+//	xIVacuumWork:=FALSE;
+//	xIVacuumWorkHMI:=FALSE;
 END_IF 
 
 //真空吸
 IF VacuumBrokenR_TRIG.Q THEN 
-	xQVacuumBrokenValve	:= TRUE ;//	卡片搬运工位¶真空发生器1¶供给阀控制
-	xQVacuumFeedValve:=FALSE;//	卡片搬运工位¶真空发生器1¶破坏阀控制
-	xIVacuumBroken:=FALSE;
-	xIVacuumBrokenHMI:=FALSE;
+	xQVacuumBrokenValve	:= TRUE ;
+	xQVacuumFeedValve:=FALSE;
+//	xIVacuumBroken:=FALSE;
+//	xIVacuumBrokenHMI:=FALSE;
 END_IF 
+IF			xQVacuumBrokenValve AND  xIVacuumBrokenReached THEN
+ 				xQVacuumBrokenValve	:= FALSE ;
+END_IF
 
-
-]]></ST>
+	xIVacuumWork:=FALSE;
+	xIVacuumWorkHMI:=FALSE;
+	xIVacuumBroken:=FALSE;
+	xIVacuumBrokenHMI:=FALSE;]]></ST>
     </Implementation>
     <LineIds Name="FB_SmcVacuum">
       <LineId Id="10" Count="0" />
@@ -51,8 +56,13 @@ END_IF
       <LineId Id="14" Count="5" />
       <LineId Id="27" Count="7" />
       <LineId Id="9" Count="0" />
-      <LineId Id="58" Count="1" />
+      <LineId Id="58" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="82" Count="0" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="87" Count="0" />
       <LineId Id="57" Count="0" />
+      <LineId Id="88" Count="1" />
     </LineIds>
   </POU>
 </TcPlcObject>

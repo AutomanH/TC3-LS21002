@@ -41,6 +41,7 @@ VAR_OUTPUT
  xQMotorStart:BOOL;
  xQBusy:BOOL;
  xQError:BOOL;
+ xQDone:BOOL;
 END_VAR
 VAR
  	//链板线电机启动
@@ -85,6 +86,7 @@ ACT_Init();]]></ST>
 				_xFirstCycle:=TRUE;
 				xIRunningPremit:=FALSE;
 				xQBusy:=TRUE;
+				xQDone:=FALSE;
 				bFlowLineStep:=bFlowLineStep +1;
 		ELSE
 				xMotorStart:=FALSE;
@@ -160,8 +162,10 @@ ACT_Init();]]></ST>
 			END_IF	      
 	8://输出链板线Ready信号
 			 xQBusy:=FALSE;
+			 xQDone:=TRUE;
 			 bFlowLineStep:=0;
-	END_CASE]]></ST>
+	END_CASE
+	xIRunningPremit:=FALSE;]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_Init" Id="{6524b2a2-a9d5-4f5a-8fad-02d8e90a8192}">
@@ -254,10 +258,14 @@ END_CASE]]></ST>
       <LineId Id="88" Count="0" />
       <LineId Id="12" Count="0" />
       <LineId Id="92" Count="1" />
+      <LineId Id="96" Count="0" />
       <LineId Id="13" Count="65" />
       <LineId Id="91" Count="0" />
-      <LineId Id="79" Count="8" />
+      <LineId Id="79" Count="7" />
+      <LineId Id="98" Count="0" />
+      <LineId Id="87" Count="0" />
       <LineId Id="1" Count="0" />
+      <LineId Id="95" Count="0" />
     </LineIds>
     <LineIds Name="FB_FlowLine.ACT_Init">
       <LineId Id="1" Count="0" />

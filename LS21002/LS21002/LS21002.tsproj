@@ -1613,6 +1613,8 @@ External Setpoint Generation:
 				<Axis Id="1" CreateSymbols="true" AxisType="1">
 					<Name>Axis 1</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -1735,6 +1737,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -1756,6 +1759,8 @@ External Setpoint Generation:
 				<Axis Id="2" CreateSymbols="true" AxisType="1">
 					<Name>Axis 2</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -1878,6 +1883,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -1901,6 +1907,8 @@ External Setpoint Generation:
 				<Axis Id="3" CreateSymbols="true" AxisType="1">
 					<Name>Axis 3</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -2023,6 +2031,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -2046,6 +2055,8 @@ External Setpoint Generation:
 				<Axis Id="4" CreateSymbols="true" AxisType="1">
 					<Name>Axis 4</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -2168,6 +2179,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -2191,6 +2203,8 @@ External Setpoint Generation:
 				<Axis Id="5" CreateSymbols="true" AxisType="1">
 					<Name>Axis 5</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -2313,6 +2327,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -2336,6 +2351,8 @@ External Setpoint Generation:
 				<Axis Id="6" CreateSymbols="true" AxisType="1">
 					<Name>Axis 6</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -2458,6 +2475,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -2481,6 +2499,8 @@ External Setpoint Generation:
 				<Axis Id="7" CreateSymbols="true" AxisType="1">
 					<Name>Axis 7</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -2603,6 +2623,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -2626,6 +2647,8 @@ External Setpoint Generation:
 				<Axis Id="8" CreateSymbols="true" AxisType="1">
 					<Name>Axis 8</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -2748,6 +2771,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -2771,6 +2795,8 @@ External Setpoint Generation:
 				<Axis Id="9" CreateSymbols="true" AxisType="1">
 					<Name>Axis 9</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -2893,6 +2919,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -2916,6 +2943,8 @@ External Setpoint Generation:
 				<Axis Id="10" CreateSymbols="true" AxisType="1">
 					<Name>Axis 10</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -3038,6 +3067,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -3061,6 +3091,8 @@ External Setpoint Generation:
 				<Axis Id="11" CreateSymbols="true" AxisType="1">
 					<Name>Axis 11</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -3183,6 +3215,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -3206,6 +3239,8 @@ External Setpoint Generation:
 				<Axis Id="12" CreateSymbols="true" AxisType="1">
 					<Name>Axis 12</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -3328,6 +3363,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -3351,6 +3387,8 @@ External Setpoint Generation:
 				<Axis Id="13" CreateSymbols="true" AxisType="1">
 					<Name>Axis 13</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -3473,6 +3511,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -3496,6 +3535,8 @@ External Setpoint Generation:
 				<Axis Id="14" CreateSymbols="true" AxisType="1">
 					<Name>Axis 14</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -3618,6 +3659,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -3641,6 +3683,8 @@ External Setpoint Generation:
 				<Axis Id="15" CreateSymbols="true" AxisType="1">
 					<Name>Axis 15</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -3763,6 +3807,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -3786,6 +3831,8 @@ External Setpoint Generation:
 				<Axis Id="16" CreateSymbols="true" AxisType="1">
 					<Name>Axis 16</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -3908,6 +3955,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -3931,6 +3979,8 @@ External Setpoint Generation:
 				<Axis Id="17" CreateSymbols="true" AxisType="1">
 					<Name>Axis 17</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -4053,6 +4103,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -4076,6 +4127,8 @@ External Setpoint Generation:
 				<Axis Id="18" CreateSymbols="true" AxisType="1">
 					<Name>Axis 18</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -4198,6 +4251,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -4221,6 +4275,8 @@ External Setpoint Generation:
 				<Axis Id="19" CreateSymbols="true" AxisType="1">
 					<Name>Axis 19</Name>
 					<AxisPara>
+						<PositionAreaControl Enable="false"/>
+						<TargetPosControl Enable="false"/>
 						<OtherSettings AllowMotionCmdToSlave="true"/>
 					</AxisPara>
 					<Encoder Name="Enc" EncType="19">
@@ -4343,6 +4399,7 @@ External Setpoint Generation:
 					</Drive>
 					<Controller Name="Ctrl" CtrType="1">
 						<CtrPara PriorControlFactor="1">
+							<PosDiffControl Enable="false"/>
 							<Observer BandWidth="20"/>
 						</CtrPara>
 					</Controller>
@@ -4482,6 +4539,10 @@ External Setpoint Generation:
 							<Type GUID="{FEB96C23-0E04-CC01-F84E-3246D8F89D97}">ARRAY [1..100] OF BOOL</Type>
 						</Var>
 						<Var>
+							<Name>GVL_Standard.fbEncoder.IudiCounterValue</Name>
+							<Type>DINT</Type>
+						</Var>
+						<Var>
 							<Name>GVL_Standard.arAxisSensor</Name>
 							<Type GUID="{E9CF5D9E-C580-19C9-FC05-64C9A7B03B21}">ARRAY [1..19] OF UDINT</Type>
 						</Var>
@@ -4513,10 +4574,6 @@ External Setpoint Generation:
 						<Var>
 							<Name>IO.uiStatusCopy</Name>
 							<Type GUID="{4AD7B44C-F27A-D32C-68EE-E0B2F85758B9}">ARRAY [1..19] OF USINT</Type>
-						</Var>
-						<Var>
-							<Name>GVL_Standard.fbEncoder.IudiCounterValue</Name>
-							<Type>DINT</Type>
 						</Var>
 					</Vars>
 					<Vars VarGrpType="2" AreaNo="1">
@@ -4607,6 +4664,10 @@ External Setpoint Generation:
 							<Type GUID="{63A84524-72E3-41C8-BEAB-4CCE44690A13}" Namespace="MC">PLCTONC_AXIS_REF</Type>
 						</Var>
 						<Var>
+							<Name>GVL_Standard.fbEncoder.QiCounterCmd</Name>
+							<Type>UINT</Type>
+						</Var>
+						<Var>
 							<Name>IO.ET01_Output</Name>
 							<Comment><![CDATA[输出]]></Comment>
 							<Type GUID="{E6284F45-CDD4-5654-75AA-DF8354BFA5F3}">ARRAY [1..6] OF EL2889</Type>
@@ -4620,10 +4681,6 @@ External Setpoint Generation:
 							<Name>IO.ET04_Output</Name>
 							<Comment><![CDATA[输出]]></Comment>
 							<Type GUID="{0FC6955D-6D07-39F0-0649-8C73878E7499}">ARRAY [1..2] OF EL2889</Type>
-						</Var>
-						<Var>
-							<Name>GVL_Standard.fbEncoder.QiCounterCmd</Name>
-							<Type>UINT</Type>
 						</Var>
 					</Vars>
 					<Contexts>

@@ -35,7 +35,7 @@ END_VAR
     <Implementation>
       <ST><![CDATA[ACT_Connect();
 IF stPar.iMaxTemperature=0 THEN
-	stPar.iMaxTemperature:=200;	
+	stPar.iMaxTemperature:=230;	
 END_IF
 IF stPar.iMinTemperature>stPar.iMaxTemperature THEN
 	stPar.iMinTemperature:=0;	

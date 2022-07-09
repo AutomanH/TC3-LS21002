@@ -210,30 +210,30 @@ CASE station.iStepAuto OF
 			 station.iStepAuto:=160;
 	160://判断产品状态
 	  	 FOR i:= 1 TO gc_MainLineFixtureNumber BY 1 DO 
-				// IF 	arMainLineFixtureData[i].stProduct.xLoading_OK AND 
-				//	  arMainLineFixtureData[i].stProduct.xlidInjecting_OK AND
-				//	  arMainLineFixtureData[i].stProduct.xLidChecking_OK AND 
-				//	  arMainLineFixtureData[i].stProduct.xAluCovering_OK AND 
-				//	  arMainLineFixtureData[i].stProduct.xAdjusting_OK    AND
-				//	  arMainLineFixtureData[i].stProduct.xCutting_OK  THEN
-				//   		arMainLineFixtureData[i].stProduct.xALL_OK := TRUE ;
-				//		arMainLineFixtureData[i].stProduct.xPart_Normal := FALSE ;
-				//		arMainLineFixtureData[i].stProduct.xPart_NG := FALSE ;
-				//ELSIF	
-				//		arMainLineFixtureData[i].stProduct.xLoading_NOK OR 
-				//	  arMainLineFixtureData[i].stProduct.xlidInjecting_NOK OR
-				//	  arMainLineFixtureData[i].stProduct.xLidChecking_NOK OR 
-				//	  arMainLineFixtureData[i].stProduct.xAluCovering_NOK OR 
-				//	  arMainLineFixtureData[i].stProduct.xAdjusting_NOK    OR
-				//	  arMainLineFixtureData[i].stProduct.xCutting_NOK  THEN
-				//		arMainLineFixtureData[i].stProduct.xALL_OK := FALSE ;
-				//		arMainLineFixtureData[i].stProduct.xPart_Normal := FALSE ;
-				//		arMainLineFixtureData[i].stProduct.xPart_NG := TRUE ;
-				//ELSE
-				//		arMainLineFixtureData[i].stProduct.xALL_OK := FALSE ;
-				//		arMainLineFixtureData[i].stProduct.xPart_Normal := TRUE ;
-				//		arMainLineFixtureData[i].stProduct.xPart_NG := FALSE ;
-				// END_IF
+					 IF 	arMainLineFixtureData[i].stProduct.xLoading_OK AND 
+						  arMainLineFixtureData[i].stProduct.xlidInjecting_OK AND
+						  arMainLineFixtureData[i].stProduct.xLidChecking_OK AND 
+						  arMainLineFixtureData[i].stProduct.xAluCovering_OK AND 
+						  arMainLineFixtureData[i].stProduct.xAdjusting_OK    AND
+						  arMainLineFixtureData[i].stProduct.xCutting_OK  THEN
+					   		arMainLineFixtureData[i].stProduct.xALL_OK := TRUE ;
+							arMainLineFixtureData[i].stProduct.xPart_Normal := FALSE ;
+							arMainLineFixtureData[i].stProduct.xPart_NG := FALSE ;
+					ELSIF	
+							arMainLineFixtureData[i].stProduct.xLoading_NOK OR 
+						  arMainLineFixtureData[i].stProduct.xlidInjecting_NOK OR
+						  arMainLineFixtureData[i].stProduct.xLidChecking_NOK OR 
+						  arMainLineFixtureData[i].stProduct.xAluCovering_NOK OR 
+						  arMainLineFixtureData[i].stProduct.xAdjusting_NOK    OR
+						  arMainLineFixtureData[i].stProduct.xCutting_NOK  THEN
+							arMainLineFixtureData[i].stProduct.xALL_OK := FALSE ;
+							arMainLineFixtureData[i].stProduct.xPart_Normal := FALSE ;
+							arMainLineFixtureData[i].stProduct.xPart_NG := TRUE ;
+					ELSE
+							arMainLineFixtureData[i].stProduct.xALL_OK := FALSE ;
+							arMainLineFixtureData[i].stProduct.xPart_Normal := TRUE ;
+							arMainLineFixtureData[i].stProduct.xPart_NG := FALSE ;
+					 END_IF
 				
 				//以下待删
 					arMainLineFixtureData[i].stProduct.xALL_OK := TRUE ;
@@ -264,9 +264,6 @@ CASE station.iStepAuto OF
 			FOR  i:= 1 TO 6 BY 1 DO 
 				fbStation[i].xDone:=FALSE;
 			END_FOR
-			IF NOT  S07_BoxCarrying.xBeltLineControl THEN
-			 	fbStation[7].xDone:=FALSE;
-			END_IF
 			xS07MainlineRunPermit:=FALSE;
 			station.iStepAuto:=500;	
 	500://清除本站过程记录及数据
@@ -329,8 +326,8 @@ CASE station.iStepInit OF
 			  IxS01Sensor2Reached  OR
 			  IxS02Sensor1Reached  OR
 			  IxS02Sensor2Reached  OR  
-			  IxS04Sensor1Reached  OR
-			  IxS04Sensor2Reached  OR
+			//  IxS04Sensor1Reached  OR
+			//  IxS04Sensor2Reached  OR
 			  IxLineEndSensor1Reached OR
 			  IxLineEndSensor2Reached OR	
         IxLineEndCheckSensor1	 OR
@@ -373,7 +370,7 @@ END_IF
     </Action>
     <Action Name="General" Id="{b98652e0-a279-416d-bff5-f370959787d5}">
       <Implementation>
-        <ST><![CDATA[(************主流线上各个工位的位置************)
+        <ST><![CDATA[{region "主流线上各个工位的位置"}
 //S01
 arCurFixtureNumStation[1]:=1;
 arCurFixtureNumStation[2]:=2;
@@ -399,15 +396,14 @@ arCurFixtureNumStation[16]:=35;
 //尾端
 arCurFixtureNumStation[17]:=41;
 arCurFixtureNumStation[18]:=42;
-
+{endregion}
 //////去下一个位置
 NextPosR_TRIG(CLK:= fbMachine[1].xManualMode AND fbMainLineAxis.xMoveHmi[6], Q=> );
 IF  NextPosR_TRIG.Q THEN
  stData.Axis[15].rMovePosition[6]:=fbMainLineAxis.rActPos +fbMainLineAxis.rRelativeDistance;
 END_IF
 
-
-(*********************************************计算环形线周长程序********************************************************************************)
+{region "计算环形线周长程序"}
 CASE wActionCalibration OF   
   10://回原点
   fbMainLineAxis.xReferenceAuto:= TRUE ;
@@ -447,7 +443,7 @@ CASE wActionCalibration OF
 	stData.Axis[15].rRelativeDistance:=((rEndPoition-rStartPoition)/450)*2;
 		wActionCalibration:=0;
 END_CASE    
-]]></ST>
+{endregion}]]></ST>
       </Implementation>
     </Action>
     <Action Name="ILC" Id="{352f208d-c404-4b71-879e-df1d2e26b914}">
@@ -468,34 +464,35 @@ fbMainLineAxis.xMoveILC[3] :=
 fbMainLineAxis.xMoveILC[4] :=
 fbMainLineAxis.xMoveILC[5] := 
 fbMainLineAxis.xMoveILC[6] := 
-		S01_Loading.fbVTCCyl_1.xHP_Delay AND 
-		S01_Loading.fbVTCCyl_2.xHP_Delay AND 
-		S02_LidInjecting.fbHOZAdjustCyl_1.xHP_Delay AND
-		//S02_LidInjecting.fbHOZAdjustCyl_2.xHP_Delay AND
-		S02_LidInjecting.fbHOZAdjustCyl_3.xHP_Delay AND
-	//	S02_LidInjecting.fbHOZAdjustCyl_4.xHP_Delay AND
-		S03_LidChecking.fbHOZAdjustCyl_1.xHP_Delay   AND
-	//	S03_LidChecking.fbHOZAdjustCyl_2.xHP_Delay   AND
-		S03_LidChecking.fbHOZAdjustCyl_3.xHP_Delay   AND
-	//	S03_LidChecking.fbHOZAdjustCyl_4.xHP_Delay   AND
-		S03_LidChecking.fbHOZAdjustCyl_5.xHP_Delay   AND
-	//S03_LidChecking.fbHOZAdjustCyl_6.xHP_Delay   AND
-		S03_LidChecking.fbHOZAdjustCyl_7.xHP_Delay   AND
-//		S03_LidChecking.fbHOZAdjustCyl_8.xHP_Delay   AND
-		S04_AluCovering.fbZAxisMove_1.xMoveInPos[1] AND 
-		S04_AluCovering.fbZAxisMove_2.xMoveInPos[1] AND
-		S04_AluCovering.fbHOZAdjustCyl_1.xHP_Delay AND
-	//	S04_AluCovering.fbHOZAdjustCyl_2.xHP_Delay AND
-		S04_AluCovering.fbHOZAdjustCyl_3.xHP_Delay AND
-	//	S04_AluCovering.fbHOZAdjustCyl_4.xHP_Delay AND
-		S05_Adjusting.fbZAxisMove_1.xMoveInPos[1] AND 
-		S05_Adjusting.fbZAxisMove_2.xMoveInPos[1] AND
-		S06_Cutting.fbVTCAdjustCyl.xHP_Delay AND
-		S06_Cutting.fbHOZCyl.xHP_Delay AND
-		S06_Cutting.fbHOZReachedCyl_1.xHP_Delay AND
-		S06_Cutting.fbHOZReachedCyl_2.xHP_Delay ; 
-	//	NOT xMainLineEndCheckSensor[1]  AND 
-	//	NOT xMainLineEndCheckSensor[2];]]></ST>
+//		S01_Loading.fbVTCCyl_1.xHP_Delay AND 
+//		S01_Loading.fbVTCCyl_2.xHP_Delay AND 
+//		S02_LidInjecting.fbHOZAdjustCyl_1.xHP_Delay AND
+//		//S02_LidInjecting.fbHOZAdjustCyl_2.xHP_Delay AND
+//		S02_LidInjecting.fbHOZAdjustCyl_3.xHP_Delay AND
+//	//	S02_LidInjecting.fbHOZAdjustCyl_4.xHP_Delay AND
+//		S03_LidChecking.fbHOZAdjustCyl_1.xHP_Delay   AND
+//	//	S03_LidChecking.fbHOZAdjustCyl_2.xHP_Delay   AND
+//		S03_LidChecking.fbHOZAdjustCyl_3.xHP_Delay   AND
+//	//	S03_LidChecking.fbHOZAdjustCyl_4.xHP_Delay   AND
+//		S03_LidChecking.fbHOZAdjustCyl_5.xHP_Delay   AND
+//	//S03_LidChecking.fbHOZAdjustCyl_6.xHP_Delay   AND
+//		S03_LidChecking.fbHOZAdjustCyl_7.xHP_Delay   AND
+////		S03_LidChecking.fbHOZAdjustCyl_8.xHP_Delay   AND
+//		S04_AluCovering.fbZAxisMove_1.xMoveInPos[1] AND 
+//		S04_AluCovering.fbZAxisMove_2.xMoveInPos[1] AND
+//		S04_AluCovering.fbHOZAdjustCyl_1.xHP_Delay AND
+//	//	S04_AluCovering.fbHOZAdjustCyl_2.xHP_Delay AND
+//		S04_AluCovering.fbHOZAdjustCyl_3.xHP_Delay AND
+//	//	S04_AluCovering.fbHOZAdjustCyl_4.xHP_Delay AND
+//		S05_Adjusting.fbZAxisMove_1.xMoveInPos[1] AND 
+//		S05_Adjusting.fbZAxisMove_2.xMoveInPos[1] AND
+//		S06_Cutting.fbVTCAdjustCyl.xHP_Delay AND
+//		S06_Cutting.fbHOZCyl.xHP_Delay AND
+//		S06_Cutting.fbHOZReachedCyl_1.xHP_Delay AND
+//		S06_Cutting.fbHOZReachedCyl_2.xHP_Delay ; 
+//	//	NOT xMainLineEndCheckSensor[1]  AND 
+//	//	NOT xMainLineEndCheckSensor[2];
+ true;]]></ST>
       </Implementation>
     </Action>
     <Action Name="TipAuto" Id="{b716fa5e-5270-4e18-9bba-03813482cbca}">
@@ -648,7 +645,6 @@ END_IF
       <LineId Id="1561" Count="1" />
       <LineId Id="1667" Count="0" />
       <LineId Id="1623" Count="0" />
-      <LineId Id="1717" Count="2" />
       <LineId Id="1693" Count="0" />
       <LineId Id="1563" Count="0" />
       <LineId Id="1552" Count="0" />
@@ -707,7 +703,7 @@ END_IF
       <LineId Id="436" Count="0" />
     </LineIds>
     <LineIds Name="S08_MainLine.General">
-      <LineId Id="361" Count="0" />
+      <LineId Id="480" Count="0" />
       <LineId Id="383" Count="0" />
       <LineId Id="381" Count="1" />
       <LineId Id="384" Count="0" />
@@ -733,7 +729,10 @@ END_IF
       <LineId Id="410" Count="0" />
       <LineId Id="405" Count="0" />
       <LineId Id="428" Count="1" />
-      <LineId Id="433" Count="10" />
+      <LineId Id="433" Count="1" />
+      <LineId Id="437" Count="0" />
+      <LineId Id="481" Count="0" />
+      <LineId Id="438" Count="5" />
       <LineId Id="477" Count="0" />
       <LineId Id="445" Count="30" />
       <LineId Id="426" Count="0" />
@@ -761,6 +760,7 @@ END_IF
       <LineId Id="274" Count="0" />
       <LineId Id="342" Count="1" />
       <LineId Id="346" Count="1" />
+      <LineId Id="351" Count="0" />
     </LineIds>
     <LineIds Name="S08_MainLine.TipAuto">
       <LineId Id="118" Count="0" />

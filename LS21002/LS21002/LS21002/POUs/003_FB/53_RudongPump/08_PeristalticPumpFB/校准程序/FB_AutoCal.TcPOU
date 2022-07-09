@@ -73,6 +73,8 @@ VAR
 	k	:INT;//
 {attribute 'tc_no_symbol'}
 	xRuDongPumpError	:BOOL;	
+{attribute 'tc_no_symbol'}
+OperR_TRIG:ARRAY[1..5] OF R_TRIG;	
 END_VAR
 
 VAR_TEMP
@@ -229,61 +231,62 @@ CASE _diCmdState OF
 	
 	3://秤体清零
 		stsyspar.fbMTMCK204C^.stDeviceOpe.xShelling_Auto:=TRUE;
-		IF stsyspar.fbMTMCK204C^.xDone THEN
-			stsyspar.fbMTMCK204C^.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;
+	4://等待清零完成
+		IF stsyspar.fbMTMCK204C^.xQDone THEN
 			_diCmdState:=_diCmdState+1;
 		END_IF
 
-	4://等待稳定时间
+	5://等待稳定时间
 		tSteadyTimer(IN:=stsyspar.fbMTMCK204C^.xRdyCmd,PT:=T#1S);
 		IF tSteadyTimer.Q THEN
 			tSteadyTimer(IN:=FALSE);
 			_diCmdState:=_diCmdState+1;
 		END_IF	
 	
-	5://蠕动泵加液
+	6://蠕动泵加液
 		stsyspar.fbRuDongPump[stparIn.iPumpController-1].stDeviceOpe.xPush_Auto[1]:=TRUE;
 		IF stsyspar.fbRuDongPump[stparIn.iPumpController-1].xDone THEN
 			stsyspar.fbRuDongPump[stparIn.iPumpController-1].xExecute:=FALSE;
 			_diCmdState:=_diCmdState+1;
 		END_IF
 
-	6://等待稳定时间
+	7://等待稳定时间
 		tSteadyTimer(IN:=stsyspar.fbRuDongPump[stparIn.iPumpController-1].xRdyCmd,PT:=TO_TIME((stparIn.tSteadyTime +stsyspar.fbRuDongPump[stparIn.iPumpController-1].stRunPara.rPushRuntime[1])*1000 ));
 		IF tSteadyTimer.Q THEN
 			tSteadyTimer(IN:=FALSE);
 			_diCmdState:=_diCmdState+1;
 		END_IF
 	
-	7://读取重量
+	8://读取重量
 		stsyspar.fbMTMCK204C^.stDeviceOpe.xAcquireWeight_Steady_Auto:=TRUE;
-		IF stsyspar.fbMTMCK204C^.xDone THEN
-			stsyspar.fbMTMCK204C^.xExecute:=FALSE;
 			_diCmdState:=_diCmdState+1;
-		END_IF
-	
-	8://等待稳定时间
+	9://等待读取完成
+					IF stsyspar.fbMTMCK204C^.xQDone THEN
+								_diCmdState:=_diCmdState+1;
+					END_IF
+	10://等待稳定时间
 		tSteadyTimer(IN:=stsyspar.fbMTMCK204C^.xRdyCmd,PT:=T#1S);
 		IF tSteadyTimer.Q THEN
 			tSteadyTimer(IN:=FALSE);
 			_diCmdState:=_diCmdState+1;
 		END_IF		
 		
-	9://传递重量值
+	11://传递重量值
 		IF stsyspar.fbMTMCK204C^.stParOut.rCurrentWeight>0 THEN
 			stParOut.rContinuesInjectWeight[_InjectNum]:=stsyspar.fbMTMCK204C^.stParOut.rCurrentWeight;
 			IF stParOut.rContinuesInjectWeight[_InjectNum]=stsyspar.fbMTMCK204C^.stParOut.rCurrentWeight THEN
 				_diCmdState:=_diCmdState+1;
 			END_IF
 		ELSE
-			_diCmdState:=7;
+			_diCmdState:=8;
 		END_IF		
 	
-	10://累加
+	12://累加
 		_InjectNum:=_InjectNum+1;
 		_diCmdState:=_diCmdState+1;
 	
-	11://复位状态
+	13://复位状态
 		tSteadyTimer(IN:=TRUE,PT:=T#1S);
 		IF tSteadyTimer.Q THEN
 			tSteadyTimer(IN:=FALSE);
@@ -327,9 +330,10 @@ CASE _diCmdState OF
 		_diCmdState:=_diCmdState+1;
 		
 	11://判断是否结束
-		IF	_CurrentPumpController>gc_uiRudongPump THEN
+		IF	_CurrentPumpController>=gc_uiRudongPump THEN
 			_diCmdState:=20;
 		ELSE
+		 stSysPar.fbRuDongPump[_CurrentPumpController-1].xExecute:=FALSE;
 			IF stSysPar.fbRuDongPump[_CurrentPumpController-1].xRdyCmd THEN
 				_diCmdState:=_diCmdState+1;
 			END_IF
@@ -337,16 +341,18 @@ CASE _diCmdState OF
 		
 	12://停止N#泵控制器	
 		stSysPar.fbRuDongPump[_CurrentPumpController-1].stDeviceOpe.xStop_Auto:=TRUE;
-		IF stSysPar.fbRuDongPump[_CurrentPumpController-1].xDone THEN
-			stSysPar.fbRuDongPump[_CurrentPumpController-1].xExecute:=FALSE;
-			_diCmdState:=_diCmdState+1;
-		END_IF		
-	
-	13://累加1
+				_diCmdState:=_diCmdState+1;
+	13://等待停止	
+					IF stSysPar.fbRuDongPump[_CurrentPumpController-1].xDone THEN
+					 stSysPar.fbRuDongPump[_CurrentPumpController-1].stDeviceOpe.xStop_Auto:=FALSE;
+						stSysPar.fbRuDongPump[_CurrentPumpController-1].xExecute:=FALSE;
+						_diCmdState:=_diCmdState+1;
+					END_IF	
+	14://累加1
 		_CurrentPumpController:=_CurrentPumpController+1;
 		_diCmdState:=_diCmdState+1;
 		
-	14://回去循环执行
+	15://回去循环执行
 		_diCmdState:=11;
 
 (**************************************************秤清零***************************************************)	
@@ -365,10 +371,11 @@ CASE _diCmdState OF
 				_diCmdState:=_diCmdState+1;
 			END_IF			
 
-	22://秤重启
-			stSysPar.fbMTMCK204C^.stDeviceOpe.xRestart_Auto:=TRUE;
-			IF stSysPar.fbMTMCK204C^.xDone THEN
-				stSysPar.fbMTMCK204C^.xExecute:=FALSE;
+	22://秤清零
+			stSysPar.fbMTMCK204C^.stDeviceOpe.xClearZeroInstanly_Auto:=TRUE;
+			_diCmdState:=_diCmdState+1;
+	23://称清零完成
+			IF stSysPar.fbMTMCK204C^.xQDone THEN
 				_diCmdState:=30;
 			END_IF			
 	
@@ -404,63 +411,67 @@ CASE _diCmdState OF
 		_diCmdState:=_diCmdState+1;	
 		
 	1://等待校准就绪
-		IF stsyspar.fbMTMCK204C^.xRdyCmd AND stsyspar.fbRuDongPump[stparIn.iPumpController-1].xRdyCmd THEN
+		stsyspar.fbRuDongPump[stparIn.iPumpController-1].xExecute:=FALSE;
+		IF stsyspar.fbMTMCK204C^.xQRdyCmd AND stsyspar.fbRuDongPump[stparIn.iPumpController-1].xRdyCmd THEN
 			_diCmdState:=_diCmdState+1;	
+
 		END_IF		
 		
 (**************************************************校准***************************************************)		
 	2://秤体清零	
 		stSysPar.fbMTMCK204C^.stDeviceOpe.xClearZero_Auto:=TRUE;
-		IF stSysPar.fbMTMCK204C^.xDone THEN
-			stSysPar.fbMTMCK204C^.xExecute:=FALSE;
+			_diCmdState:=_diCmdState+1;	
+	3://清零完成
+		IF stSysPar.fbMTMCK204C^.xQDone THEN
 			_diCmdState:=_diCmdState+1;	
 		END_IF
 		
-	3://等待稳定时间
+	4://等待稳定时间
 		tSteadyTimer(IN:=TRUE,PT:=T#1S);
 		IF tSteadyTimer.Q THEN
 			tSteadyTimer(IN:=FALSE);
 			_diCmdState:=_diCmdState+1;
 		END_IF		
 		
-	4://校准启动	
+	5://校准启动
 		stSysPar.fbRuDongPump[_CurrentPumpController-1].stDeviceOpe.xPumpCal_Auto:=TRUE;
 		IF stSysPar.fbRuDongPump[_CurrentPumpController-1].xDone THEN
-			stSysPar.fbMTMCK204C^.xExecute:=FALSE;
+		 	stSysPar.fbRuDongPump[_CurrentPumpController-1].xExecute:=FALSE;
 			_diCmdState:=_diCmdState+1;
 		END_IF
 		
-	5://等待稳定时间
+	6://等待稳定时间
 		tSteadyTimer(IN:=TRUE,PT:=TO_TIME((stparIn.tSteadyTime+1)*1000));
 		IF tSteadyTimer.Q THEN
 			_diCmdState:=_diCmdState+1;
 		END_IF
 
-	6://获取称重结果
+	7://获取称重结果
 			stSysPar.fbMTMCK204C^.stDeviceOpe.xAcquireWeight_Steady_Auto:=TRUE;
-			IF stSysPar.fbMTMCK204C^.xDone THEN
-				stSysPar.fbMTMCK204C^.xExecute:=FALSE;
+				_diCmdState:=_diCmdState+1;
+	8://等待完成
+			IF stSysPar.fbMTMCK204C^.xQDone THEN
 				_diCmdState:=_diCmdState+1;	
 			END_IF	
 	
-	7://等待稳定时间
+	9://等待稳定时间
 		tSteadyTimer(IN:=TRUE,PT:=T#1S);
 		IF tSteadyTimer.Q THEN
 			tSteadyTimer(IN:=FALSE);
 			_diCmdState:=_diCmdState+1;
 		END_IF			
 
-	8://获取称重结果
+	10://获取称重结果
 		IF stSysPar.fbMTMCK204C^.stParOut.rCurrentWeight>0 THEN
 			stParOut.rSteadyWeight:=stSysPar.fbMTMCK204C^.stParOut.rCurrentWeight;
 			IF stParOut.rSteadyWeight=stSysPar.fbMTMCK204C^.stParOut.rCurrentWeight THEN
 				_diCmdState:=_diCmdState+1;
 			END_IF
 		ELSE
-			_diCmdState:=6;//未获取到重量重新读
+			_diCmdState:=7;//未获取到重量重新读
 		END_IF
 		
-	9://给校准参数赋值
+	11://给校准参数赋值
 		stSysPar.fbRuDongPump^.stRunPara.rModuleRealFluVolume:=stParOut.rVolume;
 		stSysPar.fbRuDongPump^.stDeviceOpe.xCalParWrite_Auto:=TRUE;
 		IF stSysPar.fbRuDongPump^.xDone THEN
@@ -651,23 +662,29 @@ ELSE
 	xAutomodeFlag:=FALSE;
 END_IF
 (********************************等待手动操作******************************)
-
+OperR_TRIG[1](CLK:=  (stDeviceOpe.xSpecificPumpHeadCal_HMI OR stDeviceOpe.xSpecificPumpHeadCal_Auto) , Q=> );
+OperR_TRIG[2](CLK:=  (stDeviceOpe.xInit_Hmi  OR stDeviceOpe.xInit_Auto)  , Q=> );
 
 IF eErrorID = AutoCal_ERROR.NO_ERROR AND xEStop
 THEN
 	
 //校准指定泵头
-	IF (stDeviceOpe.xSpecificPumpHeadCal_HMI OR stDeviceOpe.xSpecificPumpHeadCal_Auto)THEN//
+	IF OperR_TRIG[1].Q THEN//
 		_CurrentPumpController:=stparIn.iPumpController;
 		_CurrentPumpHead:=stparIn.iPumpHead;
 		eCmd := AutoCal_CMD.Cmd_SpecificPumpHeadCal;
 		xExecute := TRUE;
 	END_IF
 //初始化校准程序
-	IF stDeviceOpe.xInit_Hmi THEN//
+	IF OperR_TRIG[2].Q THEN//
 		eCmd := AutoCal_CMD.Cmd_Init;
 		xExecute := TRUE;
 	END_IF	
+	
+	
+	
+	stDeviceOpe.xSpecificPumpHeadCal_HMI := stDeviceOpe.xSpecificPumpHeadCal_Auto:=FALSE;
+	stDeviceOpe.xInit_Hmi  := stDeviceOpe.xInit_Auto:=FALSE;
 	
 //连续加液测试
 	IF stDeviceOpe.xContinuesInject_HMI THEN//
@@ -794,8 +811,8 @@ xRunning:=FALSE;
 xComplete:=1;	
 
 stsyspar.fbRuDongPump[stparIn.iPumpController-1].xExecute:=FALSE;
-stsyspar.fbRuDongPump[stparIn.iPumpController-1].stDeviceOpe.xPush_Auto[1]:=TRUE;
-stsyspar.fbMTMCK204C^.xExecute:=FALSE;]]></ST>
+//stsyspar.fbRuDongPump[stparIn.iPumpController-1].stDeviceOpe.xPush_Auto[1]:=TRUE;
+stsyspar.fbRuDongPump[stparIn.iPumpController-1].stDeviceOpe.xStop_Auto:=TRUE;]]></ST>
       </Implementation>
     </Method>
     <LineIds Name="FB_AutoCal">
@@ -865,9 +882,10 @@ stsyspar.fbMTMCK204C^.xExecute:=FALSE;]]></ST>
       <LineId Id="285" Count="0" />
       <LineId Id="287" Count="1" />
       <LineId Id="286" Count="0" />
-      <LineId Id="289" Count="2" />
-      <LineId Id="348" Count="0" />
-      <LineId Id="292" Count="1" />
+      <LineId Id="289" Count="1" />
+      <LineId Id="371" Count="0" />
+      <LineId Id="373" Count="0" />
+      <LineId Id="291" Count="2" />
       <LineId Id="333" Count="0" />
       <LineId Id="335" Count="4" />
       <LineId Id="334" Count="0" />
@@ -886,11 +904,10 @@ stsyspar.fbMTMCK204C^.xExecute:=FALSE;]]></ST>
       <LineId Id="130" Count="0" />
       <LineId Id="159" Count="0" />
       <LineId Id="303" Count="0" />
-      <LineId Id="307" Count="0" />
-      <LineId Id="325" Count="0" />
       <LineId Id="308" Count="0" />
-      <LineId Id="306" Count="0" />
       <LineId Id="304" Count="0" />
+      <LineId Id="369" Count="1" />
+      <LineId Id="368" Count="0" />
       <LineId Id="343" Count="4" />
       <LineId Id="341" Count="1" />
       <LineId Id="305" Count="0" />
@@ -929,12 +946,18 @@ stsyspar.fbMTMCK204C^.xExecute:=FALSE;]]></ST>
       <LineId Id="304" Count="0" />
       <LineId Id="306" Count="1" />
       <LineId Id="309" Count="0" />
+      <LineId Id="336" Count="0" />
       <LineId Id="320" Count="0" />
       <LineId Id="310" Count="0" />
       <LineId Id="321" Count="0" />
       <LineId Id="308" Count="0" />
       <LineId Id="305" Count="0" />
-      <LineId Id="279" Count="11" />
+      <LineId Id="279" Count="1" />
+      <LineId Id="284" Count="0" />
+      <LineId Id="344" Count="1" />
+      <LineId Id="348" Count="0" />
+      <LineId Id="346" Count="1" />
+      <LineId Id="285" Count="5" />
       <LineId Id="239" Count="0" />
       <LineId Id="159" Count="0" />
       <LineId Id="295" Count="1" />
@@ -947,9 +970,10 @@ stsyspar.fbMTMCK204C^.xExecute:=FALSE;]]></ST>
       <LineId Id="319" Count="0" />
       <LineId Id="323" Count="2" />
       <LineId Id="250" Count="1" />
-      <LineId Id="326" Count="1" />
-      <LineId Id="330" Count="0" />
-      <LineId Id="328" Count="1" />
+      <LineId Id="326" Count="0" />
+      <LineId Id="343" Count="0" />
+      <LineId Id="342" Count="0" />
+      <LineId Id="327" Count="2" />
       <LineId Id="254" Count="1" />
       <LineId Id="248" Count="0" />
       <LineId Id="131" Count="0" />
@@ -966,17 +990,25 @@ stsyspar.fbMTMCK204C^.xExecute:=FALSE;]]></ST>
       <LineId Id="66" Count="0" />
       <LineId Id="64" Count="0" />
       <LineId Id="106" Count="0" />
+      <LineId Id="344" Count="0" />
       <LineId Id="285" Count="1" />
+      <LineId Id="348" Count="0" />
       <LineId Id="284" Count="0" />
       <LineId Id="217" Count="0" />
       <LineId Id="283" Count="0" />
-      <LineId Id="223" Count="6" />
+      <LineId Id="223" Count="1" />
+      <LineId Id="341" Count="1" />
+      <LineId Id="225" Count="0" />
+      <LineId Id="227" Count="2" />
       <LineId Id="278" Count="4" />
       <LineId Id="276" Count="1" />
       <LineId Id="251" Count="0" />
-      <LineId Id="315" Count="5" />
-      <LineId Id="252" Count="8" />
-      <LineId Id="311" Count="0" />
+      <LineId Id="315" Count="1" />
+      <LineId Id="346" Count="0" />
+      <LineId Id="318" Count="2" />
+      <LineId Id="252" Count="7" />
+      <LineId Id="339" Count="1" />
+      <LineId Id="260" Count="0" />
       <LineId Id="262" Count="2" />
       <LineId Id="289" Count="4" />
       <LineId Id="287" Count="0" />
@@ -1076,6 +1108,7 @@ stsyspar.fbMTMCK204C^.xExecute:=FALSE;]]></ST>
       <LineId Id="35" Count="7" />
       <LineId Id="17" Count="1" />
       <LineId Id="31" Count="0" />
+      <LineId Id="168" Count="0" />
       <LineId Id="33" Count="1" />
       <LineId Id="32" Count="0" />
       <LineId Id="144" Count="0" />
@@ -1083,7 +1116,10 @@ stsyspar.fbMTMCK204C^.xExecute:=FALSE;]]></ST>
       <LineId Id="125" Count="0" />
       <LineId Id="137" Count="1" />
       <LineId Id="141" Count="1" />
-      <LineId Id="134" Count="1" />
+      <LineId Id="134" Count="0" />
+      <LineId Id="169" Count="0" />
+      <LineId Id="171" Count="3" />
+      <LineId Id="135" Count="0" />
       <LineId Id="145" Count="1" />
       <LineId Id="150" Count="0" />
       <LineId Id="152" Count="2" />
@@ -1132,7 +1168,8 @@ stsyspar.fbMTMCK204C^.xExecute:=FALSE;]]></ST>
       <LineId Id="45" Count="0" />
       <LineId Id="62" Count="0" />
       <LineId Id="13" Count="0" />
-      <LineId Id="63" Count="1" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="72" Count="0" />
     </LineIds>
   </POU>
 </TcPlcObject>

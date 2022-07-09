@@ -117,7 +117,7 @@ THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
 	station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
-ELSIF station.xRunning  OR (  tsModuleProcess[2].xProcessStarted AND   NOT tsModuleProcess[2].xProcessCompleted)
+ELSIF station.xRunning  OR (  tsModuleProcess[2].xProcessStarted AND   NOT tsModuleProcess[2].xProcessCompleted)//Z轴热熔
 THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
 CASE station.iStepAuto OF	  

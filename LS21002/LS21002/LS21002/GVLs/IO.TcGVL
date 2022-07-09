@@ -56,9 +56,9 @@ IxS01VTCPressCyl_3WP	:BOOL;//	Z轴阻挡气缸3¶动点
 IxS01VTCPressCyl_3HP	:BOOL;//	Z轴阻挡气缸3¶原点
 IxS01VTCPressCyl_4WP	:BOOL;//	Z轴阻挡气缸4¶原点
 IxS01VTCPressCyl_4HP	:BOOL;//	Z轴阻挡气缸4¶原点
-IxS01VTCCyl_1WP	:BOOL;//	上料工位¶移栽Z轴气缸1¶动点
-IxS01VTCCyl_1HP	:BOOL;//	上料工位¶移移栽Z轴气缸1¶动点
-IxS01VTCCyl_2WP	:BOOL;//	上料工位¶移移栽Z轴气缸2¶动点
+IxS01VTCCyl_1WP	:BOOL;//	上料工位¶移栽Z轴气缸1¶动点1¶动点
+IxS01VTCCyl_2WP	:BOOL;//	上料工位¶移移栽Z轴气缸
+IxS01VTCCyl_1HP	:BOOL;//	上料工位¶移移栽Z轴气缸2¶动点
 IxS01VTCCyl_2HP	:BOOL;//	上料工位¶移移栽Z轴气缸2¶原点
 IxS02HOZAdjustCyl_1WP	:BOOL;//	注液工位¶上层水平调整气缸1¶动点
 IxS02HOZAdjustCyl_1HP	:BOOL;//	注液工位¶上层水平调整气缸1¶原点

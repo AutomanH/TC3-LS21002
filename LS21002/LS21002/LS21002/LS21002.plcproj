@@ -274,10 +274,22 @@
     <Compile Include="POUs\003_FB\05_StationFB\FB_Station.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\003_FB\060_LocalClient\FB_LocalClient.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\061_MKC204C\FB_MT_MKC_New.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\003_FB\07_RGI_14_new\不带旋转的电动夹爪\FB_RGI_14_Modbus.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\003_FB\07_RGI_14_new\带旋转的电动夹爪\FB_RGI_14_Modbus_1.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\100_test\12_BlinkFB\FB_Blinker.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\100_test\12_BlinkFB\ST_SysPulse.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\003_FB\100_test\FB_GetTime.TcPOU">
@@ -308,12 +320,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\003_FB\07_RGI_14_new\ST_RGI_PosPara.TcDUT">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\003_FB\12_BlinkFB\FB_Blinker.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\003_FB\12_BlinkFB\ST_SysPulse.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\003_FB\14_MachineFB\FB_Machine.TcPOU">
@@ -562,22 +568,22 @@
     <Compile Include="POUs\004_FC\001_Parallel\FC_ParallelRequest.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\40_TcpIp\E_ClientSteps.TcDUT">
+    <Compile Include="POUs\40_TcpIp\40_TcpIp\E_ClientSteps.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\40_TcpIp\E_DataExchaSteps.TcDUT">
+    <Compile Include="POUs\40_TcpIp\40_TcpIp\E_DataExchaSteps.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\40_TcpIp\FB_ClientDataExcha.TcPOU">
+    <Compile Include="POUs\40_TcpIp\40_TcpIp\FB_ClientDataExcha.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\40_TcpIp\FB_TcpIpClient.TcPOU">
+    <Compile Include="POUs\40_TcpIp\40_TcpIp\FB_TcpIpClient.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\40_TcpIp\stTcpIpBaseParaCfg.TcDUT">
+    <Compile Include="POUs\40_TcpIp\40_TcpIp\stTcpIpBaseParaCfg.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\40_TcpIp\TcpIpClientConstants.TcGVL">
+    <Compile Include="POUs\40_TcpIp\40_TcpIp\TcpIpClientConstants.TcGVL">
       <SubType>Code</SubType>
       <LinkAlways>true</LinkAlways>
     </Compile>
@@ -610,9 +616,9 @@
     <Folder Include="POUs\003_FB\07_RGI_14_new\带旋转的电动夹爪" />
     <Folder Include="POUs\003_FB\07_RGI_14_new\不带旋转的电动夹爪" />
     <Folder Include="POUs\003_FB\100_test" />
+    <Folder Include="POUs\003_FB\100_test\12_BlinkFB" />
     <Folder Include="POUs\003_FB\10_CylinderFB" />
     <Folder Include="POUs\003_FB\07_RGI_14_new" />
-    <Folder Include="POUs\003_FB\12_BlinkFB" />
     <Folder Include="POUs\003_FB\14_MachineFB" />
     <Folder Include="POUs\003_FB\17_HMIFB" />
     <Folder Include="POUs\003_FB\19-AxisFB" />
@@ -637,11 +643,14 @@
     <Folder Include="POUs\003_FB\042_200Smart" />
     <Folder Include="POUs\003_FB\058_ATV" />
     <Folder Include="POUs\003_FB\059_Vacuum" />
+    <Folder Include="POUs\003_FB\060_LocalClient" />
+    <Folder Include="POUs\003_FB\061_MKC204C" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB\DUTs" />
     <Folder Include="POUs\004_FC\001_Parallel" />
     <Folder Include="POUs\004_FC" />
     <Folder Include="POUs\40_TcpIp" />
+    <Folder Include="POUs\40_TcpIp\40_TcpIp" />
     <Folder Include="VISUs" />
     <Folder Include="POUs" />
   </ItemGroup>

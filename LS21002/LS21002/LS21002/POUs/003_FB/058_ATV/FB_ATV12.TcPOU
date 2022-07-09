@@ -41,25 +41,30 @@ MotorStartR_TRIG(CLK:=( xIManualMode AND   xIMotorStartHMI ) OR ( (xIAutoMode OR
 MotorStopR_TRIG(CLK:= ( xIManualMode AND   xIMotorStopHMI ) OR ((xIAutoMode OR xIDeviceRunning ) AND xIMotorStop), Q=> );
 IF  MotorStartR_TRIG.Q THEN
 			xQMotorStart	:=TRUE;//	热缩封膜出料线体¶电机正转/停止
-			xIMotorStopHMI:=FALSE;
-			xIMotorStop:=FALSE;
 ELSIF	MotorStopR_TRIG.Q	 THEN
 			xQMotorStart	:=FALSE;//	热缩封膜出料线体¶电机正转/停止
-			xIMotorStartHMI:=FALSE;
-			xIMotorStart:=FALSE;
+		
 END_IF
-	
 	arxQMotorSpeedCmd[1]	:=FALSE;//	热缩封膜出料线体¶电机（预约速度20HZ)
 	arxQMotorSpeedCmd[2]	:=TRUE;//	热缩封膜出料线体¶电机（预约速度50HZ）
 	
 	
-	xQRev	:=FALSE;//	热缩封膜出料线体¶电机（未使用）]]></ST>
+	xQRev	:=FALSE;//	热缩封膜出料线体¶电机（未使用）
+	
+		xIMotorStopHMI:=FALSE;
+		xIMotorStop:=FALSE;
+		xIMotorStartHMI:=FALSE;
+		xIMotorStart:=FALSE;]]></ST>
     </Implementation>
     <LineIds Name="FB_ATV12">
-      <LineId Id="29" Count="13" />
+      <LineId Id="29" Count="4" />
+      <LineId Id="36" Count="2" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="42" Count="0" />
       <LineId Id="9" Count="0" />
       <LineId Id="44" Count="1" />
       <LineId Id="43" Count="0" />
+      <LineId Id="79" Count="4" />
     </LineIds>
   </POU>
 </TcPlcObject>

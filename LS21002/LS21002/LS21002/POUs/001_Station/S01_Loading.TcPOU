@@ -199,7 +199,12 @@ arTonDelay[09](IN:= NOT fbYAxisMove.xbusy, PT:=T#0.1S , Q=> , ET=> );//TipAuto�
 IF NOT station.xInitDone THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
-ELSIF station.xRunning  THEN
+ELSIF station.xRunning  OR 
+(tsModuleProcess[1].xProcessStarted AND  NOT tsModuleProcess[1].xProcessCompleted)  OR//相机拍照流程
+(	tsModuleProcess[bCounter+1].xProcessStarted AND  NOT tsModuleProcess[bCounter+1].xProcessCompleted)  OR //电动夹爪夹取流程
+(tsModuleProcess[bCounter+3].xProcessStarted AND  NOT tsModuleProcess[bCounter+3].xProcessCompleted)  OR //孔板翻转流程流程
+(	tsModuleProcess[bXCounter+5].xProcessStarted AND NOT 	tsModuleProcess[bXCounter+5].xProcessCompleted) //电动夹爪松开流程
+THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
 CASE station.iStepAuto OF	  
 	0: //----Home Step，等待启动----
@@ -250,22 +255,24 @@ CASE station.iStepAuto OF
 //			END_IF
 	40://启动链板线
 		tsModuleProcess[1].xProcessNotStarted:=TRUE;
-		fbFlowLine.xIRunningPremit:=TRUE;
-			station.iStepAuto:=45;	
-	45://链板线已启动
-		IF   fbFlowLine.xQBusy THEN
-		 		fbFlowLine.xIRunningPremit:=FALSE;
-				station.iStepAuto:=50;	
+		IF   NOT _FirstFlag[3] OR station.xSingleRunning THEN
+				fbFlowLine.xIRunningPremit:=TRUE;
 		END_IF
-	50://等待链板线执行结束
-		IF 		NOT fbFlowLine.xQBusy THEN
-		 		station.iStepAuto:=60;	
-		END_IF
-	60://Y轴去拍照位置
+			station.iStepAuto:=50;	
+	//50://链板线已启动
+	//	IF   fbFlowLine.xQBusy OR (_FirstFlag[3]  AND  NOT  station.xSingleRunning )  THEN
+	//			_FirstFlag[3]:=TRUE;
+	//			station.iStepAuto:=60;	
+	//	END_IF
+	50://Y轴去拍照位置
 		fbYAxisMove.xMoveAuto[2]:=TRUE;
 		IF  fbYAxisMove.xMoveInPos[2] THEN
-		  	 station.iStepAuto:=70;	
+		  	 station.iStepAuto:=65;	
 		END_IF
+	65://等待链板线孔板到位  
+			IF 	fbFlowLine.xQDone  THEN
+					 station.iStepAuto:=70;	
+			END_IF
 	70://相机触发
 		tsModuleProcess[1].xProcessStarted:=TRUE;
 			Camera.xlTrigger:=TRUE;
@@ -273,13 +280,13 @@ CASE station.iStepAuto OF
 				Camera.xlTrigger:=FALSE;
 				station.iStepAuto:=80;	
 			END_IF
-	80://等待相机完成
+	80://等待相机完成且链板线执行完成
 		IF  NOT Camera.xQBusy THEN
 			station.iStepAuto:=100;		
 		END_IF
-		tsModuleProcess[1].xProcessCompleted:=TRUE;
 	100://查看相机结果，判断是否料反
 		(*位置1*)		
+			tsModuleProcess[1].xProcessCompleted:=TRUE;
 		_AlarmDisable:=FALSE;
 		FOR  i:=1 TO 4 BY 1 DO
 			IF 	sCamera_TO_Plc.iS01Result[i] >=3 THEN
@@ -316,12 +323,12 @@ CASE station.iStepAuto OF
 			station.iStepAuto:=60;
 	110://数据传送完成
 			tsModuleProcess[1].xQDataCompleted:=TRUE;
-			station.iStepAuto:=150;
+			station.iStepAuto:=140;
 
-///预留复检步骤120-150
-	150://开始循环。循环次数=2
-		IF NOT  fbMachine[1].xTryRun THEN
-				IF  arFlowLineReachedSensor[1] AND arFlowLineReachedSensor[3]   THEN
+///预留复检步骤120-140
+	140://开始循环。循环次数=2
+		(*IF NOT  fbMachine[1].xTryRun THEN
+			(*	IF  arFlowLineReachedSensor[1] AND arFlowLineReachedSensor[3]   THEN
 								bCounter:=1;
 								station.iStepAuto :=170; 
 				ELSIF arFlowLineReachedSensor[2] AND arFlowLineReachedSensor[4] THEN
@@ -330,7 +337,9 @@ CASE station.iStepAuto OF
 				ELSE
 								station.iStepAuto :=999; 
 				END_IF
+			*)
 				
+						
 		ELSE
 				 IF   NOT _FirstFlag[2] THEN
 						bCounter:=1;
@@ -338,6 +347,11 @@ CASE station.iStepAuto OF
 				END_IF
 		 		station.iStepAuto :=170; 
 		END_IF
+		*)
+			bCounter:=1;
+			station.iStepAuto :=150; 
+	150://循环跳转处
+				station.iStepAuto:=170;
 //	160://Restore_after_Estop_Process2/3 取孔板流程1/2
 //			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
 //					station.iStepAuto :=170; 
@@ -352,24 +366,7 @@ CASE station.iStepAuto OF
 //			END_IF
 	170://
 			tsModuleProcess[bCounter+1].xProcessNotStarted :=TRUE;
-			 station.iStepAuto:=190;
-//		(***异常处理开始*)
-//	185://电动夹爪打开
-//			fbClamp_1.aReleaseControl[1]:=TRUE;
-//			fbClamp_2.aReleaseControl[1]:=TRUE;
-//			IF fbClamp_1.xDone  AND fbClamp_2.xDone   THEN
-//					fbClamp_1.xExecute :=FALSE ;
-//					fbClamp_2.xExecute:=FALSE;
-//					 station.iStepAuto:=166;
-//			END_IF	
-//	186://Z轴上升
-//			fbVTCCyl_1.xAuto:=FALSE;
-//			fbVTCCyl_2.xAuto:=FALSE;
-//		IF  fbVTCCyl_1.xHP_Delay AND 
-//			fbVTCCyl_2.xHP_Delay THEN
-//			 station.iStepAuto:=190;		
-//		END_IF
-//	(***异常处理结束*)			  
+			 station.iStepAuto:=190;		  
 	190://XY轴去夹取位置1/2
 			fbXAxisMove.xMoveAuto[bCounter +1]:=TRUE;
 			fbYAxisMove.xMoveAuto[3]:=TRUE;
@@ -392,9 +389,9 @@ CASE station.iStepAuto OF
 			 station.iStepAuto:=210;		
 		END_IF
 	210://电动夹爪夹取
-				tsModuleProcess[bCounter+1].xProcessStarted :=TRUE;
+		tsModuleProcess[bCounter+1].xProcessStarted :=TRUE;
 		IF  fbmachine[1].xTryRun THEN 
-				station.iStepAuto:=220;	
+				station.iStepAuto:=215;	
 		ELSE
 			fbClamp_1.aClampControl[1]:=TRUE;
 			fbClamp_2.aClampControl[1]:=TRUE;
@@ -402,13 +399,16 @@ CASE station.iStepAuto OF
 			 (fbClamp_2.xDone OR (fbClamp_2.xGripClampEmpty  AND fbMachine[1].xTryRun ))   THEN
 					fbClamp_1.xExecute :=FALSE ;
 					fbClamp_2.xExecute:=FALSE;
-					 station.iStepAuto:=220;	
+					 station.iStepAuto:=215;	
 			END_IF
-		END_IF	 
+		END_IF
+	215://电动夹爪夹取完成
+				 tsModuleProcess[bCounter+1].xProcessCompleted :=TRUE;
+				 station.iStepAuto:=220;	
 	220://Z轴上升
 			arClampHavePart[1]:=TRUE;//夹爪1有产品标志位
 			arClampHavePart[2]:=TRUE;//夹爪2有产品标志位
-			tsModuleProcess[bCounter+1].xProcessCompleted :=TRUE;
+			
 				fbVTCCyl_1.xAuto:=FALSE;
 				fbVTCCyl_2.xAuto:=FALSE;
 			IF  fbVTCCyl_1.xHP_Delay AND 
@@ -502,7 +502,7 @@ CASE station.iStepAuto OF
 				END_IF	
 	280://夹爪矫正完成
 			tsModuleProcess[bCounter+3].xProcessCompleted:=TRUE;
-			station.iStepAuto:=285;
+			station.iStepAuto:=285;		
 	285://检查是否允许放料
 			IF  NOT  xLoadingReachedSensor[1]  AND
 				NOT  xLoadingReachedSensor[2]  AND 
@@ -517,7 +517,12 @@ CASE station.iStepAuto OF
 		 		bXCounter:=1;
 				_FirstCycle[2]:=TRUE;
 			END_IF
-			station.iStepAuto :=300;
+			station.iStepAuto :=291;
+	291://是否需要启动链板线
+			IF   bCounter  =2 THEN
+					fbFlowLine.xIRunningPremit:=TRUE;
+			END_IF			
+			station.iStepAuto:=295;	
 	295://Restore_after_Estop_Process6/7 孔板放料流程1/2
 //			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
 //					station.iStepAuto :=300; 
@@ -666,20 +671,16 @@ CASE station.iStepAuto OF
 				station.iStepAuto:=440;	
 		END_IF
 
-	440://循环-1
-	IF  fbMachine[1].xTryRun THEN
+	440://循环+1
 			bCounter :=bCounter +1;
-			station.iStepAuto:=450;
-	ELSE
-	 		station.iStepAuto:=150;
-	END_IF
-		
-	450://空运行使用
-		IF 	 bCounter <=2 THEN
-			 station.iStepAuto:=160;	
-		ELSE
-		 	  station.iStepAuto:=999;
+			 station.iStepAuto:=450;
+	450://
+		IF   bCounter <=2  THEN 
+		 	  station.iStepAuto:=150;
+		ELSIF	 bCounter >2 THEN
+		 		station.iStepAuto:=999;
 		END_IF
+		
 	999://----Single Run Finish----
 		station.iStepAuto :=0;
 		station.xSingleRunFlag:=FALSE;
@@ -717,6 +718,8 @@ CASE station.iStepInit OF
 		END_FOR
 		fbClamp_1.xInitControl:=FALSE;
 		fbClamp_1.xInitControl:=FALSE ;
+		fbClamp_1.aRotateClampControl[1]:=FALSE ;
+		fbClamp_2.aRotateClampControl[1]:=FALSE ;
 		fbClamp_1.xExecute :=FALSE;
 		fbClamp_2.xExecute:=FALSE;
 		IF NOT fbMachine[1].xTryRun THEN
@@ -869,30 +872,30 @@ station.adwAutoTip[1].05	:=	fbVTCCyl_2.xAutoTip	;
 
 //------------------------------------------------AutoTip Servo--------------------------------
 //**************************************
-FOR i:= 1 TO 5 BY 1 DO 
-	IF fbXAxisMove.xMoveAuto[i] THEN
-		fbXAxisMove.iPosNumber := i ;
-	END_IF
-	IF fbYAxisMove.xMoveAuto[i] THEN
-		fbYAxisMove.iPosNumber := i ;
-	END_IF
-END_FOR
-IF fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  AND  arTonDelay[9].Q  THEN 
-		IF fbXAxisMove.iPosNumber=1 AND NOT fbXAxisMove.xMoveInPos[1] THEN station.adwAutoTip[1].10:=TRUE; END_IF//轴伺服自动时位置不在位置1	
-		IF fbXAxisMove.iPosNumber=2 AND NOT fbXAxisMove.xMoveInPos[2] THEN station.adwAutoTip[1].11:=TRUE; END_IF//轴伺服自动时位置不在位置2	
-		IF fbXAxisMove.iPosNumber=3 AND NOT fbXAxisMove.xMoveInPos[3] THEN station.adwAutoTip[1].12:=TRUE; END_IF//轴伺服自动时位置不在位置3	
-		IF fbXAxisMove.iPosNumber=4 AND NOT fbXAxisMove.xMoveInPos[4] THEN station.adwAutoTip[1].13:=TRUE; END_IF//轴伺服自动时位置不在位置4	
-		IF fbXAxisMove.iPosNumber=5 AND NOT fbXAxisMove.xMoveInPos[5] THEN station.adwAutoTip[1].14:=TRUE; END_IF//轴伺服自动时位置不在位置5	
-END_IF
-IF fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  AND  arTonDelay[10].Q  THEN 		
-		
-		IF fbYAxisMove.iPosNumber=1 AND NOT fbYAxisMove.xMoveInPos[1] THEN station.adwAutoTip[1].15:=TRUE; END_IF//轴伺服自动时位置不在位置1	
-		IF fbYAxisMove.iPosNumber=2 AND NOT fbYAxisMove.xMoveInPos[2] THEN station.adwAutoTip[1].16:=TRUE; END_IF//轴伺服自动时位置不在位置2	
-		IF fbYAxisMove.iPosNumber=3 AND NOT fbYAxisMove.xMoveInPos[3] THEN station.adwAutoTip[1].17:=TRUE; END_IF//轴伺服自动时位置不在位置3	
-		IF fbYAxisMove.iPosNumber=4 AND NOT fbYAxisMove.xMoveInPos[4] THEN station.adwAutoTip[1].18:=TRUE; END_IF//轴伺服自动时位置不在位置4	
-		IF fbYAxisMove.iPosNumber=5 AND NOT fbYAxisMove.xMoveInPos[5] THEN station.adwAutoTip[1].19:=TRUE; END_IF//轴伺服自动时位置不在位置5	
-END_IF
-]]></ST>
+//FOR i:= 1 TO 5 BY 1 DO 
+//	IF fbXAxisMove.xMoveAuto[i] THEN
+//		fbXAxisMove.iPosNumber := i ;
+//	END_IF
+//	IF fbYAxisMove.xMoveAuto[i] THEN
+//		fbYAxisMove.iPosNumber := i ;
+//	END_IF
+//END_FOR
+//IF fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  AND  arTonDelay[9].Q  THEN 
+//		IF fbXAxisMove.iPosNumber=1 AND NOT fbXAxisMove.xMoveInPos[1] THEN station.adwAutoTip[1].10:=TRUE; END_IF//轴伺服自动时位置不在位置1	
+//		IF fbXAxisMove.iPosNumber=2 AND NOT fbXAxisMove.xMoveInPos[2] THEN station.adwAutoTip[1].11:=TRUE; END_IF//轴伺服自动时位置不在位置2	
+//		IF fbXAxisMove.iPosNumber=3 AND NOT fbXAxisMove.xMoveInPos[3] THEN station.adwAutoTip[1].12:=TRUE; END_IF//轴伺服自动时位置不在位置3	
+//		IF fbXAxisMove.iPosNumber=4 AND NOT fbXAxisMove.xMoveInPos[4] THEN station.adwAutoTip[1].13:=TRUE; END_IF//轴伺服自动时位置不在位置4	
+//		IF fbXAxisMove.iPosNumber=5 AND NOT fbXAxisMove.xMoveInPos[5] THEN station.adwAutoTip[1].14:=TRUE; END_IF//轴伺服自动时位置不在位置5	
+//END_IF
+//IF fbMachine[1].xAutoMode AND NOT fbMachine[1].xRunning  AND  arTonDelay[10].Q  THEN 		
+//		
+//		IF fbYAxisMove.iPosNumber=1 AND NOT fbYAxisMove.xMoveInPos[1] THEN station.adwAutoTip[1].15:=TRUE; END_IF//轴伺服自动时位置不在位置1	
+//		IF fbYAxisMove.iPosNumber=2 AND NOT fbYAxisMove.xMoveInPos[2] THEN station.adwAutoTip[1].16:=TRUE; END_IF//轴伺服自动时位置不在位置2	
+//		IF fbYAxisMove.iPosNumber=3 AND NOT fbYAxisMove.xMoveInPos[3] THEN station.adwAutoTip[1].17:=TRUE; END_IF//轴伺服自动时位置不在位置3	
+//		IF fbYAxisMove.iPosNumber=4 AND NOT fbYAxisMove.xMoveInPos[4] THEN station.adwAutoTip[1].18:=TRUE; END_IF//轴伺服自动时位置不在位置4	
+//		IF fbYAxisMove.iPosNumber=5 AND NOT fbYAxisMove.xMoveInPos[5] THEN station.adwAutoTip[1].19:=TRUE; END_IF//轴伺服自动时位置不在位置5	
+//END_IF
+//]]></ST>
       </Implementation>
     </Action>
     <Action Name="TipManual" Id="{561a1c1d-e3fd-42a1-bd5f-597305c6c45d}">
@@ -991,6 +994,11 @@ QxS01VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
     <LineIds Name="S01_Loading.FlowAuto">
       <LineId Id="1323" Count="2" />
       <LineId Id="1327" Count="2" />
+      <LineId Id="3655" Count="0" />
+      <LineId Id="3666" Count="0" />
+      <LineId Id="3660" Count="0" />
+      <LineId Id="3668" Count="0" />
+      <LineId Id="3654" Count="0" />
       <LineId Id="1331" Count="2" />
       <LineId Id="1335" Count="6" />
       <LineId Id="1343" Count="9" />
@@ -1009,18 +1017,20 @@ QxS01VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
       <LineId Id="2401" Count="10" />
       <LineId Id="1880" Count="0" />
       <LineId Id="2434" Count="0" />
+      <LineId Id="3707" Count="0" />
       <LineId Id="3495" Count="0" />
+      <LineId Id="3708" Count="0" />
       <LineId Id="3509" Count="0" />
       <LineId Id="1881" Count="0" />
       <LineId Id="3499" Count="0" />
-      <LineId Id="3508" Count="0" />
+      <LineId Id="3710" Count="0" />
       <LineId Id="3501" Count="0" />
       <LineId Id="3498" Count="0" />
-      <LineId Id="3502" Count="0" />
-      <LineId Id="3505" Count="2" />
       <LineId Id="1915" Count="0" />
       <LineId Id="1932" Count="0" />
       <LineId Id="1917" Count="2" />
+      <LineId Id="3704" Count="2" />
+      <LineId Id="3674" Count="0" />
       <LineId Id="1887" Count="0" />
       <LineId Id="2435" Count="0" />
       <LineId Id="2887" Count="3" />
@@ -1028,10 +1038,10 @@ QxS01VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
       <LineId Id="1931" Count="0" />
       <LineId Id="2877" Count="0" />
       <LineId Id="2882" Count="0" />
+      <LineId Id="3657" Count="0" />
       <LineId Id="2881" Count="0" />
-      <LineId Id="2883" Count="0" />
-      <LineId Id="1888" Count="0" />
       <LineId Id="2042" Count="0" />
+      <LineId Id="3656" Count="0" />
       <LineId Id="2324" Count="0" />
       <LineId Id="2355" Count="1" />
       <LineId Id="2359" Count="0" />
@@ -1067,12 +1077,19 @@ QxS01VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
       <LineId Id="3243" Count="0" />
       <LineId Id="3226" Count="0" />
       <LineId Id="3232" Count="0" />
+      <LineId Id="3718" Count="0" />
+      <LineId Id="3717" Count="0" />
       <LineId Id="3229" Count="0" />
       <LineId Id="3368" Count="0" />
       <LineId Id="3233" Count="0" />
       <LineId Id="3371" Count="0" />
       <LineId Id="3373" Count="0" />
       <LineId Id="3230" Count="1" />
+      <LineId Id="3719" Count="0" />
+      <LineId Id="3726" Count="0" />
+      <LineId Id="3730" Count="0" />
+      <LineId Id="3722" Count="0" />
+      <LineId Id="3721" Count="0" />
       <LineId Id="2441" Count="0" />
       <LineId Id="3068" Count="0" />
       <LineId Id="3071" Count="1" />
@@ -1082,11 +1099,6 @@ QxS01VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
       <LineId Id="2471" Count="0" />
       <LineId Id="2476" Count="0" />
       <LineId Id="2479" Count="0" />
-      <LineId Id="2802" Count="1" />
-      <LineId Id="2857" Count="0" />
-      <LineId Id="2859" Count="0" />
-      <LineId Id="2806" Count="11" />
-      <LineId Id="2797" Count="0" />
       <LineId Id="2007" Count="0" />
       <LineId Id="2056" Count="1" />
       <LineId Id="3594" Count="1" />
@@ -1112,6 +1124,7 @@ QxS01VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
       <LineId Id="2075" Count="0" />
       <LineId Id="2087" Count="0" />
       <LineId Id="2080" Count="0" />
+      <LineId Id="3663" Count="2" />
       <LineId Id="2012" Count="0" />
       <LineId Id="2770" Count="1" />
       <LineId Id="2488" Count="0" />
@@ -1179,6 +1192,11 @@ QxS01VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
       <LineId Id="3363" Count="0" />
       <LineId Id="3053" Count="4" />
       <LineId Id="3052" Count="0" />
+      <LineId Id="3681" Count="0" />
+      <LineId Id="3683" Count="0" />
+      <LineId Id="3694" Count="0" />
+      <LineId Id="3700" Count="0" />
+      <LineId Id="3711" Count="0" />
       <LineId Id="2549" Count="0" />
       <LineId Id="3079" Count="1" />
       <LineId Id="2557" Count="7" />
@@ -1259,17 +1277,14 @@ QxS01VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
       <LineId Id="2712" Count="0" />
       <LineId Id="2267" Count="0" />
       <LineId Id="2148" Count="0" />
-      <LineId Id="3235" Count="0" />
       <LineId Id="2274" Count="0" />
-      <LineId Id="2282" Count="0" />
-      <LineId Id="3236" Count="0" />
-      <LineId Id="3239" Count="0" />
       <LineId Id="3238" Count="0" />
-      <LineId Id="3358" Count="0" />
-      <LineId Id="2299" Count="2" />
+      <LineId Id="2299" Count="0" />
       <LineId Id="3098" Count="0" />
       <LineId Id="3102" Count="0" />
+      <LineId Id="3714" Count="1" />
       <LineId Id="2288" Count="0" />
+      <LineId Id="3713" Count="0" />
       <LineId Id="1395" Count="0" />
       <LineId Id="1397" Count="2" />
       <LineId Id="2297" Count="0" />
@@ -1287,6 +1302,7 @@ QxS01VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
       <LineId Id="672" Count="0" />
       <LineId Id="612" Count="0" />
       <LineId Id="614" Count="0" />
+      <LineId Id="674" Count="1" />
       <LineId Id="632" Count="1" />
       <LineId Id="616" Count="0" />
       <LineId Id="615" Count="0" />

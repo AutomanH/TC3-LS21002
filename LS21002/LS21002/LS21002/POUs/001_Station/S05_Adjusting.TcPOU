@@ -106,7 +106,8 @@ IF NOT station.xInitDone
 THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
-ELSIF station.xRunning  OR (  tsModuleProcess[2].xProcessStarted AND   NOT tsModuleProcess[2].xProcessCompleted)
+ELSIF station.xRunning  OR 
+(  tsModuleProcess[2].xProcessStarted AND   NOT tsModuleProcess[2].xProcessCompleted)//Z周调整
 THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
 CASE station.iStepAuto OF	  
@@ -449,7 +450,9 @@ END_IF
       <LineId Id="40" Count="0" />
     </LineIds>
     <LineIds Name="S05_Adjusting.FlowAuto">
-      <LineId Id="1155" Count="10" />
+      <LineId Id="1155" Count="6" />
+      <LineId Id="1842" Count="0" />
+      <LineId Id="1162" Count="3" />
       <LineId Id="1167" Count="17" />
       <LineId Id="1256" Count="0" />
       <LineId Id="1638" Count="0" />

@@ -21,6 +21,7 @@ VAR_INPUT
 	xEStop : BOOL;
 	stDeviceOpe	: RudongPump_Ope;//操作按钮
 	stModbusAddress:ST_ModbusAddress;
+	iDirectionSet:INT;
 END_VAR
 VAR_OUTPUT
 	xDone: BOOL;(*完成条件满足*)
@@ -784,8 +785,10 @@ END_IF
 CASE _diCmdState OF	
 		
 	0://单元实际液量设定
+		
 		_tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的是最新的一次
 		st_IOData.O_ModuleRealVolume := iModuleRealVolume	;	
+			st_IOData.O_FluVolumeSet := rFluVolumeSet	;	
 		IF _tonDelay.Q
 		THEN	
 			IF ABS(st_IOData.O_ModuleRealVolume-st_IOData.O_FluVolumeSet)<(st_IOData.O_FluVolumeSet*0.5) THEN//误差不能超过0.3ml
@@ -1027,7 +1030,7 @@ CASE _diCmdState OF
 		
 	8://方向设定		
 		_tonDelay(IN:= ( eCmd = RudongPump_CMD.Cmd_CalPump ) ,pt:=T#20MS);//保证执行的是最新的一次
-		st_IOData.O_DirectionSet := 1	;			
+		st_IOData.O_DirectionSet := iDirectionSet	;			
 		IF _tonDelay.Q
 		THEN	
 			_aExecute[4] := TRUE;//启动夹紧控制数据发送	
@@ -2575,7 +2578,11 @@ xComplete:=1;
       <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.CmdCalParWrite">
-      <LineId Id="3" Count="44" />
+      <LineId Id="3" Count="8" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="12" Count="1" />
+      <LineId Id="53" Count="0" />
+      <LineId Id="14" Count="33" />
       <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.CmdCalReset">
