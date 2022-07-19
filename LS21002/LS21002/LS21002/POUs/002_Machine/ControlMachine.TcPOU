@@ -87,9 +87,9 @@ END_IF
 //	IF  fbAlive[6].xQAliveError THEN
 //		fbMachine[1].dwAlarm[1].10:=TRUE; //[M01.10] 未检测到工控机3心跳
 //	END_IF
-	IF  fbAlive[7].xQAliveError THEN
-		fbMachine[1].dwAlarm[1].11:=TRUE; //[M01.11] 未检测到热缩封膜机心跳
-	END_IF
+//	IF  fbAlive[7].xQAliveError THEN
+//		fbMachine[1].dwAlarm[1].11:=TRUE; //[M01.11] 未检测到热缩封膜机心跳
+//	END_IF
 ////模块状态
 	IF  fbEhterCATSlaveMonitor[1].xQError THEN
 		fbMachine[1].dwAlarm[1].12:=TRUE; //[M01.05] ET01电柜EtherCAT总线报错

@@ -14,12 +14,12 @@ VAR
 	arTonDelay :ARRAY[1..20] OF TON;
 	//返回值
 	UdiReturnValue :ARRAY[1..20] OF UDINT;
-	
-	
-	
 	i: INT;
-	
-	
+	NGFlagR_TRIG: R_TRIG;
+	// Box检测到位
+	arxBoxCheckSensor: ARRAY[1..2] of BOOL;
+	// //相机检测NG信号
+	xNGFlag: BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -41,8 +41,9 @@ fbHOZCyl_1.xWP_Sensor:=IxS13HOZCyl_1WP	;//	NG推料气缸1¶动点
 fbHOZCyl_1.xHP_Sensor:=IxS13HOZCyl_1HP	;//	NG推料气缸1¶原点
 fbHOZCyl_2.xWP_Sensor:=IxS13HOZCyl_2WP	;//	NG推料气缸2¶动点
 fbHOZCyl_2.xHP_Sensor:=IxS13HOZCyl_2HP	;//	NG推料气缸2¶原点
-
-
+//退料检测
+arxBoxCheckSensor[1] :=IxS13SensorReached1; //NG推料处检测
+arxBoxCheckSensor[2] :=IxS13SensorReached2; //NG流道处检测
   
 
 
@@ -123,19 +124,54 @@ CASE station.iStepAuto OF
 		END_IF
     10: //复位数据 
 			station.iStepAuto:=20;
-	
-			
-	
+		20://等待NG信号
+			IF  xNGFlag THEN
+			 			station.iStepAuto:=30;
+			ELSE
+			 		station.iStepAuto:=999;
+			END_IF
+		30://等待到位信号
+			IF  arxBoxCheckSensor[1] THEN
+				 station.iStepAuto:=40;
+			END_IF
+		40://水平推料气缸伸出
+			fbHOZCyl_1.xAuto:=TRUE;
+			IF fbHOZCyl_1.xWP_Delay THEN
+			 	 station.iStepAuto:=50;
+			END_IF
+		50://水平退料气缸收回
+				fbHOZCyl_1.xAuto:=FALSE;
+			IF fbHOZCyl_1.xHP_Delay THEN
+			 	 station.iStepAuto:=60;
+			END_IF
+		60://等待NG流道检测
+			IF  arxBoxCheckSensor[2] THEN
+			 	 station.iStepAuto:=70;
+			END_IF
+		70://NG流道退料气缸伸出
+			fbHOZCyl_2.xAuto:=TRUE;
+			IF fbHOZCyl_2.xWP_Delay THEN
+			 	 station.iStepAuto:=80;
+			END_IF
+		80://NG流道退料气缸收回
+			fbHOZCyl_2.xAuto:=FALSE;
+			IF fbHOZCyl_2.xHP_Delay THEN
+			 	 station.iStepAuto:=90;
+			END_IF
+		90://检查NG物料
+			IF NOT  arxBoxCheckSensor[2] THEN
+			 	 station.iStepAuto:=999;
+			END_IF
 	999://----Single Run Finish----
+			xNGFlag:=FALSE;	
+			station.iStepAuto :=0;
+			IF NOT station.xSingleContinuousRun THEN
+				station.xSingleRunFlag:=FALSE;
+			END_IF
 			
-		station.iStepAuto :=0;
-		IF NOT station.xSingleContinuousRun THEN
-			station.xSingleRunFlag:=FALSE;
-		END_IF
-		
-		station.xCycleEnable:=FALSE;	
-		station.xDone:=TRUE;
-		station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
+			station.xCycleEnable:=FALSE;	
+		//	station.xDone:=TRUE;
+			station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
 	ELSE
 		;	
 END_CASE
@@ -157,7 +193,14 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
-    station.iStepInit:=999;	
+    station.iStepInit:=20;
+20://气缸回原
+		fbHOZCyl_1.xInit:=TRUE;
+		fbHOZCyl_2.xInit:=TRUE;	
+	IF  fbHOZCyl_1.xHP_Delay AND
+		 fbHOZCyl_2.xHP_Delay THEN
+		 station.iStepInit:=999;
+	END_IF
 999://初始化完成	
 	station.iStepInit:=0;
 	station.xInitDone:=TRUE;  
@@ -168,7 +211,14 @@ END_IF
     </Action>
     <Action Name="General" Id="{18ca33ab-4a41-40cc-a10c-85884003a4c5}">
       <Implementation>
-        <ST><![CDATA[
+        <ST><![CDATA[{region '相机检测出NG的信号传递'}
+NGFlagR_TRIG(CLK:= S14_LabelChecking.xFlowAutoDone AND S14_LabelChecking.xNGFlag, Q=> );
+IF  NGFlagR_TRIG.Q THEN
+		xNGFlag:=TRUE;		
+END_IF
+	 
+{endregion}
+
 ]]></ST>
       </Implementation>
     </Action>
@@ -179,8 +229,8 @@ END_IF
 station.xCanRun :=TRUE ;
 
 //---------------------------------------------------气缸动作条件-------------------------------------------
-fbHOZCyl_1.xOffILC	:=	TRUE	;
-fbHOZCyl_1.xOnILC	:=	TRUE; 
+fbHOZCyl_1.xOffILC	:=	TRUE;
+fbHOZCyl_1.xOnILC	:=	fbHOZCyl_2.xHP_Sensor; 
 
 fbHOZCyl_2.xOffILC	:=	TRUE	;
 fbHOZCyl_2.xOnILC	:=	TRUE; 
@@ -233,7 +283,9 @@ QxS13HOZCyl_2HP	:=fbHOZCyl_2.xHP_Valve;//	NG推料气缸2¶原点
       <LineId Id="28" Count="0" />
       <LineId Id="56" Count="2" />
       <LineId Id="55" Count="0" />
-      <LineId Id="40" Count="1" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="41" Count="0" />
       <LineId Id="10" Count="3" />
       <LineId Id="8" Count="0" />
     </LineIds>
@@ -256,9 +308,24 @@ QxS13HOZCyl_2HP	:=fbHOZCyl_2.xHP_Valve;//	NG推料气缸2¶原点
       <LineId Id="1183" Count="1" />
       <LineId Id="1256" Count="0" />
       <LineId Id="1259" Count="0" />
+      <LineId Id="1465" Count="2" />
+      <LineId Id="1469" Count="0" />
+      <LineId Id="1471" Count="0" />
+      <LineId Id="1468" Count="0" />
+      <LineId Id="1473" Count="3" />
       <LineId Id="1464" Count="0" />
+      <LineId Id="1477" Count="3" />
       <LineId Id="1431" Count="0" />
-      <LineId Id="1210" Count="0" />
+      <LineId Id="1484" Count="2" />
+      <LineId Id="1482" Count="0" />
+      <LineId Id="1487" Count="4" />
+      <LineId Id="1493" Count="2" />
+      <LineId Id="1492" Count="0" />
+      <LineId Id="1497" Count="3" />
+      <LineId Id="1496" Count="0" />
+      <LineId Id="1501" Count="0" />
+      <LineId Id="1503" Count="1" />
+      <LineId Id="1502" Count="0" />
       <LineId Id="1212" Count="2" />
       <LineId Id="1453" Count="2" />
       <LineId Id="1215" Count="2" />
@@ -267,10 +334,18 @@ QxS13HOZCyl_2HP	:=fbHOZCyl_2.xHP_Valve;//	NG推料气缸2¶原点
     </LineIds>
     <LineIds Name="S15_NG.FlowInit">
       <LineId Id="437" Count="9" />
-      <LineId Id="461" Count="5" />
+      <LineId Id="461" Count="0" />
+      <LineId Id="469" Count="3" />
+      <LineId Id="476" Count="0" />
+      <LineId Id="473" Count="1" />
+      <LineId Id="462" Count="4" />
       <LineId Id="436" Count="0" />
     </LineIds>
     <LineIds Name="S15_NG.General">
+      <LineId Id="382" Count="2" />
+      <LineId Id="387" Count="0" />
+      <LineId Id="389" Count="0" />
+      <LineId Id="385" Count="1" />
       <LineId Id="361" Count="0" />
       <LineId Id="381" Count="0" />
     </LineIds>

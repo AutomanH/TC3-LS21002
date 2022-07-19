@@ -6,12 +6,13 @@
     ET01_Input AT %I* : ARRAY [1..6] OF EL1889;//输入
     ET01_Output AT %Q* : ARRAY [1..6] OF EL2889;//输出
 	
-	ET02_Input AT %I* : ARRAY [1..6] OF EL1889;//输入
+		ET02_Input AT %I* : ARRAY [1..6] OF EL1889;//输入
     ET02_Output AT %Q* : ARRAY [1..5] OF EL2889;//输出
 	
-	ET03_Input AT %I* : ARRAY [1..1] OF EL1889;//输入
+		ET03_Input AT %I* : ARRAY [1..1] OF EL1889;//输入
+		ET03_Output AT %Q* : ARRAY [1..1] OF EL2889;//输出
 	
-	ET04_Input AT %I* : ARRAY [1..2] OF EL1889;//输入
+		ET04_Input AT %I* : ARRAY [1..2] OF EL1889;//输入
     ET04_Output AT %Q* : ARRAY [1..2] OF EL2889;//输出
 	
 	arEtherCATWcState AT %I* : ARRAY [1..20] OF BOOL;//输出
@@ -153,21 +154,21 @@ QxS02ROTCylWP	:BOOL;//	注液工位¶防滴液¶动点输出
 QxS02ROTCylHP	:BOOL;//	注液工位¶防滴液¶原点输出
 QxS03HOZAdjustCyl_1WP	:BOOL;//	相机工位¶上层水平调整气缸1¶动点输出
 QxS03HOZAdjustCyl_1HP	:BOOL;//	相机工位¶上层水平调整气缸1¶原点输出
-QxShare44	:BOOL;//	备用
-QxShare45	:BOOL;//	备用
+QxS03HOZAdjustCyl_2WP	:BOOL;//	相机工位¶上层水平调整气缸2¶动点输出
+QxS03HOZAdjustCyl_2HP	:BOOL;//	相机工位¶上层水平调整气缸2¶原点输出
 QxS03HOZAdjustCyl_3WP	:BOOL;//	相机工位¶上层水平调整气缸3¶动点输出
 QxS03HOZAdjustCyl_3HP	:BOOL;//	相机工位¶上层水平调整气缸3¶原点输出
-QxShare46	:BOOL;//	备用
-QxShare47	:BOOL;//	备用
-QxS03HOZAdjustCyl_5WP	:BOOL;//	相机工位¶下层水平调整气缸1¶动点输出
-QxS03HOZAdjustCyl_5HP	:BOOL;//	相机工位¶下层水平调整气缸1¶原点输出
-QxShare52	:BOOL;//	备用
-QxShare51	:BOOL;//	备用
-QxS03HOZAdjustCyl_7WP	:BOOL;//	相机工位¶下层水平调整气缸3¶动点输出
-QxS03HOZAdjustCyl_7HP	:BOOL;//	相机工位¶下层水平调整气缸3¶原点输出
-QxShare50	:BOOL;//	备用
-QxShare53	:BOOL;//	备用
-QxShare7	:BOOL;//	备用
+QxS03HOZAdjustCyl_4WP	:BOOL;//	相机工位¶上层水平调整气缸4¶动点输出
+QxS03HOZAdjustCyl_4HP	:BOOL;//	相机工位¶上层水平调整气缸4¶原点输出
+QxS03HOZAdjustCyl_5WP	:BOOL;//	相机工位¶上层水平调整气缸5¶动点输出
+QxS03HOZAdjustCyl_5HP	:BOOL;//	相机工位¶上层水平调整气缸5¶原点输出
+QxS03HOZAdjustCyl_6WP	:BOOL;//	相机工位¶上层水平调整气缸6¶动点输出
+QxS03HOZAdjustCyl_6HP	:BOOL;//	相机工位¶上层水平调整气缸6¶原点输出
+QxS03HOZAdjustCyl_7WP	:BOOL;//	相机工位¶上层水平调整气缸7¶动点输出
+QxS03HOZAdjustCyl_7HP	:BOOL;//	相机工位¶上层水平调整气缸7¶原点输出
+QxS03HOZAdjustCyl_8WP	:BOOL;//	相机工位¶上层水平调整气缸8¶动点输出
+QxS03HOZAdjustCyl_8HP	:BOOL;//	相机工位¶上层水平调整气缸8¶原点输出
+QxS04AluCoverCylWP	:BOOL;//	铝膜胀气轴气缸动点
 QxShare8	:BOOL;//	备用
 QxShare9	:BOOL;//	备用
 QxShare10	:BOOL;//	备用
@@ -282,12 +283,12 @@ IxBeltEntryCardCheckSensor2	:BOOL;//	皮带线入口处¶卡片检测传感器2
 IxBeltEntryBoxCheckSensor1	:BOOL;//	皮带线入口处¶深孔板检测传感器1
 IxBeltEntryBoxCheckSensor2	:BOOL;//	皮带线入口处¶深孔板检测传感器2
 IxShare71	:BOOL;//	备用
-IxShare72	:BOOL;//	备用
-IxShare73	:BOOL;//	备用
-IxShare74	:BOOL;//	备用
-IxShare75	:BOOL;//	备用
-IxShare76	:BOOL;//	备用
-IxShare77	:BOOL;//	备用
+IxS06PressCyl_1WP	:BOOL;//	切膜下压气缸1动点
+IxS06PressCyl_1HP	:BOOL;//	切膜下压气缸1原点
+IxS06PressCyl_2WP	:BOOL;//	切膜下压气缸2动点
+IxS06PressCyl_2HP	:BOOL;//	切膜下压气缸2原点
+IxS06VTCCylWP	:BOOL;//	垂直切膜气缸1动点
+IxS06VTCCylHP	:BOOL;//	垂直切膜气缸2原点
 IxShare78	:BOOL;//	备用
 IxShare79	:BOOL;//	备用
 IxShare80	:BOOL;//	备用
@@ -353,12 +354,12 @@ QxS08VTCCyl_1WP	:BOOL;//	卡片工位¶Z轴气缸1¶动点输出
 QxS08VTCCyl_1HP	:BOOL;//	卡片工位¶Z轴气缸1¶原点输出
 QxS08VTCCyl_2WP	:BOOL;//	卡片工位¶Z轴气缸2¶动点输出
 QxS08VTCCyl_2HP	:BOOL;//	卡片工位¶Z轴气缸2¶原点输出
-QxShare80	:BOOL;//	备用
-QxShare81	:BOOL;//	备用
-QxShare82	:BOOL;//	备用
-QxShare83	:BOOL;//	备用
-QxShare84	:BOOL;//	备用
-QxShare85	:BOOL;//	备用
+QxS06PressCyl_1WP	:BOOL;//	切膜下压气缸1动点输出
+QxS06PressCyl_1HP	:BOOL;//	切膜下压气缸1原点输出
+QxS06PressCyl_2WP	:BOOL;//	切膜下压气缸2动点输出
+QxS06PressCyl_2HP	:BOOL;//	切膜下压气缸2原点输出
+QxS06VTCCylWP	:BOOL;//	垂直切膜气缸1动点输出
+QxS06VTCCylHP	:BOOL;//	垂直切膜气缸2原点输出
 QxShare86	:BOOL;//	备用
 QxShare87	:BOOL;//	备用
 QxShare88	:BOOL;//	备用
@@ -369,7 +370,6 @@ QxShare92	:BOOL;//	备用
 QxShare93	:BOOL;//	备用
 QxShare94	:BOOL;//	备用
 QxShare95	:BOOL;//	备用
-
 
 
 IxShare100	:BOOL;//	
@@ -388,13 +388,30 @@ IxShare111	:BOOL;//
 IxShare112	:BOOL;//	
 IxShare113	:BOOL;//	
 IxShare114	:BOOL;//	
+QxLoadCell_1ZeroInput	:BOOL;//	压力传感器1清零信号
+QxLoadCell_2ZeroInput	:BOOL;//	压力传感器2清零信号
+QxLoadCell_3ZeroInput	:BOOL;//	压力传感器3清零信号
+QxLoadCell_4ZeroInput	:BOOL;//	压力传感器4清零信号
+QxLoadCell_5ZeroInput	:BOOL;//	压力传感器5清零信号
+QxLoadCell_6ZeroInput	:BOOL;//	压力传感器6清零信号
+QxShare165	:BOOL;//	备用
+QxShare166	:BOOL;//	备用
+QxShare167	:BOOL;//	备用
+QxShare168	:BOOL;//	备用
+QxShare169	:BOOL;//	备用
+QxShare170	:BOOL;//	备用
+QxShare171	:BOOL;//	备用
+QxShare172	:BOOL;//	备用
+QxShare173	:BOOL;//	备用
+QxShare174	:BOOL;//	备用
+
 
 
 
 IxLabelJobRdySignal	:BOOL;//	贴标机JOBRDY信号
 IxLabelReadySignal	:BOOL;//	贴标机READY信号
 IxLabelErrorSignal	:BOOL;//	贴标机ERROR信号
-IxS11SensorReached	:BOOL;//	贴标工位¶检查到位传感器
+IxS11SensorReached1	:BOOL;//	贴标工位¶检查到位传感器1
 IxS12SensorReached	:BOOL;//	标签检测工位¶检查到位传感器
 IxS13SensorReached1	:BOOL;//	NG皮带线¶检测到料传感器1
 IxS13SensorReached2	:BOOL;//	NG皮带线¶检测到料传感器2
@@ -409,7 +426,7 @@ IxS13HOZCyl_1WP	:BOOL;//	NG推料气缸1¶动点
 IxS13HOZCyl_1HP	:BOOL;//	NG推料气缸1¶原点
 IxS13HOZCyl_2WP	:BOOL;//	NG推料气缸2¶动点
 IxS13HOZCyl_2HP	:BOOL;//	NG推料气缸2¶原点
-IxShare150	:BOOL;//	
+IxS11SensorReached2	:BOOL;//	贴标工位¶检查到位传感器2
 IxShare151	:BOOL;//	
 IxShare152	:BOOL;//	
 IxShare153	:BOOL;//	

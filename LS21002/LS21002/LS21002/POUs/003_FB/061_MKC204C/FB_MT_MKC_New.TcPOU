@@ -21,7 +21,7 @@
 *********************************************************************************)
 VAR_INPUT
 	
-	xIReset:						BOOL	:= FALSE;		(* Input: Errors will been reset *)
+	xIReset:						BOOL	:= FALSE;		
 	xIInit:  						BOOL ;
 	iICodeLEN:					INT:=20;
 	iICodePOS:					INT:=1;
@@ -36,8 +36,8 @@ VAR_OUTPUT
 	xQRdyCmd:  						BOOL ;
 	xQDone     :  				BOOL ;
 	strQBarCode  : 				STRING[255];
-	xQBusy:							BOOL	:= FALSE;	(* Output: True, as long as the block has not yet fulfilled its work *)
-	xQError:						BOOL	:= FALSE;	(* Output: Group error for the FB *)
+	xQBusy:							BOOL	:= FALSE;	
+	xQError:						BOOL	:= FALSE;	
   xQNoRead:					BOOL	:= FALSE;
 	iQErrorNo:				INT;
 	stParOut					: ST_MCK_ParOut;//参数输出
@@ -69,6 +69,8 @@ VAR
 			strBloadResultCode:STRING(20);
 			fbTrigger: R_TRIG;
 			iCmdStep:INT;
+			iCmdOldStep:INT;
+			tTimeout:TON;
 			eErrorID		: MT_MCK_ERROR;(*错误码*)(* Output: Error ID (defined below) *)
 			xStart: BOOL ;
 			xBusy:BOOL;
@@ -114,7 +116,7 @@ ELSE
 		   	IF ( xStart = TRUE ) AND( xRdyCmd = TRUE )THEN
 				iStep  :=  10 ;
 				xBusy:=TRUE;
-			      xRdyCmd := FALSE  ;
+			  xRdyCmd := FALSE  ;
 			(*ELSE
  			 	xBusy  := FALSE;*)
 		   	END_IF
@@ -213,7 +215,11 @@ END_IF]]></ST>
 ELSE
  		xQRdyCmd:=FALSE;	
 END_IF
-
+tTimeout(IN:= iCmdStep =iCmdOldStep AND iCmdStep<>0 , PT:= T#5S, Q=> , ET=> );
+IF		tTimeout.Q THEN
+ 	xQError:=TRUE;
+	eErrorID:=MT_MCK_ERROR.FLT_CMD_TIMEOUT;
+END_IF
 CASE iCmdStep  OF	
 		
 		0://等待激活
@@ -223,21 +229,23 @@ CASE iCmdStep  OF
 					iCmdStep :=iCmdStep +1;
 					xcmd:=FALSE;
 			END_IF
-			
 		1://指令
 				iCmdStep :=iCmdStep +1;
-				
+				iCmdOldStep:=iCmdStep;
 		2://开始执行
 				xStart :=TRUE;
 				iCmdStep :=iCmdStep +1;
+				iCmdOldStep:=iCmdStep;
 		3://等待接受
 					IF   xBusy THEN
 					 		iCmdStep :=iCmdStep +1;
 					END_IF
+					iCmdOldStep:=iCmdStep;
 		4://报警待整理数据
 				IF  NOT xBusy AND xDone THEN
 						iCmdStep :=iCmdStep +1;;	
 				END_IF
+				iCmdOldStep:=iCmdStep;
 		5://处理接收的数据
 					IF iOperType =1 THEN
 							IF FIND(strQBarCode,'$R') <> 0 AND FIND(strQBarCode,'I4') <> 0	THEN					
@@ -434,13 +442,14 @@ CASE iCmdStep  OF
 								END_IF
 	
 				END_IF
-				//iCmdStep :=iCmdStep +1;
+				iCmdOldStep:=iCmdStep;
 		6:	
 						xQDone:=TRUE;
 						xQBusy:=FALSE;	
+						iCmdOldStep:=iCmdStep;
 						iCmdStep :=0;		
-		
 	END_CASE
+	
 	]]></ST>
       </Implementation>
     </Action>
@@ -449,7 +458,41 @@ CASE iCmdStep  OF
         <ST><![CDATA[IF  eErrorID <> 0 THEN
 	xQError:=TRUE;
 END_IF
-]]></ST>
+//报错内容输出
+CASE eErrorID OF 
+	MT_MCK_ERROR.FLT_CMD_TIMEOUT:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_CMD_TIMEOUT';
+	MT_MCK_ERROR.FLT_CmdFeedback:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_CmdFeedback';
+	MT_MCK_ERROR.FLT_CommandCantSend:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_CommandCantSend';
+	MT_MCK_ERROR.FLT_CONNECT:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_CONNECT';
+	MT_MCK_ERROR.FLT_LogicaL:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_LogicaL';
+	MT_MCK_ERROR.FLT_Par:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_Par';
+	MT_MCK_ERROR.FLT_PARA:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_PARA';
+	MT_MCK_ERROR.FLT_RDYCMD:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_RDYCMD';
+	MT_MCK_ERROR.FLT_STOP_TIMEOUT:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_STOP_TIMEOUT';
+	MT_MCK_ERROR.FLT_Syntax:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_Syntax';
+	MT_MCK_ERROR.FLT_TOverMax:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_TOverMax';
+	MT_MCK_ERROR.FLT_TOverMin:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_TOverMin';
+	MT_MCK_ERROR.FLT_ZI:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_ZI';
+	MT_MCK_ERROR.FLT_ZOverMax:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_ZOverMax';
+	MT_MCK_ERROR.FLT_ZOverMin:
+		stParOut.sErrorID:='MT_MCK_ERROR.FLT_ZOverMin';
+	MT_MCK_ERROR.No_ERROR:
+		stParOut.sErrorID:='MT_MCK_ERROR.No_ERROR';		
+END_CASE]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_OP" Id="{f44dc047-20b5-4a09-9234-2a1699eee633}">
@@ -521,7 +564,7 @@ END_IF
 	stDeviceOpe.xAcquireWeight_Continuous_HMI:=stDeviceOpe.xAcquireWeight_Continuous_Auto:=FALSE;//连续获取重量,SIR
 	stDeviceOpe.xAcquireWeight_Stop_HMI:=stDeviceOpe.xAcquireWeight_Stop_Auto		:=FALSE;//中断连续获取重量,SI
 	stDeviceOpe.xRestart_HMI:=stDeviceOpe.xRestart_Auto										:=FALSE;//重启秤体	
-	xIReset:=FALSE;
+	//xIReset:=FALSE;
 	
 
 
@@ -538,7 +581,8 @@ END_IF
   	xBusy  := FALSE;
 		xQBusy  := FALSE;
 		xStart  := FALSE;
-		eErrorID:=0;
+		eErrorID:=MT_MCK_ERROR.No_ERROR;
+		xIReset:=FALSE;
 END_IF]]></ST>
       </Implementation>
     </Action>
@@ -556,20 +600,27 @@ END_IF]]></ST>
       <LineId Id="145" Count="0" />
       <LineId Id="147" Count="1" />
       <LineId Id="146" Count="0" />
-      <LineId Id="7" Count="3" />
+      <LineId Id="519" Count="0" />
+      <LineId Id="521" Count="0" />
+      <LineId Id="524" Count="1" />
+      <LineId Id="523" Count="0" />
+      <LineId Id="8" Count="2" />
       <LineId Id="78" Count="0" />
       <LineId Id="141" Count="0" />
       <LineId Id="490" Count="0" />
       <LineId Id="80" Count="0" />
       <LineId Id="137" Count="0" />
       <LineId Id="81" Count="0" />
-      <LineId Id="83" Count="1" />
+      <LineId Id="84" Count="0" />
       <LineId Id="79" Count="0" />
       <LineId Id="86" Count="3" />
+      <LineId Id="515" Count="0" />
       <LineId Id="92" Count="3" />
+      <LineId Id="516" Count="0" />
       <LineId Id="100" Count="1" />
       <LineId Id="133" Count="0" />
       <LineId Id="104" Count="0" />
+      <LineId Id="517" Count="0" />
       <LineId Id="156" Count="0" />
       <LineId Id="167" Count="0" />
       <LineId Id="164" Count="0" />
@@ -668,15 +719,17 @@ END_IF]]></ST>
       <LineId Id="168" Count="0" />
       <LineId Id="171" Count="0" />
       <LineId Id="170" Count="0" />
+      <LineId Id="518" Count="0" />
       <LineId Id="488" Count="0" />
-      <LineId Id="142" Count="0" />
       <LineId Id="25" Count="0" />
+      <LineId Id="520" Count="0" />
       <LineId Id="135" Count="0" />
     </LineIds>
     <LineIds Name="FB_MT_MKC_New.ACT_Error">
       <LineId Id="1" Count="0" />
       <LineId Id="5" Count="0" />
       <LineId Id="3" Count="0" />
+      <LineId Id="7" Count="33" />
       <LineId Id="6" Count="0" />
     </LineIds>
     <LineIds Name="FB_MT_MKC_New.ACT_OP">
@@ -731,6 +784,7 @@ END_IF]]></ST>
       <LineId Id="11" Count="0" />
       <LineId Id="8" Count="0" />
       <LineId Id="10" Count="0" />
+      <LineId Id="14" Count="0" />
       <LineId Id="1" Count="0" />
     </LineIds>
   </POU>

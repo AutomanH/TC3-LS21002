@@ -17,6 +17,7 @@
 *
 * Revisions:
 *   V1.0.0 -Automanh 2022.06.08
+*		V2.0.0-Automanh 2022.07.15 add Timeout Error and xQDone Single
 *********************************************************************************)
 VAR_INPUT
 	xlInit	:BOOL;(*初始化*)
@@ -38,6 +39,7 @@ VAR_OUTPUT
 	xQAlarm	: BOOL := FALSE;// 报警输出
 	xQBusy	 	:BOOL;
 	xQHmiAlarm	:STRING;//报警输出
+	xQDone	  :BOOL;
 END_VAR
 VAR_IN_OUT
 	ilCompleted :INT;(*拍照完成*)
@@ -48,6 +50,8 @@ VAR
 	tonDelay: TON;//计时器
 	{attribute 'hide'}
 	tonAlarmTime :Ton;//报警计时器
+	{attribute 'hide'}
+	tTimeout:TON;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -76,25 +80,26 @@ END_IF]]></ST>
 	xQCompleted:=FALSE;
 	xQAlarm	  :=FALSE;
 	xQBusy    :=FALSE;
+	xQDone		:=FALSE;
 	xlInit	  :=FALSE;
 END_IF]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_Trigger" Id="{9183c163-8be5-4fbe-86c9-2c27dadf0cba}">
       <Implementation>
-        <ST><![CDATA[CASE bStep OF
+        <ST><![CDATA[
+CASE bStep OF
 	0://等待触发
 		tonDelay(IN:=FALSE);
 		tonAlarmTime(IN:=FALSE);
 		ilCompleted:=0;
-		IF  (( (xlAutomode OR xIDeviceRunning) AND xlTrigger) OR
-			(xlManualmode AND xlTriggerHmi)) AND (xlReady OR xITryRun) THEN
+		IF (( (xlAutomode OR xIDeviceRunning) AND xlTrigger) OR
+				(xlManualmode AND xlTriggerHmi)) AND (xlReady OR xITryRun) THEN
 			xlTrigger:=xlTriggerHmi:=FALSE;
 			xQCompleted:=FALSE;
 			xQBusy:=TRUE;
+			xQDone:=FALSE;
 			bStep:=bStep +1;
-			(*xlTrigger:=FALSE;*)
-			xlTriggerHmi:=FALSE;
 		END_IF
 	
 	1://打开光源信号
@@ -133,7 +138,6 @@ END_IF]]></ST>
 					bStep:=0;	
 				END_IF
 			END_IF
-		
 	4://关闭光源
 			xQCompleted:=TRUE;
 			xQLight:=FALSE;
@@ -141,6 +145,7 @@ END_IF]]></ST>
 	5://流程结束
 			xQHmiAlarm:='Completed';
 			xQBusy:=FALSE;
+			xQDone:=TRUE;
 			bStep:=0;	
 END_CASE]]></ST>
       </Implementation>
@@ -166,24 +171,24 @@ END_CASE]]></ST>
       <LineId Id="27" Count="1" />
       <LineId Id="31" Count="0" />
       <LineId Id="22" Count="0" />
+      <LineId Id="37" Count="0" />
       <LineId Id="4" Count="0" />
       <LineId Id="25" Count="0" />
     </LineIds>
     <LineIds Name="FB_Camera.ACT_Trigger">
+      <LineId Id="149" Count="0" />
       <LineId Id="6" Count="0" />
       <LineId Id="15" Count="0" />
       <LineId Id="44" Count="0" />
       <LineId Id="71" Count="0" />
       <LineId Id="110" Count="0" />
       <LineId Id="16" Count="0" />
-      <LineId Id="92" Count="0" />
+      <LineId Id="150" Count="0" />
       <LineId Id="123" Count="0" />
       <LineId Id="111" Count="0" />
       <LineId Id="90" Count="0" />
-      <LineId Id="17" Count="0" />
-      <LineId Id="101" Count="0" />
-      <LineId Id="100" Count="0" />
-      <LineId Id="18" Count="0" />
+      <LineId Id="140" Count="0" />
+      <LineId Id="17" Count="1" />
       <LineId Id="96" Count="0" />
       <LineId Id="23" Count="0" />
       <LineId Id="121" Count="0" />
@@ -214,13 +219,14 @@ END_CASE]]></ST>
       <LineId Id="78" Count="1" />
       <LineId Id="74" Count="0" />
       <LineId Id="53" Count="0" />
-      <LineId Id="124" Count="0" />
       <LineId Id="104" Count="0" />
       <LineId Id="109" Count="0" />
       <LineId Id="107" Count="1" />
       <LineId Id="97" Count="0" />
       <LineId Id="130" Count="0" />
-      <LineId Id="98" Count="1" />
+      <LineId Id="98" Count="0" />
+      <LineId Id="139" Count="0" />
+      <LineId Id="99" Count="0" />
       <LineId Id="14" Count="0" />
     </LineIds>
   </POU>

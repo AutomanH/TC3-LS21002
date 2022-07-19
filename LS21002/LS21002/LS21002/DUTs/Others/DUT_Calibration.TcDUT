@@ -3,14 +3,21 @@
   <DUT Name="DUT_Calibration" Id="{fab8e822-d797-4f00-b962-be218691c8a3}">
     <Declaration><![CDATA[TYPE DUT_Calibration :
 STRUCT
-	strCalibHmi:STRING;
-	xWindowsTrigger :BOOL;
-	xStartButtonHmi:BOOL;
-	xNextButtonHmi:BOOL;
-	xCompletedButtonHmi:BOOL;
-	xNeedCalibration  :BOOL;
-	iXCounter:INT;
-	iYCounter:INT;
+	strCalibHmi:STRING;	//校准信息
+	xWindowsTrigger :BOOL;//窗口调用
+	xStartButtonHmi:BOOL;//校准开始按钮
+	xNextButtonHmi:BOOL;//下一组
+	xCompletedButtonHmi:BOOL;//校准完成按钮
+	xNeedCalibration  :BOOL;//需要校准标志位
+	iXCounter:INT;//泵头
+	iYCounter:INT;//控制器
+	rRudongPumpVolume:REAL;//蠕动泵设定量
+	rMckVolume			:REAL;//称测量的量
+	rDensity				:REAL;//溶液密度
+	iType						:INT:=1;//溶液类型
+	iInjectCounter	:INT:=1;//注液次数
+	xError					:BOOL;//报警
+	xReset					:BOOL;//复位报警
 END_STRUCT
 END_TYPE
 ]]></Declaration>

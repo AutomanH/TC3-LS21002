@@ -124,11 +124,10 @@ xLoadingReachedSensor[2]:=IxS01Sensor1Reached;
       <Implementation>
         <ST><![CDATA[//
 station.adwAlarm[1].00:=station.xInitTimeout;	  //S01 初始化超时
-(*station.adwAlarm[1].01:= //S01链板线上料位置1相机检测到深孔板放反，请检查
-station.adwAlarm[1].02:=//S01链板线上料位置2相机检测到深放反，请检查
-station.adwAlarm[1].03:=//S01链板线上料位置3相机检测到深孔板放反，请检查
-station.adwAlarm[1].04:=//S01链板线上料位置4相机检测到深孔板放反，请检查
-*)
+//station.adwAlarm[1].01:= //S01链板线上料位置1相机检测到深孔板放反，请检查
+//station.adwAlarm[1].02:=//S01链板线上料位置2相机检测到深放反，请检查
+//station.adwAlarm[1].03:=//S01链板线上料位置3相机检测到深孔板放反，请检查
+//station.adwAlarm[1].04:=//S01链板线上料位置4相机检测到深孔板放反，请检查
 station.adwAlarm[1].05	:=	fbClamp_1.eErrorID>24	;//	S01电动夹爪1报错，请检查
 station.adwAlarm[1].06	:=	fbClamp_2.eErrorID>24	;//	S01电动夹爪2报错，请检查
 //station.adwAlarm[1].07	:=	fbVTCPressCyl_1.xHP_Off 	;//	S01链板线-下压气缸1原点未到位
@@ -151,13 +150,12 @@ station.adwAlarm[1].23	:=	fbYAxisMove.xNotPowerOn	;//	S01移栽上料Y轴伺服�
 station.adwAlarm[1].24	:=	fbYAxisMove.xMoveTimeout	;//	S01移栽上料Y轴伺服移动超时
 //station.adwAlarm[1].25	:=	fbFlowLine.xQError	;			//	S01移栽上料链板线报错
 
-(*station.adwAlarm[1].26:= //S01链板线上料位置1相机检测到深孔板放反，请检查
-station.adwAlarm[1].27:=//S01链板线上料位置2相机检测到深放反，请检查
-station.adwAlarm[1].28:=//S01链板线上料位置3相机检测到深孔板放反，请检查
-station.adwAlarm[1].29:=//S01链板线上料位置4相机检测到深孔板放反，请检查
-*)
-
-
+//station.adwAlarm[1].26:= //S01链板线上料位置1相机检测到深孔板放反，请检查
+//station.adwAlarm[1].27:=//S01链板线上料位置2相机检测到深放反，请检查
+//station.adwAlarm[1].28:=//S01链板线上料位置3相机检测到深孔板放反，请检查
+//station.adwAlarm[1].29:=//S01链板线上料位置4相机检测到深孔板放反，请检查
+//station.adwAlarm[1].30	:=	TRUE;//	S01上料工位-相机拍照超时，请检查
+//station.adwAlarm[1].31	:=	TRUE;//	S01上料工位-链板线运行超时,请复位
 
 ]]></ST>
       </Implementation>
@@ -165,8 +163,8 @@ station.adwAlarm[1].29:=//S01链板线上料位置4相机检测到深孔板放�
     <Action Name="Delay" Id="{084f8558-cebd-455d-abdf-a99ad2ca1ee4}">
       <Implementation>
         <ST><![CDATA[arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );
-(*arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );*)//链板线程序使用
-arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
+//arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );*)//链板线程序使用
+//arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );//已使用
 arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[05](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[06](IN:= , PT:=T#0.1S , Q=> , ET=> );
@@ -259,31 +257,51 @@ CASE station.iStepAuto OF
 				fbFlowLine.xIRunningPremit:=TRUE;
 		END_IF
 			station.iStepAuto:=50;	
+	45://
+				fbFlowLine.xIRunningPremit:=TRUE;
+				station.iStepAuto:=50;	
 	//50://链板线已启动
 	//	IF   fbFlowLine.xQBusy OR (_FirstFlag[3]  AND  NOT  station.xSingleRunning )  THEN
 	//			_FirstFlag[3]:=TRUE;
 	//			station.iStepAuto:=60;	
 	//	END_IF
 	50://Y轴去拍照位置
+		arTonDelay[03](IN:=FALSE);
 		fbYAxisMove.xMoveAuto[2]:=TRUE;
 		IF  fbYAxisMove.xMoveInPos[2] THEN
-		  	 station.iStepAuto:=65;	
+		  	 station.iStepAuto:=60;	
 		END_IF
-	65://等待链板线孔板到位  
+	60://等待链板线孔板到位 
+			arTonDelay[03](IN:=TRUE , PT:=T#10S , Q=> , ET=> ); 
 			IF 	fbFlowLine.xQDone  THEN
-					 station.iStepAuto:=70;	
+					 station.iStepAuto:=65;	
+			ELSIF fbFlowLine.xQError OR  	arTonDelay[03].Q THEN
+			 		arTonDelay[03](IN:=FALSE);
+					fbFlowLine.xIInit:=TRUE;
+					 station.iStepAuto:=45;	
+					station.adwAlarm[1].31	:=	TRUE;//	S01上料工位-链板线运行超时,请复位
+			END_IF
+	65://链板线停止
+				fbFlowLine.xIMotorStop :=TRUE;
+			IF NOT  fbFlowLine.xQMotorStart THEN
+			 			 station.iStepAuto:=70;	
 			END_IF
 	70://相机触发
 		tsModuleProcess[1].xProcessStarted:=TRUE;
 			Camera.xlTrigger:=TRUE;
-			IF    Camera.xQBusy THEN
-				Camera.xlTrigger:=FALSE;
-				station.iStepAuto:=80;	
-			END_IF
+			station.iStepAuto:=75;	
+	75://相机触发响应
+				IF    Camera.xQBusy THEN
+						station.iStepAuto:=80;	
+				END_IF
 	80://等待相机完成且链板线执行完成
-		IF  NOT Camera.xQBusy THEN
-			station.iStepAuto:=100;		
-		END_IF
+			 IF  Camera.xQDone THEN
+				 station.iStepAuto:=100;		
+			 ELSIF  Camera.xQAlarm THEN
+					 Camera.xlInit:=TRUE;
+					 station.iStepAuto:=70;		
+					 station.adwAlarm[1].30	:=	TRUE;//	S01上料工位-相机拍照超时，请检查
+			 END_IF
 	100://查看相机结果，判断是否料反
 		(*位置1*)		
 			tsModuleProcess[1].xProcessCompleted:=TRUE;
@@ -798,7 +816,8 @@ END_IF
 	xIMotorStartButtonHmi:=arFlowLineControl[1] , 
 	xIMotorStopButtonHmi:= arFlowLineControl[2], 
 	xIManualMode:= fbMachine[1].xManualMode , 
-	xIAutoMode:= fbMachine[1].xAutoMode, 
+	xIAutoMode	:= fbMachine[1].xAutoMode, 
+	xIDeviceRunning:=TRUE,
 	arQVTCCylHPValve=> , 
 	arQVTCCylWPValve=> , 
 	xQMotorEstop=> QxFlowLineSpeedCtrl_1, 
@@ -978,12 +997,12 @@ QxS01VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
       <LineId Id="177" Count="0" />
       <LineId Id="190" Count="1" />
       <LineId Id="199" Count="1" />
-      <LineId Id="192" Count="0" />
       <LineId Id="220" Count="19" />
       <LineId Id="194" Count="0" />
       <LineId Id="244" Count="0" />
       <LineId Id="240" Count="3" />
-      <LineId Id="195" Count="3" />
+      <LineId Id="245" Count="0" />
+      <LineId Id="197" Count="1" />
       <LineId Id="181" Count="0" />
     </LineIds>
     <LineIds Name="S01_Loading.Delay">
@@ -1021,23 +1040,41 @@ QxS01VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
       <LineId Id="3495" Count="0" />
       <LineId Id="3708" Count="0" />
       <LineId Id="3509" Count="0" />
+      <LineId Id="3759" Count="2" />
       <LineId Id="1881" Count="0" />
       <LineId Id="3499" Count="0" />
       <LineId Id="3710" Count="0" />
       <LineId Id="3501" Count="0" />
       <LineId Id="3498" Count="0" />
       <LineId Id="1915" Count="0" />
+      <LineId Id="3755" Count="0" />
       <LineId Id="1932" Count="0" />
       <LineId Id="1917" Count="2" />
-      <LineId Id="3704" Count="2" />
+      <LineId Id="3704" Count="0" />
+      <LineId Id="3752" Count="0" />
+      <LineId Id="3705" Count="1" />
+      <LineId Id="3751" Count="0" />
+      <LineId Id="3753" Count="0" />
+      <LineId Id="3756" Count="0" />
+      <LineId Id="3758" Count="0" />
+      <LineId Id="3757" Count="0" />
       <LineId Id="3674" Count="0" />
+      <LineId Id="3731" Count="3" />
+      <LineId Id="3736" Count="0" />
       <LineId Id="1887" Count="0" />
       <LineId Id="2435" Count="0" />
-      <LineId Id="2887" Count="3" />
-      <LineId Id="2885" Count="0" />
+      <LineId Id="2887" Count="0" />
+      <LineId Id="3747" Count="0" />
+      <LineId Id="3743" Count="0" />
+      <LineId Id="3749" Count="1" />
+      <LineId Id="3748" Count="0" />
       <LineId Id="1931" Count="0" />
       <LineId Id="2877" Count="0" />
       <LineId Id="2882" Count="0" />
+      <LineId Id="3738" Count="0" />
+      <LineId Id="3742" Count="0" />
+      <LineId Id="3741" Count="0" />
+      <LineId Id="3739" Count="0" />
       <LineId Id="3657" Count="0" />
       <LineId Id="2881" Count="0" />
       <LineId Id="2042" Count="0" />
@@ -1340,7 +1377,9 @@ QxS01VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
       <LineId Id="34" Count="0" />
       <LineId Id="15" Count="4" />
       <LineId Id="42" Count="0" />
-      <LineId Id="20" Count="12" />
+      <LineId Id="20" Count="5" />
+      <LineId Id="44" Count="0" />
+      <LineId Id="26" Count="6" />
       <LineId Id="14" Count="0" />
     </LineIds>
     <LineIds Name="S01_Loading.General">

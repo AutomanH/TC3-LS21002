@@ -11,10 +11,17 @@ VAR
 	arTonDelay :ARRAY[1..20] OF TON;
 	//返回值
 	UdiReturnValue :ARRAY[1..20] OF UDINT;
-	
-	
-	
+	//贴标机
+	xLabelJobRdySignal:BOOL;//	贴标机JOBRDY信号
+	xLabelReadySignal:BOOL;//	贴标机READY信号
+	xLabelErrorSignal:BOOL;//	贴标机ERROR信号
 	i: INT;
+	xQLabelStart: BOOL;			//	贴标机Start 
+	xQLabelRibwarn: BOOL; //	贴标机RIBWARN
+	xQLabelReset: BOOL;   //	贴标机RESET  
+	// 贴标到位传感器
+	arSensorReached: ARRAY[1..2]of BOOL;
+	
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -34,17 +41,22 @@ Z_Output();]]></ST>
         <ST><![CDATA[//气缸
 fbHOZCyl_1.xWP_Sensor:=	IxS11HOZCylWP	;//	贴标处推料气缸¶动点
 fbHOZCyl_1.xHP_Sensor:=	IxS11HOZCylHP	;//	贴标处推料气缸¶原点
+//贴标机
 
-  
+xLabelJobRdySignal:=IxLabelJobRdySignal	;//	贴标机JOBRDY信号
+xLabelReadySignal:=IxLabelReadySignal	;//	贴标机READY信号
+xLabelErrorSignal:= NOT IxLabelErrorSignal	;//	贴标机ERROR信号
 
-
+//贴标机到位传感器
+arSensorReached[1]:=IxS11SensorReached1	;//	贴标工位¶检查到位传感器1
+arSensorReached[2]:=IxS11SensorReached2;//	贴标工位¶检查到位传感器2
 
 ]]></ST>
       </Implementation>
     </Action>
     <Action Name="Alarm" Id="{a33f9682-7f1b-43f4-848a-88bf388c8dd9}">
       <Implementation>
-        <ST><![CDATA[//
+        <ST><![CDATA[
 station.adwAlarm[1].00:=station.xInitTimeout;	  			//S08Label 初始化超时
 
 ]]></ST>
@@ -53,8 +65,8 @@ station.adwAlarm[1].00:=station.xInitTimeout;	  			//S08Label 初始化超时
     <Action Name="Delay" Id="{640cd6ea-e634-4695-b63f-ca35a17c42ab}">
       <Implementation>
         <ST><![CDATA[(*arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );*)//TipAuto使用
-arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );
-arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
+arTonDelay[02](IN:= station.iStepAuto=100 , PT:=T#1S , Q=> , ET=> );//贴标识用
+arTonDelay[03](IN:=station.iStepAuto =40  , PT:=stData.TimeS[1] , Q=> , ET=> );//计算贴标延时
 arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[05](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[06](IN:= , PT:=T#0.1S , Q=> , ET=> );
@@ -114,17 +126,38 @@ CASE station.iStepAuto OF
 			station.iStepAuto:= 10;
 		END_IF
     10: //复位数据 
-			station.iStepAuto:=999;
-	999://----Single Run Finish----
-			
-		station.iStepAuto :=0;
-		IF NOT station.xSingleContinuousRun THEN
-			station.xSingleRunFlag:=FALSE;
-		END_IF
-		
-		station.xCycleEnable:=FALSE;	
-		station.xDone:=TRUE;
-		station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
+			xQLabelStart:=FALSE;			//	贴标机Start
+			station.iStepAuto:=20;
+		20://等待第一个传感器感应到
+			IF  arSensorReached[1] THEN
+						station.iStepAuto:=30;	
+			END_IF
+		30://等待两个传感器都感应到
+				IF  arSensorReached[1]  AND arSensorReached[2] THEN
+						station.iStepAuto:=40;	
+			END_IF
+		40://计算延时触发贴标
+				IF   arTonDelay[03].Q THEN
+					station.iStepAuto:=100;
+				END_IF
+		100://开始触发贴标
+					xQLabelStart:=TRUE;			//	贴标机Start
+					IF	arTonDelay[02].Q THEN
+							station.iStepAuto:=110;
+					END_IF							
+		110://等待贴标完成
+					xQLabelStart:=FALSE;			//	贴标机Start
+					station.iStepAuto:=999;
+
+		999://----Single Run Finish----
+				station.iStepAuto :=0;
+				IF NOT station.xSingleContinuousRun THEN
+					station.xSingleRunFlag:=FALSE;
+				END_IF
+				
+				station.xCycleEnable:=FALSE;	
+				//station.xDone:=TRUE;
+				station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
 	ELSE
 		;	
 END_CASE
@@ -147,6 +180,7 @@ CASE station.iStepInit OF
   	END_IF	
 10://复位数据
     station.iStepInit:=999;	
+		xQLabelStart:=FALSE;			//	贴标机Start
 999://初始化完成	
 	station.iStepInit:=0;
 	station.xInitDone:=TRUE;  
@@ -157,8 +191,7 @@ END_IF
     </Action>
     <Action Name="General" Id="{7e130351-797e-4ca7-9bb7-b3cd5e7898e1}">
       <Implementation>
-        <ST><![CDATA[
-]]></ST>
+        <ST><![CDATA[]]></ST>
       </Implementation>
     </Action>
     <Action Name="ILC" Id="{a47065cb-3ca4-400c-a537-51952fd23503}">
@@ -205,6 +238,10 @@ fbHOZCyl_1.xOnILC	:=	TRUE;
         <ST><![CDATA[(**************************气缸输出********************************)
 QxS11HOZCylWP	:=fbHOZCyl_1.xWP_Valve;//	贴标处推料气缸¶动点
 QxS11HOZCylHP	:=fbHOZCyl_1.xHP_Valve;//	贴标处推料气缸¶原点
+//贴标机
+QxLabelStart	:=xQLabelStart;			//	贴标机Start
+QxLabelRibwarn:=xQLabelRibwarn;	//	贴标机RIBWARN
+QxLabelReset	:=xQLabelReset;		//	贴标机RESET
 ]]></ST>
       </Implementation>
     </Action>
@@ -216,7 +253,11 @@ QxS11HOZCylHP	:=fbHOZCyl_1.xHP_Valve;//	贴标处推料气缸¶原点
       <LineId Id="28" Count="0" />
       <LineId Id="42" Count="0" />
       <LineId Id="40" Count="1" />
-      <LineId Id="10" Count="3" />
+      <LineId Id="44" Count="3" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="82" Count="1" />
+      <LineId Id="13" Count="0" />
       <LineId Id="8" Count="0" />
     </LineIds>
     <LineIds Name="S13_Labeling.Alarm">
@@ -237,8 +278,27 @@ QxS11HOZCylHP	:=fbHOZCyl_1.xHP_Valve;//	贴标处推料气缸¶原点
       <LineId Id="1452" Count="0" />
       <LineId Id="1183" Count="1" />
       <LineId Id="1256" Count="0" />
+      <LineId Id="1456" Count="0" />
       <LineId Id="1259" Count="0" />
-      <LineId Id="1212" Count="2" />
+      <LineId Id="1457" Count="0" />
+      <LineId Id="1460" Count="0" />
+      <LineId Id="1458" Count="1" />
+      <LineId Id="1462" Count="0" />
+      <LineId Id="1467" Count="1" />
+      <LineId Id="1465" Count="0" />
+      <LineId Id="1473" Count="0" />
+      <LineId Id="1501" Count="0" />
+      <LineId Id="1474" Count="0" />
+      <LineId Id="1502" Count="0" />
+      <LineId Id="1475" Count="1" />
+      <LineId Id="1489" Count="1" />
+      <LineId Id="1488" Count="0" />
+      <LineId Id="1483" Count="0" />
+      <LineId Id="1495" Count="0" />
+      <LineId Id="1484" Count="0" />
+      <LineId Id="1477" Count="0" />
+      <LineId Id="1212" Count="0" />
+      <LineId Id="1214" Count="0" />
       <LineId Id="1453" Count="2" />
       <LineId Id="1215" Count="2" />
       <LineId Id="1451" Count="0" />
@@ -246,11 +306,12 @@ QxS11HOZCylHP	:=fbHOZCyl_1.xHP_Valve;//	贴标处推料气缸¶原点
     </LineIds>
     <LineIds Name="S13_Labeling.FlowInit">
       <LineId Id="437" Count="9" />
-      <LineId Id="461" Count="5" />
+      <LineId Id="461" Count="0" />
+      <LineId Id="467" Count="0" />
+      <LineId Id="462" Count="4" />
       <LineId Id="436" Count="0" />
     </LineIds>
     <LineIds Name="S13_Labeling.General">
-      <LineId Id="361" Count="0" />
       <LineId Id="381" Count="0" />
     </LineIds>
     <LineIds Name="S13_Labeling.ILC">
@@ -282,6 +343,8 @@ QxS11HOZCylHP	:=fbHOZCyl_1.xHP_Valve;//	贴标处推料气缸¶原点
       <LineId Id="2" Count="0" />
       <LineId Id="21" Count="1" />
       <LineId Id="20" Count="0" />
+      <LineId Id="24" Count="2" />
+      <LineId Id="23" Count="0" />
     </LineIds>
   </POU>
 </TcPlcObject>

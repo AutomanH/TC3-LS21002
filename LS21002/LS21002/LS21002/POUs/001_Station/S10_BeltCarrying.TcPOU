@@ -18,7 +18,8 @@ VAR
 	tsModuleProcess:ARRAY[1..gc_ModuleProNo] OF DUT_Process;
 	xClearModuleProcessDone:BOOL;
 	bClearProcessStep	:BYTE;
-	i: INT;
+	i,t: INT;
+	bCounter:BYTE;
 
 	 //报警屏蔽
 	_AlarmDisable: BOOL;
@@ -28,14 +29,19 @@ VAR
 	xBeltMovingEnable: BOOL;
 	wActionCalibration: WORD;
 	// 起始位置
-	rStartPoition: REAL;
+	rStartPoition: ARRAY[0..8] OF REAL;
 	// 结束位置
-	rEndPoition: REAL;
+	rEndPoition:ARRAY[0..8] OF  REAL;
 	NextPosR_TRIG: R_TRIG;
 	tes: REAL;
 	// 深孔板检测传感器
 	xBoxSensorReached: ARRAY[1..2] of BOOL;
 	xNotStop: BOOL;
+	// 间距
+	rcalcPos: ARRAY[0..7] OF REAL;
+	//平均数
+	raverage:REAL;
+	_xFirstCycle: BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -77,7 +83,7 @@ station.adwAlarm[1].00:=station.xInitTimeout;	  			//S09CardCarrying 初始化�
       <Implementation>
         <ST><![CDATA[arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );
 (*arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );*)//已被使用
-arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
+(*arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );*)//已被使用
 arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[05](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[06](IN:= , PT:=T#0.1S , Q=> , ET=> );
@@ -113,7 +119,8 @@ THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
 ELSIF station.xRunning   OR 
-(tsModuleProcess[1].xProcessStarted AND NOT tsModuleProcess[1].xProcessCompleted)//皮带线伺服移动
+(tsModuleProcess[1].xProcessStarted AND NOT tsModuleProcess[1].xProcessCompleted) OR//皮带线伺服移动
+(tsModuleProcess[2].xProcessStarted AND NOT tsModuleProcess[2].xProcessCompleted)  //皮带线回原点
 THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
 CASE station.iStepAuto OF	  
@@ -156,51 +163,60 @@ CASE station.iStepAuto OF
 	25://不允许各工位放料
 				station.xDone :=FALSE;
 				station.iStepAuto:=80;	   
-	80://伺服电机给定jog速度
+	80://
 				tsModuleProcess[1].xProcessNotStarted:=TRUE;
-			 stData.Axis[16].rRelativeVelocity:=30;
-			  stData.Axis[16].rRelativeDistance:=46.0*2;
-				fbROTAxisMove.xRelativeAuto:=TRUE;
-			 //stData.Axis[16].rJogVelocity :=10;  
-			 // rStartPoition:=fbROTAxisMove.rActPos;
+			  rStartPoition[t]:=fbROTAxisMove.rActPos;
 				station.iStepAuto:=90;
-	90://检查jog的距离
-			tsModuleProcess[1].xProcessStarted:=TRUE;
-			 IF	 (*fbROTAxisMove.rActPos>(rStartPoition+46*2) *) fbROTAxisMove.xRelativeDone  THEN 
-						fbROTAxisMove.xJogForwardAuto := FALSE ; 
-						fbROTAxisMove.xJogForwardHmi := FALSE ; 
-					  stData.Axis[16].rJogVelocity :=1; 
-							station.iStepAuto:=95; 
-				//ELSE
-				//		 IF  fbMachine[1].xAutoMode THEN
-				//			 fbROTAxisMove.xJogForwardAuto := TRUE ;
-				//		 ELSE
-				//			 fbROTAxisMove.xJogForwardHmi:=TRUE;
-				//		 END_IF 	
-			 END_IF
-	95://
-				IF  fbMachine[1].xAutoMode THEN
-				fbROTAxisMove.xJogForwardAuto := TRUE ;
-			ELSE
-			 	fbROTAxisMove.xJogForwardHmi:=TRUE;
-			 END_IF 
-			 	station.iStepAuto:=100; 	
-	100://jog到目标点
-				IF    arAxisSensorH[16] THEN
-				  	fbROTAxisMove.xJogForwardAuto := FALSE ; 
-						fbROTAxisMove.xJogForwardHmi := FALSE ; 
-						station.iStepAuto:=110; 
-				END_IF			
-	110://数据传递
-			tsModuleProcess[1].xProcessCompleted:=TRUE;
+	90://储存当前位置
+			stData.Axis[16].rMovePosition[3]:=fbROTAxisMove.rActPos;
+			station.iStepAuto:=95;
+	95://读取原点偏移量
+		 IF NOT _xFirstCycle THEN
+		   stData.Axis[16].rMovePosition[2] := stData.Axis[16].rMovePosition[1] ;
+		   _xFirstCycle := TRUE ;
+		 END_IF
+		   station.iStepAuto:=110;	
+	//100://判断伺服位置是否合理
+	//		IF      ( ABS(stData.Axis[16].rMovePosition[3]+stData.Axis[16].rRelativeDistance))+0.1>=ABS(stData.Axis[16].rMovePosition[2]) AND 
+	//				  ( ABS(stData.Axis[16].rMovePosition[3]+stData.Axis[16].rRelativeDistance))-0.1<=ABS(stData.Axis[16].rMovePosition[2]) THEN
+	//				  station.iStepAuto:=120;(*伺服已经移动过了*)
+	//		ELSIF  ABS(stData.Axis[16].rMovePosition[3])+0.1>=ABS(stData.Axis[16].rMovePosition[2]) AND 
+	//			   ABS(stData.Axis[16].rMovePosition[3])-0.1<=ABS(stData.Axis[16].rMovePosition[2]) THEN
+	//			     station.iStepAuto:=110;(*伺服需要移动*)
+	//		END_IF
+	110://数据更新 位置
+				 tsModuleProcess[1].xProcessStarted:=TRUE;
+				 stData.Axis[16].rMovePosition[2] := stData.Axis[16].rMovePosition[2] +stData.Axis[16].rRelativeDistance ;
+				 arTonDelay[03](IN:= FALSE , PT:=T#50MS , Q=> , ET=> );
+				 station.iStepAuto:= 120;
+	120:
+					arTonDelay[03](IN:= TRUE , PT:=T#50MS , Q=> , ET=> );
+					IF arTonDelay[03].Q THEN
+						 station.iStepAuto:=130;
+				 			arTonDelay[03](IN:=FALSE, PT:=T#50MS , Q=> , ET=> );
+				   END_IF
+	130:
+					fbROTAxisMove.xMoveAuto[2]:=TRUE;
+				 IF fbROTAxisMove.xMoveInPos[2] THEN
+					 station.iStepAuto :=140; 
+				 END_IF	
+	140://计算链条移动次数
+				tsModuleProcess[1].xProcessCompleted:=TRUE;
+				bCounter:=bCounter +1;
+				station.iStepAuto:=142;	
+	142://是否需要回原点
+			  IF 	bCounter >8 THEN
+						station.iStepAuto:=1000;	
+				ELSE
+				 			station.iStepAuto:=150;	
+				END_IF
+	150://数据传递
 			FOR i:=4 TO 1 BY -1 DO
 						MEMCPY(ADR(arBeltLineFixtureData[i+2]),ADR(arBeltLineFixtureData[i]),SIZEOF(arBeltLineFixtureData[i]));
 			END_FOR
 			 station.iStepAuto:=160;
 	160://启动各个工位
-		//	IF   S07_BoxCarrying.xBeltLineControl THEN
-			 			fbStation[7].xDone:=FALSE;
-		//	END_IF
+			fbStation[7].xDone:=FALSE;
 			fbStation[9].xDone:=FALSE;
 			station.iStepAuto:=500;	
 	500://清除本站过程记录
@@ -215,11 +231,37 @@ CASE station.iStepAuto OF
 			station.xSingleRunFlag:=FALSE;
 		END_IF
 		station.xCycleEnable:=FALSE;	
-		station.xDone:=TRUE;
+		station.xDone:=TRUE;	
+
+1000://回原点流程
+				fbROTAxisMove.xReferenceAuto := TRUE ;
+				station.iStepAuto:=1010;	
+1010://伺服回原点完成
+	IF  fbAxisHome[16].home_done THEN 
+		 fbROTAxisMove.xReferenceAuto  := FALSE ;
+		 	station.iStepAuto:=1050;	
+	END_IF
+//1020://如果有报警
+//		IF		fbROTAxisMove.xError THEN
+//		 		fbROTAxisMove.xAlarmResetHmi:=TRUE;
+//		ELSE
+//		 		fbROTAxisMove.xAlarmResetHmi:=FALSE;	
+//				 station.iStepAuto:=1050;	  
+//		END_IF
+1050://回原点完成
+				tsModuleProcess[2].xProcessCompleted:=TRUE;
+				_xFirstCycle:=FALSE;
+				bCounter:=1;	
+				station.iStepAuto:=142;	
+				
+
+
+	
 	ELSE
 		;	
 END_CASE
-END_IF]]></ST>
+END_IF
+]]></ST>
       </Implementation>
     </Action>
     <Action Name="FlowInit" Id="{8c3c079e-1f18-47e9-9b8f-ac261d5376ea}">
@@ -234,6 +276,8 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
+	bCounter:=1;
+	_xFirstCycle:=FALSE;
 	station.iStepInit:=20;
 20://伺服上电
 	fbROTAxisMove.xPowerInit :=TRUE;
@@ -256,6 +300,13 @@ CASE station.iStepInit OF
 		 fbROTAxisMove.xReferenceAuto  := FALSE ;
 		 station.iStepInit:=70;  
 	END_IF	
+//65://如果有报警
+//		IF		fbROTAxisMove.xError THEN
+//		 		fbROTAxisMove.xAlarmResetHmi:=TRUE;
+//		ELSE
+//		 		fbROTAxisMove.xAlarmResetHmi:=FALSE;	
+//				 station.iStepInit:=70;  
+//		END_IF
 70://伺服去待机点
 	fbROTAxisMove.xMoveAuto[1]:=TRUE;
 	IF  fbROTAxisMove.xMoveInPos[1] THEN
@@ -287,7 +338,7 @@ CASE wActionCalibration OF
 	 IF  arAxisSensorH[16] THEN 
 		 fbROTAxisMove.xJogForwardAuto := FALSE ; 
 			wActionCalibration:=30;
-			rStartPoition:=fbROTAxisMove.rActPos;
+			rStartPoition[t]:=fbROTAxisMove.rActPos;
 	 END_IF 
   60: //高速走定位，理论值前10MM处停止
 	stData.Axis[16].rMovePosition[5] :=(755*5)-10; 
@@ -305,10 +356,10 @@ CASE wActionCalibration OF
  IF   arAxisSensorH[16] THEN 
 	 fbROTAxisMove.xJogForwardAuto := FALSE ; 
  		wActionCalibration:=90;
-		rEndPoition:=fbROTAxisMove.rActPos;
+		rEndPoition[t]:=fbROTAxisMove.rActPos;
  END_IF 
 90:
-	stData.Axis[16].rRelativeDistance:=((rEndPoition-rStartPoition)/85);
+		stData.Axis[16].rRelativeDistance:=((rEndPoition[t]-rStartPoition[t])/85);
 		wActionCalibration:=0;
 END_CASE  
   
@@ -319,8 +370,6 @@ NextPosR_TRIG(CLK:= fbMachine[1].xManualMode AND fbROTAxisMove.xMoveHmi[6], Q=> 
 IF  NextPosR_TRIG.Q THEN
  stData.Axis[16].rMovePosition[6]:=fbROTAxisMove.rActPos +fbROTAxisMove.rRelativeDistance;
 END_IF
-
-tes:=((rEndPoition-rStartPoition)/80);
   
 {endregion}]]></ST>
       </Implementation>
@@ -421,6 +470,7 @@ fbROTAxisMove.xRelativeILC:=TRUE;
     <LineIds Name="S10_BeltCarrying.FlowAuto">
       <LineId Id="1155" Count="6" />
       <LineId Id="2060" Count="0" />
+      <LineId Id="2159" Count="0" />
       <LineId Id="1162" Count="3" />
       <LineId Id="1167" Count="15" />
       <LineId Id="1452" Count="0" />
@@ -441,49 +491,58 @@ fbROTAxisMove.xRelativeILC:=TRUE;
       <LineId Id="1946" Count="0" />
       <LineId Id="1969" Count="0" />
       <LineId Id="2033" Count="0" />
-      <LineId Id="2061" Count="1" />
-      <LineId Id="2064" Count="0" />
-      <LineId Id="1972" Count="0" />
       <LineId Id="1974" Count="0" />
       <LineId Id="1970" Count="0" />
-      <LineId Id="2022" Count="0" />
-      <LineId Id="2059" Count="0" />
-      <LineId Id="1973" Count="0" />
-      <LineId Id="2013" Count="1" />
-      <LineId Id="1984" Count="0" />
-      <LineId Id="2012" Count="0" />
-      <LineId Id="2053" Count="0" />
-      <LineId Id="2055" Count="3" />
-      <LineId Id="2054" Count="0" />
-      <LineId Id="1981" Count="0" />
-      <LineId Id="2015" Count="0" />
-      <LineId Id="2017" Count="3" />
-      <LineId Id="2016" Count="0" />
-      <LineId Id="2021" Count="0" />
-      <LineId Id="1992" Count="2" />
-      <LineId Id="2011" Count="0" />
-      <LineId Id="1996" Count="0" />
-      <LineId Id="1995" Count="0" />
+      <LineId Id="2094" Count="0" />
+      <LineId Id="2096" Count="1" />
+      <LineId Id="2124" Count="4" />
+      <LineId Id="2123" Count="0" />
+      <LineId Id="2098" Count="12" />
+      <LineId Id="2112" Count="9" />
+      <LineId Id="2093" Count="0" />
+      <LineId Id="2129" Count="0" />
+      <LineId Id="2178" Count="0" />
+      <LineId Id="2130" Count="2" />
+      <LineId Id="2136" Count="0" />
+      <LineId Id="2144" Count="0" />
+      <LineId Id="2140" Count="0" />
+      <LineId Id="2143" Count="0" />
+      <LineId Id="2138" Count="0" />
       <LineId Id="1843" Count="0" />
-      <LineId Id="1848" Count="0" />
       <LineId Id="2047" Count="0" />
       <LineId Id="2049" Count="0" />
       <LineId Id="2048" Count="0" />
       <LineId Id="1849" Count="0" />
       <LineId Id="1909" Count="0" />
-      <LineId Id="2031" Count="1" />
-      <LineId Id="1901" Count="0" />
+      <LineId Id="2032" Count="0" />
       <LineId Id="1949" Count="0" />
       <LineId Id="1904" Count="4" />
       <LineId Id="1777" Count="1" />
       <LineId Id="1212" Count="0" />
       <LineId Id="1214" Count="0" />
       <LineId Id="1453" Count="2" />
-      <LineId Id="1216" Count="4" />
+      <LineId Id="1216" Count="1" />
+      <LineId Id="2153" Count="1" />
+      <LineId Id="2158" Count="0" />
+      <LineId Id="2160" Count="0" />
+      <LineId Id="2170" Count="3" />
+      <LineId Id="2166" Count="0" />
+      <LineId Id="2181" Count="5" />
+      <LineId Id="2180" Count="0" />
+      <LineId Id="2163" Count="1" />
+      <LineId Id="2188" Count="0" />
+      <LineId Id="2187" Count="0" />
+      <LineId Id="2177" Count="0" />
+      <LineId Id="2155" Count="2" />
+      <LineId Id="2152" Count="0" />
+      <LineId Id="1218" Count="2" />
       <LineId Id="1224" Count="0" />
+      <LineId Id="2067" Count="0" />
     </LineIds>
     <LineIds Name="S10_BeltCarrying.FlowInit">
       <LineId Id="437" Count="9" />
+      <LineId Id="596" Count="0" />
+      <LineId Id="595" Count="0" />
       <LineId Id="467" Count="0" />
       <LineId Id="478" Count="0" />
       <LineId Id="553" Count="1" />
@@ -493,6 +552,9 @@ fbROTAxisMove.xRelativeILC:=TRUE;
       <LineId Id="567" Count="0" />
       <LineId Id="588" Count="6" />
       <LineId Id="585" Count="0" />
+      <LineId Id="601" Count="2" />
+      <LineId Id="605" Count="2" />
+      <LineId Id="604" Count="0" />
       <LineId Id="571" Count="2" />
       <LineId Id="577" Count="0" />
       <LineId Id="575" Count="0" />
@@ -501,14 +563,14 @@ fbROTAxisMove.xRelativeILC:=TRUE;
     </LineIds>
     <LineIds Name="S10_BeltCarrying.General">
       <LineId Id="429" Count="0" />
-      <LineId Id="383" Count="38" />
+      <LineId Id="383" Count="35" />
+      <LineId Id="435" Count="0" />
+      <LineId Id="420" Count="1" />
       <LineId Id="432" Count="0" />
       <LineId Id="423" Count="0" />
       <LineId Id="431" Count="0" />
       <LineId Id="424" Count="3" />
       <LineId Id="422" Count="0" />
-      <LineId Id="361" Count="0" />
-      <LineId Id="381" Count="0" />
       <LineId Id="434" Count="0" />
       <LineId Id="433" Count="0" />
     </LineIds>

@@ -10,6 +10,7 @@ VAR
 //	fbHOZAdjustCyl_2	:REFERENCE TO FB_Cylinder:=fbCylinder[21];	//	上层水平调整气缸2
 	fbHOZAdjustCyl_3	:REFERENCE TO FB_Cylinder:=fbCylinder[22];	//	下层水平调整气缸1
 //	fbHOZAdjustCyl_4	:REFERENCE TO FB_Cylinder:=fbCylinder[23];	//	下层水平调整气缸2
+	fbAluCoverCyl			:REFERENCE TO FB_Cylinder:=fbCylinder[44];//铝膜胀气轴
 	//伺服
 	fbZAxisMove_1	 :REFERENCE TO FB_Axis:=fbAxis[10];	//	热熔工位-Z轴伺服1（右）
 	fbZAxisMove_2	 :REFERENCE TO FB_Axis:=fbAxis[11];	//		热熔工位-Z轴伺服2
@@ -48,6 +49,9 @@ fbHOZAdjustCyl_1.xWP_Sensor	:=	IxS04HOZAdjustCyl_1WP AND IxS04HOZAdjustCyl_2WP	;
 fbHOZAdjustCyl_1.xHP_Sensor	:=	IxS04HOZAdjustCyl_1HP	 AND IxS04HOZAdjustCyl_2hP;
 fbHOZAdjustCyl_3.xWP_Sensor	:=	IxS04HOZAdjustCyl_3WP	 AND IxS04HOZAdjustCyl_4WP;
 fbHOZAdjustCyl_3.xHP_Sensor	:=	IxS04HOZAdjustCyl_3HP	AND IxS04HOZAdjustCyl_4HP;
+
+fbAluCoverCyl.xWP_Sensor :=fbAluCoverCyl.xWP_Valve;
+fbAluCoverCyl.xHP_Sensor:=fbAluCoverCyl.xHP_Valve;
 
 
 
@@ -444,6 +448,8 @@ fbZAxisMove_2.xMoveILC[3] :=
 fbZAxisMove_2.xMoveILC[4] :=
 fbZAxisMove_2.xMoveILC[5] := TRUE ;
 
+fbAluCoverCyl.xOffILC:=true;
+fbAluCoverCyl.xOnILC:=true;
 ]]></ST>
       </Implementation>
     </Action>
@@ -508,7 +514,7 @@ QxS04HOZAdjustCyl_1HP	:=	fbHOZAdjustCyl_1.xHP_Valve	;
 QxS04HOZAdjustCyl_3WP	:=	fbHOZAdjustCyl_3.xWP_Valve	;
 QxS04HOZAdjustCyl_3HP	:=	fbHOZAdjustCyl_3.xHP_Valve	;
 
-]]></ST>
+QxS04AluCoverCylWP:=fbAluCoverCyl.xWP_Valve;]]></ST>
       </Implementation>
     </Action>
     <LineIds Name="S04_AluCovering">
@@ -519,6 +525,9 @@ QxS04HOZAdjustCyl_3HP	:=	fbHOZAdjustCyl_3.xHP_Valve	;
       <LineId Id="28" Count="0" />
       <LineId Id="66" Count="1" />
       <LineId Id="70" Count="1" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="74" Count="0" />
       <LineId Id="65" Count="0" />
       <LineId Id="55" Count="0" />
       <LineId Id="40" Count="1" />
@@ -665,8 +674,10 @@ QxS04HOZAdjustCyl_3HP	:=	fbHOZAdjustCyl_3.xHP_Valve	;
       <LineId Id="302" Count="0" />
       <LineId Id="307" Count="0" />
       <LineId Id="290" Count="0" />
-      <LineId Id="316" Count="14" />
-      <LineId Id="274" Count="0" />
+      <LineId Id="316" Count="13" />
+      <LineId Id="331" Count="0" />
+      <LineId Id="330" Count="0" />
+      <LineId Id="341" Count="1" />
     </LineIds>
     <LineIds Name="S04_AluCovering.TipAuto">
       <LineId Id="118" Count="0" />

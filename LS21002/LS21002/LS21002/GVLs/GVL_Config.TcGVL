@@ -5,7 +5,7 @@
 	gc_xEstopYesORno               		  : BOOL:=1;   //机器拍急停:1-停机重新初始化，0-继续跑不用初始化
 	gc_uiAxisNum						  : INT:=19;//轴数量
 	gc_uiAxisMoveNum          			 : INT:=10 ;  //轴点位数量
-	gc_uiCylinderNum					  : INT:=40; //气缸数量 
+	gc_uiCylinderNum					  : INT:=50; //气缸数量 
 	gc_uiMachineNum						 : INT:=1;	//机器数量
 	gc_uiStationNum				 		  : INT:=16;//工站数量
 	gc_uiHMI_Num						  : INT:=2;	//人机界面数量
@@ -24,6 +24,7 @@
 	gc_AliveNum									:INT:=10;//心跳包数量
 	gc_uiValveNum								:INT:=2;//真空发生器个数
 	gc_uiSlaveNum								:INT:=4;//电柜EtherCAT状态
+	gc_uiLoadcellNum						:INT:=6;//压力传感器个数
 END_VAR]]></Declaration>
   </GVL>
 </TcPlcObject>

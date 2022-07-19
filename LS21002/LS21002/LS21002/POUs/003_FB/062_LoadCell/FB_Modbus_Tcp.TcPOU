@@ -1,0 +1,381 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_Modbus_Tcp" Id="{b8aebcb4-f74a-4fad-ac5e-649e260e6632}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Modbus_Tcp
+VAR_INPUT
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+ stModbusPara:stModbusPara;
+{region "02 :Input status 读取离散量输入相关变量"}
+fbReadInputs :FB_MBReadInputs;(*读取离散量输入功能块*)
+xReadInputs:BOOL;(*执行条件*)
+wQuantityInputs:WORD:=1;(*读取个数*)
+wMBAddInputs:WORD:=1;(*读取起始地址*)
+arwDataInputs :ARRAY[1..20] OF WORD;(*存放离散量输入的值*)
+{endregion}
+{region "01:Coil status 读取/写入线圈相关变量"}
+fbReadCoils :FB_MBReadCoils;(*读取线圈功能块*)
+xReadCoils:BOOL;(*执行条件*)
+wQuantityReadCoils:WORD:=1;(*读取个数*)
+wMBAddReadCoils:WORD:=1;(*读取起始地址*)
+arwDataReadCoils :ARRAY[1..20] OF WORD;(*存放线圈的值*)
+	 
+			
+fbWriteCoils :FB_MBWriteCoils;(*写入线圈功能块*)
+xWriteCoils:BOOL;(*执行条件*)
+wQuantityWriteCoils:WORD:=1;(*读取个数*)
+wMBAddWriteCoils:WORD:=1;(*读取起始地址*)
+arwDataWriteCoils :ARRAY[1..20] OF WORD;(*写入线圈的值*)				 
+						
+
+fbWriteSingleCoil :FB_MBWriteSingleCoil;(*写入单个线圈功能块*)
+xWriteSingleCoil:BOOL;(*执行条件*)
+wMBAddWriteSingleCoil:WORD:=1;(*读取起始地址*)
+wDataWriteSingleCoil :WORD;(*写入单个线圈的值*)	
+{endregion}
+{region "04:Input Register 读取输入寄存器相关变量"}	 
+fbReadInputRegs :FB_MBReadInputRegs;(*读取输入寄存器功能块*)
+xReadInputRegs:BOOL;(*执行条件*)
+wQuantityReadInputRegs:WORD:=1;(*读取个数*)
+wMBAddReadInputRegs:WORD:=1;(*读取起始地址*)
+arwDataReadInputRegs :ARRAY[1..20] OF WORD;(*存放输入寄存器的值*)
+{endregion}
+
+{region "03:Holding  Register 读取或写入保存寄存器相关变量"}	 
+fbReadRegs :FB_MBReadRegs;(*读取保存寄存器功能块*)
+xReadRegs:BOOL;(*执行条件*)
+wQuantityReadRegs:WORD:=1;(*读取个数*)
+wMBAddReadRegs:WORD:=1;(*读取起始地址*)
+arwDataReadRegs :ARRAY[1..20] OF WORD;(*存放保持寄存器的值*)
+	 
+fbWriteRegs :FB_MBWriteRegs;(*写入保存寄存器功能块*)
+xWriteRegs:BOOL;(*执行条件*)
+wQuantityWriteRegs:WORD:=1;(*读取个数*)
+wMBAddWriteRegs:WORD:=1;(*读取起始地址*)
+arwDataWriteRegs :ARRAY[1..20] OF WORD;(*存放保持寄存器的值*)			
+				 
+		
+fbWriteSingleReg :FB_MBWriteSingleReg;(*写入单个保存寄存器功能块*)
+xWriteSingleReg:BOOL;(*执行条件*)
+wMBAddWriteSingleReg:WORD:=1;(*读取起始地址*)
+wDataWriteSingleReg : WORD;(*存放保持寄存器的值*)					
+{endregion}
+{region "浮点数转化为十进制数 IEEE-754 32位浮点数"}
+dwData:DWORD;
+rSIGN:LREAL;//符号位
+bExponent:BYTE;//指数
+dwExponent:DWORD;//指数位
+rExponent:LREAL;
+rFraction:LREAL;//尾数位	
+_xNeedFlag:BOOL;//标记
+iMathStep,iMathOldstep:INT;
+l_b_repeat:BOOL;
+{endregion}
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[
+	 
+	 ]]></ST>
+    </Implementation>
+    <Method Name="M_IEEE754" Id="{481be5b5-8461-48fb-a5df-9d578407a47b}">
+      <Declaration><![CDATA[METHOD M_IEEE754 : REAL
+VAR_INPUT
+END_VAR
+VAR
+ E:BYTE;
+ M:WORD;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[REPEAT
+	 l_b_repeat := FALSE;
+	 CASE iMathStep OF
+		0: //符号位
+						
+			 IF  dwData.31 =0 THEN
+					 rSIGN:=1;
+			 ELSIF dwData.31 =1 THEN
+					rSIGN:=-1;
+			 END_IF
+			  l_b_repeat := TRUE;
+			 iMathStep:=iMathStep +1;
+		1://阶码或指数部分
+			 bExponent.7:=dwData.30;
+			 bExponent.6:=dwData.29;
+			 bExponent.5:=dwData.28;
+			 bExponent.4:=dwData.27;
+			 bExponent.3:=dwData.26;
+			 bExponent.2:=dwData.25;
+			 bExponent.1:=dwData.24;
+			 bExponent.0:=dwData.23;
+			 bExponent:=bExponent-127;
+			 rExponent:=TO_LREAL(EXPT(2,bExponent));
+			 l_b_repeat := TRUE;
+			 iMathStep:=iMathStep +1;
+		2://尾数部分
+				IF  dwData.22 THEN
+				 		rFraction:=1.0+1*EXPT(2,-1);
+				ELSE
+				 		rFraction:=1.0;
+				END_IF
+				IF  dwData.21 THEN
+				 		rFraction:=rFraction+1*EXPT(2,-2);
+				END_IF
+				IF  dwData.20 THEN
+				 		rFraction:=rFraction+1*EXPT(2,-3);
+				END_IF
+				IF  dwData.19 THEN
+				 			rFraction:=rFraction+1*EXPT(2,-4);
+				END_IF
+				IF  dwData.18 THEN
+				 			rFraction:=rFraction+1*EXPT(2,-5);
+				END_IF
+				IF  dwData.17 THEN
+				 		rFraction:=rFraction+1*EXPT(2,-6);
+				END_IF
+				IF  dwData.16 THEN
+				 		rFraction:=rFraction+1*EXPT(2,-7);
+				END_IF
+				IF  dwData.15 THEN
+				 			rFraction:=rFraction+1*EXPT(2,-8);
+				END_IF
+				IF  dwData.14 THEN
+				 		rFraction:=rFraction+1*EXPT(2,-9);
+				END_IF
+				IF  dwData.13 THEN
+				 		rFraction:=rFraction+1*EXPT(2,-10);
+				END_IF
+				IF  dwData.12 THEN
+				 			rFraction:=rFraction+1*EXPT(2,-11);
+				END_IF
+				IF  dwData.11 THEN
+				 			rFraction:=rFraction+1*EXPT(2,-12);
+				END_IF
+				IF  dwData.10 THEN
+				 		rFraction:=rFraction+1*EXPT(2,-13);
+				END_IF
+				IF  dwData.09 THEN
+				 		rFraction:=rFraction+1*EXPT(2,-14);
+				END_IF
+				IF  dwData.08 THEN
+				 			rFraction:=rFraction+1*EXPT(2,-15);
+				END_IF
+				IF  dwData.07 THEN
+				 		rFraction:=rFraction+1*EXPT(2,-16);
+				END_IF
+				IF  dwData.06 THEN
+				 		rFraction:=rFraction+1*EXPT(2,-17);
+				END_IF
+				IF  dwData.05 THEN
+				 			rFraction:=rFraction+1*EXPT(2,-18);
+				END_IF
+				IF  dwData.04 THEN
+				 		rFraction:=rFraction+1*EXPT(2,-19);
+				END_IF
+				IF  dwData.03 THEN
+				 		rFraction:=rFraction+1*EXPT(2,-20);
+				END_IF
+				IF  dwData.02 THEN
+				 			rFraction:=rFraction+1*EXPT(2,-21);
+				END_IF
+				IF  dwData.01 THEN
+				 			rFraction:=rFraction+1*EXPT(2,-22);
+				END_IF
+				IF  dwData.00 THEN
+				 		rFraction:=rFraction+1*EXPT(2,-23);
+				END_IF
+				l_b_repeat := TRUE;
+			 	iMathStep:=iMathStep +1;
+		3://计算结果
+			M_IEEE754:=rSIGN*rExponent*rFraction;
+			l_b_repeat := TRUE;
+			iMathStep:=999;
+	END_CASE
+UNTIL l_b_repeat = FALSE
+END_REPEAT;
+
+
+]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_Modbus" Id="{99d6a75f-350b-4653-9116-8208d970ab3b}">
+      <Declaration><![CDATA[METHOD M_Modbus : BOOL
+VAR_INPUT
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[{region "02 :Input status 读取离散量输入相关变量"}
+fbReadInputs(
+	sIPAddr:= stModbusPara.strSlaveIP, 
+	nTCPPort:=stModbusPara.iSlavePort , 
+	nUnitID:= stModbusPara.bySlaveID, 
+	nQuantity:= wQuantityInputs, 
+	nMBAddr:= wMBAddInputs, 
+	cbLength:=SIZEOF(arwDataInputs) , 
+	pDestAddr:=ADR(arwDataInputs) , 
+	bExecute:=xReadInputs , 
+	tTimeout:=T#1S, 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> , 
+	cbRead=> );
+{endregion}
+	 
+{region "01:Coil status 读取/写入线圈相关变量"}
+fbReadCoils(
+	sIPAddr:= 	stModbusPara.strSlaveIP, 
+	nTCPPort:= 	stModbusPara.iSlavePort ,
+	nUnitID:= 	stModbusPara.bySlaveID,  
+	nQuantity:=wQuantityReadCoils , 
+	nMBAddr:=wMBAddReadCoils , 
+	cbLength:=SIZEOF(arwDataReadCoils) , 
+	pDestAddr:= ADR(arwDataReadCoils), 
+	bExecute:= xReadCoils, 
+	tTimeout:= T#1S, 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> , 
+	cbRead=> );
+	 
+fbWriteCoils(
+	sIPAddr:=	 	stModbusPara.strSlaveIP, 
+	nTCPPort:= 	stModbusPara.iSlavePort ,
+	nUnitID:= 	stModbusPara.bySlaveID,  
+	nQuantity:= wQuantityWriteCoils, 
+	nMBAddr:=wMBAddWriteCoils , 
+	cbLength:= SIZEOF(arwDataWriteCoils), 
+	pSrcAddr:= ADR(arwDataWriteCoils), 
+	bExecute:= xWriteCoils, 
+	tTimeout:=  T#1S, 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> );		
+
+fbWriteSingleCoil(
+	sIPAddr:= 	stModbusPara.strSlaveIP, 
+	nTCPPort:= 	stModbusPara.iSlavePort ,
+	nUnitID:= 	stModbusPara.bySlaveID,  
+	nMBAddr:=wMBAddWriteSingleCoil , 
+	nValue:= wDataWriteSingleCoil, 
+	bExecute:= xWriteSingleCoil, 
+	tTimeout:= T#1S, 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> );
+{endregion}
+{region "04:Input Register 读取输入寄存器相关变量"}	
+ fbReadInputRegs(
+	sIPAddr:= 	stModbusPara.strSlaveIP,  
+	nTCPPort:= 	stModbusPara.iSlavePort , 
+	nUnitID:= 	stModbusPara.bySlaveID,   
+	nQuantity:=wQuantityReadInputRegs , 
+	nMBAddr:= wMBAddReadInputRegs, 
+	cbLength:= SIZEOF(arwDataReadInputRegs), 
+	pDestAddr:=ADR(arwDataReadInputRegs) , 
+	bExecute:=xReadInputRegs , 
+	tTimeout:=  T#1S, 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> , 
+	cbRead=> );
+		 
+{endregion}
+	 
+{region "03:Holding  Register 读取或写入保存寄存器相关变量"}	 
+fbReadRegs(
+	sIPAddr:= 	stModbusPara.strSlaveIP, 
+	nTCPPort:= 	stModbusPara.iSlavePort ,
+	nUnitID:= 	stModbusPara.bySlaveID,  
+	nQuantity:= wQuantityReadRegs, 
+	nMBAddr:= wMBAddReadRegs, 
+	cbLength:= SIZEOF(arwDataReadRegs), 
+	pDestAddr:=ADR(arwDataReadRegs) , 
+	bExecute:= xReadRegs, 
+	tTimeout:= T#1S, 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> , 
+	cbRead=> );
+		 
+fbWriteRegs(
+	sIPAddr:= 	stModbusPara.strSlaveIP, 
+	nTCPPort:= 	stModbusPara.iSlavePort ,
+	nUnitID:= 	stModbusPara.bySlaveID,  
+	nQuantity:=wQuantityWriteRegs , 
+	nMBAddr:=wMBAddWriteRegs , 
+	cbLength:= SIZEOF(arwDataWriteRegs), 
+	pSrcAddr:=ADR(arwDataWriteRegs) , 
+	bExecute:=xWriteRegs , 
+	tTimeout:=  T#1S, 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> );
+		 
+fbWriteSingleReg(
+	sIPAddr:= 	stModbusPara.strSlaveIP,  
+	nTCPPort:= 	stModbusPara.iSlavePort , 
+	nUnitID:= 	stModbusPara.bySlaveID,   
+	nMBAddr:= wMBAddWriteSingleReg, 
+	nValue:=wDataWriteSingleReg , 
+	bExecute:=xWriteSingleReg , 
+	tTimeout:=  T#1S, 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> );	 		
+{endregion}
+	 ]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_Modbus_Tcp">
+      <LineId Id="194" Count="2" />
+    </LineIds>
+    <LineIds Name="FB_Modbus_Tcp.M_IEEE754">
+      <LineId Id="377" Count="0" />
+      <LineId Id="169" Count="0" />
+      <LineId Id="323" Count="0" />
+      <LineId Id="170" Count="0" />
+      <LineId Id="176" Count="4" />
+      <LineId Id="173" Count="0" />
+      <LineId Id="474" Count="0" />
+      <LineId Id="181" Count="0" />
+      <LineId Id="187" Count="0" />
+      <LineId Id="190" Count="8" />
+      <LineId Id="188" Count="0" />
+      <LineId Id="471" Count="0" />
+      <LineId Id="174" Count="0" />
+      <LineId Id="200" Count="0" />
+      <LineId Id="379" Count="1" />
+      <LineId Id="382" Count="1" />
+      <LineId Id="381" Count="0" />
+      <LineId Id="388" Count="1" />
+      <LineId Id="392" Count="0" />
+      <LineId Id="394" Count="1" />
+      <LineId Id="398" Count="2" />
+      <LineId Id="393" Count="0" />
+      <LineId Id="412" Count="1" />
+      <LineId Id="416" Count="8" />
+      <LineId Id="385" Count="0" />
+      <LineId Id="425" Count="44" />
+      <LineId Id="297" Count="0" />
+      <LineId Id="236" Count="0" />
+      <LineId Id="259" Count="1" />
+      <LineId Id="473" Count="0" />
+      <LineId Id="172" Count="0" />
+      <LineId Id="326" Count="0" />
+      <LineId Id="378" Count="0" />
+      <LineId Id="171" Count="0" />
+      <LineId Id="147" Count="0" />
+      <LineId Id="157" Count="0" />
+      <LineId Id="53" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_Modbus_Tcp.M_Modbus">
+      <LineId Id="6" Count="73" />
+      <LineId Id="127" Count="0" />
+      <LineId Id="80" Count="43" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

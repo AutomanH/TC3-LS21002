@@ -600,6 +600,9 @@ CASE station.iStepAuto OF
 					IF  (S10_BeltCarrying.xBoxSensorReached[1] AND S10_BeltCarrying.xBoxSensorReached[2]) THEN 
 							station.xDone:=TRUE;
 							station.iStepAuto :=0;
+					ELSIF 		 NOT  arMainlineFixtureData[arCurFixtureNumStation[17]].xMaterialOnOff AND
+										 NOT  arMainlineFixtureData[arCurFixtureNumStation[18]].xMaterialOnOff  THEN///皮带线卡片已到但是主流线产品未到
+					 			station.iStepAuto :=0;
 					END_IF
 		ELSIF   NOT arBeltLineFixtureData[5].xMaterialOnOff AND  NOT arBeltLineFixtureData[6].xMaterialOnOff  THEN
 						  station.xDone:=TRUE;
@@ -1182,6 +1185,8 @@ END_CASE
       <LineId Id="4108" Count="0" />
       <LineId Id="3785" Count="0" />
       <LineId Id="4187" Count="0" />
+      <LineId Id="4194" Count="0" />
+      <LineId Id="4196" Count="1" />
       <LineId Id="4112" Count="0" />
       <LineId Id="4185" Count="1" />
       <LineId Id="4188" Count="0" />

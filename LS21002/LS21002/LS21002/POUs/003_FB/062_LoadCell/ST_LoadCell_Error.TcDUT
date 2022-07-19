@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_LoadCell_Error" Id="{6511a998-27a0-4ded-a8ab-474b158ac8e7}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE ST_LoadCell_Error :
+(
+		No_ERROR := 0,	
+  	FLT_PARA             			 	:= 1, (* 程序配置参数有问题 *)
+  	FLT_CONNECT       		      := 2, (*有通信报警*) 
+		FLT_CMD_TIMEOUT    		 			:= 15(* 命令超时 *) 
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

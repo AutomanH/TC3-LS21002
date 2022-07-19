@@ -402,6 +402,8 @@ CASE station.iStepInit OF
 			fbZAxisStepMotor2.xJogForwardAuto:=FALSE;
 			fbZAxisStepMotor1.xJogForwardHMI:=FALSE;
 			fbZAxisStepMotor2.xJogForwardHMI:=FALSE;
+			fbZAxisStepMotor1.xJogBackwardsHmi:=FALSE;
+			fbZAxisStepMotor2.xJogBackwardsHmi:=FALSE;
 			station.iStepInit:=30;
 //20://检查是否需要破真空	
 //	IF tsModuleProcess[1].xProcessStarted AND
@@ -432,36 +434,61 @@ CASE station.iStepInit OF
 60://X轴气缸回原
 	fbHOZCyl.xInit:=TRUE;
 	IF  fbHOZCyl.xHP_Delay THEN
-		station.iStepInit:=70;	
+		station.iStepInit:=65;	
 	END_IF		
-70://卡片步进上电
+65://卡片步进上电
 	fbZAxisStepMotor1.xPowerInit:=TRUE;
 	fbZAxisStepMotor2.xPowerInit:=TRUE;
 	IF		fbZAxisStepMotor1.xPowerOn AND
 		    fbZAxisStepMotor2.xPowerOn THEN
-			station.iStepInit:=80;	
+			station.iStepInit:=70;	
 	END_IF
-80://回原点
-	fbZAxisStepMotor1.xReferenceAuto:=TRUE;
-	fbZAxisStepMotor2.xReferenceAuto:=TRUE;
-	station.iStepinit:=90;
-90:
-   IF  fbAxisHome[17].home_done  AND 
-		fbAxisHome[18].home_done THEN 
-		fbZAxisStepMotor1.xAlarmResetHmi:=TRUE;
-		fbZAxisStepMotor2.xAlarmResetHmi:=TRUE;
-		 fbZAxisStepMotor1.xReferenceAuto:=FALSE;
-		fbZAxisStepMotor2.xReferenceAuto:=FALSE;
-		 station.iStepInit:=100;  
-	END_IF
-
-100://参考点
-			 fbZAxisStepMotor1.xMoveAuto[1]:=TRUE;
-			 fbZAxisStepMotor2.xMoveAuto[1]:=TRUE;
-			IF    fbZAxisStepMotor1.xMoveInPos[1] AND 
-				fbZAxisStepMotor2.xMoveInPos[1] THEN
-				station.iStepInit:=999;
+70://卡片1步进
+			IF NOT  arxCardCheckSensor[2] THEN
+					 IF  NOT  arAxisSensorH[18] THEN
+									 fbZAxisStepMotor2.xJogBackwardsHmi:=TRUE;
+						ELSE		
+						 			fbZAxisStepMotor2.xJogBackwardsHmi:=FALSE;
+									station.iStepInit:=72;	
+						END_IF
+						
+			ELSE
+					station.iStepInit:=72;	
 			END_IF
+	 
+
+72:		 //卡片2步进
+			IF NOT  arxCardCheckSensor[1] THEN
+					 IF  NOT  arAxisSensorH[17] THEN
+									 fbZAxisStepMotor1.xJogBackwardsHmi:=TRUE;
+						ELSE		
+						 			fbZAxisStepMotor1.xJogBackwardsHmi:=FALSE;
+						END_IF
+						station.iStepInit:=999;	
+			ELSE
+					station.iStepInit:=999;	
+			END_IF
+//80://回原点
+//	fbZAxisStepMotor1.xReferenceAuto:=TRUE;
+//	fbZAxisStepMotor2.xReferenceAuto:=TRUE;
+//	station.iStepinit:=90;
+//90:
+//   IF  fbAxisHome[17].home_done  AND 
+//		fbAxisHome[18].home_done THEN 
+//		fbZAxisStepMotor1.xAlarmResetHmi:=TRUE;
+//		fbZAxisStepMotor2.xAlarmResetHmi:=TRUE;
+//		 fbZAxisStepMotor1.xReferenceAuto:=FALSE;
+//		fbZAxisStepMotor2.xReferenceAuto:=FALSE;
+//		 station.iStepInit:=100;  
+//	END_IF
+
+//100://参考点
+//			 fbZAxisStepMotor1.xMoveAuto[1]:=TRUE;
+//			 fbZAxisStepMotor2.xMoveAuto[1]:=TRUE;
+//			IF    fbZAxisStepMotor1.xMoveInPos[1] AND 
+//				fbZAxisStepMotor2.xMoveInPos[1] THEN
+//				station.iStepInit:=999;
+//			END_IF
 999://初始化完成	
 	station.iStepInit:=0;
 	station.xInitDone:=TRUE;  
@@ -747,6 +774,8 @@ QxS08VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;]]></ST>
       <LineId Id="437" Count="9" />
       <LineId Id="575" Count="2" />
       <LineId Id="574" Count="0" />
+      <LineId Id="610" Count="0" />
+      <LineId Id="612" Count="0" />
       <LineId Id="467" Count="0" />
       <LineId Id="469" Count="1" />
       <LineId Id="473" Count="1" />
@@ -771,6 +800,23 @@ QxS08VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;]]></ST>
       <LineId Id="512" Count="1" />
       <LineId Id="516" Count="0" />
       <LineId Id="514" Count="0" />
+      <LineId Id="589" Count="0" />
+      <LineId Id="591" Count="0" />
+      <LineId Id="609" Count="0" />
+      <LineId Id="621" Count="0" />
+      <LineId Id="623" Count="1" />
+      <LineId Id="636" Count="0" />
+      <LineId Id="622" Count="0" />
+      <LineId Id="625" Count="0" />
+      <LineId Id="613" Count="0" />
+      <LineId Id="619" Count="0" />
+      <LineId Id="618" Count="0" />
+      <LineId Id="620" Count="0" />
+      <LineId Id="616" Count="0" />
+      <LineId Id="608" Count="0" />
+      <LineId Id="626" Count="0" />
+      <LineId Id="628" Count="7" />
+      <LineId Id="596" Count="0" />
       <LineId Id="521" Count="0" />
       <LineId Id="523" Count="1" />
       <LineId Id="522" Count="0" />

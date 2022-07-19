@@ -1,0 +1,307 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_LoadCell" Id="{efc32d14-fdbe-433e-bed9-862bb38cebfc}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_LoadCell EXTENDS FB_Modbus_Tcp
+(*
+********************************************************************************
+* Name: FB_LoadCell
+*
+* Author:  Automanh
+* Version: 1.0.0
+*
+* Description:
+*  LoadSell of XJC-CF3600-F
+*
+* Remarks:
+*
+* Revisions:
+*   1.0 -AutomanH Rebuild
+*********************************************************************************)
+VAR_INPUT
+xIStart:BOOL;
+xIReset:BOOL;
+LocalClient:stModbusPara;
+stDeviceOpe	:DUT_DeviceOpe;
+xIDeviceRunning:BOOL;
+xManualMode:BOOL;
+xAutoMode:BOOL;
+END_VAR
+VAR_OUTPUT
+ xQRdyCmd:BOOL;
+ xQBusy:BOOL;
+ xQError:BOOL;
+ xQDone:BOOL;
+ xQZeroSingle:BOOL;
+ stParOut					: ST_LoadCell_ParOut;//参数输出
+END_VAR
+VAR
+	// modbustcp连接步骤
+	iCmdStep,iCmdOldStep: INT;
+	ardwData:ARRAY[1..5] OF DWORD;
+	arwData:ARRAY[1..2]OF WORD;
+	arwTempData:ARRAY[1..2]OF WORD;
+	wLEN:INT;
+	wADDR:INT;
+	strFunCode:STRING; 
+	
+	OperR_TRIG:ARRAY[1..20] OF R_TRIG;
+	tTimeout:TON;
+	tonDelay:TON;
+	eErrorID		: ST_LoadCell_Error;(*错误码*)
+	// 操作类型
+	iOperType: INT;
+	i:INT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ACT_Op();
+ACT_Cmd();
+ACT_Reset();
+ACT_Error();]]></ST>
+    </Implementation>
+    <Action Name="ACT_Cmd" Id="{4d20a460-1fe8-4974-863f-5f7f4f91b116}">
+      <Implementation>
+        <ST><![CDATA[MEMCPY(ADR(SUPER^.stModbusPara),ADR(LocalClient),SIZEOF(localClient));
+SUPER^.M_Modbus();
+IF  NOT  xQBusy THEN
+ 		xQRdyCmd:=TRUE;
+ELSE
+ 		xQRdyCmd:=FALSE;	
+END_IF
+tTimeout(IN:= iCmdStep =iCmdOldStep AND iCmdStep<>0 , PT:= T#5S, Q=> , ET=> );
+IF		tTimeout.Q THEN
+ 	xQError:=TRUE;
+	eErrorID:=ST_LoadCell_Error.FLT_CMD_TIMEOUT;
+END_IF
+	 
+CASE iCmdStep OF
+		0: //等待启动
+			 	IF  xIStart THEN
+					xQBusy:=TRUE;
+					xQDone:=FALSE;
+					xIStart:=FALSE;
+					iCmdStep:=iCmdStep +1;
+				END_IF
+		1://等待选择modbusTcp功能码
+			 		iCmdOldStep:=iCmdStep;
+					iCmdStep:=iCmdStep +1;
+		2://判断
+					iCmdOldStep:=iCmdStep;
+					IF   strFunCode = '10H' THEN
+							 tonDelay(IN:= FALSE);
+							xQZeroSingle:=TRUE;
+							iCmdStep:=iCmdStep +1;
+					ELSIF strFunCode = '04H' THEN
+					 		iCmdStep:=iCmdStep +2;
+					END_IF
+					
+		3://等待至少20ms以上
+				iCmdOldStep:=iCmdStep;
+				 tonDelay(IN:= TRUE, PT:=T#100MS , Q=> , ET=> );
+				 IF  tonDelay.Q THEN
+								 tonDelay(IN:= FALSE);
+								xQZeroSingle:=FALSE;
+								iCmdStep:=iCmdStep +1;
+				 END_IF
+		4://读取当前GROSS值
+	  					 wQuantityReadInputRegs:=wLEN;(*读取个数*)
+	  					 wMBAddReadInputRegs:=wADDR;(*读取起始地址*)
+	  					 xReadInputRegs:= TRUE;	
+	  				 IF  fbReadInputRegs.bBusy  THEN
+	  								xReadInputRegs:=FALSE;
+	  							 iCmdOldStep:=iCmdStep;
+	  							 iCmdStep:=iCmdStep +1;
+	  				 END_IF	
+	  5://触发
+	  	 	iCmdOldStep:=iCmdStep;
+	  	 	IF  NOT 	fbReadInputRegs.bBusy AND  NOT  	fbReadInputRegs.bError THEN
+	  					MEMCPY(ADR(arwData),ADR(arwDataReadInputRegs[1] ),SIZEOF(arwData) ); 
+	  					arwTempData[1]:=arwData[2];
+	  					arwTempData[2]:=arwData[1];
+	  					MEMCPY(ADR(ardwData[1]),ADR(arwTempData ),SIZEOF(ardwData[1]) );
+	  					MEMCPY(ADR(dwData),ADR(ardwData[1] ),SIZEOF(dwData));	 
+	  						iCmdStep:=iCmdStep +1;
+	  		ELSIF   	fbReadInputRegs.bError THEN
+	  					iCmdStep:=0;		
+	  					eErrorID:=ST_LoadCell_Error.FLT_PARA;					
+	  		END_IF	
+	  		
+	  6://运算
+	  	 		iCmdOldStep:=iCmdStep;
+	  	 		iMathStep:=0;
+	  			stParOut.rGROSSWeight:=M_IEEE754();;
+	  			iCmdStep:=iCmdStep +1;
+		7:
+			 		xQDone:=TRUE;
+					xQBusy:=FALSE;	 
+					iCmdOldStep:=iCmdStep;		
+					iCmdStep :=0;					 
+END_CASE;
+	 
+
+	]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Error" Id="{504fd7d7-2408-439f-889d-82a5dfa8009e}">
+      <Implementation>
+        <ST><![CDATA[IF  eErrorID <> 0 THEN
+	xQError:=TRUE;
+END_IF
+//报错内容输出
+CASE eErrorID OF 
+ 	ST_LoadCell_Error.No_ERROR:
+		stParOut.sErrorID:='NO ERROR';
+	ST_LoadCell_Error.FLT_CMD_TIMEOUT:
+		stParOut.sErrorID:='FLT_CMD_TIMEOUT';
+	ST_LoadCell_Error.FLT_PARA:
+		stParOut.sErrorID:='FLT_PARA';
+	
+	
+END_CASE]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_OP" Id="{8941661e-a2d2-4680-80a6-1861a81a1cd7}">
+      <Implementation>
+        <ST><![CDATA[OperR_TRIG[1](CLK:= (xManualMode AND  stDeviceOpe.xReadGROSSHmi) OR((xAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xReadGROSSAuto) , Q=> );	//获取总值GROSS		
+OperR_TRIG[2](CLK:= (xManualMode AND  stDeviceOpe.XSetZEROHmi) OR((xAutoMode OR  xIDeviceRunning) AND stDeviceOpe.XSetZEROAuto) , Q=> );		//请零或去皮		
+OperR_TRIG[3](CLK:= (xManualMode AND  stDeviceOpe.xSetZEROSaveHmi) OR((xAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xSetZEROSaveAuto) , Q=> );		//保存零点	
+OperR_TRIG[13](CLK:=xIReset , Q=> );	//Cancel	
+FOR  i:= 1 TO 20 BY 1 DO
+ 	IF   OperR_TRIG[i].Q THEN
+				iOperType:= i;
+				xIStart:=TRUE;
+				EXIT;
+	END_IF
+END_FOR
+
+IF   iOperType =1 THEN
+  strFunCode:='04H';
+ 	wLEN := 2;
+	wADDR:=0;
+ELSIF   iOperType =2 THEN
+ 	strFunCode:='10H';
+	wLEN := 2;
+	wADDR:=0;
+//由于modbus TCP中不支持10H功能码，所以外接Q点清零
+ //	wLEN := 2;
+//	wADDR:=4604;
+END_IF
+stDeviceOpe.xReadGROSSHmi:=stDeviceOpe.xReadGROSSAuto :=FALSE;	//获取总值GROSS
+stDeviceOpe.XSetZEROHmi:=stDeviceOpe.XSetZEROAuto		:=FALSE;//去皮或请零
+
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Reset" Id="{ada698be-6006-419e-b92a-e1eeb2240882}">
+      <Implementation>
+        <ST><![CDATA[IF ( xIReset = TRUE )THEN
+ 		iCmdStep:=0;
+//  	iStep := 0 ;
+//		iLoadStep:=0;
+  	xQError := FALSE ;
+ //	xBusy  := FALSE;
+		xQBusy  := FALSE;
+//	xStart  := FALSE;
+		eErrorID:=MT_MCK_ERROR.No_ERROR;
+		xIReset:=FALSE;
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="FB_LoadCell">
+      <LineId Id="53" Count="2" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_LoadCell.ACT_Cmd">
+      <LineId Id="2" Count="0" />
+      <LineId Id="62" Count="0" />
+      <LineId Id="331" Count="10" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="342" Count="1" />
+      <LineId Id="60" Count="0" />
+      <LineId Id="354" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="366" Count="0" />
+      <LineId Id="344" Count="0" />
+      <LineId Id="446" Count="0" />
+      <LineId Id="451" Count="0" />
+      <LineId Id="453" Count="0" />
+      <LineId Id="468" Count="0" />
+      <LineId Id="454" Count="0" />
+      <LineId Id="464" Count="0" />
+      <LineId Id="462" Count="1" />
+      <LineId Id="455" Count="0" />
+      <LineId Id="452" Count="0" />
+      <LineId Id="456" Count="0" />
+      <LineId Id="465" Count="0" />
+      <LineId Id="457" Count="0" />
+      <LineId Id="459" Count="0" />
+      <LineId Id="467" Count="0" />
+      <LineId Id="466" Count="0" />
+      <LineId Id="460" Count="1" />
+      <LineId Id="414" Count="0" />
+      <LineId Id="416" Count="7" />
+      <LineId Id="425" Count="18" />
+      <LineId Id="348" Count="4" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="85" Count="0" />
+      <LineId Id="326" Count="0" />
+      <LineId Id="413" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_LoadCell.ACT_Error">
+      <LineId Id="1" Count="0" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="3" Count="0" />
+      <LineId Id="7" Count="1" />
+      <LineId Id="42" Count="1" />
+      <LineId Id="9" Count="2" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="6" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_LoadCell.ACT_OP">
+      <LineId Id="2" Count="0" />
+      <LineId Id="54" Count="0" />
+      <LineId Id="180" Count="0" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="82" Count="0" />
+      <LineId Id="85" Count="0" />
+      <LineId Id="174" Count="0" />
+      <LineId Id="132" Count="0" />
+      <LineId Id="86" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="131" Count="0" />
+      <LineId Id="124" Count="0" />
+      <LineId Id="189" Count="0" />
+      <LineId Id="133" Count="0" />
+      <LineId Id="186" Count="0" />
+      <LineId Id="135" Count="0" />
+      <LineId Id="190" Count="0" />
+      <LineId Id="194" Count="1" />
+      <LineId Id="193" Count="0" />
+      <LineId Id="191" Count="0" />
+      <LineId Id="137" Count="0" />
+      <LineId Id="134" Count="0" />
+      <LineId Id="90" Count="1" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_LoadCell.ACT_Reset">
+      <LineId Id="2" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="3" Count="0" />
+      <LineId Id="5" Count="2" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="8" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

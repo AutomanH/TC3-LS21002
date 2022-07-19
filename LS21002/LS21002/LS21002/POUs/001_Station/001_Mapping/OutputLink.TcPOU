@@ -55,21 +55,21 @@ ET01_Output[3].Output.4	:=	QxS02ROTCylWP	;//	注液工位¶防滴液¶动点输�
 ET01_Output[3].Output.5	:=	QxS02ROTCylHP	;//	注液工位¶防滴液¶原点输出
 ET01_Output[3].Output.6	:=	QxS03HOZAdjustCyl_1WP	;//	相机工位¶上层水平调整气缸1¶动点输出
 ET01_Output[3].Output.7	:=	QxS03HOZAdjustCyl_1HP	;//	相机工位¶上层水平调整气缸1¶原点输出
-ET01_Output[3].Output.8	:=	QxShare44	;//	备用
-ET01_Output[3].Output.9	:=	QxShare45	;//	备用
+ET01_Output[3].Output.8	:=	QxS03HOZAdjustCyl_2WP	;//	相机工位¶上层水平调整气缸2¶动点输出
+ET01_Output[3].Output.9	:=	QxS03HOZAdjustCyl_2HP	;//	相机工位¶上层水平调整气缸2¶原点输出
 ET01_Output[3].Output.10	:=	QxS03HOZAdjustCyl_3WP	;//	相机工位¶上层水平调整气缸3¶动点输出
 ET01_Output[3].Output.11	:=	QxS03HOZAdjustCyl_3HP	;//	相机工位¶上层水平调整气缸3¶原点输出
-ET01_Output[3].Output.12	:=	QxShare46	;//	备用
-ET01_Output[3].Output.13	:=	QxShare47	;//	备用
-ET01_Output[3].Output.14	:=	QxS03HOZAdjustCyl_5WP	;//	相机工位¶下层水平调整气缸1¶动点输出
-ET01_Output[3].Output.15	:=	QxS03HOZAdjustCyl_5HP	;//	相机工位¶下层水平调整气缸1¶原点输出
-ET01_Output[4].Output.0	:=	QxShare52	;//	备用
-ET01_Output[4].Output.1	:=	QxShare51	;//	备用
-ET01_Output[4].Output.2	:=	QxS03HOZAdjustCyl_7WP	;//	相机工位¶下层水平调整气缸3¶动点输出
-ET01_Output[4].Output.3	:=	QxS03HOZAdjustCyl_7HP	;//	相机工位¶下层水平调整气缸3¶原点输出
-ET01_Output[4].Output.4	:=	QxShare50	;//	备用
-ET01_Output[4].Output.5	:=	QxShare53	;//	备用
-ET01_Output[4].Output.6	:=	QxShare7	;//	备用
+ET01_Output[3].Output.12	:=	QxS03HOZAdjustCyl_4WP	;//	相机工位¶上层水平调整气缸4¶动点输出
+ET01_Output[3].Output.13	:=	QxS03HOZAdjustCyl_4HP	;//	相机工位¶上层水平调整气缸4¶原点输出
+ET01_Output[3].Output.14	:=	QxS03HOZAdjustCyl_5WP	;//	相机工位¶上层水平调整气缸5¶动点输出
+ET01_Output[3].Output.15	:=	QxS03HOZAdjustCyl_5HP	;//	相机工位¶上层水平调整气缸5¶原点输出
+ET01_Output[4].Output.0	:=	QxS03HOZAdjustCyl_6WP	;//	相机工位¶上层水平调整气缸6¶动点输出
+ET01_Output[4].Output.1	:=	QxS03HOZAdjustCyl_6HP	;//	相机工位¶上层水平调整气缸6¶原点输出
+ET01_Output[4].Output.2	:=	QxS03HOZAdjustCyl_7WP	;//	相机工位¶上层水平调整气缸7¶动点输出
+ET01_Output[4].Output.3	:=	QxS03HOZAdjustCyl_7HP	;//	相机工位¶上层水平调整气缸7¶原点输出
+ET01_Output[4].Output.4	:=	QxS03HOZAdjustCyl_8WP	;//	相机工位¶上层水平调整气缸8¶动点输出
+ET01_Output[4].Output.5	:=	QxS03HOZAdjustCyl_8HP	;//	相机工位¶上层水平调整气缸8¶原点输出
+ET01_Output[4].Output.6	:=	QxS04AluCoverCylWP	;//	铝膜胀气轴
 ET01_Output[4].Output.7	:=	QxShare8	;//	备用
 ET01_Output[4].Output.8	:=	QxShare9	;//	备用
 ET01_Output[4].Output.9	:=	QxShare10	;//	备用
@@ -164,12 +164,12 @@ ET02_Output[3].Output.12	:=	QxS08VTCCyl_1WP	;//	卡片工位¶Z轴气缸1¶动�
 ET02_Output[3].Output.13	:=	QxS08VTCCyl_1HP	;//	卡片工位¶Z轴气缸1¶原点输出
 ET02_Output[3].Output.14	:=	QxS08VTCCyl_2WP	;//	卡片工位¶Z轴气缸2¶动点输出
 ET02_Output[3].Output.15	:=	QxS08VTCCyl_2HP	;//	卡片工位¶Z轴气缸2¶原点输出
-ET02_Output[4].Output.0	:=	QxShare80	;//	备用
-ET02_Output[4].Output.1	:=	QxShare81	;//	备用
-ET02_Output[4].Output.2	:=	QxShare82	;//	备用
-ET02_Output[4].Output.3	:=	QxShare83	;//	备用
-ET02_Output[4].Output.4	:=	QxShare84	;//	备用
-ET02_Output[4].Output.5	:=	QxShare85	;//	备用
+ET02_Output[4].Output.0	:=	QxS06PressCyl_1WP	;//	切膜下压气缸1动点输出
+ET02_Output[4].Output.1	:=	QxS06PressCyl_1HP	;//	切膜下压气缸1原点输出
+ET02_Output[4].Output.2	:=	QxS06PressCyl_2WP	;//	切膜下压气缸2动点输出
+ET02_Output[4].Output.3	:=	QxS06PressCyl_2HP	;//	切膜下压气缸2原点输出
+ET02_Output[4].Output.4	:=	QxS06VTCCylWP	;//	垂直切膜气缸1动点输出
+ET02_Output[4].Output.5	:=	QxS06VTCCylHP	;//	垂直切膜气缸2原点输出
 ET02_Output[4].Output.6	:=	QxShare86	;//	备用
 ET02_Output[4].Output.7	:=	QxShare87	;//	备用
 ET02_Output[4].Output.8	:=	QxShare88	;//	备用
@@ -185,7 +185,23 @@ ET02_Output[4].Output.15	:=	QxShare95	;//	备用
     </Action>
     <Action Name="ACT_ET03" Id="{4c3f35d5-c1b2-4514-a9d5-142363eb864a}">
       <Implementation>
-        <ST><![CDATA[]]></ST>
+        <ST><![CDATA[ET03_Output[1].Output.0	:=	QxLoadCell_1ZeroInput	;//	压力传感器1清零信号
+ET03_Output[1].Output.1	:=	QxLoadCell_2ZeroInput	;//	压力传感器2清零信号
+ET03_Output[1].Output.2	:=	QxLoadCell_3ZeroInput	;//	压力传感器3清零信号
+ET03_Output[1].Output.3	:=	QxLoadCell_4ZeroInput	;//	压力传感器4清零信号
+ET03_Output[1].Output.4	:=	QxLoadCell_5ZeroInput	;//	压力传感器5清零信号
+ET03_Output[1].Output.5	:=	QxLoadCell_6ZeroInput	;//	压力传感器6清零信号
+ET03_Output[1].Output.6	:=	QxShare165	;//	备用
+ET03_Output[1].Output.7	:=	QxShare166	;//	备用
+ET03_Output[1].Output.8	:=	QxShare167	;//	备用
+ET03_Output[1].Output.9	:=	QxShare168	;//	备用
+ET03_Output[1].Output.10	:=	QxShare169	;//	备用
+ET03_Output[1].Output.11	:=	QxShare170	;//	备用
+ET03_Output[1].Output.12	:=	QxShare171	;//	备用
+ET03_Output[1].Output.13	:=	QxShare172	;//	备用
+ET03_Output[1].Output.14	:=	QxShare173	;//	备用
+ET03_Output[1].Output.15	:=	QxShare174	;//	备用
+]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_ET04" Id="{98a3b441-9716-46f3-a4fc-a90567759c7b}">
@@ -232,14 +248,19 @@ ET04_Output[2].Output.15	:=	QxShare163	;//	备用
       <LineId Id="5" Count="0" />
     </LineIds>
     <LineIds Name="OutputLink.ACT_ET01">
-      <LineId Id="348" Count="95" />
+      <LineId Id="348" Count="37" />
+      <LineId Id="444" Count="15" />
+      <LineId Id="402" Count="6" />
+      <LineId Id="460" Count="0" />
+      <LineId Id="410" Count="33" />
       <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="OutputLink.ACT_ET02">
-      <LineId Id="257" Count="63" />
+      <LineId Id="321" Count="63" />
       <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="OutputLink.ACT_ET03">
+      <LineId Id="2" Count="15" />
       <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="OutputLink.ACT_ET04">

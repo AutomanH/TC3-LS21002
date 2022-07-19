@@ -15,9 +15,10 @@ VAR
 	fbGlampAdjustCyl_1	:REFERENCE TO FB_Cylinder:=fbCylinder[30];	//	下方夹爪调整气缸1
 	fbGlampAdjustCyl_2	:REFERENCE TO FB_Cylinder:=fbCylinder[31];	//	下方夹爪调整气缸2
 	fbGlampAdjustCyl_3	:REFERENCE TO FB_Cylinder:=fbCylinder[32];	//	下方夹爪调整气缸3
-
-
-
+	fbPressCyl_1				:REFERENCE TO FB_Cylinder:=fbCylinder[41];	//	压膜气缸1
+	fbPressCyl_2				:REFERENCE TO FB_Cylinder:=fbCylinder[42];	//	压膜气缸2
+	fbVTCCyl						:REFERENCE TO FB_Cylinder:=fbCylinder[43];	//	切膜垂直气缸
+	
 	//伺服
 	fbROTAxisMove	 :REFERENCE TO FB_Axis:=fbAxis[14];	//	切膜工位丢膜伺服
 
@@ -68,15 +69,19 @@ fbHOZCyl.xWP_Sensor	:=	IxS06HOZCyl_1WP	;
 fbHOZCyl.xHP_Sensor	:=	IxS06HOZCyl_1HP	;
 fbVTCAdjustCyl.xWP_Sensor	:=	IxS06VTCAdjustCylWP	;
 fbVTCAdjustCyl.xHP_Sensor	:=	IxS06VTCAdjustCylHP	;
-fbGlampAdjustCyl_1.xWP_Sensor	:=	IxS06GlampAdjustCyl_1WP	;
+fbGlampAdjustCyl_1.xWP_Sensor	:= NOT 	IxS06GlampAdjustCyl_1HP AND arTonDelay[04].Q; //IxS06GlampAdjustCyl_1WP	;
 fbGlampAdjustCyl_1.xHP_Sensor	:=	IxS06GlampAdjustCyl_1HP	;
-fbGlampAdjustCyl_2.xWP_Sensor	:=	IxS06GlampAdjustCyl_2WP	;
+fbGlampAdjustCyl_2.xWP_Sensor	:=	NOT IxS06GlampAdjustCyl_2HP AND arTonDelay[05].Q;//IxS06GlampAdjustCyl_2WP	;
 fbGlampAdjustCyl_2.xHP_Sensor	:=	IxS06GlampAdjustCyl_2HP	;
-fbGlampAdjustCyl_3.xWP_Sensor	:=	IxS06GlampAdjustCyl_3WP	;
+fbGlampAdjustCyl_3.xWP_Sensor	:=	NOT IxS06GlampAdjustCyl_3HP AND arTonDelay[06].Q;//IxS06GlampAdjustCyl_3WP	;
 fbGlampAdjustCyl_3.xHP_Sensor	:=	IxS06GlampAdjustCyl_3HP	;
 
-
-
+fbPressCyl_1.xWP_Sensor:=IxS06PressCyl_1HP	;
+fbPressCyl_1.xHP_Sensor:=IxS06PressCyl_1WP	;
+fbPressCyl_2.xWP_Sensor:=IxS06PressCyl_2HP	;
+fbPressCyl_2.xHP_Sensor:=IxS06PressCyl_2WP	;
+fbVTCCyl.xWP_Sensor:=	   IxS06VTCCylHP	;
+fbVTCCyl.xHP_Sensor:=	   IxS06VTCCylWP	;
   
 
 
@@ -113,9 +118,9 @@ station.adwAlarm[1].18	:=	fbGlampAdjustCyl_3.xWP_Off	;//	S06切膜工位调整�
         <ST><![CDATA[arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );
 arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
-arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
-arTonDelay[05](IN:= , PT:=T#0.1S , Q=> , ET=> );
-arTonDelay[06](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[04](IN:= fbGlampAdjustCyl_1.xWP_Valve AND  NOT IxS06GlampAdjustCyl_1HP, PT:=T#500MS , Q=> , ET=> );
+arTonDelay[05](IN:= fbGlampAdjustCyl_2.xWP_Valve AND  NOT IxS06GlampAdjustCyl_2HP, PT:=T#500MS , Q=> , ET=> );
+arTonDelay[06](IN:= fbGlampAdjustCyl_3.xWP_Valve AND  NOT IxS06GlampAdjustCyl_3HP, PT:=T#500MS , Q=> , ET=> );
 arTonDelay[07](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[08](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[09](IN:= , PT:=T#0.1S , Q=> , ET=> );
@@ -184,11 +189,11 @@ CASE station.iStepAuto OF
 			IF   	 NOT  arMainlineFixtureData[arCurFixtureNumStation[14]].xMaterialOnOff AND
 					 NOT arMainlineFixtureData[arCurFixtureNumStation[15]].xMaterialOnOff AND 
 					 NOT arMainlineFixtureData[arCurFixtureNumStation[16]].xMaterialOnOff THEN
-					 xS05WorkPermit:=TRUE;
+					 //xS05WorkPermit:=TRUE;
 					station.iStepAuto:= 999;			
 			ELSIF	arMainlineFixtureData[arCurFixtureNumStation[14]].xMaterialOnOff AND    
-				    arMainlineFixtureData[arCurFixtureNumStation[15]].xMaterialOnOff  AND 
-					NOT arMainlineFixtureData[arCurFixtureNumStation[16]].xMaterialOnOff THEN
+				    arMainlineFixtureData[arCurFixtureNumStation[15]].xMaterialOnOff  THEN 
+					//NOT arMainlineFixtureData[arCurFixtureNumStation[16]].xMaterialOnOff THEN
 					station.iStepAuto:= 20;
 			ELSIF	NOT arMainlineFixtureData[arCurFixtureNumStation[14]].xMaterialOnOff AND    
 				    arMainlineFixtureData[arCurFixtureNumStation[15]].xMaterialOnOff  AND 
@@ -226,7 +231,18 @@ CASE station.iStepAuto OF
 			station.iStepAuto:= 40;			
 	/////产品流程开始	
 	40:
-		station.iStepAuto:= 50;
+		station.iStepAuto:= 45;
+	45://上方下压气缸伸出
+			IF  arProcessDataStation[1].xMaterialOnOff THEN
+						fbPressCyl_1.xAuto:=TRUE;
+			END_IF
+			IF   arProcessDataStation[3].xMaterialOnOff THEN
+						fbPressCyl_2.xAuto:=TRUE;
+			END_IF
+		IF    ( fbPressCyl_1.xWP_Delay OR NOT  arProcessDataStation[1].xMaterialOnOff) AND
+			  (fbPressCyl_2.xWP_Delay OR  NOT  arProcessDataStation[3].xMaterialOnOff)  THEN
+				station.iStepAuto :=50;	
+		END_IF		
 	50://下方顶升气缸伸出
 		fbVTCAdjustCyl.xAuto:=TRUE;
 		IF fbVTCAdjustCyl.xWP_Delay THEN
@@ -243,10 +259,21 @@ CASE station.iStepAuto OF
 			IF    ( fbGlampAdjustCyl_1.xWP_Delay OR arProcessDataStation[1].xMaterialOnOff=FALSE) AND
 				  fbGlampAdjustCyl_2.xWP_Delay  AND 
 				  (fbGlampAdjustCyl_3.xWP_Delay OR  arProcessDataStation[3].xMaterialOnOff =FALSE)  THEN
-					station.iStepAuto :=65;	
+					station.iStepAuto :=61;	
 			END_IF
+	61://上方下压气缸伸出
+				IF  arProcessDataStation[1].xMaterialOnOff THEN
+							fbPressCyl_1.xAuto:=TRUE;
+				END_IF
+				IF   arProcessDataStation[3].xMaterialOnOff THEN
+							fbPressCyl_2.xAuto:=TRUE;
+				END_IF
+			IF    ( fbPressCyl_1.xWP_Delay OR NOT  arProcessDataStation[1].xMaterialOnOff) AND
+				  (fbPressCyl_2.xWP_Delay OR  NOT  arProcessDataStation[3].xMaterialOnOff)  THEN
+					station.iStepAuto :=65;	
+			END_IF	
 	65://允许调整工位动作
-			xS05WorkPermit:=TRUE;
+			//xS05WorkPermit:=TRUE;
 			station.iStepAuto :=70;	
 	70://水平到位气缸伸出
 		fbHOZReachedCyl_1.xauto :=TRUE;
@@ -280,11 +307,26 @@ CASE station.iStepAuto OF
 			 tsModuleProcess[2].xProcessNotStarted:=TRUE;
 			 station.iStepAuto :=110; 
 	
-	110://切膜流程开始
+	110://切膜流程开始,垂直切膜气缸动作
 			tsModuleProcess[2].xProcessStarted:=TRUE;
+			fbVTCCyl.xAuto:=TRUE;
+			IF fbVTCCyl.xWP_Delay THEN
+			 		station.iStepAuto :=112;		
+			END_IF
+	112://正式切膜
 			fbHOZCyl.xAuto:=TRUE;
 			IF  fbHOZCyl.xWP_Delay THEN
-				station.iStepAuto :=120;		
+				station.iStepAuto :=115;		
+			END_IF
+	115://水平切膜气缸返回
+				fbHOZCyl.xAuto:=FALSE;
+			IF  fbHOZCyl.xHP_Delay THEN
+				station.iStepAuto :=116;		
+			END_IF	
+	116://切膜垂直气缸收回
+				fbVTCCyl.xAuto:=FALSE;
+			IF fbVTCCyl.xHP_Delay THEN
+			 		station.iStepAuto :=120;		
 			END_IF
 	120:
 			tsModuleProcess[2].xProcessCompleted:=TRUE;
@@ -320,13 +362,18 @@ CASE station.iStepAuto OF
 	150://旋转伺服去工作位置
 		 fbROTAxisMove.xMoveAuto[2]:=TRUE;
 		 IF fbROTAxisMove.xMoveInPos[2] THEN
-			 station.iStepAuto :=160; 
+			 station.iStepAuto :=170; 
 		 END_IF
-	160://水平切膜气缸返回
-		 	fbHOZCyl.xAuto:=FALSE;
-			IF  fbHOZCyl.xHP_Delay THEN
-				station.iStepAuto :=170;		
-			END_IF 
+//	155://垂直切膜气缸上升
+//				fbVTCCyl.xAuto:=FALSE;
+//			IF  fbVTCCyl.xHP_Delay THEN
+//				station.iStepAuto :=170;		
+//			END_IF 
+//	//160://水平切膜气缸返回
+	//	 	fbHOZCyl.xAuto:=FALSE;
+	//		IF  fbHOZCyl.xHP_Delay THEN
+	//			station.iStepAuto :=170;		
+	//		END_IF 
 	170://调整夹爪气缸松开
 				
 				fbGlampAdjustCyl_1.xAuto:=FALSE;
@@ -340,9 +387,15 @@ CASE station.iStepAuto OF
 	180://顶升调整气缸收回
 				fbVTCAdjustCyl.xAuto:=FALSE;
 		IF fbVTCAdjustCyl.xHP_Delay THEN
-			station.iStepAuto :=200;	
+			station.iStepAuto :=190;	
 		END_IF	
-			
+	190://压膜气缸回原
+			fbPressCyl_1.xAuto:=FALSE;
+			fbPressCyl_2.xAuto:=FALSE;
+			IF fbPressCyl_1.xHP_Delay AND 	
+				 fbPressCyl_2.xHP_Delay  THEN
+				station.iStepAuto :=200;	
+			END_IF	
 	////产品流程结束	
 	200:////Restore_after_Estop_Process3 数据传输流程
 			IF  station.xSingleRunning THEN // OR fbMachine[1].xTryRun THEN
@@ -428,18 +481,13 @@ CASE station.iStepInit OF
 	FOR i:=1 TO gc_ModuleProNo BY 1 DO
 				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
 	END_FOR
-	station.iStepInit :=40;
-
-//20://切膜流程分析
-//		IF   tsModuleProcess[2].xProcessStarted  AND  NOT tsModuleProcess[2].xProcessCompleted  THEN
-//			station.iStepInit:=40;
-//		ELSIF     tsModuleProcess[2].xProcessCompleted  THEN
-//			station.iStepInit:=50;
-//		ELSE(*未开始*)
-//			station.iStepInit :=200;
-//		END_IF
-
-40://水平切膜气缸伸出
+	station.iStepInit :=20;
+20://切莫垂直气缸收回
+		fbVTCCyl.xInit:=TRUE;
+		IF  fbVTCCyl.xHP_Delay THEN
+		 	station.iStepInit :=40;
+		END_IF
+40://水平切膜气缸收回
 	fbHOZCyl.xInit :=TRUE;
 	IF  fbHOZCyl.xHP_Delay THEN
 		station.iStepInit :=50;
@@ -454,8 +502,15 @@ CASE station.iStepInit OF
 	fbHOZReachedCyl_2.xInit :=TRUE;
 	IF   fbHOZReachedCyl_1.xHP_Delay AND
 		 fbHOZReachedCyl_2.xHP_Delay THEN
-		station.iStepInit :=70;
+		station.iStepInit :=65;
 	END_IF	
+65://下压气缸回原
+		fbPressCyl_1.xInit:=TRUE;
+		fbPressCyl_2.xInit:=TRUE;
+		IF  fbPressCyl_1.xHP_Delay  AND  
+				fbPressCyl_2.xHP_Delay THEN
+		 	station.iStepInit :=70;
+		END_IF	
 70:	//旋转伺服上电
 	fbROTAxisMove.xPowerInit:=TRUE;
 	IF  fbROTAxisMove.xPowerOn THEN
@@ -581,6 +636,12 @@ fbGlampAdjustCyl_2.xOffILC	:=	TRUE	;
 fbGlampAdjustCyl_2.xOnILC	:=	TRUE	;
 fbGlampAdjustCyl_3.xOffILC	:=	TRUE	;
 fbGlampAdjustCyl_3.xOnILC	:=	TRUE	;
+fbVTCCyl.xOffILC:=TRUE;
+fbVTCCyl.xOnILC:=TRUE;
+fbPressCyl_1.xOffILC:=TRUE;
+fbPressCyl_1.xOnILC:=TRUE;
+fbPressCyl_2.xOffILC:=TRUE;
+fbPressCyl_2.xOnILC:=TRUE;
 
 
 //---------------------------------------------------伺服动作条件-------------------------------------------
@@ -656,7 +717,12 @@ QxS06GlampAdjustCyl_2WP	:=	fbGlampAdjustCyl_2.xWP_Valve	;
 QxS06GlampAdjustCyl_2HP	:=	fbGlampAdjustCyl_2.xHP_Valve	;
 QxS06GlampAdjustCyl_3WP	:=	fbGlampAdjustCyl_3.xWP_Valve	;
 QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
-]]></ST>
+QxS06PressCyl_1WP					:=		fbPressCyl_1.xWP_Valve;
+QxS06PressCyl_1HP	    		:=    fbPressCyl_1.xHP_Valve;
+QxS06PressCyl_2WP	    		:=    fbPressCyl_2.xWP_Valve;
+QxS06PressCyl_2HP	    		:=    fbPressCyl_2.xHP_Valve;
+QxS06VTCCylWP				   		:=    fbVTCCyl.xWP_Valve;
+QxS06VTCCylHP	    				:=    fbVTCCyl.xHP_Valve;]]></ST>
       </Implementation>
     </Action>
     <LineIds Name="S06_Cutting">
@@ -665,9 +731,12 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
     </LineIds>
     <LineIds Name="S06_Cutting.A_Input">
       <LineId Id="28" Count="0" />
-      <LineId Id="84" Count="17" />
-      <LineId Id="55" Count="0" />
-      <LineId Id="40" Count="1" />
+      <LineId Id="84" Count="19" />
+      <LineId Id="105" Count="0" />
+      <LineId Id="104" Count="0" />
+      <LineId Id="107" Count="0" />
+      <LineId Id="106" Count="0" />
+      <LineId Id="41" Count="0" />
       <LineId Id="10" Count="3" />
       <LineId Id="8" Count="0" />
     </LineIds>
@@ -703,7 +772,10 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="2019" Count="7" />
       <LineId Id="1932" Count="0" />
       <LineId Id="1640" Count="1" />
-      <LineId Id="1643" Count="1" />
+      <LineId Id="1643" Count="0" />
+      <LineId Id="2298" Count="9" />
+      <LineId Id="2296" Count="0" />
+      <LineId Id="1644" Count="0" />
       <LineId Id="1764" Count="2" />
       <LineId Id="1763" Count="0" />
       <LineId Id="1767" Count="1" />
@@ -715,6 +787,11 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="1776" Count="0" />
       <LineId Id="1782" Count="0" />
       <LineId Id="1773" Count="1" />
+      <LineId Id="2248" Count="0" />
+      <LineId Id="2254" Count="2" />
+      <LineId Id="2258" Count="3" />
+      <LineId Id="2263" Count="1" />
+      <LineId Id="2253" Count="0" />
       <LineId Id="2242" Count="0" />
       <LineId Id="2245" Count="1" />
       <LineId Id="1648" Count="0" />
@@ -737,9 +814,18 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="2044" Count="0" />
       <LineId Id="1655" Count="0" />
       <LineId Id="2047" Count="0" />
+      <LineId Id="2277" Count="2" />
+      <LineId Id="2281" Count="0" />
+      <LineId Id="2276" Count="0" />
       <LineId Id="1793" Count="1" />
       <LineId Id="1797" Count="0" />
       <LineId Id="1796" Count="0" />
+      <LineId Id="2308" Count="0" />
+      <LineId Id="2310" Count="2" />
+      <LineId Id="2309" Count="0" />
+      <LineId Id="2313" Count="0" />
+      <LineId Id="2315" Count="2" />
+      <LineId Id="2314" Count="0" />
       <LineId Id="2048" Count="0" />
       <LineId Id="2050" Count="1" />
       <LineId Id="2085" Count="0" />
@@ -765,6 +851,9 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="1811" Count="0" />
       <LineId Id="1814" Count="0" />
       <LineId Id="1813" Count="0" />
+      <LineId Id="2282" Count="0" />
+      <LineId Id="2284" Count="2" />
+      <LineId Id="2283" Count="0" />
       <LineId Id="1810" Count="0" />
       <LineId Id="1816" Count="2" />
       <LineId Id="1815" Count="0" />
@@ -777,6 +866,11 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="2236" Count="0" />
       <LineId Id="2239" Count="2" />
       <LineId Id="2238" Count="0" />
+      <LineId Id="2288" Count="1" />
+      <LineId Id="2292" Count="0" />
+      <LineId Id="2290" Count="0" />
+      <LineId Id="2295" Count="0" />
+      <LineId Id="2291" Count="0" />
       <LineId Id="2222" Count="0" />
       <LineId Id="1665" Count="0" />
       <LineId Id="2118" Count="0" />
@@ -810,15 +904,9 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="596" Count="1" />
       <LineId Id="595" Count="0" />
       <LineId Id="467" Count="0" />
-      <LineId Id="584" Count="0" />
-      <LineId Id="583" Count="0" />
-      <LineId Id="585" Count="0" />
-      <LineId Id="591" Count="0" />
-      <LineId Id="589" Count="0" />
-      <LineId Id="593" Count="1" />
-      <LineId Id="590" Count="0" />
-      <LineId Id="587" Count="0" />
       <LineId Id="491" Count="0" />
+      <LineId Id="599" Count="1" />
+      <LineId Id="603" Count="1" />
       <LineId Id="472" Count="0" />
       <LineId Id="498" Count="3" />
       <LineId Id="484" Count="0" />
@@ -832,6 +920,13 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="582" Count="0" />
       <LineId Id="512" Count="0" />
       <LineId Id="485" Count="0" />
+      <LineId Id="598" Count="0" />
+      <LineId Id="609" Count="0" />
+      <LineId Id="612" Count="0" />
+      <LineId Id="610" Count="0" />
+      <LineId Id="615" Count="0" />
+      <LineId Id="611" Count="0" />
+      <LineId Id="608" Count="0" />
       <LineId Id="514" Count="2" />
       <LineId Id="519" Count="0" />
       <LineId Id="518" Count="0" />
@@ -881,6 +976,11 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
     <LineIds Name="S06_Cutting.ILC">
       <LineId Id="234" Count="4" />
       <LineId Id="308" Count="17" />
+      <LineId Id="329" Count="0" />
+      <LineId Id="331" Count="0" />
+      <LineId Id="330" Count="0" />
+      <LineId Id="328" Count="0" />
+      <LineId Id="332" Count="1" />
       <LineId Id="302" Count="0" />
       <LineId Id="307" Count="0" />
       <LineId Id="290" Count="0" />
@@ -911,6 +1011,7 @@ QxS06GlampAdjustCyl_3HP	:=	fbGlampAdjustCyl_3.xHP_Valve	;
       <LineId Id="2" Count="0" />
       <LineId Id="39" Count="17" />
       <LineId Id="20" Count="0" />
+      <LineId Id="57" Count="4" />
     </LineIds>
   </POU>
 </TcPlcObject>

@@ -97,7 +97,8 @@ ACT_FuShiPXF();
 ACT_M0dbus_200Smart();
 ACT_Encoder();
 ACT_ATV12();
-ACT_SmcVacuum();]]></ST>
+ACT_SmcVacuum();
+ACT_LoadCell();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{423c098f-672e-4e09-b9e7-666319181834}">
       <Implementation>
@@ -272,18 +273,18 @@ cnSlaveAddr[06] := 1019 ;
 cnSlaveAddr[07] := 1020 ;
 cnSlaveAddr[08] := 1021 ;
 
-cnSlaveAddr[09] := 1024 ;
+cnSlaveAddr[09] := 1025 ;
 
-cnSlaveAddr[10] := 1036 ;
-cnSlaveAddr[11] := 1037 ;
-cnSlaveAddr[12] := 1038 ;
-cnSlaveAddr[13] := 1039 ;
-cnSlaveAddr[14] := 1040 ;
-cnSlaveAddr[15] := 1041 ;
-cnSlaveAddr[16] := 1042 ;
-cnSlaveAddr[17] := 1043 ;
-cnSlaveAddr[18] := 1044 ;
-cnSlaveAddr[19] := 1045 ;
+cnSlaveAddr[10] := 1037 ;
+cnSlaveAddr[11] := 1038 ;
+cnSlaveAddr[12] := 1039 ;
+cnSlaveAddr[13] := 1040 ;
+cnSlaveAddr[14] := 1041 ;
+cnSlaveAddr[15] := 1042 ;
+cnSlaveAddr[16] := 1043 ;
+cnSlaveAddr[17] := 1044 ;
+cnSlaveAddr[18] := 1045 ;
+cnSlaveAddr[19] := 1046 ;
 
 
 
@@ -399,7 +400,7 @@ QxCamera1Trigger:=fbCamera[1].xQStart;
 
 
 
-//光源控制器
+//S03液位检测工位光源触发
 IF 			fbCamera[2].xQLight OR	fbCamera[3].xQLight OR
 				fbCamera[4].xQLight OR	fbCamera[5].xQLight OR
 			  fbCamera[6].xQLight OR	fbCamera[7].xQLight OR
@@ -430,7 +431,15 @@ QxCamera14Trigger   := fbCamera[14].xQStart;
 QxCamera15Trigger   := fbCamera[15].xQStart;
 QxCamera16Trigger   := fbCamera[16].xQStart;
 QxCamera17Trigger   := fbCamera[17].xQStart;
-]]></ST>
+//贴标工位相机光源触发
+IF  fbCamera[18].xQLight THEN
+ 			QxCameraLight4Trigger:=TRUE;
+ELSE
+ 			QxCameraLight4Trigger:=FALSE;
+END_IF
+
+//相机触发
+QxCameraTrigger	:= fbCamera[18].xQStart; ]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_Comm" Id="{b17cb29c-5b77-4461-9112-d1cc0492c03a}">
@@ -522,7 +531,7 @@ ELSE
 FOR i:=1 TO gc_uiPXF5Num DO
 fbTempretureControl[i](
 	xEstop:= fbMachine[1].xEStop , 
-	xStart:=TRUE , 
+	xStart:= , 
 	xSvSet:= , 
 	stSysPar:= , 
 	stPar:= , 
@@ -564,6 +573,61 @@ FBGetTime(
 	o_b_err=> , 
 	o_udi_ErrId=> , 
 	o_DateAndTime=> );]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_LoadCell" Id="{c3db498e-8be5-45e5-8db9-c1ffc95aaf93}">
+      <Implementation>
+        <ST><![CDATA[fbLoadCell[1].LocalClient.strSlaveIP:='192.168.1.73';
+fbLoadCell[1].LocalClient.iSlavePort:=1030;
+fbLoadCell[1].LocalClient.bySlaveID:=1;
+
+fbLoadCell[2].LocalClient.strSlaveIP:='192.168.1.73';
+fbLoadCell[2].LocalClient.iSlavePort:=1031;
+fbLoadCell[2].LocalClient.bySlaveID:=2;
+
+fbLoadCell[3].LocalClient.strSlaveIP:='192.168.1.74';
+fbLoadCell[3].LocalClient.iSlavePort:=1030;
+fbLoadCell[3].LocalClient.bySlaveID:=3;
+
+fbLoadCell[4].LocalClient.strSlaveIP:='192.168.1.74';
+fbLoadCell[4].LocalClient.iSlavePort:=1031;
+fbLoadCell[4].LocalClient.bySlaveID:=4;
+
+
+fbLoadCell[5].LocalClient.strSlaveIP:='192.168.1.75';
+fbLoadCell[5].LocalClient.iSlavePort:=1030;
+fbLoadCell[5].LocalClient.bySlaveID:=5;
+
+
+fbLoadCell[6].LocalClient.strSlaveIP:='192.168.1.75';
+fbLoadCell[6].LocalClient.iSlavePort:=1031;
+fbLoadCell[6].LocalClient.bySlaveID:=6;
+
+
+
+FOR i:=1 TO gc_uiLoadcellNum  DO
+	fbLoadCell[i](
+	xIStart:= , 
+	xIReset:= , 
+	LocalClient:= , 
+	stDeviceOpe:= , 
+	xIDeviceRunning:=TRUE , 
+	xManualMode:= fbMachine[1].xManualMode, 
+	xAutoMode:= fbMachine[1].xAutoMode, 
+	xQRdyCmd=> , 
+	xQBusy=> , 
+	xQError=> , 
+	xQDone=> , 
+	stParOut=> );
+END_FOR
+//清零或去皮信号
+QxLoadCell_1ZeroInput:=fbLoadCell[1].xQZeroSingle;
+QxLoadCell_2ZeroInput:=fbLoadCell[2].xQZeroSingle;
+QxLoadCell_3ZeroInput:=fbLoadCell[3].xQZeroSingle;
+QxLoadCell_4ZeroInput:=fbLoadCell[4].xQZeroSingle;
+QxLoadCell_5ZeroInput:=fbLoadCell[5].xQZeroSingle;
+QxLoadCell_6ZeroInput:=fbLoadCell[6].xQZeroSingle;
+]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_M0dbus_200Smart" Id="{f9c3f295-f0f9-4ed8-a615-986545a73617}">
@@ -690,7 +754,7 @@ fbMCK.stSysPar.nRemotePort:=1030;
 fbMCK.stSysPar.bySlaveID:=1;
 
 fbMCK(
-	xIReset:= , 
+	xIReset:=(*fbMachine[1].xReset*) , 
 	xIInit:= , 
 	iICodeLEN:= 20, 
 	iICodePOS:= 1, 
@@ -812,6 +876,10 @@ stData.RudongPump[12].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定�
 stData.RudongPump[12].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
 
 
+
+
+
+
 FOR i :=1 TO gc_uiRudongPump BY 1 DO
 	fbRudongPump[i](
 	xExecute:= , 
@@ -838,7 +906,15 @@ FOR i :=1 TO gc_uiRudongPump BY 1 DO
 	xRudongPump_ERROR=> , 
 	eERRORID=> , 
 	xRdyCmd=> );
-
+	
+	//确定蠕动泵注液方向
+	IF  fbMachine[1].xManualMode THEN
+			 IF i MOD 2  = 0 THEN 
+							 fbRudongPump[i].iDirectionSet:=0;
+			 ELSE
+							 fbRudongPump[i].iDirectionSet:=1;
+			 END_IF
+	END_IF
 END_FOR
 //IF NOT _xCalFirstCycle THEN
 ////	fbAutoCal.stSysPar.fbMTMCK204C:=ADR	(fbMCK204W);
@@ -1408,6 +1484,7 @@ END_FOR]]></ST>
       <LineId Id="994" Count="0" />
       <LineId Id="1062" Count="0" />
       <LineId Id="1130" Count="1" />
+      <LineId Id="1267" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.A_Input">
       <LineId Id="12" Count="2" />
@@ -1540,6 +1617,12 @@ END_FOR]]></ST>
       <LineId Id="166" Count="0" />
       <LineId Id="76" Count="16" />
       <LineId Id="74" Count="0" />
+      <LineId Id="176" Count="0" />
+      <LineId Id="178" Count="0" />
+      <LineId Id="180" Count="1" />
+      <LineId Id="179" Count="0" />
+      <LineId Id="183" Count="1" />
+      <LineId Id="182" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.ACT_Comm">
       <LineId Id="2" Count="1" />
@@ -1592,6 +1675,30 @@ END_FOR]]></ST>
       <LineId Id="18" Count="0" />
       <LineId Id="12" Count="5" />
       <LineId Id="10" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_LoadCell">
+      <LineId Id="20" Count="0" />
+      <LineId Id="29" Count="4" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="35" Count="2" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="52" Count="1" />
+      <LineId Id="38" Count="0" />
+      <LineId Id="43" Count="3" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="48" Count="3" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="27" Count="1" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="54" Count="11" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="80" Count="0" />
+      <LineId Id="75" Count="4" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="74" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.ACT_M0dbus_200Smart">
       <LineId Id="2" Count="0" />
@@ -1708,11 +1815,19 @@ END_FOR]]></ST>
       <LineId Id="228" Count="0" />
       <LineId Id="233" Count="2" />
       <LineId Id="232" Count="0" />
+      <LineId Id="239" Count="0" />
+      <LineId Id="243" Count="0" />
+      <LineId Id="241" Count="1" />
       <LineId Id="236" Count="0" />
       <LineId Id="136" Count="0" />
       <LineId Id="132" Count="0" />
       <LineId Id="71" Count="23" />
       <LineId Id="67" Count="0" />
+      <LineId Id="248" Count="0" />
+      <LineId Id="250" Count="0" />
+      <LineId Id="255" Count="0" />
+      <LineId Id="251" Count="3" />
+      <LineId Id="249" Count="0" />
       <LineId Id="237" Count="0" />
       <LineId Id="70" Count="0" />
       <LineId Id="105" Count="1" />

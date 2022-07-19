@@ -187,12 +187,12 @@ IxBeltEntryCardCheckSensor2	:=	ET02_Input[5].INPUT.5	;//	皮带线入口处¶卡
 IxBeltEntryBoxCheckSensor1	:=	ET02_Input[5].INPUT.6	;//	皮带线入口处¶深孔板检测传感器1
 IxBeltEntryBoxCheckSensor2	:=	ET02_Input[5].INPUT.7	;//	皮带线入口处¶深孔板检测传感器2
 IxShare71	:=	ET02_Input[5].INPUT.8	;//	备用
-IxShare72	:=	ET02_Input[5].INPUT.9	;//	备用
-IxShare73	:=	ET02_Input[5].INPUT.10	;//	备用
-IxShare74	:=	ET02_Input[5].INPUT.11	;//	备用
-IxShare75	:=	ET02_Input[5].INPUT.12	;//	备用
-IxShare76	:=	ET02_Input[5].INPUT.13	;//	备用
-IxShare77	:=	ET02_Input[5].INPUT.14	;//	备用
+IxS06PressCyl_1WP	:=	ET02_Input[5].INPUT.9	;//	切膜下压气缸1动点
+IxS06PressCyl_1HP	:=	ET02_Input[5].INPUT.10	;//	切膜下压气缸1原点
+IxS06PressCyl_2WP	:=	ET02_Input[5].INPUT.11	;//	切膜下压气缸2动点
+IxS06PressCyl_2HP	:=	ET02_Input[5].INPUT.12	;//	切膜下压气缸2原点
+IxS06VTCCylWP	:=	ET02_Input[5].INPUT.13	;//	垂直切膜气缸1动点
+IxS06VTCCylHP	:=	ET02_Input[5].INPUT.14	;//	垂直切膜气缸2原点
 IxShare78	:=	ET02_Input[5].INPUT.15	;//	备用
 IxShare79	:=	ET02_Input[6].INPUT.0	;//	备用
 IxShare80	:=	ET02_Input[6].INPUT.1	;//	备用
@@ -238,7 +238,7 @@ IxShare114	:=	ET03_Input[1].INPUT.15	;//	备用]]></ST>
         <ST><![CDATA[IxLabelJobRdySignal	:=	ET04_Input[1].INPUT.0	;//	贴标机JOBRDY信号
 IxLabelReadySignal	:=	ET04_Input[1].INPUT.1	;//	贴标机READY信号
 IxLabelErrorSignal	:=	ET04_Input[1].INPUT.2	;//	贴标机ERROR信号
-IxS11SensorReached	:=	ET04_Input[1].INPUT.3	;//	贴标工位¶检查到位传感器
+IxS11SensorReached1	:=	ET04_Input[1].INPUT.3	;//	贴标工位¶检查到位传感器
 IxS12SensorReached	:=	ET04_Input[1].INPUT.4	;//	标签检测工位¶检查到位传感器
 IxS13SensorReached1	:=	ET04_Input[1].INPUT.5	;//	NG皮带线¶检测到料传感器1
 IxS13SensorReached2	:=	ET04_Input[1].INPUT.6	;//	NG皮带线¶检测到料传感器2
@@ -253,7 +253,7 @@ IxS13HOZCyl_1WP	:=	ET04_Input[1].INPUT.14	;//	NG推料气缸1¶动点
 IxS13HOZCyl_1HP	:=	ET04_Input[1].INPUT.15	;//	NG推料气缸1¶原点
 IxS13HOZCyl_2WP	:=	ET04_Input[2].INPUT.0	;//	NG推料气缸2¶动点
 IxS13HOZCyl_2HP	:=	ET04_Input[2].INPUT.1	;//	NG推料气缸2¶原点
-IxShare150	:=	ET04_Input[2].INPUT.2	;//	备用
+IxS11SensorReached2	:=	ET04_Input[2].INPUT.2	;//	贴标工位¶检查到位传感器2
 IxShare151	:=	ET04_Input[2].INPUT.3	;//	备用
 IxShare152	:=	ET04_Input[2].INPUT.4	;//	备用
 IxShare153	:=	ET04_Input[2].INPUT.5	;//	备用
@@ -280,14 +280,14 @@ IxShare163	:=	ET04_Input[2].INPUT.15	;//	备用
       <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="InputLink.ACT_ET02">
-      <LineId Id="786" Count="95" />
+      <LineId Id="882" Count="95" />
       <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="InputLink.ACT_ET03">
       <LineId Id="2" Count="15" />
     </LineIds>
     <LineIds Name="InputLink.ACT_ET04">
-      <LineId Id="2" Count="31" />
+      <LineId Id="34" Count="31" />
       <LineId Id="1" Count="0" />
     </LineIds>
   </POU>

@@ -1415,6 +1415,15 @@ External Setpoint Generation:
 			</ArrayInfo>
 		</DataType>
 		<DataType>
+			<Name GUID="{FEB96C23-0E04-CC01-F84E-3246D8F89D97}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..100] OF BOOL</Name>
+			<BitSize>800</BitSize>
+			<BaseType GUID="{18071995-0000-0000-0000-000000000030}">BOOL</BaseType>
+			<ArrayInfo>
+				<LBound>1</LBound>
+				<Elements>100</Elements>
+			</ArrayInfo>
+		</DataType>
+		<DataType>
 			<Name GUID="{18071995-0000-0000-0000-000000000041}" TcBaseType="true" HideSubItems="true" CName="AmsNetId">AMSNETID</Name>
 			<BitSize>48</BitSize>
 			<BaseType GUID="{18071995-0000-0000-0000-000000000001}">BYTE</BaseType>
@@ -1431,15 +1440,6 @@ External Setpoint Generation:
 				<Parameter>[4]</Parameter>
 				<Parameter>[5]</Parameter>
 			</Format>
-		</DataType>
-		<DataType>
-			<Name GUID="{FEB96C23-0E04-CC01-F84E-3246D8F89D97}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..100] OF BOOL</Name>
-			<BitSize>800</BitSize>
-			<BaseType GUID="{18071995-0000-0000-0000-000000000030}">BOOL</BaseType>
-			<ArrayInfo>
-				<LBound>1</LBound>
-				<Elements>100</Elements>
-			</ArrayInfo>
 		</DataType>
 		<DataType>
 			<Name GUID="{E9CF5D9E-C580-19C9-FC05-64C9A7B03B21}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..19] OF UDINT</Name>
@@ -1471,16 +1471,6 @@ External Setpoint Generation:
 			</ArrayInfo>
 		</DataType>
 		<DataType>
-			<Name GUID="{5B71B567-A56A-4C34-02E8-93B84554BF86}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..6] OF EL1889</Name>
-			<Comment><![CDATA[输入]]></Comment>
-			<BitSize>96</BitSize>
-			<BaseType GUID="{F39BF48F-658D-9C24-3630-0A4317E0DE71}">EL1889</BaseType>
-			<ArrayInfo>
-				<LBound>1</LBound>
-				<Elements>6</Elements>
-			</ArrayInfo>
-		</DataType>
-		<DataType>
 			<Name GUID="{947A9DCD-67EC-7506-32AF-03B935E0DE83}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..2] OF EL1889</Name>
 			<Comment><![CDATA[输入]]></Comment>
 			<BitSize>32</BitSize>
@@ -1491,12 +1481,42 @@ External Setpoint Generation:
 			</ArrayInfo>
 		</DataType>
 		<DataType>
+			<Name GUID="{5B71B567-A56A-4C34-02E8-93B84554BF86}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..6] OF EL1889</Name>
+			<Comment><![CDATA[输入]]></Comment>
+			<BitSize>96</BitSize>
+			<BaseType GUID="{F39BF48F-658D-9C24-3630-0A4317E0DE71}">EL1889</BaseType>
+			<ArrayInfo>
+				<LBound>1</LBound>
+				<Elements>6</Elements>
+			</ArrayInfo>
+		</DataType>
+		<DataType>
 			<Name GUID="{0A518027-34CE-5493-053E-263686ECD3D7}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..20] OF BOOL</Name>
 			<BitSize>160</BitSize>
 			<BaseType GUID="{18071995-0000-0000-0000-000000000030}">BOOL</BaseType>
 			<ArrayInfo>
 				<LBound>1</LBound>
 				<Elements>20</Elements>
+			</ArrayInfo>
+		</DataType>
+		<DataType>
+			<Name GUID="{34988DE2-7AFA-0557-5329-858EAD52A8AE}" AutoDeleteType="true">EL2889</Name>
+			<BitSize>16</BitSize>
+			<SubItem>
+				<Name>OUTPUT</Name>
+				<Type GUID="{18071995-0000-0000-0000-000000000004}">WORD</Type>
+				<BitSize>16</BitSize>
+				<BitOffs>0</BitOffs>
+			</SubItem>
+		</DataType>
+		<DataType>
+			<Name GUID="{58390D31-CF1F-12CF-68D7-6043AA7E1C77}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..1] OF EL2889</Name>
+			<Comment><![CDATA[输出]]></Comment>
+			<BitSize>16</BitSize>
+			<BaseType GUID="{34988DE2-7AFA-0557-5329-858EAD52A8AE}">EL2889</BaseType>
+			<ArrayInfo>
+				<LBound>1</LBound>
+				<Elements>1</Elements>
 			</ArrayInfo>
 		</DataType>
 		<DataType>
@@ -1516,16 +1536,6 @@ External Setpoint Generation:
 				<LBound>1</LBound>
 				<Elements>19</Elements>
 			</ArrayInfo>
-		</DataType>
-		<DataType>
-			<Name GUID="{34988DE2-7AFA-0557-5329-858EAD52A8AE}" AutoDeleteType="true">EL2889</Name>
-			<BitSize>16</BitSize>
-			<SubItem>
-				<Name>OUTPUT</Name>
-				<Type GUID="{18071995-0000-0000-0000-000000000004}">WORD</Type>
-				<BitSize>16</BitSize>
-				<BitOffs>0</BitOffs>
-			</SubItem>
 		</DataType>
 		<DataType>
 			<Name GUID="{E6284F45-CDD4-5654-75AA-DF8354BFA5F3}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..6] OF EL2889</Name>
@@ -4438,11 +4448,6 @@ External Setpoint Generation:
 							<Type GUID="{4AD7B44C-F27A-D32C-68EE-E0B2F85758B9}">ARRAY [1..19] OF USINT</Type>
 						</Var>
 						<Var>
-							<Name>GVL_Standard.sDeviceNetId</Name>
-							<Comment><![CDATA[设备的ethercat地址]]></Comment>
-							<Type GUID="{18071995-0000-0000-0000-000000000041}">AMSNETID</Type>
-						</Var>
-						<Var>
 							<Name>GVL_Standard.Axis[1].NcToPlc</Name>
 							<Type GUID="{10036166-C9D3-404B-BDD3-323034AAA7F4}" Namespace="MC">NCTOPLC_AXIS_REF</Type>
 						</Var>
@@ -4543,6 +4548,11 @@ External Setpoint Generation:
 							<Type>DINT</Type>
 						</Var>
 						<Var>
+							<Name>GVL_Standard.sDeviceNetId</Name>
+							<Comment><![CDATA[设备的ethercat地址]]></Comment>
+							<Type GUID="{18071995-0000-0000-0000-000000000041}">AMSNETID</Type>
+						</Var>
+						<Var>
 							<Name>GVL_Standard.arAxisSensor</Name>
 							<Type GUID="{E9CF5D9E-C580-19C9-FC05-64C9A7B03B21}">ARRAY [1..19] OF UDINT</Type>
 						</Var>
@@ -4550,6 +4560,11 @@ External Setpoint Generation:
 							<Name>IO.ET03_Input</Name>
 							<Comment><![CDATA[输入]]></Comment>
 							<Type GUID="{2B7A2230-DE77-F7FC-2DC2-3E43EB484FB2}">ARRAY [1..1] OF EL1889</Type>
+						</Var>
+						<Var>
+							<Name>IO.ET04_Input</Name>
+							<Comment><![CDATA[输入]]></Comment>
+							<Type GUID="{947A9DCD-67EC-7506-32AF-03B935E0DE83}">ARRAY [1..2] OF EL1889</Type>
 						</Var>
 						<Var>
 							<Name>IO.ET01_Input</Name>
@@ -4560,11 +4575,6 @@ External Setpoint Generation:
 							<Name>IO.ET02_Input</Name>
 							<Comment><![CDATA[输入]]></Comment>
 							<Type GUID="{5B71B567-A56A-4C34-02E8-93B84554BF86}">ARRAY [1..6] OF EL1889</Type>
-						</Var>
-						<Var>
-							<Name>IO.ET04_Input</Name>
-							<Comment><![CDATA[输入]]></Comment>
-							<Type GUID="{947A9DCD-67EC-7506-32AF-03B935E0DE83}">ARRAY [1..2] OF EL1889</Type>
 						</Var>
 						<Var>
 							<Name>IO.arEtherCATWcState</Name>
@@ -4578,6 +4588,11 @@ External Setpoint Generation:
 					</Vars>
 					<Vars VarGrpType="2" AreaNo="1">
 						<Name>PlcTask Outputs</Name>
+						<Var>
+							<Name>IO.ET03_Output</Name>
+							<Comment><![CDATA[输出]]></Comment>
+							<Type GUID="{58390D31-CF1F-12CF-68D7-6043AA7E1C77}">ARRAY [1..1] OF EL2889</Type>
+						</Var>
 						<Var>
 							<Name>CallStandard.sModeOperation</Name>
 							<Comment><![CDATA[操作模式]]></Comment>
@@ -7608,10 +7623,99 @@ External Setpoint Generation:
 									</Pdo>
 								</EtherCAT>
 							</Box>
+							<Box Id="73" BoxType="9099">
+								<Name>Term 73 (EL2889)</Name>
+								<ImageId>1001</ImageId>
+								<EtherCAT SlaveType="1" PdiType="#x0104" CycleMBoxPollingTime="0" VendorId="#x00000002" ProductCode="#x0b493052" RevisionNo="#x00120000" RepeatSupport="true" PortPhys="51" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EL2889 16Ch. Dig. Output 24V, 0.5A, negative" Desc="EL2889" PortABoxInfo="#x01000027">
+									<SyncMan>000f01004400010003000000000000000100000f44090000</SyncMan>
+									<SyncMan>010f01004400010003000000000000000100010f44090000</SyncMan>
+									<Fmmu>0000000000000000000f00020100000001000000000000000000000000000000</Fmmu>
+									<Pdo Name="Channel 1" Index="#x1600" InOut="1" Flags="#x0011" SyncMan="0">
+										<Entry Name="Output" Index="#x7000" Sub="#x01">
+											<Type>BIT</Type>
+										</Entry>
+									</Pdo>
+									<Pdo Name="Channel 2" Index="#x1601" InOut="1" Flags="#x0011" SyncMan="0">
+										<Entry Name="Output" Index="#x7010" Sub="#x01">
+											<Type>BIT</Type>
+										</Entry>
+									</Pdo>
+									<Pdo Name="Channel 3" Index="#x1602" InOut="1" Flags="#x0011" SyncMan="0">
+										<Entry Name="Output" Index="#x7020" Sub="#x01">
+											<Type>BIT</Type>
+										</Entry>
+									</Pdo>
+									<Pdo Name="Channel 4" Index="#x1603" InOut="1" Flags="#x0011" SyncMan="0">
+										<Entry Name="Output" Index="#x7030" Sub="#x01">
+											<Type>BIT</Type>
+										</Entry>
+									</Pdo>
+									<Pdo Name="Channel 5" Index="#x1604" InOut="1" Flags="#x0011" SyncMan="0">
+										<Entry Name="Output" Index="#x7040" Sub="#x01">
+											<Type>BIT</Type>
+										</Entry>
+									</Pdo>
+									<Pdo Name="Channel 6" Index="#x1605" InOut="1" Flags="#x0011" SyncMan="0">
+										<Entry Name="Output" Index="#x7050" Sub="#x01">
+											<Type>BIT</Type>
+										</Entry>
+									</Pdo>
+									<Pdo Name="Channel 7" Index="#x1606" InOut="1" Flags="#x0011" SyncMan="0">
+										<Entry Name="Output" Index="#x7060" Sub="#x01">
+											<Type>BIT</Type>
+										</Entry>
+									</Pdo>
+									<Pdo Name="Channel 8" Index="#x1607" InOut="1" Flags="#x0011" SyncMan="0">
+										<Entry Name="Output" Index="#x7070" Sub="#x01">
+											<Type>BIT</Type>
+										</Entry>
+									</Pdo>
+									<Pdo Name="Channel 9" Index="#x1608" InOut="1" Flags="#x0011" SyncMan="1">
+										<Entry Name="Output" Index="#x7080" Sub="#x01">
+											<Type>BIT</Type>
+										</Entry>
+									</Pdo>
+									<Pdo Name="Channel 10" Index="#x1609" InOut="1" Flags="#x0011" SyncMan="1">
+										<Entry Name="Output" Index="#x7090" Sub="#x01">
+											<Type>BIT</Type>
+										</Entry>
+									</Pdo>
+									<Pdo Name="Channel 11" Index="#x160a" InOut="1" Flags="#x0011" SyncMan="1">
+										<Entry Name="Output" Index="#x70a0" Sub="#x01">
+											<Type>BIT</Type>
+										</Entry>
+									</Pdo>
+									<Pdo Name="Channel 12" Index="#x160b" InOut="1" Flags="#x0011" SyncMan="1">
+										<Entry Name="Output" Index="#x70b0" Sub="#x01">
+											<Type>BIT</Type>
+										</Entry>
+									</Pdo>
+									<Pdo Name="Channel 13" Index="#x160c" InOut="1" Flags="#x0011" SyncMan="1">
+										<Entry Name="Output" Index="#x70c0" Sub="#x01">
+											<Type>BIT</Type>
+										</Entry>
+									</Pdo>
+									<Pdo Name="Channel 14" Index="#x160d" InOut="1" Flags="#x0011" SyncMan="1">
+										<Entry Name="Output" Index="#x70d0" Sub="#x01">
+											<Type>BIT</Type>
+										</Entry>
+									</Pdo>
+									<Pdo Name="Channel 15" Index="#x160e" InOut="1" Flags="#x0011" SyncMan="1">
+										<Entry Name="Output" Index="#x70e0" Sub="#x01">
+											<Type>BIT</Type>
+										</Entry>
+									</Pdo>
+									<Pdo Name="Channel 16" Index="#x160f" InOut="1" Flags="#x0011" SyncMan="1">
+										<Entry Name="Output" Index="#x70f0" Sub="#x01">
+											<Type>BIT</Type>
+										</Entry>
+									</Pdo>
+								</EtherCAT>
+							</Box>
 							<Box Id="62" BoxType="9099">
 								<Name>Term 62 (EL9011)</Name>
 								<ImageId>1005</ImageId>
-								<EtherCAT CycleMBoxPollingTime="0" VendorId="#x00000002" ProductCode="#x23333050" InfoDataState="false" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EL9011 End Terminal" Desc="EL9011" PortABoxInfo="#x01000027"/>
+								<EtherCAT CycleMBoxPollingTime="0" VendorId="#x00000002" ProductCode="#x23333050" InfoDataState="false" MaxSlotCount="256" MaxSlotGroupCount="1" SlotPdoIncrement="1" SlotIndexIncrement="16" Type="EL9011 End Terminal" Desc="EL9011" PortABoxInfo="#x01000049"/>
 							</Box>
 						</Box>
 						<Box Id="40" BoxType="9099" BoxFlags="#x00000020">
@@ -11854,6 +11958,24 @@ External Setpoint Generation:
 				<Link VarA="PlcTask Inputs^IO.ET03_Input" VarB="Channel 7^Input" Size="1" OffsA="6"/>
 				<Link VarA="PlcTask Inputs^IO.ET03_Input" VarB="Channel 8^Input" Size="1" OffsA="7"/>
 				<Link VarA="PlcTask Inputs^IO.ET03_Input" VarB="Channel 9^Input" Size="1" OffsA="8"/>
+			</OwnerB>
+			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Term 38 (EK1100)^Term 73 (EL2889)">
+				<Link VarA="PlcTask Outputs^IO.ET03_Output[1]" VarB="Channel 10^Output" Size="1" OffsA="9"/>
+				<Link VarA="PlcTask Outputs^IO.ET03_Output[1]" VarB="Channel 11^Output" Size="1" OffsA="10"/>
+				<Link VarA="PlcTask Outputs^IO.ET03_Output[1]" VarB="Channel 12^Output" Size="1" OffsA="11"/>
+				<Link VarA="PlcTask Outputs^IO.ET03_Output[1]" VarB="Channel 13^Output" Size="1" OffsA="12"/>
+				<Link VarA="PlcTask Outputs^IO.ET03_Output[1]" VarB="Channel 14^Output" Size="1" OffsA="13"/>
+				<Link VarA="PlcTask Outputs^IO.ET03_Output[1]" VarB="Channel 15^Output" Size="1" OffsA="14"/>
+				<Link VarA="PlcTask Outputs^IO.ET03_Output[1]" VarB="Channel 16^Output" Size="1" OffsA="15"/>
+				<Link VarA="PlcTask Outputs^IO.ET03_Output[1]" VarB="Channel 1^Output"/>
+				<Link VarA="PlcTask Outputs^IO.ET03_Output[1]" VarB="Channel 2^Output" Size="1" OffsA="1"/>
+				<Link VarA="PlcTask Outputs^IO.ET03_Output[1]" VarB="Channel 3^Output" Size="1" OffsA="2"/>
+				<Link VarA="PlcTask Outputs^IO.ET03_Output[1]" VarB="Channel 4^Output" Size="1" OffsA="3"/>
+				<Link VarA="PlcTask Outputs^IO.ET03_Output[1]" VarB="Channel 5^Output" Size="1" OffsA="4"/>
+				<Link VarA="PlcTask Outputs^IO.ET03_Output[1]" VarB="Channel 6^Output" Size="1" OffsA="5"/>
+				<Link VarA="PlcTask Outputs^IO.ET03_Output[1]" VarB="Channel 7^Output" Size="1" OffsA="6"/>
+				<Link VarA="PlcTask Outputs^IO.ET03_Output[1]" VarB="Channel 8^Output" Size="1" OffsA="7"/>
+				<Link VarA="PlcTask Outputs^IO.ET03_Output[1]" VarB="Channel 9^Output" Size="1" OffsA="8"/>
 			</OwnerB>
 			<OwnerB Name="TIID^Device 1 (EtherCAT)^Term 16 (EK1200)^Term 29 (EK1122)^Term 41 (EK1100)^Term 42 (EL1889)">
 				<Link VarA="PlcTask Inputs^GVL_Standard.fbEhterCATSlaveMonitor[2].axIState[1]" VarB="WcState^WcState"/>

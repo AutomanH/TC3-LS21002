@@ -17,13 +17,15 @@
 *
 * Revisions:
 *   V1.0.0 -Automanh 2022.06.08
-* 	V2.0.0-Automanh 2022.06.20,Add ACT_Motor();
+* 	V1.1.0-Automanh 2022.06.20,Add ACT_Motor();
+*		V2.0.0-Automanh 2022.07.18 add timeout alarm 
 *********************************************************************************)
 VAR_INPUT
  arIReachedSensor:ARRAY[1..iColumnsNum] OF BOOL;
  arIVTCCylHPSensor:ARRAY[1..iColumnsNum] OF BOOL;
  arIVTCCylWPSensor:ARRAY[1..iColumnsNum] OF BOOL;
  xIRunningPremit:BOOL;
+ xIMotorStop:BOOL;
  xIEmptyDone:BOOL;
  xITryRun:BOOL;
  xIMotorEstop:BOOL;
@@ -32,6 +34,7 @@ VAR_INPUT
  xIMotorStopButtonHmi:BOOL;
  xIManualMode:BOOL;
  xIAutoMode:BOOL;
+ xIDeviceRunning:BOOL;
 END_VAR
 VAR_OUTPUT
  arQVTCCylHPValve:ARRAY[1..iColumnsNum] OF BOOL;
@@ -57,8 +60,12 @@ VAR
 	_xFirstCycle: BOOL;
 	stMotorStatus:DUT_Motor;
 	ModeSwitchR_TRIG:R_TRIG;
+	MotorStopR_TRIG:R_TRIG;
 	InitR_TRIG:R_TRIG;
 	bInitStep: BYTE;
+	//超时
+	tTimeOut:TON;
+	
 END_VAR
 VAR CONSTANT
  	iColumnsNum :INT:=4;
@@ -73,7 +80,11 @@ ACT_Init();]]></ST>
       <Implementation>
         <ST><![CDATA[
 
-(**************************************链板线程序********************************************)
+{region "链板线程序"}
+tTimeOut(IN:= bFlowLineStepOld =bFlowLineStep AND bFlowLineStepOld<>0,PT:=T#10S , Q=> , ET=> );
+IF  tTimeOut.Q THEN
+		xQError:=TRUE;  			
+END_IF
 	CASE bFlowLineStep OF
 	0://启动
 		FOR i:=1 TO 10 BY 1 DO
@@ -92,12 +103,14 @@ ACT_Init();]]></ST>
 				xMotorStart:=FALSE;
 		END_IF
 	1://下压气缸回原
+		 		bFlowLineStepOld :=bFlowLineStep;
 				FOR  i:=1 TO iColumnsNum BY 1 DO
 					 arQVTCCylWPValve[i]:=FALSE;
 					 arQVTCCylHPValve[i]:=TRUE;
 				END_FOR 	
 				bFlowLineStep:=bFlowLineStep +1;
 	2://判断回原是否完成
+		 	bFlowLineStepOld :=bFlowLineStep;
 			arTonDelay[01](IN:=NOT xQError  , PT:=T#5S , Q=> , ET=> );
 			IF  NOT arTonDelay[01].Q THEN
 				FOR  i:=1 TO iColumnsNum BY 1 DO
@@ -108,64 +121,49 @@ ACT_Init();]]></ST>
 					 END_IF
 				 END_FOR
 			ELSE
-				xQError:=TRUE;    
-				bFlowLineStepOld :=bFlowLineStep;
+				xQError:=TRUE;   
 			END_IF
 			
 	3://到位传感器检测
+		 bFlowLineStepOld :=bFlowLineStep;
 		arTonDelay[01](IN:=FALSE);
-		arTonDelay[02](IN:=TRUE  , PT:=T#10S , Q=> , ET=> );
 		IF NOT xITryRun THEN
 			FOR  i:=1 TO iColumnsNum BY 1 DO
 				IF  NOT arIReachedSensor[i]  THEN
 					EXIT;
 				ELSIF   i =iColumnsNum THEN
-					bFlowLineStep:=bFlowLineStep +2;
-				ELSIF  arTonDelay[02].Q THEN
-				 bFlowLineStep:=bFlowLineStep +1;
-					arTonDelay[02](IN:=FALSE);
+					bFlowLineStep:=bFlowLineStep +1;
 				END_IF
 			END_FOR
 		ELSE
 				bFlowLineStep:=bFlowLineStep +2;
 		END_IF
-	//4://如果到位传感器只检测到一组，那么也可以进行
-	//		arTonDelay[02](IN:=FALSE);
-	//		FOR  i:=1 TO iColumnsNum BY 1 DO
-	//		 		IF arIReachedSensor[i] AND arIReachedSensor[i+2] THEN
-	//				 			bFlowLineStep:=bFlowLineStep +1;
-	//				ELSIF  i =iColumnsNum THEN
-	//				 			bFlowLineStep:=bFlowLineStep -1;
-	//				END_IF
-	//		END_FOR
-	5://下压气缸伸出
+	4://下压气缸伸出
+		 			bFlowLineStepOld :=bFlowLineStep;
 					FOR  i:=1 TO iColumnsNum BY 1 DO
 							 arQVTCCylWPValve[i]:=TRUE;
 							 arQVTCCylHPValve[i]:=FALSE;
 					 
 					END_FOR
 						bFlowLineStep:=bFlowLineStep +1;
-	6://检测下压气缸到位
-			//	FOR  i:=1 TO iColumnsNum  BY 1 DO
-			//				IF  NOT   arIVTCCylWPSensor[i] OR  arIVTCCylHPSensor[i]  THEN
-			//					EXIT;
-			//				ELSIF  i=iColumnsNum THEN
-			//				 		bFlowLineStep:=bFlowLineStep +1;
-			//				END_IF
-			//	END_FOR   
+	5://检测下压气缸到位
+		 		bFlowLineStepOld :=bFlowLineStep;
 				bFlowLineStep:=bFlowLineStep +1;
-	7://延时2S
-				arTonDelay[3](IN:=TRUE  , PT:=T#2S , Q=> , ET=> );
+	6://延时1s
+		 	bFlowLineStepOld :=bFlowLineStep;
+			arTonDelay[3](IN:=TRUE  , PT:=T#1S , Q=> , ET=> );
 			IF  	arTonDelay[3].Q THEN
 						bFlowLineStep:=bFlowLineStep +1;
 						arTonDelay[3](IN:=FALSE);
 			END_IF	      
-	8://输出链板线Ready信号
+	7://输出链板线Ready信号
+		 	bFlowLineStepOld :=bFlowLineStep;
 			 xQBusy:=FALSE;
 			 xQDone:=TRUE;
 			 bFlowLineStep:=0;
 	END_CASE
-	xIRunningPremit:=FALSE;]]></ST>
+	xIRunningPremit:=FALSE;
+{endregion}]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_Init" Id="{6524b2a2-a9d5-4f5a-8fad-02d8e90a8192}">
@@ -173,12 +171,11 @@ ACT_Init();]]></ST>
         <ST><![CDATA[InitR_TRIG(CLK:= xIInit, Q=> );
 CASE bInitStep OF
  0:
- 	IF	InitR_TRIG.Q THEN
-	 		bFlowLineStep:=0;
-			xQBusy:=FALSE;
-			bInitStep:=bInitStep +1;
-	 END_IF
- 
+		IF	InitR_TRIG.Q THEN
+				bFlowLineStep:=0;
+				xQBusy:=FALSE;
+				bInitStep:=bInitStep +1;
+		 END_IF
  1://气缸回原
 			FOR  i:=1 TO iColumnsNum BY 1 DO
 			 	 arQVTCCylWPValve[i]:=FALSE;
@@ -191,28 +188,28 @@ CASE bInitStep OF
 		  xQMotorStart:=FALSE;
 			xQBusy:=FALSE;
 			bInitStep:=0;
-
 END_CASE
 ]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_Manual" Id="{be38eeb0-0032-4be1-8538-9852e13dc970}">
       <Implementation>
-        <ST><![CDATA[IF  (xMotorStart OR  xIAutoMode )  OR
+        <ST><![CDATA[IF  (xMotorStart AND  xIDeviceRunning )  OR
  		(xIMotorStartButtonHmi AND xIManualMode) THEN
-			xQMotorStart:=TRUE;
-			xQMotorStop:=FALSE;
+				xMotorStart:=TRUE;
+				xMotorStop:=FALSE;
 ELSIF
- 	 (xMotorStop OR  xIAutoMode )  OR
+ 	 (xIMotorStop AND  xIDeviceRunning )  OR
  	(xIMotorStopButtonHmi AND xIManualMode)	THEN
-		xQMotorStart:=FALSE;
-		xQMotorStop:=TRUE;
-END_IF]]></ST>
+			xMotorStart:=FALSE;
+			xMotorStop:=TRUE;
+END_IF
+]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_Motor" Id="{849b814a-2f32-478a-9aea-f75e9105b6dc}">
       <Implementation>
-        <ST><![CDATA[ModeSwitchR_TRIG(CLK:= xIManualMode XOR xIAutoMode , Q=> );
+        <ST><![CDATA[ModeSwitchR_TRIG(CLK:= xIManualMode (*XOR xIAutoMode*) , Q=> );
 CASE  bMotorCtrlStep  OF
 0://等待激活
 			IF   xIMotorEstop THEN
@@ -230,14 +227,13 @@ CASE  bMotorCtrlStep  OF
 		bMotorCtrlStep:=0;
 2://停止被按下
 		xQMotorStart:=FALSE;
+		xQMotorStop:=TRUE;
 		bMotorCtrlStep:=0;
 3://启动被按下
-			
 			xQMotorStop:=FALSE;
 			xQMotorStart:=TRUE;
 			bMotorCtrlStep:=0;
 4://设备模式切换
-			
 			xQMotorStart:=FALSE;
 			xQMotorStop:=TRUE;
 			bMotorCtrlStep:=0;
@@ -252,20 +248,44 @@ END_CASE]]></ST>
       <LineId Id="353" Count="0" />
     </LineIds>
     <LineIds Name="FB_FlowLine.ACT_Flow">
-      <LineId Id="2" Count="8" />
+      <LineId Id="2" Count="1" />
+      <LineId Id="99" Count="0" />
+      <LineId Id="101" Count="0" />
+      <LineId Id="120" Count="1" />
+      <LineId Id="123" Count="0" />
+      <LineId Id="5" Count="5" />
       <LineId Id="94" Count="0" />
       <LineId Id="11" Count="0" />
       <LineId Id="88" Count="0" />
       <LineId Id="12" Count="0" />
       <LineId Id="92" Count="1" />
       <LineId Id="96" Count="0" />
-      <LineId Id="13" Count="65" />
+      <LineId Id="13" Count="4" />
+      <LineId Id="106" Count="0" />
+      <LineId Id="18" Count="5" />
+      <LineId Id="105" Count="0" />
+      <LineId Id="24" Count="10" />
+      <LineId Id="36" Count="2" />
+      <LineId Id="107" Count="0" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="41" Count="4" />
+      <LineId Id="109" Count="0" />
+      <LineId Id="50" Count="4" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="108" Count="0" />
+      <LineId Id="65" Count="6" />
+      <LineId Id="112" Count="0" />
       <LineId Id="91" Count="0" />
-      <LineId Id="79" Count="7" />
+      <LineId Id="79" Count="0" />
+      <LineId Id="113" Count="0" />
+      <LineId Id="80" Count="5" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="86" Count="0" />
       <LineId Id="98" Count="0" />
       <LineId Id="87" Count="0" />
       <LineId Id="1" Count="0" />
       <LineId Id="95" Count="0" />
+      <LineId Id="100" Count="0" />
     </LineIds>
     <LineIds Name="FB_FlowLine.ACT_Init">
       <LineId Id="1" Count="0" />
@@ -275,27 +295,26 @@ END_CASE]]></ST>
       <LineId Id="34" Count="0" />
       <LineId Id="33" Count="0" />
       <LineId Id="32" Count="0" />
-      <LineId Id="19" Count="1" />
+      <LineId Id="20" Count="0" />
       <LineId Id="24" Count="3" />
       <LineId Id="37" Count="0" />
       <LineId Id="35" Count="0" />
       <LineId Id="38" Count="2" />
       <LineId Id="29" Count="0" />
       <LineId Id="42" Count="0" />
-      <LineId Id="17" Count="0" />
       <LineId Id="16" Count="0" />
       <LineId Id="4" Count="0" />
     </LineIds>
     <LineIds Name="FB_FlowLine.ACT_Manual">
       <LineId Id="1" Count="0" />
       <LineId Id="7" Count="0" />
-      <LineId Id="4" Count="0" />
-      <LineId Id="14" Count="0" />
+      <LineId Id="30" Count="1" />
       <LineId Id="9" Count="0" />
       <LineId Id="11" Count="0" />
       <LineId Id="10" Count="0" />
-      <LineId Id="12" Count="1" />
+      <LineId Id="32" Count="1" />
       <LineId Id="3" Count="0" />
+      <LineId Id="36" Count="0" />
     </LineIds>
     <LineIds Name="FB_FlowLine.ACT_Motor">
       <LineId Id="39" Count="0" />
@@ -311,16 +330,15 @@ END_CASE]]></ST>
       <LineId Id="12" Count="0" />
       <LineId Id="24" Count="1" />
       <LineId Id="30" Count="0" />
-      <LineId Id="23" Count="0" />
-      <LineId Id="31" Count="1" />
+      <LineId Id="58" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="32" Count="0" />
       <LineId Id="26" Count="0" />
-      <LineId Id="54" Count="0" />
       <LineId Id="49" Count="0" />
       <LineId Id="34" Count="0" />
       <LineId Id="2" Count="0" />
-      <LineId Id="41" Count="0" />
-      <LineId Id="55" Count="0" />
-      <LineId Id="42" Count="0" />
+      <LineId Id="41" Count="1" />
       <LineId Id="47" Count="0" />
       <LineId Id="43" Count="0" />
       <LineId Id="56" Count="0" />

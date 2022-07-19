@@ -9,16 +9,20 @@ VAR
 //气缸
 	fbHOZCyl_1			:REFERENCE TO FB_Cylinder:=fbCylinder[37];	//	推料气缸1
 	fbHOZCyl_2			:REFERENCE TO FB_Cylinder:=fbCylinder[38];	//	推料气缸2
+//相机
+	Camera   : 	 REFERENCE TO FB_Camera:=fbCamera[18]; 
 	
 	//延时
 	arTonDelay :ARRAY[1..20] OF TON;
 	//返回值
 	UdiReturnValue :ARRAY[1..20] OF UDINT;
-	
-	
-	
 	i: INT;
-
+ //传感器
+	arxBoxCheckSensor: ARRAY[1..2] OF BOOL;
+	// //需要推到NG位置
+	xNGFlag: BOOL;
+	//运行结束
+	XFlowAutoDone:BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -38,8 +42,12 @@ Z_Output();]]></ST>
         <ST><![CDATA[//气缸
 fbHOZCyl_1.xWP_Sensor:=					IxS12HOZCyl_1WP;//	贴标检测工位¶推料气缸1¶动点
 fbHOZCyl_1.xHP_Sensor:=					IxS12HOZCyl_1HP;//	贴标检测工位¶推料气缸1¶原点
-fbHOZCyl_2.xWP_Sensor:=					IxS12HOZCyl_2WP;//	贴标检测工位¶推料气缸2¶动点
-fbHOZCyl_2.xHP_Sensor:=					IxS12HOZCyl_2HP;//	贴标检测工位¶推料气缸2¶原点
+fbHOZCyl_2.xWP_Sensor:=					IxS12HOZCyl_2HP;//	贴标检测工位¶推料气缸2¶动点
+fbHOZCyl_2.xHP_Sensor:=					IxS12HOZCyl_2WP;//	贴标检测工位W推料气缸2¶原点
+
+//传感器
+arxBoxCheckSensor[1] :=IxS12SensorReached;	//相机检测处
+
 
 
 
@@ -55,14 +63,14 @@ fbHOZCyl_2.xHP_Sensor:=					IxS12HOZCyl_2HP;//	贴标检测工位¶推料气缸2
       <Implementation>
         <ST><![CDATA[//
 station.adwAlarm[1].00:=station.xInitTimeout;	  			//S08Label 初始化超时
-
+//station.adwAlarm[1].01:=TRUE;	  			//S14贴标工位相机检测超时，请检查	
 ]]></ST>
       </Implementation>
     </Action>
     <Action Name="Delay" Id="{7bc9ee60-9b9c-4a53-b951-82315c5dc169}">
       <Implementation>
         <ST><![CDATA[(*arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );*)//TipAuto使用
-arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );
+arTonDelay[02](IN:= 	station.iStepAuto=60 , PT:=T#1S , Q=> , ET=> );//已使用
 arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
 arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[05](IN:= , PT:=T#0.1S , Q=> , ET=> );
@@ -122,19 +130,77 @@ CASE station.iStepAuto OF
 			station.xRunningOffProhibit := TRUE ;//运行中信号Off禁止
 			station.iStepAuto:= 10;
 		END_IF
-    10: //复位数据 
+  10: //复位数据 
+			xFlowAutoDone:=FALSE;	
+			xNGFlag:=FALSE;
+			sCamera_TO_Plc.iS13Result[1]:=0;
 			station.iStepAuto:=20;
-
+	20://等待传感器检测
+			IF  arxBoxCheckSensor[1]  THEN
+					station.iStepAuto:=30;
+			END_IF
+	30://水平阻挡气缸伸出
+				fbHOZCyl_1.xAuto:=TRUE;
+			IF	fbHOZCyl_1.xWP_Delay THEN
+			 	station.iStepAuto:=40;
+			END_IF
+	40://阻挡气缸下降
+			fbHOZCyl_2.xAuto:=FALSE;
+			IF	fbHOZCyl_2.xHP_Delay THEN
+			 	station.iStepAuto:=50;
+			END_IF
+	50://收回水平阻挡气缸
+				fbHOZCyl_1.xAuto:=FALSE;
+			IF	fbHOZCyl_1.xHP_Delay THEN
+			 	station.iStepAuto:=60;
+			END_IF
+	60://等待
+				IF   arTonDelay[02].Q THEN
+							station.iStepAuto:=70;
+				END_IF
+	70://相机检测
+				Camera.xlTrigger:=TRUE;
+					station.iStepAuto:=75;
+	75://等待相机响应
+			IF    Camera.xQBusy THEN
+				station.iStepAuto:=80;	
+			END_IF
+	80://等待相机完成
+			 IF   Camera.xQDone THEN
+				 station.iStepAuto:=90;	
+			 ELSIF Camera.xQAlarm THEN
+					Camera.xlInit:=TRUE;
+					station.iStepAuto:=70;
+					station.adwAlarm[1].01:=TRUE;	//S14贴标工位相机检测超时，请检查	
+			 END_IF
+	90://处理相机结果
+			IF 	sCamera_TO_Plc.iS13Result[1] =1  THEN
+				//相机拍照结果， 1=OK 2=NG，触发前PLC清除	
+					xNGFlag:=FALSE;
+					station.iStepAuto:=100;
+			ELSIF sCamera_TO_Plc.iS13Result[1] =2 THEN
+			 		xNGFlag:=TRUE;
+			 		station.iStepAuto:=100;
+			END_IF
+	100://阻挡气缸抬起
+			fbHOZCyl_2.xAuto:=TRUE;
+			IF	fbHOZCyl_2.xWP_Delay THEN
+			 	station.iStepAuto:=110;
+			END_IF
+	110://等待传感器
+			IF  NOT  arxBoxCheckSensor[1] THEN
+			 		station.iStepAuto:=999;
+			END_IF
 	
 	999://----Single Run Finish----
-			
+		xFlowAutoDone:=TRUE;	
 		station.iStepAuto :=0;
 		IF NOT station.xSingleContinuousRun THEN
 			station.xSingleRunFlag:=FALSE;
 		END_IF
 		
 		station.xCycleEnable:=FALSE;	
-		station.xDone:=TRUE;
+	//	station.xDone:=TRUE;
 		station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
 	ELSE
 		;	
@@ -157,7 +223,14 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
-    station.iStepInit:=999;	
+    station.iStepInit:=20;	
+20://阻挡气缸回原
+			fbHOZCyl_1.xInit:=TRUE;
+	  	fbHOZCyl_2.xInit:=TRUE;
+		IF  fbHOZCyl_1.xHP_Delay  AND 
+				fbHOZCyl_2.xHP_Delay THEN
+				station.iStepInit:=999;	
+		END_IF
 999://初始化完成	
 	station.iStepInit:=0;
 	station.xInitDone:=TRUE;  
@@ -188,6 +261,7 @@ fbHOZCyl_2.xOnILC	:=	TRUE;
 
 //---------------------------------------------------伺服动作条件-------------------------------------------
 
+Camera.xIDeviceRunning:=TRUE;
 ]]></ST>
       </Implementation>
     </Action>
@@ -234,6 +308,10 @@ QxS12HOZCyl_2HP	:=fbHOZCyl_2.xHP_Valve;//	贴标检测工位¶推料气缸2¶原
       <LineId Id="69" Count="0" />
       <LineId Id="67" Count="1" />
       <LineId Id="54" Count="0" />
+      <LineId Id="71" Count="0" />
+      <LineId Id="70" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="74" Count="0" />
       <LineId Id="65" Count="0" />
       <LineId Id="55" Count="0" />
       <LineId Id="40" Count="1" />
@@ -258,9 +336,43 @@ QxS12HOZCyl_2HP	:=fbHOZCyl_2.xHP_Valve;//	贴标检测工位¶推料气缸2¶原
       <LineId Id="1452" Count="0" />
       <LineId Id="1183" Count="1" />
       <LineId Id="1256" Count="0" />
+      <LineId Id="1555" Count="0" />
+      <LineId Id="1538" Count="0" />
+      <LineId Id="1479" Count="0" />
       <LineId Id="1259" Count="0" />
+      <LineId Id="1456" Count="0" />
+      <LineId Id="1458" Count="2" />
+      <LineId Id="1501" Count="0" />
+      <LineId Id="1504" Count="2" />
+      <LineId Id="1503" Count="0" />
+      <LineId Id="1508" Count="3" />
+      <LineId Id="1507" Count="0" />
+      <LineId Id="1526" Count="3" />
+      <LineId Id="1525" Count="0" />
+      <LineId Id="1512" Count="0" />
+      <LineId Id="1547" Count="2" />
+      <LineId Id="1500" Count="0" />
+      <LineId Id="1467" Count="0" />
+      <LineId Id="1557" Count="0" />
+      <LineId Id="1556" Count="0" />
+      <LineId Id="1468" Count="0" />
+      <LineId Id="1470" Count="4" />
+      <LineId Id="1550" Count="3" />
+      <LineId Id="1466" Count="0" />
+      <LineId Id="1476" Count="0" />
+      <LineId Id="1478" Count="0" />
+      <LineId Id="1475" Count="0" />
+      <LineId Id="1484" Count="0" />
+      <LineId Id="1487" Count="0" />
       <LineId Id="1431" Count="0" />
+      <LineId Id="1485" Count="0" />
+      <LineId Id="1488" Count="0" />
+      <LineId Id="1481" Count="0" />
       <LineId Id="1210" Count="0" />
+      <LineId Id="1493" Count="0" />
+      <LineId Id="1495" Count="2" />
+      <LineId Id="1541" Count="3" />
+      <LineId Id="1490" Count="0" />
       <LineId Id="1212" Count="2" />
       <LineId Id="1453" Count="2" />
       <LineId Id="1215" Count="2" />
@@ -269,7 +381,14 @@ QxS12HOZCyl_2HP	:=fbHOZCyl_2.xHP_Valve;//	贴标检测工位¶推料气缸2¶原
     </LineIds>
     <LineIds Name="S14_LabelChecking.FlowInit">
       <LineId Id="437" Count="9" />
-      <LineId Id="461" Count="5" />
+      <LineId Id="461" Count="0" />
+      <LineId Id="467" Count="0" />
+      <LineId Id="476" Count="0" />
+      <LineId Id="469" Count="0" />
+      <LineId Id="472" Count="0" />
+      <LineId Id="477" Count="0" />
+      <LineId Id="473" Count="1" />
+      <LineId Id="462" Count="4" />
       <LineId Id="436" Count="0" />
     </LineIds>
     <LineIds Name="S14_LabelChecking.General">
@@ -284,6 +403,7 @@ QxS12HOZCyl_2HP	:=fbHOZCyl_2.xHP_Valve;//	贴标检测工位¶推料气缸2¶原
       <LineId Id="290" Count="0" />
       <LineId Id="244" Count="0" />
       <LineId Id="274" Count="0" />
+      <LineId Id="313" Count="0" />
     </LineIds>
     <LineIds Name="S14_LabelChecking.TipAuto">
       <LineId Id="118" Count="0" />

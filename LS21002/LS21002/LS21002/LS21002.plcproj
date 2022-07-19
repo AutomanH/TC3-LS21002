@@ -280,6 +280,24 @@
     <Compile Include="POUs\003_FB\061_MKC204C\FB_MT_MKC_New.TcPOU">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\003_FB\062_LoadCell\DUT_DeviceOpe.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\062_LoadCell\ST_LoadCell_Error.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\062_LoadCell\FB_LoadCell.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\062_LoadCell\FB_Modbus_Tcp.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\062_LoadCell\stModbusPara.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\062_LoadCell\ST_LoadCell_ParOut.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\003_FB\07_RGI_14_new\不带旋转的电动夹爪\FB_RGI_14_Modbus.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -645,6 +663,7 @@
     <Folder Include="POUs\003_FB\059_Vacuum" />
     <Folder Include="POUs\003_FB\060_LocalClient" />
     <Folder Include="POUs\003_FB\061_MKC204C" />
+    <Folder Include="POUs\003_FB\062_LoadCell" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB\DUTs" />
     <Folder Include="POUs\004_FC\001_Parallel" />
@@ -667,6 +686,10 @@
       <DefaultResolution>Tc2_EtherCAT, * (Beckhoff Automation GmbH)</DefaultResolution>
       <Namespace>Tc2_EtherCAT</Namespace>
     </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_Math">
+      <DefaultResolution>Tc2_Math, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_Math</Namespace>
+    </PlaceholderReference>
     <PlaceholderReference Include="Tc2_MC2">
       <DefaultResolution>Tc2_MC2, * (Beckhoff Automation GmbH)</DefaultResolution>
       <Namespace>Tc2_MC2</Namespace>
@@ -678,6 +701,10 @@
     <PlaceholderReference Include="Tc2_ModbusSrv">
       <DefaultResolution>Tc2_ModbusSrv, * (Beckhoff Automation GmbH)</DefaultResolution>
       <Namespace>Tc2_ModbusSrv</Namespace>
+    </PlaceholderReference>
+    <PlaceholderReference Include="Tc2_SPA">
+      <DefaultResolution>Tc2_SPA, * (Beckhoff Automation GmbH)</DefaultResolution>
+      <Namespace>Tc2_SPA</Namespace>
     </PlaceholderReference>
     <PlaceholderReference Include="Tc2_Standard">
       <DefaultResolution>Tc2_Standard, * (Beckhoff Automation GmbH)</DefaultResolution>
