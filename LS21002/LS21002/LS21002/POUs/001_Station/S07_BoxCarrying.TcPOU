@@ -124,7 +124,10 @@ END_IF
 //station.adwAlarm[1].09	:=	true	;//	S07孔板搬运工位卡片1位置不可重复放置,请检查
 //station.adwAlarm[1].10	:=	true;//	S07孔板搬运工位卡片2位置不可重复放置,请检查
 //station.adwAlarm[1].11	:=	true	;//	S07孔板搬运工位Buffer位置不可重复放置,请检查
-//station.adwAlarm[1].12	:=	true	;//	S07孔板搬运工位NG位置不可重复放置,请检查]]></ST>
+//station.adwAlarm[1].12	:=	true	;//	S07孔板搬运工位NG位置不可重复放置,请检查
+
+
+station.adwAlarm[1].13:= (station.xIniting AND NOT stFromRobot.xLocal_Remote)  ;//S07孔板搬运工位机械手示教器未打到自动模式]]></ST>
       </Implementation>
     </Action>
     <Action Name="Delay" Id="{2db4a02f-a342-4718-bc45-d3fd6620ccc0}">
@@ -201,16 +204,24 @@ CASE station.iStepAuto OF
 		IF  fbMachine[1].xTryRun THEN //OR station.xSingleRunning THEN
 			station.iStepAuto:= 20;
 		ELSE
-			IF   	 NOT  arMainlineFixtureData[arCurFixtureNumStation[17]].xMaterialOnOff AND
-					 NOT  arMainlineFixtureData[arCurFixtureNumStation[18]].xMaterialOnOff AND  NOT    xMainLineSensorReached[1] THEN
-							station.iStepAuto:= 999;
-					//		xBeltLineControl:=FALSE;
-							xS07MainlineRunPermit:=TRUE;		
-			ELSIF		( arMainlineFixtureData[arCurFixtureNumStation[17]].xMaterialOnOff AND    
-						arMainlineFixtureData[arCurFixtureNumStation[18]].xMaterialOnOff  )AND  xMainLineSensorReached[1]   THEN
-						//	xBeltLineControl:=TRUE;
-							station.iStepAuto:= 20;
-			END_IF
+				IF   station.xEmptyDone THEN
+								 xS07MainlineRunPermit:=TRUE;				
+								 station.iStepAuto:= 999;
+				ELSIF  	arMainlineFixtureData[arCurFixtureNumStation[17]].stProduct.xEmptying  AND 
+								arMainlineFixtureData[arCurFixtureNumStation[17]].stProduct.xEmptying  AND 
+								NOT  xMainLineSensorReached[1] THEN
+ 									station.xEmptying:=TRUE;
+									station.iStepAuto:= 1000;
+				ELSIF NOT  arMainlineFixtureData[arCurFixtureNumStation[17]].xMaterialOnOff AND
+							NOT  arMainlineFixtureData[arCurFixtureNumStation[18]].xMaterialOnOff AND  
+							NOT  xMainLineSensorReached[1] THEN
+								 station.iStepAuto:= 999;
+								 xS07MainlineRunPermit:=TRUE;		
+				ELSIF	  arMainlineFixtureData[arCurFixtureNumStation[17]].xMaterialOnOff AND    
+								arMainlineFixtureData[arCurFixtureNumStation[18]].xMaterialOnOff AND
+								xMainLineSensorReached[1]   THEN
+								 station.iStepAuto:= 20;
+				 END_IF
 		END_IF
 	20:////Restore_after_Estop_Process1 上载数据流程
 			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
@@ -307,24 +318,11 @@ CASE station.iStepAuto OF
 					stToRobot1.xClampPartDone:=FALSE;
 					station.iStepAuto :=97;
 	97://等皮带线前进完成后再做放料判断
-			IF 	S10_BeltCarrying.station.xDone  THEN
+			IF 	S10_BeltCarrying.station.xDone  AND  NOT station.xDone THEN
 			 	station.iStepAuto :=100;
 			END_IF
-	100:
-			////Restore_after_Estop_Process4/Process5 机械手第1/2次放料流程
-			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
-					station.iStepAuto :=110; 
-			ELSIF tsModuleProcess[bRobCounter+3].xProcessNotStarted AND NOT  tsModuleProcess[bRobCounter+3].xProcessStarted THEN
-					station.iStepAuto :=110; (*process not started*)
-			ELSIF  tsModuleProcess[bRobCounter+3].xProcessStarted AND NOT  tsModuleProcess[bRobCounter+3].xProcessCompleted THEN
-				 station.iStepAuto := 110;(*process started*)
-			ELSIF  tsModuleProcess[bRobCounter+3].xProcessCompleted AND NOT tsModuleProcess[bRobCounter+3].xQDataCompleted  THEN
-					station.iStepAuto :=170 ;(*process completed*)
-			ELSIF tsModuleProcess[bRobCounter+3].xQDataCompleted THEN
-					station.iStepAuto :=170;(*Qdata completed *)
-			ELSE
-					station.iStepAuto :=110; 
-			END_IF	
+	100:	////Restore_after_Estop_Process4/Process5 机械手第1/2次放料流程
+				station.iStepAuto :=110;
 	110://判断该去哪个位置放料
 			tsModuleProcess[bRobCounter+3].xProcessNotStarted:=TRUE;
 			IF  bRobCounter =1 THEN
@@ -608,6 +606,24 @@ CASE station.iStepAuto OF
 						  station.xDone:=TRUE;
 							station.iStepAuto :=0;
 		END_IF
+
+{region "清料程序"}
+1000://写入数据
+	 		 arMainlineFixtureData[arCurFixtureNumStation[17]].xMaterialOnOff:=FALSE;
+	 		 arMainlineFixtureData[arCurFixtureNumStation[18]].xMaterialOnOff:=FALSE;
+	 		 arMainlineFixtureData[arCurFixtureNumStation[17]].stProduct.xEmptying:=FALSE;
+	 		 arMainlineFixtureData[arCurFixtureNumStation[18]].stProduct.xEmptying:=FALSE;
+			 station.iStepAuto :=1010;
+1010://清料完成
+	 	station.xEmptying:=FALSE;
+		station.xEmptyDone:=TRUE;
+		station.iStepAuto :=0;	
+{endregion}
+		
+		
+		
+		
+		
 	ELSE
 		;	
 END_CASE
@@ -772,6 +788,7 @@ CASE station.iStepInit OF
 					station.iStepInit:= 50;
 				END_IF		
 50:  //机械手初始化
+		stToRobot1.iMoveMode := CmdRobot1.Cmd_GoHome ;//切换到回原点
 		fbRobot.xInitExte := TRUE ;	
 		station.iStepInit:=60;		
 60:
@@ -780,7 +797,7 @@ CASE station.iStepInit OF
 			station.iStepInit:=65;		
 		END_IF		
 65:
-			stToRobot1.iMoveMode := CmdRobot1.Cmd_GoHome ;
+			//stToRobot1.iMoveMode := CmdRobot1.Cmd_GoHome ;
 			station.iStepInit:=70;	
 70://机械手初始化	
 	
@@ -989,6 +1006,8 @@ END_CASE
       <LineId Id="279" Count="0" />
       <LineId Id="291" Count="2" />
       <LineId Id="289" Count="0" />
+      <LineId Id="295" Count="1" />
+      <LineId Id="294" Count="0" />
     </LineIds>
     <LineIds Name="S07_BoxCarrying.Delay">
       <LineId Id="64" Count="7" />
@@ -1005,10 +1024,19 @@ END_CASE
       <LineId Id="2846" Count="12" />
       <LineId Id="3659" Count="3" />
       <LineId Id="3658" Count="0" />
-      <LineId Id="2860" Count="7" />
-      <LineId Id="3739" Count="0" />
-      <LineId Id="2868" Count="2" />
-      <LineId Id="3740" Count="0" />
+      <LineId Id="2860" Count="4" />
+      <LineId Id="4217" Count="0" />
+      <LineId Id="4221" Count="0" />
+      <LineId Id="4223" Count="0" />
+      <LineId Id="4218" Count="0" />
+      <LineId Id="4225" Count="0" />
+      <LineId Id="4227" Count="0" />
+      <LineId Id="4222" Count="0" />
+      <LineId Id="4226" Count="0" />
+      <LineId Id="2865" Count="1" />
+      <LineId Id="4215" Count="0" />
+      <LineId Id="2867" Count="3" />
+      <LineId Id="4216" Count="0" />
       <LineId Id="2871" Count="3" />
       <LineId Id="3251" Count="1" />
       <LineId Id="2875" Count="21" />
@@ -1048,12 +1076,10 @@ END_CASE
       <LineId Id="3704" Count="0" />
       <LineId Id="3702" Count="1" />
       <LineId Id="3753" Count="0" />
-      <LineId Id="4182" Count="2" />
-      <LineId Id="3002" Count="0" />
-      <LineId Id="3004" Count="0" />
-      <LineId Id="3257" Count="1" />
-      <LineId Id="3005" Count="10" />
-      <LineId Id="3519" Count="0" />
+      <LineId Id="4182" Count="1" />
+      <LineId Id="4200" Count="1" />
+      <LineId Id="4214" Count="0" />
+      <LineId Id="4198" Count="0" />
       <LineId Id="3657" Count="0" />
       <LineId Id="3525" Count="0" />
       <LineId Id="3597" Count="0" />
@@ -1191,6 +1217,18 @@ END_CASE
       <LineId Id="4185" Count="1" />
       <LineId Id="4188" Count="0" />
       <LineId Id="3781" Count="0" />
+      <LineId Id="4234" Count="0" />
+      <LineId Id="4228" Count="0" />
+      <LineId Id="4239" Count="0" />
+      <LineId Id="4241" Count="0" />
+      <LineId Id="4240" Count="0" />
+      <LineId Id="4237" Count="0" />
+      <LineId Id="4242" Count="0" />
+      <LineId Id="4246" Count="0" />
+      <LineId Id="4248" Count="1" />
+      <LineId Id="4251" Count="1" />
+      <LineId Id="4235" Count="0" />
+      <LineId Id="4229" Count="4" />
       <LineId Id="3193" Count="2" />
       <LineId Id="3972" Count="67" />
       <LineId Id="3245" Count="0" />
@@ -1220,15 +1258,16 @@ END_CASE
       <LineId Id="731" Count="0" />
       <LineId Id="736" Count="3" />
       <LineId Id="730" Count="0" />
-      <LineId Id="634" Count="1" />
+      <LineId Id="634" Count="0" />
+      <LineId Id="741" Count="0" />
+      <LineId Id="635" Count="0" />
       <LineId Id="716" Count="0" />
       <LineId Id="638" Count="3" />
       <LineId Id="633" Count="0" />
       <LineId Id="717" Count="2" />
-      <LineId Id="662" Count="1" />
-      <LineId Id="701" Count="0" />
-      <LineId Id="703" Count="0" />
-      <LineId Id="705" Count="0" />
+      <LineId Id="742" Count="0" />
+      <LineId Id="762" Count="0" />
+      <LineId Id="743" Count="2" />
       <LineId Id="704" Count="0" />
       <LineId Id="702" Count="0" />
       <LineId Id="664" Count="8" />

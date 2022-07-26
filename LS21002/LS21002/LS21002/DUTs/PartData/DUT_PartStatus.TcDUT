@@ -18,6 +18,7 @@ STRUCT
 	xAdjusting_NOK :BOOL;
 	xCutting_OK		:BOOL;
 	xCutting_NOK		:BOOL;
+	xEmptying:BOOL;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

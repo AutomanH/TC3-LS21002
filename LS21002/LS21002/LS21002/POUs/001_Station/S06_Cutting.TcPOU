@@ -186,19 +186,19 @@ CASE station.iStepAuto OF
 		IF (* fbMachine[1].xTryRun OR*) station.xSingleRunning THEN
 			station.iStepAuto:= 20;
 		ELSE
-			IF   	 NOT  arMainlineFixtureData[arCurFixtureNumStation[14]].xMaterialOnOff AND
-					 NOT arMainlineFixtureData[arCurFixtureNumStation[15]].xMaterialOnOff AND 
-					 NOT arMainlineFixtureData[arCurFixtureNumStation[16]].xMaterialOnOff THEN
-					 //xS05WorkPermit:=TRUE;
-					station.iStepAuto:= 999;			
+		 	IF		station.xEmptyDone THEN
+									station.iStepAuto:= 999;
+			ELSIF	arMainlineFixtureData[arCurFixtureNumStation[14]].stProduct.xEmptying AND    
+				    arMainlineFixtureData[arCurFixtureNumStation[15]].stProduct.xEmptying THEN
+										station.xEmptying:=TRUE;
+										station.iStepAuto:= 1000;
+			ELSIF  NOT  arMainlineFixtureData[arCurFixtureNumStation[14]].xMaterialOnOff AND
+						 NOT arMainlineFixtureData[arCurFixtureNumStation[15]].xMaterialOnOff AND 
+						 NOT arMainlineFixtureData[arCurFixtureNumStation[16]].xMaterialOnOff THEN
+										station.iStepAuto:= 999;			
 			ELSIF	arMainlineFixtureData[arCurFixtureNumStation[14]].xMaterialOnOff AND    
 				    arMainlineFixtureData[arCurFixtureNumStation[15]].xMaterialOnOff  THEN 
-					//NOT arMainlineFixtureData[arCurFixtureNumStation[16]].xMaterialOnOff THEN
-					station.iStepAuto:= 20;
-			ELSIF	NOT arMainlineFixtureData[arCurFixtureNumStation[14]].xMaterialOnOff AND    
-				    arMainlineFixtureData[arCurFixtureNumStation[15]].xMaterialOnOff  AND 
-					 arMainlineFixtureData[arCurFixtureNumStation[16]].xMaterialOnOff THEN
-					station.iStepAuto:= 20;
+										station.iStepAuto:= 20;
 			END_IF
 		END_IF
 	20:////Restore_after_Estop_Process1 上载数据流程
@@ -419,7 +419,7 @@ CASE station.iStepAuto OF
 		IF arProcessDataStation[1].xMaterialOnOff  THEN
 			MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[14]]),ADR(arProcessDataStation[1]),SIZEOF(arProcessDataStation[1]));
 		END_IF
-		MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[15]]),ADR(arProcessDataStation[2]),SIZEOF(arProcessDataStation[2]));
+		  MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[15]]),ADR(arProcessDataStation[2]),SIZEOF(arProcessDataStation[2]));
 		IF arProcessDataStation[3].xMaterialOnOff  THEN
 			MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[16]]),ADR(arProcessDataStation[3]),SIZEOF(arProcessDataStation[3]));
 		END_IF
@@ -455,7 +455,95 @@ CASE station.iStepAuto OF
 		END_IF
 		
 		station.xCycleEnable:=FALSE;	
-		station.xDone:=TRUE;			
+		station.xDone:=TRUE;	
+		
+		
+{region "清料程序"}
+1000://写入数据
+	 		arProcessDataStation[1].xMaterialOnOff:=FALSE;
+			arProcessDataStation[2].xMaterialOnOff:=FALSE;
+			arProcessDataStation[3].xMaterialOnOff:=FALSE;
+	 		arProcessDataStation[1].stProduct.xCutting_NOK:=FALSE;
+			arProcessDataStation[1].stProduct.xCutting_OK:=FALSE;	
+			arProcessDataStation[2].stProduct.xCutting_NOK:=FALSE;
+			arProcessDataStation[2].stProduct.xCutting_OK:=FALSE;	
+			arProcessDataStation[3].stProduct.xCutting_NOK:=FALSE;
+			arProcessDataStation[3].stProduct.xCutting_OK:=FALSE;	
+			arProcessDataStation[1].stProduct.xEmptying:=TRUE;
+			arProcessDataStation[2].stProduct.xEmptying:=TRUE;
+			arProcessDataStation[3].stProduct.xEmptying:=TRUE;
+			MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[14]]),ADR(arProcessDataStation[1]),SIZEOF(arProcessDataStation[1]));
+			MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[15]]),ADR(arProcessDataStation[2]),SIZEOF(arProcessDataStation[2]));
+			MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[16]]),ADR(arProcessDataStation[3]),SIZEOF(arProcessDataStation[3]));
+			station.iStepAuto:= 1010;
+1010://切莫垂直气缸收回
+		fbVTCCyl.xAuto:=FALSE;
+		IF  fbVTCCyl.xHP_Delay THEN
+		 	station.iStepAuto :=1020;
+		END_IF
+1020://水平切膜气缸收回
+		fbHOZCyl.xAuto:=FALSE;
+		IF  fbHOZCyl.xHP_Delay THEN
+			station.iStepAuto :=1030;
+		END_IF
+1030://后侧夹爪气缸松开
+		fbGlampCyl_2.xauto :=FALSE;
+		IF   fbGlampCyl_2.xHP_Delay THEN
+			station.iStepAuto :=1040;
+		END_IF
+1040://水平对顶气缸收回
+		fbHOZReachedCyl_1.xAuto :=FALSE;
+		fbHOZReachedCyl_2.xAuto :=FALSE;
+		IF   fbHOZReachedCyl_1.xHP_Delay AND
+			 fbHOZReachedCyl_2.xHP_Delay THEN
+			station.iStepAuto :=1050;
+		END_IF	
+1050://下压气缸回原
+		fbPressCyl_1.xAuto :=FALSE;
+		fbPressCyl_2.xAuto :=FALSE;
+		IF  fbPressCyl_1.xHP_Delay  AND  
+				fbPressCyl_2.xHP_Delay THEN
+		 	station.iStepAuto :=1060;
+		END_IF	
+1060://旋转伺服旋转到位置1
+		fbROTAxisMove.xMoveAuto[2]:=TRUE;
+		IF  fbROTAxisMove.xMoveInPos[2] THEN
+			station.iStepAuto :=1070;
+		END_IF
+1070://水平切莫气缸收回
+		 fbHOZCyl.xAuto :=FALSE;
+		 IF  fbHOZCyl.xHP_Delay THEN
+				 station.iStepAuto :=1080;
+		 END_IF
+1080://前测夹爪气缸松开
+		 fbGlampCyl_1.xAuto :=FALSE;
+		 IF   fbGlampCyl_1.xHP_Delay THEN
+			 station.iStepAuto :=1090;
+		 END_IF
+1090://旋转伺服回参考位置
+		 fbROTAxisMove.xMoveAuto[1]:=TRUE;
+		 IF  fbROTAxisMove.xMoveInPos[1] THEN
+			 station.iStepAuto :=1100;
+		 END_IF
+1100://下方夹气缸松开
+		 fbGlampAdjustCyl_1.xAuto :=FALSE;
+		 fbGlampAdjustCyl_2.xAuto :=FALSE;
+		 fbGlampAdjustCyl_3.xAuto :=FALSE;
+	 IF fbGlampAdjustCyl_1.xHP_Delay AND 
+		 fbGlampAdjustCyl_2.xHP_Delay AND 
+			fbGlampAdjustCyl_3.xHP_Delay THEN
+			station.iStepAuto :=1110;	
+	 END_IF
+1110://下方顶升气缸回原位
+	fbVTCAdjustCyl.xAuto :=FALSE;
+	IF fbVTCAdjustCyl.xHP_Delay THEN
+		station.iStepAuto :=1120;	
+	END_IF
+1120://清料程序完成
+			station.xEmptying:=FALSE;
+			station.xEmptyDone:=TRUE;
+			station.iStepAuto :=0;		 
+{endregion}		
 		
 	ELSE
 		;	
@@ -758,14 +846,16 @@ QxS06VTCCylHP	    				:=    fbVTCCyl.xHP_Valve;]]></ST>
       <LineId Id="2191" Count="3" />
       <LineId Id="2190" Count="0" />
       <LineId Id="1259" Count="0" />
-      <LineId Id="1949" Count="6" />
-      <LineId Id="2247" Count="0" />
+      <LineId Id="1949" Count="3" />
+      <LineId Id="2327" Count="1" />
+      <LineId Id="2322" Count="1" />
+      <LineId Id="2326" Count="0" />
+      <LineId Id="2325" Count="0" />
+      <LineId Id="1953" Count="2" />
       <LineId Id="1958" Count="0" />
-      <LineId Id="1962" Count="2" />
+      <LineId Id="1962" Count="1" />
       <LineId Id="1972" Count="0" />
-      <LineId Id="2016" Count="1" />
-      <LineId Id="1977" Count="0" />
-      <LineId Id="1983" Count="3" />
+      <LineId Id="1984" Count="2" />
       <LineId Id="2183" Count="1" />
       <LineId Id="1987" Count="12" />
       <LineId Id="2001" Count="2" />
@@ -896,6 +986,32 @@ QxS06VTCCylHP	    				:=    fbVTCCyl.xHP_Valve;]]></ST>
       <LineId Id="1212" Count="2" />
       <LineId Id="1453" Count="2" />
       <LineId Id="1215" Count="2" />
+      <LineId Id="2336" Count="1" />
+      <LineId Id="2331" Count="0" />
+      <LineId Id="2427" Count="0" />
+      <LineId Id="2430" Count="1" />
+      <LineId Id="2440" Count="0" />
+      <LineId Id="2432" Count="0" />
+      <LineId Id="2441" Count="0" />
+      <LineId Id="2434" Count="0" />
+      <LineId Id="2442" Count="2" />
+      <LineId Id="2436" Count="1" />
+      <LineId Id="2445" Count="0" />
+      <LineId Id="2438" Count="1" />
+      <LineId Id="2446" Count="0" />
+      <LineId Id="2429" Count="0" />
+      <LineId Id="2338" Count="21" />
+      <LineId Id="2447" Count="0" />
+      <LineId Id="2361" Count="5" />
+      <LineId Id="2448" Count="0" />
+      <LineId Id="2373" Count="8" />
+      <LineId Id="2383" Count="4" />
+      <LineId Id="2409" Count="17" />
+      <LineId Id="2334" Count="0" />
+      <LineId Id="2333" Count="0" />
+      <LineId Id="2449" Count="0" />
+      <LineId Id="2451" Count="1" />
+      <LineId Id="2332" Count="0" />
       <LineId Id="2199" Count="0" />
       <LineId Id="1218" Count="6" />
     </LineIds>

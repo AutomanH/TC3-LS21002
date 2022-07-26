@@ -165,22 +165,23 @@ CASE station.iStepAuto OF
 		tsModuleProcess[1].xQDataCompleted:=TRUE;
 		station.iStepAuto:= 40;
 	40: //判断产品状态
-		//IF	NOT fbMachine[1].xTryRun THEN
-			IF  arProcessDataStation[1].xMaterialOnOff   AND
-				 arProcessDataStation[2].xMaterialOnOff  THEN
-				station.iStepAuto:= 50;
-			ELSE
-				station.iStepAuto:= 999;
-			END_IF	
-	//45://等待切莫工位允许信号
-	//				 IF   xS05WorkPermit THEN
-	//								station.iStepAuto:= 50;
-	//								xS05WorkPermit:=FALSE;
-	//					END_IF
-				
-	//	ELSE
-	//	 	station.iStepAuto:= 50;
-	//	END_IF
+			IF	NOT fbMachine[1].xTryRun THEN
+								 IF  station.xEmptyDone THEN
+													 station.iStepAuto:= 999;	
+								 ELSIF  arProcessDataStation[1].stProduct.xEmptying  AND 
+												arProcessDataStation[2].stProduct.xEmptying  THEN
+													 station.xEmptying:=TRUE;
+													 station.iStepAuto:= 1000;
+								 ELSIF  arProcessDataStation[1].xMaterialOnOff   AND
+												arProcessDataStation[2].xMaterialOnOff  THEN
+													 station.iStepAuto:= 50;
+								 ELSIF	 NOT arProcessDataStation[1].xMaterialOnOff   AND
+												NOT arProcessDataStation[2].xMaterialOnOff  THEN
+													 station.iStepAuto:= 999;
+								 END_IF
+			 ELSE
+			 			station.iStepAuto:= 50;
+			 END_IF
 	/////产品流程开始	
 	50:////Restore_after_Estop_Process2 调整流程
 			IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
@@ -269,6 +270,42 @@ CASE station.iStepAuto OF
 		END_IF
 		station.xCycleEnable:=FALSE;	
 		station.xDone:=TRUE;
+
+{region "清料程序"}
+1000://写入数据
+	 		arProcessDataStation[1].xMaterialOnOff:=FALSE;
+			arProcessDataStation[2].xMaterialOnOff:=FALSE;
+	 		arProcessDataStation[1].stProduct.xAdjusting_NOK:=FALSE;
+			arProcessDataStation[2].stProduct.xAdjusting_OK:=FALSE;
+			arProcessDataStation[1].stProduct.xAdjusting_NOK:=FALSE;
+			arProcessDataStation[2].stProduct.xAdjusting_OK:=FALSE;
+			arProcessDataStation[1].stProduct.xEmptying:=TRUE;
+			arProcessDataStation[2].stProduct.xEmptying:=TRUE;
+			MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[12]]),ADR(arProcessDataStation[1]),SIZEOF(arProcessDataStation[1]));
+			MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[13]]),ADR(arProcessDataStation[2]),SIZEOF(arProcessDataStation[2]));
+			station.iStepAuto:= 1010;
+1010://Z轴回参考位置
+			fbZAxisMove_1.xMoveAuto[1]:=TRUE;
+			fbZAxisMove_2.xMoveAuto[1]:=TRUE;
+			IF  fbZAxisMove_1.xMoveInPos[1] AND fbZAxisMove_2.xMoveInPos[1]THEN
+				station.iStepAuto:=1020;	
+			END_IF	 
+1020://清料完成
+	 		station.xEmptying:=FALSE;
+		  station.xEmptyDone:=TRUE;
+			station.iStepAuto:=0;
+{endRegion}	
+		
+				
+		
+		
+		
+		
+		
+		
+		
+		
+		
 	ELSE
 		;	
 END_CASE
@@ -335,7 +372,6 @@ CASE bClearProcessStep OF
 		END_IF
 	30:  
 			bClearProcessStep:=0;
-	
 END_CASE
 
 
@@ -468,15 +504,8 @@ END_IF
       <LineId Id="1685" Count="0" />
       <LineId Id="1700" Count="0" />
       <LineId Id="1687" Count="3" />
-      <LineId Id="1827" Count="0" />
-      <LineId Id="1694" Count="5" />
-      <LineId Id="1833" Count="0" />
-      <LineId Id="1835" Count="0" />
-      <LineId Id="1838" Count="0" />
-      <LineId Id="1840" Count="0" />
-      <LineId Id="1837" Count="0" />
-      <LineId Id="1834" Count="0" />
-      <LineId Id="1828" Count="2" />
+      <LineId Id="1855" Count="15" />
+      <LineId Id="1846" Count="0" />
       <LineId Id="1557" Count="0" />
       <LineId Id="1709" Count="0" />
       <LineId Id="1820" Count="1" />
@@ -503,6 +532,8 @@ END_IF
       <LineId Id="1818" Count="1" />
       <LineId Id="1781" Count="33" />
       <LineId Id="1735" Count="0" />
+      <LineId Id="1881" Count="25" />
+      <LineId Id="1871" Count="9" />
       <LineId Id="1218" Count="2" />
       <LineId Id="1223" Count="1" />
     </LineIds>
@@ -520,7 +551,8 @@ END_IF
       <LineId Id="436" Count="0" />
     </LineIds>
     <LineIds Name="S05_Adjusting.General">
-      <LineId Id="382" Count="21" />
+      <LineId Id="382" Count="18" />
+      <LineId Id="402" Count="1" />
       <LineId Id="361" Count="0" />
       <LineId Id="381" Count="0" />
     </LineIds>

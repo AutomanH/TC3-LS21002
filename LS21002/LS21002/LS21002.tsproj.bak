@@ -1471,16 +1471,6 @@ External Setpoint Generation:
 			</ArrayInfo>
 		</DataType>
 		<DataType>
-			<Name GUID="{947A9DCD-67EC-7506-32AF-03B935E0DE83}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..2] OF EL1889</Name>
-			<Comment><![CDATA[输入]]></Comment>
-			<BitSize>32</BitSize>
-			<BaseType GUID="{F39BF48F-658D-9C24-3630-0A4317E0DE71}">EL1889</BaseType>
-			<ArrayInfo>
-				<LBound>1</LBound>
-				<Elements>2</Elements>
-			</ArrayInfo>
-		</DataType>
-		<DataType>
 			<Name GUID="{5B71B567-A56A-4C34-02E8-93B84554BF86}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..6] OF EL1889</Name>
 			<Comment><![CDATA[输入]]></Comment>
 			<BitSize>96</BitSize>
@@ -1491,32 +1481,22 @@ External Setpoint Generation:
 			</ArrayInfo>
 		</DataType>
 		<DataType>
+			<Name GUID="{947A9DCD-67EC-7506-32AF-03B935E0DE83}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..2] OF EL1889</Name>
+			<Comment><![CDATA[输入]]></Comment>
+			<BitSize>32</BitSize>
+			<BaseType GUID="{F39BF48F-658D-9C24-3630-0A4317E0DE71}">EL1889</BaseType>
+			<ArrayInfo>
+				<LBound>1</LBound>
+				<Elements>2</Elements>
+			</ArrayInfo>
+		</DataType>
+		<DataType>
 			<Name GUID="{0A518027-34CE-5493-053E-263686ECD3D7}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..20] OF BOOL</Name>
 			<BitSize>160</BitSize>
 			<BaseType GUID="{18071995-0000-0000-0000-000000000030}">BOOL</BaseType>
 			<ArrayInfo>
 				<LBound>1</LBound>
 				<Elements>20</Elements>
-			</ArrayInfo>
-		</DataType>
-		<DataType>
-			<Name GUID="{34988DE2-7AFA-0557-5329-858EAD52A8AE}" AutoDeleteType="true">EL2889</Name>
-			<BitSize>16</BitSize>
-			<SubItem>
-				<Name>OUTPUT</Name>
-				<Type GUID="{18071995-0000-0000-0000-000000000004}">WORD</Type>
-				<BitSize>16</BitSize>
-				<BitOffs>0</BitOffs>
-			</SubItem>
-		</DataType>
-		<DataType>
-			<Name IecBaseType="true">ARRAY [1..1] OF EL2889</Name>
-			<Comment><![CDATA[输出]]></Comment>
-			<BitSize>16</BitSize>
-			<BaseType GUID="{34988DE2-7AFA-0557-5329-858EAD52A8AE}">EL2889</BaseType>
-			<ArrayInfo>
-				<LBound>1</LBound>
-				<Elements>1</Elements>
 			</ArrayInfo>
 		</DataType>
 		<DataType>
@@ -1535,6 +1515,26 @@ External Setpoint Generation:
 			<ArrayInfo>
 				<LBound>1</LBound>
 				<Elements>19</Elements>
+			</ArrayInfo>
+		</DataType>
+		<DataType>
+			<Name GUID="{34988DE2-7AFA-0557-5329-858EAD52A8AE}" AutoDeleteType="true">EL2889</Name>
+			<BitSize>16</BitSize>
+			<SubItem>
+				<Name>OUTPUT</Name>
+				<Type GUID="{18071995-0000-0000-0000-000000000004}">WORD</Type>
+				<BitSize>16</BitSize>
+				<BitOffs>0</BitOffs>
+			</SubItem>
+		</DataType>
+		<DataType>
+			<Name GUID="{58390D31-CF1F-12CF-68D7-6043AA7E1C77}" IecBaseType="true" AutoDeleteType="true">ARRAY [1..1] OF EL2889</Name>
+			<Comment><![CDATA[输出]]></Comment>
+			<BitSize>16</BitSize>
+			<BaseType GUID="{34988DE2-7AFA-0557-5329-858EAD52A8AE}">EL2889</BaseType>
+			<ArrayInfo>
+				<LBound>1</LBound>
+				<Elements>1</Elements>
 			</ArrayInfo>
 		</DataType>
 		<DataType>
@@ -4562,11 +4562,6 @@ External Setpoint Generation:
 							<Type GUID="{2B7A2230-DE77-F7FC-2DC2-3E43EB484FB2}">ARRAY [1..1] OF EL1889</Type>
 						</Var>
 						<Var>
-							<Name>IO.ET04_Input</Name>
-							<Comment><![CDATA[输入]]></Comment>
-							<Type GUID="{947A9DCD-67EC-7506-32AF-03B935E0DE83}">ARRAY [1..2] OF EL1889</Type>
-						</Var>
-						<Var>
 							<Name>IO.ET01_Input</Name>
 							<Comment><![CDATA[输入]]></Comment>
 							<Type GUID="{5B71B567-A56A-4C34-02E8-93B84554BF86}">ARRAY [1..6] OF EL1889</Type>
@@ -4575,6 +4570,11 @@ External Setpoint Generation:
 							<Name>IO.ET02_Input</Name>
 							<Comment><![CDATA[输入]]></Comment>
 							<Type GUID="{5B71B567-A56A-4C34-02E8-93B84554BF86}">ARRAY [1..6] OF EL1889</Type>
+						</Var>
+						<Var>
+							<Name>IO.ET04_Input</Name>
+							<Comment><![CDATA[输入]]></Comment>
+							<Type GUID="{947A9DCD-67EC-7506-32AF-03B935E0DE83}">ARRAY [1..2] OF EL1889</Type>
 						</Var>
 						<Var>
 							<Name>IO.arEtherCATWcState</Name>
@@ -4588,11 +4588,6 @@ External Setpoint Generation:
 					</Vars>
 					<Vars VarGrpType="2" AreaNo="1">
 						<Name>PlcTask Outputs</Name>
-						<Var>
-							<Name>IO.ET03_Output</Name>
-							<Comment><![CDATA[输出]]></Comment>
-							<Type GUID="{58390D31-CF1F-12CF-68D7-6043AA7E1C77}">ARRAY [1..1] OF EL2889</Type>
-						</Var>
 						<Var>
 							<Name>CallStandard.sModeOperation</Name>
 							<Comment><![CDATA[操作模式]]></Comment>
@@ -4681,6 +4676,11 @@ External Setpoint Generation:
 						<Var>
 							<Name>GVL_Standard.fbEncoder.QiCounterCmd</Name>
 							<Type>UINT</Type>
+						</Var>
+						<Var>
+							<Name>IO.ET03_Output</Name>
+							<Comment><![CDATA[输出]]></Comment>
+							<Type GUID="{58390D31-CF1F-12CF-68D7-6043AA7E1C77}">ARRAY [1..1] OF EL2889</Type>
 						</Var>
 						<Var>
 							<Name>IO.ET01_Output</Name>

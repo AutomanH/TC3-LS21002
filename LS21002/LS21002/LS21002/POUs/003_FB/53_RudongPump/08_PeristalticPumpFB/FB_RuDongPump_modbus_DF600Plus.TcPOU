@@ -1467,14 +1467,15 @@ CASE _diCmdState OF
 		
 	8://方向设定		
 		_tonDelay(IN:= ( eCmd = RudongPump_CMD.Cmd_Push OR eCmd = RudongPump_CMD.Cmd_Pull ) ,pt:=T#20MS);//保证执行的是最新的一次
-		IF eCmd = RudongPump_CMD.Cmd_Push
-		THEN
-			st_IOData.O_DirectionSet := 1	;			
-		END_IF
-		IF eCmd = RudongPump_CMD.Cmd_Pull 
-		THEN
-			st_IOData.O_DirectionSet := 0	;			
-		END_IF
+		//IF   eCmd = RudongPump_CMD.Cmd_Push
+		//THEN
+		//	st_IOData.O_DirectionSet := 1	;			
+		//END_IF
+		//IF eCmd = RudongPump_CMD.Cmd_Pull 
+		//THEN
+		//	st_IOData.O_DirectionSet := 0	;			
+		//END_IF
+		st_IOData.O_DirectionSet:=iDirectionSet;
 		IF _tonDelay.Q
 		THEN	
 			_aExecute[4] := TRUE;//启动夹紧控制数据发送	
@@ -2063,13 +2064,13 @@ THEN
 	END_IF		
 		//校准
 		IF stDeviceOpe.xPumpCal_Hmi OR stDeviceOpe.xPumpCal_Auto THEN
-			rFluVolumeSet		:=stRunPara.rCalFluVolume;
-			rRuntimeSet			:=stRunPara.rCalTime;
-			iCycleNumber		:=stRunPara.rCalNum;	
-			iModuleAdress		:=stRunPara.iModuleAdress;
-			iModuleSpeed		:=stRunPara.rModuleSpeed;		
-			eCmd 				:= RudongPump_CMD.Cmd_CalPump;
-			xExecute 			:= TRUE;		
+				rFluVolumeSet		:=stRunPara.rCalFluVolume;
+				rRuntimeSet			:=stRunPara.rCalTime;
+				iCycleNumber		:=stRunPara.rCalNum;	
+				iModuleAdress		:=stRunPara.iModuleAdress;
+				iModuleSpeed		:=stRunPara.rCalFluVolume/stRunPara.rCalTime;   //stRunPara.rModuleSpeed;		
+				eCmd 				:= RudongPump_CMD.Cmd_CalPump;
+				xExecute 			:= TRUE;		
 		END_IF
 		
 		//复位校准系数为初始值
@@ -2268,14 +2269,15 @@ END_IF
 CASE _diCmdState OF
 	0://方向设定		
 		_tonDelay(IN:= ( eCmd = RudongPump_CMD.Cmd_FullSpeedPush OR eCmd = RudongPump_CMD.Cmd_FullSpeedPull ) ,pt:=T#30MS);//保证执行的是最新的一次
-		IF eCmd = RudongPump_CMD.Cmd_FullSpeedPush
-		THEN
-			st_IOData.O_DirectionSet := 1	;			
-		END_IF
-		IF eCmd = RudongPump_CMD.Cmd_FullSpeedPull 
-		THEN
-			st_IOData.O_DirectionSet := 0	;			
-		END_IF
+		//IF eCmd = RudongPump_CMD.Cmd_FullSpeedPush
+		//THEN
+		//	st_IOData.O_DirectionSet := 1	;			
+		//END_IF
+		//IF eCmd = RudongPump_CMD.Cmd_FullSpeedPull 
+		//THEN
+		//	st_IOData.O_DirectionSet := 0	;			
+		//END_IF
+		st_IOData.O_DirectionSet :=iDirectionSet;
 		IF _tonDelay.Q
 		THEN	
 			_aExecute[4] := TRUE;//启动夹紧控制数据发送	
@@ -2594,7 +2596,9 @@ xComplete:=1;
       <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.CmdRunAction">
-      <LineId Id="3" Count="346" />
+      <LineId Id="3" Count="179" />
+      <LineId Id="354" Count="0" />
+      <LineId Id="183" Count="166" />
       <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.ConnectAction">
@@ -2641,7 +2645,9 @@ xComplete:=1;
       <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.mCmdFullSpeedStartAction">
-      <LineId Id="3" Count="120" />
+      <LineId Id="3" Count="16" />
+      <LineId Id="129" Count="0" />
+      <LineId Id="20" Count="103" />
       <LineId Id="2" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.mCmdStopAction">

@@ -2,6 +2,21 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
   <POU Name="FB_Modbus_200Smart" Id="{66da7a51-bb0e-43c3-bde8-bcaf8272e8b8}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_Modbus_200Smart
+(*
+********************************************************************************
+* Name: FB_Modbus_200Smart
+*
+* Author:  AutomanH
+* Version: 1.0.0
+*
+* Description:
+*	Beckhoff CX5130 and SIEMENS 200SMART Modbus TCP Communication 
+*
+* Remarks:
+*
+* Revisions:
+*   V1.0.0 -Automanh 2022.06.01
+*********************************************************************************)
 VAR_INPUT
 	stPara       : ST_Sys_Para;//系统参数	
 END_VAR

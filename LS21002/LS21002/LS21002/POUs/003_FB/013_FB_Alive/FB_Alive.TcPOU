@@ -2,6 +2,21 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
   <POU Name="FB_Alive" Id="{f1f92b40-b4a7-41b1-b839-62ae5064f77c}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_Alive
+(*
+********************************************************************************
+* Name: FB_Alive
+*
+* Author:  AutomanH
+* Version: 1.0.0
+*
+* Description:
+* PLC and PC and Camera Communication Alive
+*
+* Remarks:
+*
+*  Revisions:
+*   V1.0.0 -Automanh 2022.05.20
+*********************************************************************************)
 VAR_INPUT
 iAliveSingle:INT;
 END_VAR

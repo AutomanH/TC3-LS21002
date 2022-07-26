@@ -1,0 +1,207 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_TempControl_FUSHI" Id="{fbebdc2b-fd7f-4451-ac40-d76701320372}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_TempControl_FUSHI
+(*
+********************************************************************************
+* Name: FB_TempControl_FUSHI
+*
+* Author:  AutomanH
+* Version: 1.0.0
+*
+* Description:
+* 
+*
+* Remarks:
+*
+* Revisions:
+*   V2.0.0 -Automanh 2022.07.01  add Power on singal PWM Countrol for temperature up Lower
+********************************************************************************************)
+VAR_INPUT
+	xEstop		:BOOL;//急停
+	xStart		:BOOL;//控温开始
+	xSvSet		:BOOL;//温度设置
+	stSysPar	:ST_FUSHI_PXF_Sys_Pointer;
+	stPar		  :ST_FUSHI_PXF_ParSet;
+END_VAR
+VAR_OUTPUT
+	stParRead	:ST_FUSHI_PXF_ParRead;
+	xRdy		:BOOL;//温度就绪
+	xPowerOut	:BOOL;//功率输出
+	xError		:BOOL;
+	sError		:STRING;
+END_VAR
+VAR
+	{attribute 'tc_no_symbol'}	
+	_diCmdState:INT;
+	{attribute 'tc_no_symbol'}
+	_tonDelay,_tonCmdTimeout:TON;
+	{attribute 'tc_no_symbol'}
+	///ReadStatus
+	_aRead_VAR: FB_MBReadInputRegs;
+	{attribute 'tc_no_symbol'}
+	//Set SV
+	_aWtirt_VAR: FB_MBWriteRegs;
+	{attribute 'tc_no_symbol'}
+  _rSvSet	:R_TRIG;
+	{attribute 'tc_no_symbol'}	
+	fbTon1:TON;
+	{attribute 'tc_no_symbol'}
+	tCycleTime:TIME;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[ACT_Connect();
+M_DutyRatio();
+IF stPar.iMaxTemperature=0 THEN
+	stPar.iMaxTemperature:=230;	
+END_IF
+IF stPar.iMinTemperature>stPar.iMaxTemperature THEN
+	stPar.iMinTemperature:=0;	
+END_IF
+
+IF xEstop THEN
+	xPowerOut:=xStart AND stParRead.iPV<stPar.iMaxTemperature AND stParRead.iPV>stPar.iMinTemperature AND (stParRead.iPV-stParRead.iSV<15) ;
+ELSE
+	xPowerOut:=FALSE;
+	xRdy:=FALSE;
+END_IF
+
+//温度就绪
+xRdy:=(stParRead.iPV>stParRead.iSV-3) AND (stParRead.iPV<=stParRead.iSV+8) AND NOT xError AND xEstop;
+
+//
+IF stSysPar.strSlaveIP<>''  THEN
+   IF stSysPar.bySlaveID<>0 AND stSysPar.iSlavePort<>0 THEN
+      _aRead_VAR.bExecute:=stSysPulse.xP200ms; //温度读取
+			IF xSvSet THEN   //温度设置
+	      IF xError OR stParRead.iSV=stPar.iSV THEN
+		       xSvSet:=FALSE;
+	      END_IF
+      END_IF
+	 END_IF	 
+END_IF
+
+_rSvSet(CLK:=xSvSet);
+_aWtirt_VAR.bExecute:=_rSvSet.Q; //温度设置
+]]></ST>
+    </Implementation>
+    <Action Name="ACT_Connect" Id="{6ff8eed8-397f-4617-984c-c19806b0e7b9}">
+      <Implementation>
+        <ST><![CDATA[	_aRead_VAR(
+	sIPAddr:= stSysPar.strSlaveIP,
+	nTCPPort:= stSysPar.iSlavePort, 
+	nUnitID:= stSysPar.bySlaveID, 
+	nQuantity:= 5, 
+	nMBAddr:= 2000, 
+	cbLength:= 10, 
+	pDestAddr:= ADR(stParRead), 
+	bExecute:= , 
+	tTimeout:= T#1S, 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> , 
+	cbRead=> );	
+ 
+_aWtirt_VAR(
+	sIPAddr:= stSysPar.strSlaveIP, 
+	nTCPPort:= stSysPar.iSlavePort, 
+	nUnitID:= stSysPar.bySlaveID, 
+	nQuantity:=1 , 
+	nMBAddr:= 2002, 
+	cbLength:=2 , 
+	pSrcAddr:= ADR(stPar.iSV), 
+	bExecute:= , 
+	tTimeout:= , 
+	bBusy=> , 
+	bError=> , 
+	nErrId=> );	
+sError:='';
+
+IF _aRead_VAR.nErrId<>0 OR _aWtirt_VAR.nErrId<>0 THEN
+	sError:=TO_STRING(_aRead_VAR.nErrId XOR _aWtirt_VAR.nErrId);
+ELSIF	stPar.iSV>stPar.iMaxTemperature THEN
+	sError:=CONCAT(sError,'设定值超出温度上限');	
+ELSIF	stPar.iSV<stPar.iMinTemperature THEN
+	sError:=CONCAT(sError,'设定值低于温度下限');
+ELSIF	stParRead.iPV>stPar.iMaxTemperature THEN
+	sError:=CONCAT(sError,'当前值超出温度上限');	
+ELSIF	stParRead.iPV<stPar.iMinTemperature THEN
+	sError:=CONCAT(sError,'当前低于温度下限');		
+ELSIF	ABS(stParRead.iDV)>10 AND stParRead.iPV>stParRead.iSV THEN
+	sError:=CONCAT(sError,'温度超差过大');
+ELSIF	ABS(stParRead.iDV)>10 AND stParRead.iPV<stParRead.iSV THEN
+	sError:=CONCAT(sError,'温度差距过大');	
+END_IF
+
+]]></ST>
+      </Implementation>
+    </Action>
+    <Method Name="M_DutyRatio" Id="{ad798ce7-d8e8-4e9e-9871-8c2e0b25c68d}">
+      <Declaration><![CDATA[METHOD M_DutyRatio : BOOL]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[fbTon1(IN:= NOT fbTon1.Q, PT:=tCycleTime , Q=> , ET=> );
+//33％ on 66％ off
+M_DutyRatio:=fbton1.ET>fbton1.PT/3;]]></ST>
+      </Implementation>
+    </Method>
+    <LineIds Name="FB_TempControl_FUSHI">
+      <LineId Id="77" Count="0" />
+      <LineId Id="169" Count="0" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="71" Count="0" />
+      <LineId Id="74" Count="1" />
+      <LineId Id="68" Count="1" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="31" Count="3" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="96" Count="0" />
+      <LineId Id="89" Count="0" />
+      <LineId Id="87" Count="0" />
+      <LineId Id="100" Count="0" />
+      <LineId Id="99" Count="0" />
+      <LineId Id="102" Count="0" />
+      <LineId Id="105" Count="0" />
+      <LineId Id="101" Count="0" />
+      <LineId Id="108" Count="3" />
+      <LineId Id="107" Count="0" />
+      <LineId Id="106" Count="0" />
+      <LineId Id="103" Count="0" />
+      <LineId Id="115" Count="0" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="117" Count="0" />
+      <LineId Id="116" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TempControl_FUSHI.ACT_Connect">
+      <LineId Id="38" Count="0" />
+      <LineId Id="44" Count="11" />
+      <LineId Id="36" Count="0" />
+      <LineId Id="35" Count="0" />
+      <LineId Id="57" Count="11" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="22" Count="1" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="33" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_TempControl_FUSHI.M_DutyRatio">
+      <LineId Id="10" Count="1" />
+      <LineId Id="5" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

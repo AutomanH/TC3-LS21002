@@ -180,16 +180,23 @@ CASE station.iStepAuto OF
 			 tsModuleProcess[1].xQDataCompleted:=TRUE;
 			 station.iStepAuto:= 40;
 	40: //判断产品状态
-		//	IF	NOT fbMachine[1].xTryRun THEN
-					IF  arProcessDataStation[1].xMaterialOnOff   AND
-						 arProcessDataStation[2].xMaterialOnOff  THEN
+			IF	NOT fbMachine[1].xTryRun THEN
+						 IF  station.xEmptyDone THEN
+											 station.iStepAuto:= 999;	
+						 ELSIF  arProcessDataStation[1].stProduct.xEmptying  AND 
+										arProcessDataStation[2].stProduct.xEmptying  THEN
+											 station.xEmptying:=TRUE;
+											 station.iStepAuto:= 1000;
+						 ELSIF  arProcessDataStation[1].xMaterialOnOff   AND
+										arProcessDataStation[2].xMaterialOnOff  THEN
+											 station.iStepAuto:= 41;
+						 ELSIF	 NOT arProcessDataStation[1].xMaterialOnOff   AND
+										NOT arProcessDataStation[2].xMaterialOnOff  THEN
+											 station.iStepAuto:= 999;
+						 END_IF
+			ELSE
 						station.iStepAuto:= 41;
-					ELSE
-						station.iStepAuto:= 999;
-					END_IF
-		//ELSE
-		//			station.iStepAuto:= 41;
-		//END_IF
+			END_IF
 	41://手动NOK按钮
 			IF   arManualNOKHmiButton[4]  AND NOT station.xCycleRunning THEN
 				station.iStepAuto:= 140;
@@ -257,12 +264,16 @@ CASE station.iStepAuto OF
 			
 			station.iStepAuto:=130;	
 	130://结果OK
-			arProcessDataStation[1].stProduct.xAluCovering_NOK:=TRUE;
-			arProcessDataStation[2].stProduct.xAluCovering_OK:=FALSE;
+			arProcessDataStation[1].stProduct.xAluCovering_NOK:=FALSE;
+			arProcessDataStation[1].stProduct.xAluCovering_OK:=TRUE;
+			arProcessDataStation[2].stProduct.xAluCovering_NOK:=FALSE;
+			arProcessDataStation[2].stProduct.xAluCovering_OK:=TRUE;
 			station.iStepAuto:=150;	
 	140://结果NG 
-			arProcessDataStation[1].stProduct.xAluCovering_NOK:=FALSE;
-			arProcessDataStation[2].stProduct.xAluCovering_OK:=TRUE;		
+			arProcessDataStation[1].stProduct.xAluCovering_NOK:=TRUE;
+			arProcessDataStation[1].stProduct.xAluCovering_OK:=FALSE;
+			arProcessDataStation[2].stProduct.xAluCovering_NOK:=TRUE;
+			arProcessDataStation[2].stProduct.xAluCovering_OK:=FALSE;
 			station.iStepAuto:=150;	
 	150:
 			tsModuleProcess[2].xQDataCompleted :=TRUE;
@@ -318,13 +329,50 @@ CASE station.iStepAuto OF
 			tsModuleProcess[3].xQDataCompleted:=TRUE;
 			station.iStepAuto:= 999;
 	999://----Single Run Finish----
-			
 		station.iStepAuto :=0;
 		IF NOT station.xSingleContinuousRun THEN
 			station.xSingleRunFlag:=FALSE;
 		END_IF
 		station.xCycleEnable:=FALSE;	
 		station.xDone:=TRUE;
+	
+{region "清料程序"}
+1000://写入数据
+	 		arProcessDataStation[1].xMaterialOnOff:=FALSE;
+			arProcessDataStation[2].xMaterialOnOff:=FALSE;
+	 		arProcessDataStation[1].stProduct.xAluCovering_NOK:=FALSE;
+			arProcessDataStation[2].stProduct.xAluCovering_OK:=FALSE;
+			arProcessDataStation[1].stProduct.xAluCovering_NOK:=FALSE;
+			arProcessDataStation[2].stProduct.xAluCovering_OK:=FALSE;
+			arProcessDataStation[1].stProduct.xEmptying:=TRUE;
+			arProcessDataStation[2].stProduct.xEmptying:=TRUE;
+			MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[10]]),ADR(arProcessDataStation[1]),SIZEOF(arProcessDataStation[1]));
+			MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[11]]),ADR(arProcessDataStation[2]),SIZEOF(arProcessDataStation[2]));
+			station.iStepAuto:= 1010;
+1010://Z轴回参考位置
+			fbZAxisMove_1.xMoveAuto[1]:=TRUE;
+			fbZAxisMove_2.xMoveAuto[1]:=TRUE;
+			IF  fbZAxisMove_1.xMoveInPos[1] AND fbZAxisMove_2.xMoveInPos[1]THEN
+				station.iStepAuto:=1020;	
+			END_IF	 
+1020://清料完成
+	 		station.xEmptying:=FALSE;
+		  station.xEmptyDone:=TRUE;
+			station.iStepAuto:=0;
+{endRegion}	
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
+		
 	ELSE
 		;	
 END_CASE
@@ -571,7 +619,14 @@ QxS04AluCoverCylWP:=fbAluCoverCyl.xWP_Valve;]]></ST>
       <LineId Id="1730" Count="0" />
       <LineId Id="1734" Count="0" />
       <LineId Id="1844" Count="0" />
-      <LineId Id="1738" Count="5" />
+      <LineId Id="1853" Count="0" />
+      <LineId Id="1856" Count="1" />
+      <LineId Id="1854" Count="0" />
+      <LineId Id="1860" Count="0" />
+      <LineId Id="1855" Count="0" />
+      <LineId Id="1738" Count="3" />
+      <LineId Id="1859" Count="0" />
+      <LineId Id="1742" Count="1" />
       <LineId Id="1845" Count="2" />
       <LineId Id="1556" Count="0" />
       <LineId Id="1817" Count="1" />
@@ -605,10 +660,13 @@ QxS04AluCoverCylWP:=fbAluCoverCyl.xWP_Valve;]]></ST>
       <LineId Id="1677" Count="0" />
       <LineId Id="1766" Count="2" />
       <LineId Id="1774" Count="1" />
+      <LineId Id="1885" Count="0" />
       <LineId Id="1777" Count="0" />
+      <LineId Id="1886" Count="0" />
       <LineId Id="1787" Count="0" />
       <LineId Id="1776" Count="0" />
-      <LineId Id="1785" Count="1" />
+      <LineId Id="1887" Count="2" />
+      <LineId Id="1785" Count="0" />
       <LineId Id="1778" Count="1" />
       <LineId Id="1781" Count="0" />
       <LineId Id="1790" Count="0" />
@@ -636,9 +694,26 @@ QxS04AluCoverCylWP:=fbAluCoverCyl.xWP_Valve;]]></ST>
       <LineId Id="1822" Count="0" />
       <LineId Id="1812" Count="0" />
       <LineId Id="1626" Count="0" />
-      <LineId Id="1212" Count="2" />
+      <LineId Id="1212" Count="0" />
+      <LineId Id="1214" Count="0" />
       <LineId Id="1453" Count="2" />
-      <LineId Id="1216" Count="8" />
+      <LineId Id="1216" Count="1" />
+      <LineId Id="1861" Count="0" />
+      <LineId Id="1875" Count="0" />
+      <LineId Id="1878" Count="0" />
+      <LineId Id="1881" Count="1" />
+      <LineId Id="1879" Count="1" />
+      <LineId Id="1883" Count="1" />
+      <LineId Id="1892" Count="1" />
+      <LineId Id="1890" Count="1" />
+      <LineId Id="1894" Count="0" />
+      <LineId Id="1896" Count="0" />
+      <LineId Id="1898" Count="3" />
+      <LineId Id="1897" Count="0" />
+      <LineId Id="1903" Count="3" />
+      <LineId Id="1876" Count="0" />
+      <LineId Id="1862" Count="12" />
+      <LineId Id="1218" Count="6" />
     </LineIds>
     <LineIds Name="S04_AluCovering.FlowInit">
       <LineId Id="437" Count="9" />

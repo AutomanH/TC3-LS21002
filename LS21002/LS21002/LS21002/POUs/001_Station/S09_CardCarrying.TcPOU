@@ -15,10 +15,9 @@ VAR
 	//伺服
 	fbZAxisStepMotor1	 :REFERENCE TO FB_Axis:=fbAxis[17];	//	卡片顶升步进
 	fbZAxisStepMotor2	 :REFERENCE TO FB_Axis:=fbAxis[18];	//	卡片顶升步进
-	
+	//离子风棒
+	Cimcor	 :REFERENCE TO FB_Cimcor_IZN10E:=fbCimcor[1];	//卡片离子风棒
 
-
-	
 	//延时
 	arTonDelay :ARRAY[1..20] OF TON;
 	//返回值
@@ -97,13 +96,15 @@ arxCardSensorReached[2] := NOT  IxS08CardSensor2Reached	;//	卡片工位¶产品
       <Implementation>
         <ST><![CDATA[//
 station.adwAlarm[1].00:=station.xInitTimeout;	  			//S09CardCarrying 初始化超时
-(*station.adwAlarm[1].01:=TRUE;	  							//S09CardCarrying 卡片不足，需要补充*)]]></ST>
+//station.adwAlarm[1].01:=TRUE;	  							//S09CardCarrying 卡片不足，需要补充
+station.adwAlarm[1].02:=Cimcor.xQError;	  		//S09CardCarrying 卡片离子风棒动作超时，请检查
+station.adwAlarm[1].03:=Cimcor.xQNeedMaint;	  		//S09CardCarrying 卡片离子风棒需要维护，请检查]]></ST>
       </Implementation>
     </Action>
     <Action Name="Delay" Id="{7954a2d3-613f-47d1-88d7-daa2a45cb229}">
       <Implementation>
         <ST><![CDATA[arTonDelay[01](IN:= , PT:=T#0.1S , Q=> , ET=> );
-arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );
+//arTonDelay[02](IN:=  , PT:=T#1S , Q=> , ET=> );//已被使用
 arTonDelay[03](IN:=   , PT:=T#1S , Q=> , ET=> );
 arTonDelay[04](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[05](IN:= , PT:=T#0.1S , Q=> , ET=> );
@@ -230,8 +231,9 @@ CASE station.iStepAuto OF
 				arxCardSensorReached[2]  THEN
 				station.iStepAuto:=35;
 			END_IF
-	35://步进JOG流程完成
+	35://步进JOG流程完成,离子风棒启动
 		tsModuleProcess[1].xProcessCompleted:=TRUE;
+			Cimcor.xIStart:=TRUE;
 			station.iStepAuto:=40;
 	40://X轴气缸伸出
 		fbHOZCyl.xAuto :=TRUE;
@@ -244,17 +246,22 @@ CASE station.iStepAuto OF
 			station.iStepAuto:=60;	
 		END_IF
 	60://下Z轴下降
+		arTonDelay[02](IN:=FALSE); 
 		fbVTCCyl_2.xAuto:=TRUE;
 		IF fbVTCCyl_2.xWP_Delay THEN
 			station.iStepAuto:=90;	
 		END_IF
 	90://真空吸动作
+			arTonDelay[02](IN:=TRUE  , PT:=T#5S , Q=> , ET=> );
 			fbSmcVacuum[1].xIVacuumWork:=TRUE;
 			fbSmcVacuum[2].xIVacuumWork:=TRUE;
 			IF  fbSmcVacuum[1].xIVacuumWorkReached AND 
 			 		fbSmcVacuum[2].xIVacuumWorkReached THEN
 						station.iStepAuto:= 100;
-				END_IF
+			ELSIF arTonDelay[02].Q THEN
+			 			station.iStepAuto:= 100;//动作超时也放行
+						arTonDelay[02](IN:=FALSE);
+			END_IF
 	100://真空吸动作完成
 			station.iStepAuto:= 110;
 	110://上Z轴上升
@@ -295,6 +302,7 @@ CASE station.iStepAuto OF
 									station.iStepAuto:=165;
 				END_IF
 	165://检查是否允许放卡片
+					Cimcor.xIStop:=TRUE;
 			 IF   NOT   station.xSingleRunning THEN 
 					 IF  NOT xBeltCardCheckSensor[1] AND 
 						 NOT xBeltCardCheckSensor[2] AND 
@@ -398,6 +406,7 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
+			Cimcor.xIReset:=TRUE;
 			fbZAxisStepMotor1.xJogForwardAuto:=FALSE;
 			fbZAxisStepMotor2.xJogForwardAuto:=FALSE;
 			fbZAxisStepMotor1.xJogForwardHMI:=FALSE;
@@ -595,7 +604,7 @@ station.adwAutoTip[1].02	:=	fbVTCCyl_2.xAutoTip	;
     </Action>
     <Action Name="Z_Output" Id="{e5141706-d276-488d-8e03-6fb5bac7b25e}">
       <Implementation>
-        <ST><![CDATA[(**************************气缸输出********************************)
+        <ST><![CDATA[//气缸输出
 QxS08HOZCylWP	:=	fbHOZCyl.xWP_Valve	;
 QxS08HOZCylHP	:=	fbHOZCyl.xHP_Valve	;
 QxS08VTCCyl_1WP	:=	fbVTCCyl_1.xWP_Valve	;
@@ -624,7 +633,7 @@ QxS08VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;]]></ST>
     </LineIds>
     <LineIds Name="S09_CardCarrying.Alarm">
       <LineId Id="176" Count="1" />
-      <LineId Id="266" Count="0" />
+      <LineId Id="266" Count="2" />
     </LineIds>
     <LineIds Name="S09_CardCarrying.Delay">
       <LineId Id="64" Count="6" />
@@ -682,6 +691,7 @@ QxS08VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;]]></ST>
       <LineId Id="1484" Count="1" />
       <LineId Id="1707" Count="0" />
       <LineId Id="1709" Count="0" />
+      <LineId Id="1915" Count="0" />
       <LineId Id="1807" Count="0" />
       <LineId Id="1551" Count="0" />
       <LineId Id="1555" Count="0" />
@@ -691,12 +701,16 @@ QxS08VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;]]></ST>
       <LineId Id="1488" Count="0" />
       <LineId Id="1566" Count="3" />
       <LineId Id="1558" Count="0" />
+      <LineId Id="1909" Count="0" />
       <LineId Id="1572" Count="2" />
       <LineId Id="1801" Count="0" />
       <LineId Id="1800" Count="0" />
+      <LineId Id="1908" Count="0" />
       <LineId Id="1549" Count="0" />
       <LineId Id="1857" Count="2" />
       <LineId Id="1580" Count="0" />
+      <LineId Id="1910" Count="1" />
+      <LineId Id="1914" Count="0" />
       <LineId Id="1579" Count="0" />
       <LineId Id="1491" Count="0" />
       <LineId Id="1459" Count="0" />
@@ -722,6 +736,7 @@ QxS08VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;]]></ST>
       <LineId Id="1897" Count="0" />
       <LineId Id="1890" Count="0" />
       <LineId Id="1727" Count="0" />
+      <LineId Id="1917" Count="0" />
       <LineId Id="1821" Count="0" />
       <LineId Id="1815" Count="5" />
       <LineId Id="1735" Count="0" />
@@ -772,6 +787,7 @@ QxS08VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;]]></ST>
     </LineIds>
     <LineIds Name="S09_CardCarrying.FlowInit">
       <LineId Id="437" Count="9" />
+      <LineId Id="637" Count="0" />
       <LineId Id="575" Count="2" />
       <LineId Id="574" Count="0" />
       <LineId Id="610" Count="0" />

@@ -29,7 +29,11 @@ VAR
 	arProcessDataStation : ARRAY [1..5] OF DUT_MainlineFixture;
 	
 	i,j,k: INT;
-	
+	//循环使用
+	i_b_REPEAT:BOOL;
+	i_i_Counter:INT;
+	//相机拍照结果步骤
+	bResultStep:BYTE;
 	// 循环计数
 	bCounter: BYTE;
 	// 临时变量
@@ -162,7 +166,7 @@ THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
 	station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
-ELSIF station.xRunning  OR (tsModuleProcess[bXCounter+1].xProcessStarted AND NOT tsModuleProcess[bXCounter+1].xProcessCompleted)//相机检测流程
+ELSIF station.xRunning // OR (tsModuleProcess[bXCounter+1].xProcessStarted AND NOT tsModuleProcess[bXCounter+1].xProcessCompleted )//相机检测流程
 THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
 CASE station.iStepAuto OF	  
@@ -186,67 +190,83 @@ CASE station.iStepAuto OF
 			station.iStepAuto:= 5;
 		END_IF		
 	 5://复位数据
-		
-				 FOR i:=1 TO gc_ModuleProNo BY 1 DO
-						 MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
-				 END_FOR
+			FOR i:=1 TO gc_ModuleProNo BY 1 DO
+				 MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+			END_FOR
 			station.iStepAuto:= 10;
 	 10: //判断产品是否到该工位
-		//	IF fbMachine[1].xTryRun  THEN
-		//	IF NOT _FirstCycle[6] THEN
-		//			bCounter:=3;
-		//			bEndCounter:=0;
-		//		_FirstCycle[6]:=TRUE;
-		//	END_IF
-		//	station.iStepAuto:= 11;
 		IF  station.xSingleRunning THEN
 			station.iStepAuto:= 11;
 		ELSE
-			IF   NOT  arMainlineFixtureData[arCurFixtureNumStation[5]].xMaterialOnOff AND
-					 NOT arMainlineFixtureData[arCurFixtureNumStation[6]].xMaterialOnOff  AND 
-					 NOT arMainlineFixtureData[arCurFixtureNumStation[7]].xMaterialOnOff AND 
-					NOT	arMainlineFixtureData[arCurFixtureNumStation[8]].xMaterialOnOff AND
-					NOT arMainlineFixtureData[arCurFixtureNumStation[9]].xMaterialOnOff  THEN
-							bCounter:=0;
-							bEndCounter :=0;
-							_FirstCycle[1]:=FALSE;
-							_FirstCycle[2]:=FALSE;
-							_FirstCycle[6]:=FALSE;
-							station.iStepAuto:= 999;
-			ELSIF 			_FirstCycle[10]  THEN   //待删
-							station.iStepAuto:= 11;			//待删
-			ELSIF	 arMainlineFixtureData[arCurFixtureNumStation[5]].xMaterialOnOff AND    
-				    arMainlineFixtureData[arCurFixtureNumStation[6]].xMaterialOnOff (* AND 
-				NOT arMainlineFixtureData[arCurFixtureNumStation[7]].xMaterialOnOff AND 
-				NOT	arMainlineFixtureData[arCurFixtureNumStation[8]].xMaterialOnOff AND
-				NOT arMainlineFixtureData[arCurFixtureNumStation[9]].xMaterialOnOff*) AND  NOT _FirstCycle[10]  THEN//这里的FirstCycle[10]待删  
-					IF  NOT _FirstCycle[1] THEN
-							bCounter:=1;
-							bEndCounter :=0;
-							_FirstCycle[1]:=TRUE;
-					END_IF
-					_FirstCycle[10]:=TRUE;//这里的FirstCycle[10]待删  
-					station.iStepAuto:= 11;
-		//	ELSIF   NOT arMainlineFixtureData[arCurFixtureNumStation[5]].xMaterialOnOff AND    
-		//		    NOT arMainlineFixtureData[arCurFixtureNumStation[6]].xMaterialOnOff  AND 
-		//				arMainlineFixtureData[arCurFixtureNumStation[7]].xMaterialOnOff AND 
-		//				arMainlineFixtureData[arCurFixtureNumStation[8]].xMaterialOnOff AND
-		//				arMainlineFixtureData[arCurFixtureNumStation[9]].xMaterialOnOff  THEN
-		//			IF  NOT _FirstCycle[2] THEN
-		//					bEndCounter:=1;
-		//					bCounter:=0;
-		//					_FirstCycle[2]:=TRUE;
-		//			END_IF
-		//			station.iStepAuto:= 11;
-			END_IF
-		END_IF
+		 			IF    station.xEmptyDone THEN
+										station.iStepAuto:= 999;		
+					//清料程序
+					ELSIF   arMainlineFixtureData[arCurFixtureNumStation[5]].stProduct.xEmptying AND    
+				    	arMainlineFixtureData[arCurFixtureNumStation[6]].stProduct.xEmptying  AND 
+							arMainlineFixtureData[arCurFixtureNumStation[7]].xMaterialOnOff AND 
+							arMainlineFixtureData[arCurFixtureNumStation[8]].xMaterialOnOff AND
+							arMainlineFixtureData[arCurFixtureNumStation[9]].xMaterialOnOff  THEN
+										 bEndCounter:=1;
+										 bCounter:=0;
+								 		 station.iStepAuto:= 11;
+					ELSIF   arMainlineFixtureData[arCurFixtureNumStation[5]].stProduct.xEmptying AND    
+									arMainlineFixtureData[arCurFixtureNumStation[6]].stProduct.xEmptying  AND 
+									arMainlineFixtureData[arCurFixtureNumStation[7]].stProduct.xEmptying AND 
+									arMainlineFixtureData[arCurFixtureNumStation[8]].stProduct.xEmptying AND
+									arMainlineFixtureData[arCurFixtureNumStation[9]].xMaterialOnOff  THEN
+												 bEndCounter:=2;
+												 bCounter:=0;
+												 station.iStepAuto:= 11;							 
+					ELSIF   arMainlineFixtureData[arCurFixtureNumStation[5]].stProduct.xEmptying AND    
+									arMainlineFixtureData[arCurFixtureNumStation[6]].stProduct.xEmptying  AND 
+									arMainlineFixtureData[arCurFixtureNumStation[7]].stProduct.xEmptying AND 
+									arMainlineFixtureData[arCurFixtureNumStation[8]].stProduct.xEmptying AND
+									arMainlineFixtureData[arCurFixtureNumStation[9]].stProduct.xEmptying  THEN
+												 station.xEmptying:=TRUE;
+												 station.iStepAuto:= 1010;														
+			//正常程序
+				 ELSIF   NOT  arMainlineFixtureData[arCurFixtureNumStation[5]].xMaterialOnOff AND
+								 NOT arMainlineFixtureData[arCurFixtureNumStation[6]].xMaterialOnOff  AND 
+								 NOT arMainlineFixtureData[arCurFixtureNumStation[7]].xMaterialOnOff AND 
+								 NOT	arMainlineFixtureData[arCurFixtureNumStation[8]].xMaterialOnOff AND
+								 NOT arMainlineFixtureData[arCurFixtureNumStation[9]].xMaterialOnOff  THEN
+											bCounter:=0;
+											bEndCounter :=0;
+											_FirstCycle[6]:=FALSE;
+											station.iStepAuto:= 999;
+				 ELSIF	 arMainlineFixtureData[arCurFixtureNumStation[5]].xMaterialOnOff AND    
+							 arMainlineFixtureData[arCurFixtureNumStation[6]].xMaterialOnOff  AND 
+							 NOT arMainlineFixtureData[arCurFixtureNumStation[7]].xMaterialOnOff AND 
+							 NOT	arMainlineFixtureData[arCurFixtureNumStation[8]].xMaterialOnOff AND
+							 NOT arMainlineFixtureData[arCurFixtureNumStation[9]].xMaterialOnOff   THEN
+												bCounter:=1;
+												bEndCounter :=0;
+												station.iStepAuto:= 11;
+				ELSIF	arMainlineFixtureData[arCurFixtureNumStation[5]].xMaterialOnOff AND    
+							 arMainlineFixtureData[arCurFixtureNumStation[6]].xMaterialOnOff  AND 
+							 arMainlineFixtureData[arCurFixtureNumStation[7]].xMaterialOnOff AND 
+							 arMainlineFixtureData[arCurFixtureNumStation[8]].xMaterialOnOff AND
+							 NOT arMainlineFixtureData[arCurFixtureNumStation[9]].xMaterialOnOff   THEN
+												 bCounter:=2;
+												 bEndCounter :=0;
+												 station.iStepAuto:= 11;
+				ELSIF  arMainlineFixtureData[arCurFixtureNumStation[5]].xMaterialOnOff AND      
+							 arMainlineFixtureData[arCurFixtureNumStation[6]].xMaterialOnOff  AND 
+							 arMainlineFixtureData[arCurFixtureNumStation[7]].xMaterialOnOff AND 
+							 arMainlineFixtureData[arCurFixtureNumStation[8]].xMaterialOnOff AND
+							 arMainlineFixtureData[arCurFixtureNumStation[9]].xMaterialOnOff   THEN
+												 bCounter:=3;
+												 bEndCounter :=0;
+												 station.iStepAuto:= 11;
+			 END_IF
+	END_IF
 	11://手动NOK按钮
 			IF   arManualNOKHmiButton[3]  AND NOT station.xSingleRunning THEN
 				station.iStepAuto:= 280;
 			ELSE	
 				station.iStepAuto:= 20;
 			END_IF
-			
+
 	20:////Restore_after_Estop_Process1 上载数据流程
 			IF   station.xSingleRunning  THEN//OR  fbMachine[1].xTryRun THEN
 				    station.iStepAuto :=40;
@@ -282,7 +302,29 @@ CASE station.iStepAuto OF
 	/////产品流程开始	
 		40://设定X轴循环为1，总次数2
 				 bXCounter:=1;
-				station.iStepAuto:= 50;		
+				station.iStepAuto:= 45;		
+		45://测试所用
+					//以下为测试所用
+					IF   bCounter =3 THEN 
+				 			FOR j:=1 TO 4 BY 1 DO
+									 FOR k:=1 TO 12 BY 1 DO
+											 MEMCPY(ADR(arCameraResultHmi[5,j,k]),ADR(arCameraResultHmi[3,j,k]),SIZEOF(arCameraResultHmi[3,j,k]));
+								END_FOR
+							END_FOR	
+					 END_IF	
+					IF  bCounter =2 OR bCounter =3  THEN 
+							FOR j:=1 TO 4 BY 1 DO
+									 FOR k:=1 TO 12 BY 1 DO
+											 MEMCPY(ADR(arCameraResultHmi[3,j,k]),ADR(arCameraResultHmi[1,j,k]),SIZEOF(arCameraResultHmi[1,j,k]));
+											 MEMCPY(ADR(arCameraResultHmi[4,j,k]),ADR(arCameraResultHmi[2,j,k]),SIZEOF(arCameraResultHmi[2,j,k]));
+											 MEMSET(ADR(arCameraResultHmi[1,j,k]),0,SIZEOF(arCameraResultHmi[1,j,k]));	
+											 MEMSET(ADR(arCameraResultHmi[2,j,k]),0,SIZEOF(arCameraResultHmi[2,j,k]));	
+								END_FOR
+							END_FOR	
+					END_IF
+			
+			
+					station.iStepAuto:= 50;			
 		50:////Restore_after_Estop_Process2/3 X轴位置1/2拍照流程
 			 IF  station.xSingleRunning OR fbMachine[1].xTryRun THEN
 					 station.iStepAuto :=70; 
@@ -411,7 +453,7 @@ CASE station.iStepAuto OF
 								END_FOR
 					END_IF
 			ELSIF  bEndCounter =2 THEN
-					IF bXCounter =2 THEN
+			 		IF  bXCounter =2 THEN
 							FOR i:=14 TO  17 BY 1 DO
 									fbCamera[i].xlTrigger:=TRUE;
 							END_FOR	
@@ -427,471 +469,778 @@ CASE station.iStepAuto OF
 				END_IF
 	150://检查相机完成信号并储存
 		(*开始循环*)
+{region "bCounter =1 and bXCounter =1"}
 			 IF   bCounter =1 (*17.18位置有产品*)  THEN	
 				  	IF  bXCounter =1 THEN
-							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
-											arCameraResult[1,3,bYCounter]:=1;	
-											arCameraResult[1,3,6+bYCounter]:=1;	
-											arCameraResult[1,1,3+bYCounter]:=1;
-											arCameraResult[1,1,9+bYCounter]:=1;
-											arCameraResult[2,4,bYCounter]:=1;
-											arCameraResult[2,4,6+bYCounter]:=1;
-											arCameraResult[2,2,3+bYCounter]:=1;
-											arCameraResult[2,2,9+bYCounter]:=1;	
-											station.iStepAuto:=160;
-							ELSE
-								FOR i:=1 TO  8 BY 1 DO
-										IF  fbCamera[i+1].xQDone THEN	
-												IF  i =1 THEN
-													arCameraResult[1,3,bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												ELSIF i =2 THEN
-													arCameraResult[1,3,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												ELSIF i =3 THEN
-													arCameraResult[1,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												ELSIF i =4 THEN
-													arCameraResult[1,1,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												ELSIF i =5 THEN
-													arCameraResult[2,4,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												ELSIF i =6 THEN
-													arCameraResult[2,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												ELSIF i =7 THEN
-													arCameraResult[2,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												ELSIF i =8 THEN
-													arCameraResult[2,2,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												END_IF	
-										ELSIF   fbCamera[i+1].xQAlarm THEN
-										 			fbCamera[i+1].xlInit:=TRUE;
-													station.iStepAuto:=140;
-													station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
-										END_IF
-										IF   i =8 THEN
-											station.iStepAuto:=160;
-										END_IF
-								END_FOR
-							END_IF
-				
+								IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
+													arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[3,bYCounter]:=
+													arCameraResultHmi[1,3,bYCounter]:=1;	
+													arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[3,6+bYCounter]:=
+													arCameraResultHmi[1,3,6+bYCounter]:=1;	
+													arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[1,3+bYCounter]:=
+													arCameraResultHmi[1,1,3+bYCounter]:=1;
+													arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[1,9+bYCounter]:=
+													arCameraResultHmi[1,1,9+bYCounter]:=1;
+													arProcessDataStation[2].stProcessData.arCameraResult[4,bYCounter]:=
+													arCameraResultHmi[2,4,bYCounter]:=1;
+													arProcessDataStation[2].stProcessData.arCameraResult[4,6+bYCounter]:=
+													arCameraResultHmi[2,4,6+bYCounter]:=1;
+													arProcessDataStation[2].stProcessData.arCameraResult[2,3+bYCounter]:=
+													arCameraResultHmi[2,2,3+bYCounter]:=1;
+													 arProcessDataStation[2].stProcessData.arCameraResult[2,9+bYCounter]:=
+													arCameraResultHmi[2,2,9+bYCounter]:=1;	
+													station.iStepAuto:=160;
+								ELSE
+										CASE  bResultStep OF
+												0: //
+														i_i_Counter:=1;
+														bResultStep:=bResultStep +1;
+												1://等待相机完成
+														IF  fbCamera[i_i_Counter+1].xQDone THEN
+																IF  i_i_Counter =1 THEN
+																	arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[3,bYCounter]:=																	
+																arCameraResultHmi[1,3,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+															 ELSIF i_i_Counter =2 THEN
+																 arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[3,6+bYCounter]:=
+																 arCameraResultHmi[1,3,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+															 ELSIF i_i_Counter =3 THEN
+																 arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[1,3+bYCounter]:=
+																 arCameraResultHmi[1,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+															 ELSIF i_i_Counter =4 THEN
+																 arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[1,9+bYCounter]:=
+																 arCameraResultHmi[1,1,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+															 ELSIF i_i_Counter =5 THEN
+																	arProcessDataStation[2].stProcessData.arCameraResult[4,bYCounter]:= 
+																 arCameraResultHmi[2,4,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+															 ELSIF i_i_Counter =6 THEN
+																 arProcessDataStation[2].stProcessData.arCameraResult[4,6+bYCounter]:=
+																 arCameraResultHmi[2,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+															 ELSIF i_i_Counter =7 THEN
+																 arProcessDataStation[2].stProcessData.arCameraResult[2,3+bYCounter]:=
+																 arCameraResultHmi[2,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+															 ELSIF i_i_Counter =8 THEN
+																 arProcessDataStation[2].stProcessData.arCameraResult[2,9+bYCounter]:=
+																 arCameraResultHmi[2,2,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+															 END_IF	
+															 bResultStep:=bResultStep +1;
+													ELSIF   fbCamera[i_i_Counter+1].xQAlarm THEN
+																		bResultStep:=0;
+																		fbCamera[i_i_Counter+1].xlInit:=TRUE;
+																		station.iStepAuto:=140;
+																		station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
+													END_IF
+												2://循环计数
+														 IF  i_i_Counter <8 THEN
+																	i_i_Counter:=i_i_Counter+1;
+																	bResultStep:=1;
+														 ELSE
+																
+																bResultStep:=0;
+																station.iStepAuto:=160;
+														 END_IF											
+										 END_CASE
+								END_IF
+					
+{endregion}
+{region "bCounter =1 and bXCounter =2"}
 				 	ELSIF   bXCounter =2 THEN
-							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
-											arCameraResult[2,3,bYCounter]:=1;	
-											arCameraResult[2,3,6+bYCounter]:=1;	
-											arCameraResult[2,1,3+bYCounter]:=1;
-											arCameraResult[2,1,9+bYCounter]:=1;
-											station.iStepAuto:=160;
-							ELSE
-								FOR i:=1 TO 4 BY 1	DO
-										IF  fbCamera[i+1].xQDone THEN	
-												 IF  i =1 THEN
-													 arCameraResult[2,3,bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												 ELSIF i =2 THEN
-													 arCameraResult[2,3,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												 ELSIF i =3 THEN
-													 arCameraResult[2,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												 ELSIF i =4 THEN
-													 arCameraResult[2,1,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												 END_IF
-										ELSIF   fbCamera[i+1].xQAlarm THEN
-										 			fbCamera[i+1].xlInit:=TRUE;
-													station.iStepAuto:=140;
-													station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
-										END_IF
-										IF   i =4 THEN
-											station.iStepAuto:=160;
-										END_IF
-								END_FOR
-							END_IF
-							
-					END_IF		
-			ELSIF  bCounter=2 THEN
+									IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
+															 arProcessDataStation[2].stProcessData.arCameraResult[3,bYCounter]:=
+															 arCameraResultHmi[2,3,bYCounter]:=1;	
+															arProcessDataStation[2].stProcessData.arCameraResult[3,6+bYCounter]:=
+															arCameraResultHmi[2,3,6+bYCounter]:=1;	
+															arProcessDataStation[2].stProcessData.arCameraResult[1,3+bYCounter]:=
+															arCameraResultHmi[2,1,3+bYCounter]:=1;
+															arProcessDataStation[2].stProcessData.arCameraResult[1,9+bYCounter]:=
+															arCameraResultHmi[2,1,9+bYCounter]:=1;
+															station.iStepAuto:=160;
+																	
+									ELSE
+														CASE  bResultStep OF
+																 0: //
+																		i_i_Counter:=1;
+																		bResultStep:=bResultStep +1;
+																1://等待相机完成
+																		IF  fbCamera[i_i_Counter+1].xQDone THEN
+																				 IF  i_i_Counter =1 THEN
+																					 arProcessDataStation[2].stProcessData.arCameraResult[3,bYCounter]:=
+																					 arCameraResultHmi[2,3,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+																				 ELSIF	i_i_Counter =2 THEN
+																					 arProcessDataStation[2].stProcessData.arCameraResult[3,6+bYCounter]:=
+																					 arCameraResultHmi[2,3,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+																				 ELSIF i_i_Counter =3 THEN
+																					  arProcessDataStation[2].stProcessData.arCameraResult[1,3+bYCounter]:=
+																					 arCameraResultHmi[2,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																				 ELSIF i_i_Counter =4 THEN
+																						arProcessDataStation[2].stProcessData.arCameraResult[1,9+bYCounter]:=
+																					 	arCameraResultHmi[2,1,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																				 END_IF
+																			 bResultStep:=bResultStep +1;
+																	ELSIF   fbCamera[i_i_Counter+1].xQAlarm THEN
+																				bResultStep:=0;
+																				fbCamera[i_i_Counter+1].xlInit:=TRUE;
+																				station.iStepAuto:=140;
+																				station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
+																	END_IF
+																2://循环计数
+																		 IF  i_i_Counter <4 THEN
+																					i_i_Counter:=i_i_Counter+1;
+																					bResultStep:=1;
+																		 ELSE
+																			
+																				bResultStep:=0;
+																				station.iStepAuto:=160;
+																		 END_IF											
+														 END_CASE
+									END_IF		
+						END_IF
+{endregion}
+{region "bCounter =2 and bXCounter =1"}
+		ELSIF  bCounter=2 THEN
 					IF bXCounter =1 THEN
+										 IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
+												 							arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[3,bYCounter]:=
+																			arCameraResultHmi[1,3,bYCounter]:=1;
+																			arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[3,6+bYCounter]:=
+																			arCameraResultHmi[1,3,6+bYCounter]:=1;	
+																			arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[1,3+bYCounter]:=
+																			arCameraResultHmi[1,1,3+bYCounter]:=1;
+																			arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[1,9+bYCounter]:=
+																			arCameraResultHmi[1,1,9+bYCounter]:=1;
+																			arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[4,bYCounter]:=
+																			arCameraResultHmi[2,4,bYCounter]:=1;
+																			arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[4,6+bYCounter]:=
+																			arCameraResultHmi[2,4,6+bYCounter]:=1;
+																			arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[2,3+bYCounter]:=
+																			arCameraResultHmi[2,2,3+bYCounter]:=1;
+																			arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[2,9+bYCounter]:=
+																			arCameraResultHmi[2,2,9+bYCounter]:=1;	
+																			arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[3,3+bYCounter]:=
+																			arCameraResultHmi[3,3,3+bYCounter]:=1;	
+																			arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[3,9+bYCounter]:=
+																			arCameraResultHmi[3,3,9+bYCounter]:=1;	
+																			arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[1,bYCounter]:=
+																			arCameraResultHmi[3,1,bYCounter]:= 1;
+																			arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[1,6+bYCounter]:=
+																			arCameraResultHmi[3,1,6+bYCounter]:=1;
+																			arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[4,3+bYCounter]:=
+																			arCameraResultHmi[4,4,3+bYCounter]:=1;
+																			arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[4,9+bYCounter]:=
+																			arCameraResultHmi[4,4,9+bYCounter]:=1;
+																			arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[2,bYCounter]:=
+																			arCameraResultHmi[4,2,bYCounter]:=1;
+																			arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[2,6+bYCounter]:=
+																			arCameraResultHmi[4,2,6+bYCounter]:=1;	
+																			station.iStepAuto:=160;
+										 ELSE
+																		 CASE  bResultStep OF
+																						0: //
+																							 i_i_Counter:=1;
+																							 bResultStep:=bResultStep +1;
+																					 1://等待相机完成
+																							 IF  fbCamera[i_i_Counter+1].xQDone THEN
+																										 IF  i_i_Counter =1 THEN
+																											 arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[3,bYCounter]:=
+																											 arCameraResultHmi[1,3,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	 
+																										 ELSIF i_i_Counter =2 THEN 
+																											 arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[3,6+bYCounter]:=
+																											 arCameraResultHmi[1,3,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	 
+																										 ELSIF i_i_Counter =3 THEN 
+																											 arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[1,3+bYCounter]:=
+																											 arCameraResultHmi[1,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter]; 
+																										 ELSIF i_i_Counter =4 THEN 
+																											 arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[1,9+bYCounter]:=
+																											 arCameraResultHmi[1,1,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter]; 
+																										 ELSIF i_i_Counter =5 THEN 
+																											 arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[4,bYCounter]:=
+																											 arCameraResultHmi[2,4,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter]; 
+																										 ELSIF i_i_Counter =6 THEN
+																											 arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[4,6+bYCounter]:=
+																											 arCameraResultHmi[2,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter]; 
+																										 ELSIF i_i_Counter =7 THEN 
+																											 arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[2,3+bYCounter]:=
+																											 arCameraResultHmi[2,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter]; 
+																										 ELSIF i_i_Counter =8 THEN 
+																											  arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[2,9+bYCounter]:=
+																											 arCameraResultHmi[2,2,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	 
+																										 ELSIF i_i_Counter =9 THEN 
+																											 arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[3,3+bYCounter]:=
+																											 arCameraResultHmi[3,3,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	 
+																										 ELSIF i_i_Counter =10 THEN 
+																											 arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[3,9+bYCounter]:=
+																											 arCameraResultHmi[3,3,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	 
+																										 ELSIF i_i_Counter =11 THEN	
+																											 arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[1,bYCounter]:= 
+																											 arCameraResultHmi[3,1,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter]; 
+																										 ELSIF i_i_Counter =12 THEN 
+																											 arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[1,6+bYCounter]:= 
+																											 arCameraResultHmi[3,1,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter]; 
+																										 ELSIF i_i_Counter =13 THEN 
+																											 arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[4,3+bYCounter]:= 
+																											 arCameraResultHmi[4,4,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter]; 
+																										 ELSIF i_i_Counter =14 THEN 
+																											 arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[4,9+bYCounter]:= 
+																											 arCameraResultHmi[4,4,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter]; 
+																										 ELSIF i_i_Counter =15 THEN 
+																											 arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[2,bYCounter]:= 
+																											 arCameraResultHmi[4,2,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter]; 
+																										 ELSIF i_i_Counter =16 THEN 
+																											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[2,6+bYCounter]:= 
+																											 arCameraResultHmi[4,2,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	 
+																										 END_IF	 
+																										bResultStep:=bResultStep +1;
+																						 ELSIF   fbCamera[i_i_Counter+1].xQAlarm THEN
+																									 bResultStep:=0;
+																									 fbCamera[i_i_Counter+1].xlInit:=TRUE;
+																									 station.iStepAuto:=140;
+																									 station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
+																						 END_IF
+																					 2://循环计数
+																								IF  i_i_Counter <16 THEN
+																										 i_i_Counter:=i_i_Counter+1;
+																										 bResultStep:=1;
+																								ELSE
+																									 bResultStep:=0;
+																									 station.iStepAuto:=160;
+																								END_IF											
+																				END_CASE
+										 END_IF
+{endregion}		
+{region "bCounter =2 and bXCounter =2"}
+			   ELSIF bXCounter =2 THEN
 							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
-												arCameraResult[1,3,bYCounter]:=1;	
-												arCameraResult[1,3,6+bYCounter]:=1;	
-												arCameraResult[1,1,3+bYCounter]:=1;
-												arCameraResult[1,1,9+bYCounter]:=1;
-												arCameraResult[2,4,bYCounter]:=1;
-												arCameraResult[2,4,6+bYCounter]:=1;
-												arCameraResult[2,2,3+bYCounter]:=1;
-												arCameraResult[2,2,9+bYCounter]:=1;	
-												arCameraResult[3,3,3+bYCounter]:=1;	
-												arCameraResult[3,3,9+bYCounter]:=1;	
-												arCameraResult[3,1,bYCounter]:= 1;
-												arCameraResult[3,1,6+bYCounter]:=1;
-												arCameraResult[4,4,3+bYCounter]:=1;
-												arCameraResult[4,4,9+bYCounter]:=1;
-												arCameraResult[4,2,bYCounter]:=1;
-												arCameraResult[4,2,6+bYCounter]:=1;	
-												station.iStepAuto:=160;
-							ELSE
-								FOR i:=1 TO  16 BY 1 DO
-									IF  fbCamera[i+1].xQDone THEN	
-													IF  i =1 THEN
-														arCameraResult[1,3,bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-													ELSIF i =2 THEN
-														arCameraResult[1,3,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-													ELSIF i =3 THEN
-														arCameraResult[1,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-													ELSIF i =4 THEN
-														arCameraResult[1,1,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-													ELSIF i =5 THEN
-														arCameraResult[2,4,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-													ELSIF i =6 THEN
-														arCameraResult[2,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-													ELSIF i =7 THEN
-														arCameraResult[2,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-													ELSIF i =8 THEN
-														arCameraResult[2,2,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-													ELSIF i =9 THEN
-														arCameraResult[3,3,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-													ELSIF i =10 THEN
-														arCameraResult[3,3,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-													ELSIF i =11 THEN
-														arCameraResult[3,1,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-													ELSIF i =12 THEN
-														arCameraResult[3,1,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-													ELSIF i =13 THEN
-														arCameraResult[4,4,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-													ELSIF i =14 THEN
-														arCameraResult[4,4,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-													ELSIF i =15 THEN
-														arCameraResult[4,2,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-													ELSIF i =16 THEN
-														arCameraResult[4,2,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-													END_IF	
-										ELSIF   fbCamera[i+1].xQAlarm THEN
-										 			fbCamera[i+1].xlInit:=TRUE;
-													station.iStepAuto:=140;
-													station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
-										END_IF
-									IF   i =16 THEN
-											station.iStepAuto:=160;
-									END_IF
-								END_FOR	
-							END_IF
-							
-					ELSIF bXCounter =2 THEN
-							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
-											arCameraResult[2,3,bYCounter]:=1;															           
-											arCameraResult[2,3,6+bYCounter]:=1;	    											
-											arCameraResult[2,1,3+bYCounter]:=1;     											
-											arCameraResult[2,1,9+bYCounter]:=1;     											
-											arCameraResult[3,4,bYCounter]:=1;       											
-											arCameraResult[3,4,6+bYCounter]:=1;     											
-											arCameraResult[3,2,3+bYCounter]:=1;     											
-											arCameraResult[3,2,9+bYCounter]:=1;	    											
-											arCameraResult[4,3,3+bYCounter]:=1;	    											
-											arCameraResult[4,3,9+bYCounter]:=1;	    											
-											arCameraResult[4,1,bYCounter]:=1;       											
-											arCameraResult[4,1,6+bYCounter]:=1;     											
+											arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[3,bYCounter]:= 
+											arCameraResultHmi[2,3,bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[3,6+bYCounter]:= 															           
+											arCameraResultHmi[2,3,6+bYCounter]:=1;	  
+											arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[1,3+bYCounter]:=   											
+											arCameraResultHmi[2,1,3+bYCounter]:=1; 
+    									arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[1,9+bYCounter]:=  		
+											arCameraResultHmi[2,1,9+bYCounter]:=1;    
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[4,bYCounter]:=  	 											
+											arCameraResultHmi[3,4,bYCounter]:=1;     
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[4,6+bYCounter]:=    											
+											arCameraResultHmi[3,4,6+bYCounter]:=1;  
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[2,3+bYCounter]:=   											
+											arCameraResultHmi[3,2,3+bYCounter]:=1;   
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[2,9+bYCounter]:=  											
+											arCameraResultHmi[3,2,9+bYCounter]:=1;			
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[3,3+bYCounter]:=    											
+											arCameraResultHmi[4,3,3+bYCounter]:=1;	 
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[3,9+bYCounter]:=   											
+											arCameraResultHmi[4,3,9+bYCounter]:=1;	    	
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[1,bYCounter]:=  										
+											arCameraResultHmi[4,1,bYCounter]:=1;  
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[1,6+bYCounter]:=  	     											
+											arCameraResultHmi[4,1,6+bYCounter]:=1;     											
 											station.iStepAuto:=160;
 							ELSE
-								FOR i:=1 TO  12 BY 1 DO
-									IF  fbCamera[i+1].xQDone THEN
-												 IF  i =1 THEN
-													 arCameraResult[2,3,bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												 ELSIF i =2 THEN       
-													 arCameraResult[2,3,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												 ELSIF i =3 THEN      
-													 arCameraResult[2,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												 ELSIF i =4 THEN      
-													 arCameraResult[2,1,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												 ELSIF i =5 THEN      
-													 arCameraResult[3,4,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												 ELSIF i =6 THEN     
-													 arCameraResult[3,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												 ELSIF i =7 THEN      
-													 arCameraResult[3,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												 ELSIF i =8 THEN      
-													 arCameraResult[3,2,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												 ELSIF i =9 THEN      
-													 arCameraResult[4,3,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												 ELSIF i =10 THEN     
-													 arCameraResult[4,3,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												 ELSIF i =11 THEN      
-													 arCameraResult[4,1,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												 ELSIF i =12 THEN      
-													 arCameraResult[4,1,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												 END_IF	
-										ELSIF   fbCamera[i+1].xQAlarm THEN
-										 			fbCamera[i+1].xlInit:=TRUE;
-													station.iStepAuto:=140;
-													station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
-										END_IF
-									IF   i =12 THEN
-										station.iStepAuto:=160;
-									END_IF	
-								END_FOR	
+												 CASE  bResultStep OF
+															0: //
+																 i_i_Counter:=1;
+																 bResultStep:=bResultStep +1;
+														 1://等待相机完成
+																 IF  fbCamera[i_i_Counter+1].xQDone THEN
+																			 	 IF  i_i_Counter =1 THEN
+																						arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[3,bYCounter]:= 
+																						 arCameraResultHmi[2,3,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];		
+																					 ELSIF i_i_Counter =2 THEN   
+																						arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[3,6+bYCounter]:=     		 
+																						 arCameraResultHmi[2,3,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];					
+																					 ELSIF i_i_Counter =3 THEN  
+																						 arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[1,3+bYCounter]:=      					 
+																						 arCameraResultHmi[2,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];							
+																					 ELSIF i_i_Counter =4 THEN     
+																						 arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[1,9+bYCounter]:=   								 
+																						 arCameraResultHmi[2,1,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];										
+																					 ELSIF i_i_Counter =5 THEN  
+																						 	arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[4,bYCounter]:=  	     											 
+																						 arCameraResultHmi[3,4,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];													
+																					 ELSIF i_i_Counter =6 THEN 
+																						 arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[4,6+bYCounter]:=    														 
+																						 arCameraResultHmi[3,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];																
+																					 ELSIF i_i_Counter =7 THEN 
+																						 arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[2,3+bYCounter]:=     																	 
+																						 arCameraResultHmi[3,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];																			
+																					 ELSIF i_i_Counter =8 THEN      	
+																						 arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[2,9+bYCounter]:= 																			 
+																						 arCameraResultHmi[3,2,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];																							
+																					 ELSIF i_i_Counter =9 THEN 
+																							arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[3,3+bYCounter]:=      																							 
+																						 arCameraResultHmi[4,3,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];																										
+																					 ELSIF i_i_Counter =10 THEN     
+																						 arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[3,9+bYCounter]:=  																										 
+																						 arCameraResultHmi[4,3,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];																													
+																					 ELSIF i_i_Counter =11 THEN      	
+																						 arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[1,bYCounter]:=																												 
+																						 arCameraResultHmi[4,1,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];																															
+																					 ELSIF i_i_Counter =12 THEN      		
+																						 arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[1,6+bYCounter]:= 																														 
+																						 arCameraResultHmi[4,1,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];																																		
+																					 END_IF																																				 																																									 
+																			bResultStep:=bResultStep +1;
+															 ELSIF   fbCamera[i_i_Counter+1].xQAlarm THEN
+																		 bResultStep:=0;
+																		 fbCamera[i_i_Counter+1].xlInit:=TRUE;
+																		 station.iStepAuto:=140;
+																		 station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
+															 END_IF
+														 2://循环计数
+																	IF  i_i_Counter <12 THEN
+																			 i_i_Counter:=i_i_Counter+1;
+																			 bResultStep:=1;
+																	ELSE
+																		 bResultStep:=0;
+																		 station.iStepAuto:=160;
+																	END_IF											
+											END_CASE
 							END_IF
-					END_IF
-				
+				END_IF
+{endregion}	
+ {region	"bCounter =3 and bXCounter =1"}              
 			ELSIF  bCounter =3 THEN
 					IF bXCounter =1 THEN
 							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
-											arCameraResult[1,3,bYCounter]:=	1;	
-											arCameraResult[1,3,6+bYCounter]:=1;	
-											arCameraResult[1,1,3+bYCounter]:=1;
-											arCameraResult[1,1,9+bYCounter]:=1;
-											arCameraResult[2,4,bYCounter]:=1;
-											arCameraResult[2,4,6+bYCounter]:=1;
-											arCameraResult[2,2,3+bYCounter]:=1;
-											arCameraResult[2,2,9+bYCounter]:=1;	
-											arCameraResult[3,3,3+bYCounter]:=1;	
-											arCameraResult[3,3,9+bYCounter]:=1;	
-											arCameraResult[3,1,bYCounter]:=1;
-											arCameraResult[3,1,6+bYCounter]:=1;
-											arCameraResult[4,4,3+bYCounter]:=1;
-											arCameraResult[4,4,9+bYCounter]:=1;
-											arCameraResult[4,2,bYCounter]:=1;
-											arCameraResult[4,2,6+bYCounter]:=1;	
+											arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[3,bYCounter]:=
+											arCameraResultHmi[1,3,bYCounter]:=	1;
+											arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[3,6+bYCounter]:=	
+											arCameraResultHmi[1,3,6+bYCounter]:=1;	
+											arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[1,3+bYCounter]:=
+											arCameraResultHmi[1,1,3+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[1,9+bYCounter]:=
+											arCameraResultHmi[1,1,9+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[4,bYCounter]:=
+											arCameraResultHmi[2,4,bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[4,6+bYCounter]:=
+											arCameraResultHmi[2,4,6+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[2,3+bYCounter]:=	 
+											arCameraResultHmi[2,2,3+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[2,9+bYCounter]:=
+											arCameraResultHmi[2,2,9+bYCounter]:=1;	
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[3,3+bYCounter]:=	
+											arCameraResultHmi[3,3,3+bYCounter]:=1;	
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[3,9+bYCounter]:=		
+											arCameraResultHmi[3,3,9+bYCounter]:=1;	
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[1,bYCounter]:=	
+											arCameraResultHmi[3,1,bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[1,6+bYCounter]:=
+											arCameraResultHmi[3,1,6+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[4,3+bYCounter]:=
+											arCameraResultHmi[4,4,3+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[4,9+bYCounter]:=
+											arCameraResultHmi[4,4,9+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[2,bYCounter]:=
+											arCameraResultHmi[4,2,bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[2,6+bYCounter]:=
+											arCameraResultHmi[4,2,6+bYCounter]:=1;	
 											station.iStepAuto:=160;
 							ELSE
-								FOR i:=1 TO  16 BY 1 DO
-										IF  fbCamera[i+1].xQDone THEN	
-												IF  i =1 THEN
-													arCameraResult[1,3,bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												ELSIF i =2 THEN   
-													arCameraResult[1,3,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												ELSIF i =3 THEN    
-													arCameraResult[1,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												ELSIF i =4 THEN    
-													arCameraResult[1,1,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												ELSIF i =5 THEN     
-													arCameraResult[2,4,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												ELSIF i =6 THEN    
-													arCameraResult[2,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												ELSIF i =7 THEN     
-													arCameraResult[2,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												ELSIF i =8 THEN     
-													arCameraResult[2,2,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												ELSIF i =9 THEN     
-													arCameraResult[3,3,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												ELSIF i =10 THEN    
-													arCameraResult[3,3,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												ELSIF i =11 THEN    
-													arCameraResult[3,1,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												ELSIF i =12 THEN    
-													arCameraResult[3,1,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												ELSIF i =13 THEN    
-													arCameraResult[4,4,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												ELSIF i =14 THEN    
-													arCameraResult[4,4,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												ELSIF i =15 THEN    
-												//	arCameraResult[4,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-													arCameraResult[4,2,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												ELSIF i =16 THEN   
-													arCameraResult[4,2,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												END_IF	
-										ELSIF   fbCamera[i+1].xQAlarm THEN
-										 			fbCamera[i+1].xlInit:=TRUE;
-													station.iStepAuto:=140;
-													station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
-										END_IF	
-										IF  i =16 THEN 
-											station.iStepAuto:=160;
-										END_IF
-								END_FOR	
+							 		CASE  bResultStep OF
+															0: //
+																 i_i_Counter:=1;
+																 bResultStep:=bResultStep +1;
+														 1://等待相机完成
+																 IF  fbCamera[i_i_Counter+1].xQDone THEN
+																		IF  i_i_Counter =1 THEN
+																				arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[3,bYCounter]:=
+																			arCameraResultHmi[1,3,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+																		ELSIF i_i_Counter =2 THEN  
+																			arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[3,6+bYCounter]:=	
+																			arCameraResultHmi[1,3,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+																		ELSIF i_i_Counter =3 THEN   
+																			arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[1,3+bYCounter]:= 
+																			arCameraResultHmi[1,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																		ELSIF i_i_Counter =4 THEN   
+																			arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[1,9+bYCounter]:= 
+																			arCameraResultHmi[1,1,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																		ELSIF i_i_Counter =5 THEN   
+																			arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[4,bYCounter]:= 
+																			arCameraResultHmi[2,4,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																		ELSIF i_i_Counter =6 THEN   
+																			arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[4,6+bYCounter]:= 
+																			arCameraResultHmi[2,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																		ELSIF i_i_Counter =7 THEN 
+																			arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[2,3+bYCounter]:=	     
+																			arCameraResultHmi[2,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																		ELSIF i_i_Counter =8 THEN  
+																			arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[2,9+bYCounter]:=   
+																			arCameraResultHmi[2,2,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+																		ELSIF i_i_Counter =9 THEN  
+																			arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[3,3+bYCounter]:=   
+																			arCameraResultHmi[3,3,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+																		ELSIF i_i_Counter =10 THEN   
+																			arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[3,9+bYCounter]:=	 
+																			arCameraResultHmi[3,3,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+																		ELSIF i_i_Counter =11 THEN   
+																			arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[1,bYCounter]:=	 
+																			arCameraResultHmi[3,1,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																		ELSIF i_i_Counter =12 THEN    
+																			arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[1,6+bYCounter]:=
+																			arCameraResultHmi[3,1,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																		ELSIF i_i_Counter =13 THEN 
+																			arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[4,3+bYCounter]:=   
+																			arCameraResultHmi[4,4,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																		ELSIF i_i_Counter =14 THEN   
+																			arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[4,9+bYCounter]:= 
+																			arCameraResultHmi[4,4,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																		ELSIF i_i_Counter =15 THEN    
+																			arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[2,bYCounter]:=
+																			arCameraResultHmi[4,2,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																		ELSIF i_i_Counter =16 THEN	
+																			arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[2,6+bYCounter]:=   
+																			arCameraResultHmi[4,2,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+                                    END_IF																																								 
+																			bResultStep:=bResultStep +1;
+															 ELSIF   fbCamera[i_i_Counter+1].xQAlarm THEN
+																		 bResultStep:=0;
+																		 fbCamera[i_i_Counter+1].xlInit:=TRUE;
+																		 station.iStepAuto:=140;
+																		 station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
+															 END_IF
+														 2://循环计数
+																	IF  i_i_Counter <16 THEN
+																			 i_i_Counter:=i_i_Counter+1;
+																			 bResultStep:=1;
+																	ELSE
+																		 bResultStep:=0;
+																		 station.iStepAuto:=160;
+																	END_IF											
+											END_CASE
 							END_IF
+{endregion}
+{region "bCounter =3 and bxCounter =2"}
 					ELSIF bXCounter =2 THEN
 							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
-											arCameraResult[2,3,bYCounter]:=1;	
-											arCameraResult[2,3,6+bYCounter]:=1;	
-											arCameraResult[2,1,3+bYCounter]:=1;
-											arCameraResult[2,1,9+bYCounter]:=1;
-											arCameraResult[3,4,bYCounter]:=1;
-											arCameraResult[3,4,6+bYCounter]:=1;
-											arCameraResult[3,2,3+bYCounter]:=1;
-											arCameraResult[3,2,9+bYCounter]:=1;	
-											arCameraResult[4,3,3+bYCounter]:=1;	
-											arCameraResult[4,3,9+bYCounter]:=1;	
-											arCameraResult[4,1,bYCounter]:=1;
-											arCameraResult[4,1,6+bYCounter]:=1;
-											arCameraResult[5,4,3+bYCounter]:=1;
-											arCameraResult[5,4,9+bYCounter]:=1;
-											arCameraResult[5,2,bYCounter]:=1;
-											arCameraResult[5,2,6+bYCounter]:=1;	
+											arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[3,bYCounter]:= 
+											arCameraResultHmi[2,3,bYCounter]:=1;	
+											arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[3,6+bYCounter]:=
+											arCameraResultHmi[2,3,6+bYCounter]:=1;	
+											arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[1,3+bYCounter]:=
+											arCameraResultHmi[2,1,3+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[1,9+bYCounter]:=
+											arCameraResultHmi[2,1,9+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[4,bYCounter]:=
+											arCameraResultHmi[3,4,bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[4,6+bYCounter]:=
+											arCameraResultHmi[3,4,6+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[2,3+bYCounter]:=
+											arCameraResultHmi[3,2,3+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[2,9+bYCounter]:=
+											arCameraResultHmi[3,2,9+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[3,3+bYCounter]:=	
+											arCameraResultHmi[4,3,3+bYCounter]:=1;	
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[3,9+bYCounter]:=	
+											arCameraResultHmi[4,3,9+bYCounter]:=1;	
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[1,bYCounter]:=	
+											arCameraResultHmi[4,1,bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[1,6+bYCounter]:=	
+											arCameraResultHmi[4,1,6+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[4,3+bYCounter]:=	
+											arCameraResultHmi[5,4,3+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[4,9+bYCounter]:=	
+											arCameraResultHmi[5,4,9+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[2,bYCounter]:=	
+											arCameraResultHmi[5,2,bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[2,6+bYCounter]:=	
+											arCameraResultHmi[5,2,6+bYCounter]:=1;	
 											station.iStepAuto:=160;
 							ELSE
-								FOR i:=1 TO  16 BY 1 DO
-									IF fbCamera[i+1].xQDone THEN	
-											IF  i =1 THEN
-												arCameraResult[2,3,bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											ELSIF i =2 THEN   
-												arCameraResult[2,3,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											ELSIF i =3 THEN    
-												arCameraResult[2,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =4 THEN     
-												arCameraResult[2,1,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =5 THEN     
-												arCameraResult[3,4,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =6 THEN    
-												arCameraResult[3,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =7 THEN   
-												arCameraResult[3,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =8 THEN     
-												arCameraResult[3,2,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											ELSIF i =9 THEN    
-												arCameraResult[4,3,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											ELSIF i =10 THEN    
-												arCameraResult[4,3,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											ELSIF i =11 THEN    
-												arCameraResult[4,1,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =12 THEN    
-												arCameraResult[4,1,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =13 THEN   
-												arCameraResult[5,4,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =14 THEN    
-												arCameraResult[5,4,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =15 THEN    
-												//arCameraResult[5,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												arCameraResult[5,2,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =16 THEN   
-												arCameraResult[5,2,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											END_IF	
-									ELSIF   fbCamera[i+1].xQAlarm THEN
-										 			fbCamera[i+1].xlInit:=TRUE;
-													station.iStepAuto:=140;
-													station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
-									END_IF
-									IF  i =16 THEN
-										station.iStepAuto:=160;	
-									END_IF
-								END_FOR	
-							END_IF
-					END_IF
-			END_IF
-			
+							 				CASE  bResultStep OF
+															0: //
+																 i_i_Counter:=1;
+																 bResultStep:=bResultStep +1;
+														 1://等待相机完成
+																 IF  fbCamera[i_i_Counter+1].xQDone THEN
+																			IF  i_i_Counter=1 THEN
+																				arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[3,bYCounter]:= 
+                                    		arCameraResultHmi[2,3,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+                                    	ELSIF i_i_Counter =2 THEN 
+																				arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[3,6+bYCounter]:=  
+                                    		arCameraResultHmi[2,3,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+                                    	ELSIF i_i_Counter =3 THEN    
+																				arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[1,3+bYCounter]:=
+                                    		arCameraResultHmi[2,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+                                    	ELSIF i_i_Counter =4 THEN
+																			  arMainlineFixtureData[arCurFixtureNumStation[6]].stProcessData.arCameraResult[1,9+bYCounter]:=     
+                                    		arCameraResultHmi[2,1,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+                                    	ELSIF i_i_Counter =5 THEN   
+																				arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[4,bYCounter]:=  
+                                    		arCameraResultHmi[3,4,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+                                    	ELSIF i_i_Counter =6 THEN  
+																				arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[4,6+bYCounter]:=  
+                                    		arCameraResultHmi[3,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+                                    	ELSIF i_i_Counter =7 THEN
+																				arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[2,3+bYCounter]:=   
+                                    		arCameraResultHmi[3,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+                                    	ELSIF i_i_Counter =8 THEN  
+																				arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[2,9+bYCounter]:=   
+                                    		arCameraResultHmi[3,2,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+                                    	ELSIF i_i_Counter =9 THEN  
+																				arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[3,3+bYCounter]:=	  
+                                    		arCameraResultHmi[4,3,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+                                    	ELSIF i_i_Counter =10 THEN 
+																				arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[3,9+bYCounter]:=	   
+                                    		arCameraResultHmi[4,3,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+                                    	ELSIF i_i_Counter =11 THEN 
+																				arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[1,bYCounter]:=	   
+                                    		arCameraResultHmi[4,1,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+                                    	ELSIF i_i_Counter =12 THEN
+																				arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[1,6+bYCounter]:=	    
+                                    		arCameraResultHmi[4,1,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+                                    	ELSIF i_i_Counter =13 THEN 
+																				arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[4,3+bYCounter]:=	  
+                                    		arCameraResultHmi[5,4,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+                                    	ELSIF i_i_Counter =14 THEN   
+																				arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[4,9+bYCounter]:=	 
+                                    		arCameraResultHmi[5,4,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+                                    	ELSIF i_i_Counter =15 THEN    
+                                    		arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[2,bYCounter]:=	
+                                    		arCameraResultHmi[5,2,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+                                    	ELSIF	i_i_Counter =16 THEN  
+																				arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[2,6+bYCounter]:=	 
+                                    		arCameraResultHmi[5,2,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+                                    	END_IF	
+																			bResultStep:=bResultStep +1;
+															 ELSIF   fbCamera[i_i_Counter+1].xQAlarm THEN
+																		 bResultStep:=0;
+																		 fbCamera[i_i_Counter+1].xlInit:=TRUE;
+																		 station.iStepAuto:=140;
+																		 station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
+															 END_IF
+														 2://循环计数
+																	IF  i_i_Counter <16 THEN
+																			 i_i_Counter:=i_i_Counter+1;
+																			 bResultStep:=1;
+																	ELSE
+																		 bResultStep:=0;
+																		 station.iStepAuto:=160;
+																	END_IF											
+											END_CASE
+						 END_IF		
+					END_IF											 
+{endregion}
+{region "bEndCounter =1 and bXCounter =1"}
 		(*结束循环*)
 			 IF   bEndCounter =1 (*17.18位置无产品*)  THEN	
 				  	IF  bXCounter =1 THEN
 							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
-											arCameraResult[3,3,3+bYCounter]:=1;
-											arCameraResult[3,3,9+bYCounter]:=1;
-											arCameraResult[3,1,bYCounter]:=1;
-											arCameraResult[3,1,3+bYCounter]:=1;                 
-											arCameraResult[4,4,3+bYCounter]:=1;	
-											arCameraResult[4,4,9+bYCounter]:=1;
-											arCameraResult[4,2,bYCounter]:=1;
-											arCameraResult[4,2,6+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[3,3+bYCounter]:=	
+											arCameraResultHmi[3,3,3+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[3,9+bYCounter]:=	
+											arCameraResultHmi[3,3,9+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[1,bYCounter]:=	
+											arCameraResultHmi[3,1,bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[1,3+bYCounter]:=	
+											arCameraResultHmi[3,1,3+bYCounter]:=1; 
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[4,3+bYCounter]:=                
+											arCameraResultHmi[4,4,3+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[4,9+bYCounter]:=    	
+											arCameraResultHmi[4,4,9+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[2,bYCounter]:=   
+											arCameraResultHmi[4,2,bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[2,6+bYCounter]:=  
+											arCameraResultHmi[4,2,6+bYCounter]:=1;
 											station.iStepAuto:=160;
 							ELSE
-								FOR i:=9 TO  16 BY 1 DO
-									IF  fbCamera[i+1].xQDone THEN	
-											IF i =9 THEN
-												arCameraResult[3,3,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =10 THEN   
-												arCameraResult[3,3,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =11 THEN   
-												arCameraResult[3,1,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =12 THEN    
-												arCameraResult[3,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];                 
-											ELSIF i =13 THEN   
-												arCameraResult[4,4,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											ELSIF i =14 THEN    
-												arCameraResult[4,4,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =15 THEN    
-												arCameraResult[4,2,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =16 THEN   
-												arCameraResult[4,2,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											END_IF
-									ELSIF   fbCamera[i+1].xQAlarm THEN
-										 			fbCamera[i+1].xlInit:=TRUE;
-													station.iStepAuto:=140;
-													station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
-									END_IF
-									IF  i =16 THEN
-											station.iStepAuto:=160;	
-									END_IF
-								END_FOR	
+									CASE  bResultStep OF
+															0: //
+																 i_i_Counter:=9;
+																 bResultStep:=bResultStep +1;
+														 1://等待相机完成
+																 IF  fbCamera[i_i_Counter+1].xQDone THEN
+																				IF i_i_Counter =9 THEN
+																					arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[3,3+bYCounter]:=	
+																					arCameraResultHmi[3,3,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																				ELSIF i_i_Counter =10 THEN  
+																					arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[3,9+bYCounter]:=	 
+																					arCameraResultHmi[3,3,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																				ELSIF i_i_Counter =11 THEN  
+																					arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[1,bYCounter]:=	 
+																					arCameraResultHmi[3,1,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																				ELSIF i_i_Counter =12 THEN
+																					arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[1,3+bYCounter]:=	    
+																					arCameraResultHmi[3,1,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																				ELSIF i_i_Counter =13 THEN
+																					arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[4,3+bYCounter]:=       
+																					arCameraResultHmi[4,4,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																				ELSIF i_i_Counter =14 THEN    
+																					arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[4,9+bYCounter]:=   
+																					arCameraResultHmi[4,4,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																				ELSIF i_i_Counter =15 THEN    
+																				  arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[2,bYCounter]:=  
+																					arCameraResultHmi[4,2,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																				ELSIF i_i_Counter =16 THEN  
+																					arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[2,6+bYCounter]:=   
+																					arCameraResultHmi[4,2,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																				END_IF
+																			bResultStep:=bResultStep +1;
+															 ELSIF   fbCamera[i_i_Counter+1].xQAlarm THEN
+																		 bResultStep:=0;
+																		 fbCamera[i_i_Counter+1].xlInit:=TRUE;
+																		 station.iStepAuto:=140;
+																		 station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
+															 END_IF
+														 2://循环计数
+																	IF  i_i_Counter <16 THEN
+																			 i_i_Counter:=i_i_Counter+1;
+																			 bResultStep:=1;
+																	ELSE
+																		 bResultStep:=0;
+																		 station.iStepAuto:=160;
+																	END_IF											
+											END_CASE 
 							END_IF
-							
+{endregion}
+{region "bEndCounter =1 and bXCounter =2"}		
 				 	ELSIF   bXCounter =2 THEN
 							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
-											arCameraResult[3,4,bYCounter]:=1;	
-											arCameraResult[3,4,6+bYCounter]:=1;	
-											arCameraResult[3,2,3+bYCounter]:=1;
-											arCameraResult[3,2,9+bYCounter]:=1;
-											arCameraResult[4,3,3+bYCounter]:=1;	
-											arCameraResult[4,3,8+bYCounter]:=1;	
-											arCameraResult[4,1,bYCounter]:=1;
-											arCameraResult[4,1,6+bYCounter]:=1;		
-											arCameraResult[5,4,3+bYCounter]:=1;	
-											arCameraResult[5,4,9+bYCounter]:=1;	
-											arCameraResult[5,2,bYCounter]:=1;
-											arCameraResult[5,2,6+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[4,bYCounter]:=  
+											arCameraResultHmi[3,4,bYCounter]:=1;	
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[4,6+bYCounter]:=
+											arCameraResultHmi[3,4,6+bYCounter]:=1;	
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[2,3+bYCounter]:=
+											arCameraResultHmi[3,2,3+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[2,9+bYCounter]:=
+											arCameraResultHmi[3,2,9+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[3,3+bYCounter]:=
+											arCameraResultHmi[4,3,3+bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[3,9+bYCounter]:=	
+											arCameraResultHmi[4,3,9+bYCounter]:=1;	
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[1,bYCounter]:=
+											arCameraResultHmi[4,1,bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[1,6+bYCounter]:=
+											arCameraResultHmi[4,1,6+bYCounter]:=1;		
+											arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[4,3+bYCounter]:=
+											arCameraResultHmi[5,4,3+bYCounter]:=1;	
+											arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[4,9+bYCounter]:=
+											arCameraResultHmi[5,4,9+bYCounter]:=1;	
+											arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[2,bYCounter]:=
+											arCameraResultHmi[5,2,bYCounter]:=1;
+											arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[2,6+bYCounter]:=
+											arCameraResultHmi[5,2,6+bYCounter]:=1;
 											station.iStepAuto:=160;
 							ELSE
-								FOR i:=5 TO 16 BY 1	DO
-										IF  fbCamera[i+1].xQDone THEN	
-												 IF  i =5 THEN
-													 arCameraResult[3,4,bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												 ELSIF i =6 THEN    
-													 arCameraResult[3,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												 ELSIF i =7 THEN    
-													 arCameraResult[3,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												 ELSIF i =8 THEN    
-													 arCameraResult[3,2,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												 ELSIF  i =9 THEN    
-													 arCameraResult[4,3,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												 ELSIF i =10 THEN    
-													 arCameraResult[4,3,8+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												 ELSIF i =11 THEN    
-													 arCameraResult[4,1,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												 ELSIF i =12 THEN  
-													 arCameraResult[4,1,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];		
-												 ELSIF  i =13 THEN 
-													 arCameraResult[5,4,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												 ELSIF i =14 THEN   
-													 arCameraResult[5,4,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-												 ELSIF i =15 THEN   
-													 arCameraResult[5,2,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												 ELSIF i =16 THEN  
-													 arCameraResult[5,2,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-												 END_IF
-										ELSIF   fbCamera[i+1].xQAlarm THEN
-										 			fbCamera[i+1].xlInit:=TRUE;
-													station.iStepAuto:=140;
-													station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
-										END_IF
-										IF i =16 THEN
-											station.iStepAuto:=160;
-										END_IF
-								END_FOR
-							END_IF
-							
-						END_IF		
-			ELSIF  bEndCounter=2 THEN
-					IF bXCounter =2 THEN
-							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
-								
-												arCameraResult[5,4,3+bYCounter]:=1;	
-												arCameraResult[5,4,9+bYCounter]:=1;	
-												arCameraResult[5,4,bYCounter]:=1;
-												arCameraResult[5,4,6+bYCounter]:=1;
-												station.iStepAuto:=160;
-							ELSE
-								FOR i:=13 TO  16 BY 1 DO
-									IF  fbCamera[i+1].xQDone THEN	
-											IF  i =13 THEN
-												arCameraResult[5,4,3+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											ELSIF i =14 THEN
-												arCameraResult[5,4,9+bYCounter]:=sCamera_To_Plc.iS03Result[i];	
-											ELSIF i =15 THEN
-												arCameraResult[5,4,bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											ELSIF i =16 THEN
-												arCameraResult[5,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i];
-											END_IF	
-									ELSIF   fbCamera[i+1].xQAlarm THEN
-										 			fbCamera[i+1].xlInit:=TRUE;
-													station.iStepAuto:=140;
-													station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
-									END_IF
-									IF i =16 THEN
-										station.iStepAuto:=160;
-									END_IF	
-								END_FOR	
+											CASE  bResultStep OF
+															0: //
+																 i_i_Counter:=5;
+																 bResultStep:=bResultStep +1;
+														 1://等待相机完成
+																 IF  fbCamera[i_i_Counter+1].xQDone THEN
+																					 IF  i_i_Counter =5 THEN
+																						 arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[4,bYCounter]:= 
+																						 arCameraResultHmi[3,4,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+																					 ELSIF i_i_Counter =6 THEN  
+																					   arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[4,6+bYCounter]:=  
+																						 arCameraResultHmi[3,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+																					 ELSIF i_i_Counter =7 THEN  			
+																						 arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[2,3+bYCounter]:=  
+																						 arCameraResultHmi[3,2,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																					 ELSIF i_i_Counter =8 THEN  
+																						 arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[2,9+bYCounter]:=  
+																						 arCameraResultHmi[3,2,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																					 ELSIF  i_i_Counter =9 THEN 
+																						 arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[3,3+bYCounter]:=   
+																						 arCameraResultHmi[4,3,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+																					 ELSIF i_i_Counter =10 THEN   
+																						 arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[3,9+bYCounter]:=	 
+																						 arCameraResultHmi[4,3,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+																					 ELSIF i_i_Counter =11 THEN 
+																						 arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[1,bYCounter]:=   
+																						 arCameraResultHmi[4,1,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																					 ELSIF i_i_Counter =12 THEN 
+																						 arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[1,6+bYCounter]:= 
+																						 arCameraResultHmi[4,1,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];		
+																					 ELSIF i_i_Counter=13 THEN 
+																						 arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[4,3+bYCounter]:=
+																						 arCameraResultHmi[5,4,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+																					 ELSIF i_i_Counter =14 THEN
+																						 arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[4,9+bYCounter]:=   
+																						 arCameraResultHmi[5,4,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+																					 ELSIF i_i_Counter =15 THEN
+																						 arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[2,bYCounter]:=   
+																						 arCameraResultHmi[5,2,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																					 ELSIF i_i_Counter =16 THEN  
+																						 arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[2,6+bYCounter]:=
+																						 arCameraResultHmi[5,2,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																					 END_IF																																																 
+																			bResultStep:=bResultStep +1;
+															 ELSIF   fbCamera[i_i_Counter+1].xQAlarm THEN
+																		 bResultStep:=0;
+																		 fbCamera[i_i_Counter+1].xlInit:=TRUE;
+																		 station.iStepAuto:=140;
+																		 station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
+															 END_IF
+														 2://循环计数
+																	IF  i_i_Counter <16 THEN
+																			 i_i_Counter:=i_i_Counter+1;
+																			 bResultStep:=1;
+																	ELSE
+																		 bResultStep:=0;
+																		 station.iStepAuto:=160;
+																	END_IF											
+											END_CASE 
 							END_IF
 					END_IF
-			END_IF	
-			
+{endregion}
+{region "bEndCounter=2 and bXCounter =1"}
+			ELSIF  bEndCounter=2 THEN
+					IF  bXCounter =1 THEN
+							;//需要添加内容
+{endregion}	
+{region "bEndCounter=2 and bXCounter =1"}
+					ELSIF bXCounter =2 THEN
+							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
+												arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[4,3+bYCounter]:=
+												arCameraResultHmi[5,4,3+bYCounter]:=1;	
+											  arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[4,9+bYCounter]:=
+												arCameraResultHmi[5,4,9+bYCounter]:=1;	
+												arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[4,bYCounter]:=
+												arCameraResultHmi[5,4,bYCounter]:=1;
+												arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[4,6+bYCounter]:=
+												arCameraResultHmi[5,4,6+bYCounter]:=1;
+												station.iStepAuto:=160;
+							ELSE
+									CASE  bResultStep OF
+															0: //
+																 i_i_Counter:=13;
+																 bResultStep:=bResultStep +1;
+														 1://等待相机完成
+																 IF  fbCamera[i_i_Counter+1].xQDone THEN
+																					IF  i_i_Counter =13 THEN
+																						
+																					 arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[4,3+bYCounter]:=																				
+																					 arCameraResultHmi[5,4,3+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+																				 ELSIF i_i_Counter =14 THEN
+																					 arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[4,9+bYCounter]:=
+																					 arCameraResultHmi[5,4,9+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];	
+																				 ELSIF i_i_Counter =15 THEN
+																					 arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[4,bYCounter]:=
+																					 arCameraResultHmi[5,4,bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																				 ELSIF i_i_Counter =16 THEN
+																					 arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[4,6+bYCounter]:=
+																					 arCameraResultHmi[5,4,6+bYCounter]:=sCamera_To_Plc.iS03Result[i_i_Counter];
+																				 END_IF																			 
+																				bResultStep:=bResultStep +1;
+															 ELSIF   fbCamera[i_i_Counter+1].xQAlarm THEN
+																		 bResultStep:=0;
+																		 fbCamera[i_i_Counter+1].xlInit:=TRUE;
+																		 station.iStepAuto:=140;
+																		 station.adwAlarm[1].18	:=	TRUE;//	S03液位检测工位-相机检测超时报警,请检查
+															 END_IF
+														 2://循环计数
+																	IF  i_i_Counter <16 THEN
+																			 i_i_Counter:=i_i_Counter+1;
+																			 bResultStep:=1;
+																	ELSE
+																		 bResultStep:=0;
+																		 station.iStepAuto:=160;
+																	END_IF											
+											END_CASE 
+							END_IF								
+						END_IF
+				END_IF	
+		END_IF
+{endregion}	
 		160://Y循环+1
 			bYCounter :=bYCounter +1 ;
 			station.iStepAuto:=180;
@@ -947,7 +1296,7 @@ CASE station.iStepAuto OF
 
 		260:////Restore_after_Estop_Process4 数据传输流程
 			IF  station.xSingleRunning  THEN //OR fbMachine[1].xTryRun THEN
-					station.iStepAuto :=999;
+						station.iStepAuto :=999;
 			ELSIF tsModuleProcess[4].xProcessNotStarted AND NOT  tsModuleProcess[4].xProcessStarted THEN
 					station.iStepAuto :=270; (*process not started*)
 			ELSIF  tsModuleProcess[4].xProcessStarted AND NOT  tsModuleProcess[4].xProcessCompleted THEN
@@ -961,31 +1310,20 @@ CASE station.iStepAuto OF
 			END_IF		
 		270://		
 				tsModuleProcess[4].xProcessNotStarted:=TRUE;
-				station.iStepAuto :=275; 
-				
-		275://储存结果
-			tsModuleProcess[4].xProcessStarted:=TRUE;
-			 FOR i:=1 TO 5 BY 1 DO
-							FOR j:=1 TO 4 BY 1 DO
-				 					FOR k:=1 TO 12 BY 1 DO
-										arProcessDataStation[i].stProcessData.arCameraResult[j,K]:=arCameraResult[i,j,k];
-									END_FOR
-							END_FOR
-				END_FOR
-			station.iStepAuto:=280;
+				station.iStepAuto :=280;
 		280://汇总结果【4】
 				FOR i:=1 TO 4 BY 1 DO
 					FOR j :=1 TO 12 BY 1 DO 
 						IF bCounter = 2 OR bCounter = 3 OR bEndCounter =1 THEN
-							IF arProcessDataStation[4].stProcessData.arCameraResult[i,j]<> 1 THEN
-							 	arProcessDataStation[4].xMaterialOnOff:=TRUE;//待删
-								arProcessDataStation[4].stProduct.xLidChecking_NOK:=TRUE;
-								arProcessDataStation[4].stProduct.xLidChecking_OK:=FALSE;
+							IF arMainlineFixtureData[arCurFixtureNumStation[8]].stProcessData.arCameraResult[i,j]<> 1 THEN
+							 	arMainlineFixtureData[arCurFixtureNumStation[8]].xMaterialOnOff:=TRUE;//待删
+								arMainlineFixtureData[arCurFixtureNumStation[8]].stProduct.xLidChecking_NOK:=TRUE;
+								arMainlineFixtureData[arCurFixtureNumStation[8]].stProduct.xLidChecking_OK:=FALSE;
 								EXIT;
 							ELSIF   i=4 AND j =12 THEN
-							 	arProcessDataStation[4].xMaterialOnOff:=TRUE;//待删
-								arProcessDataStation[4].stProduct.xLidChecking_NOK:=FALSE;
-								arProcessDataStation[4].stProduct.xLidChecking_OK:=TRUE;
+							 	arMainlineFixtureData[arCurFixtureNumStation[8]].xMaterialOnOff:=TRUE;//待删
+								arMainlineFixtureData[arCurFixtureNumStation[8]].stProduct.xLidChecking_NOK:=FALSE;
+								arMainlineFixtureData[arCurFixtureNumStation[8]].stProduct.xLidChecking_OK:=TRUE;
 							END_IF
 						END_IF
 					END_FOR
@@ -995,49 +1333,21 @@ CASE station.iStepAuto OF
 				FOR i:=1 TO 4 BY 1 DO
 					FOR j :=1 TO 12 BY 1 DO 
 						IF bCounter = 3  OR bEndCounter =2 THEN
-							IF arProcessDataStation[5].stProcessData.arCameraResult[i,j]<>1 THEN
-							 	arProcessDataStation[5].xMaterialOnOff:=TRUE;//待删
-								arProcessDataStation[5].stProduct.xLidChecking_NOK:=TRUE;
-								arProcessDataStation[5].stProduct.xLidChecking_OK:=FALSE;
+							IF arMainlineFixtureData[arCurFixtureNumStation[9]].stProcessData.arCameraResult[i,j]<>1 THEN
+							 	 arMainlineFixtureData[arCurFixtureNumStation[9]].xMaterialOnOff:=TRUE;//待删
+								 arMainlineFixtureData[arCurFixtureNumStation[9]].stProduct.xLidChecking_NOK:=TRUE;
+							 	 arMainlineFixtureData[arCurFixtureNumStation[9]].stProduct.xLidChecking_OK:=FALSE;
 								EXIT;
 							ELSIF  i=4 AND j =12 THEN
-							 	arProcessDataStation[5].xMaterialOnOff:=TRUE;//待删
-								arProcessDataStation[5].stProduct.xLidChecking_NOK:=FALSE;
-								arProcessDataStation[5].stProduct.xLidChecking_OK:=TRUE; 
+							 	 arMainlineFixtureData[arCurFixtureNumStation[9]].xMaterialOnOff:=TRUE;//待删
+								 arMainlineFixtureData[arCurFixtureNumStation[9]].stProduct.xLidChecking_NOK:=FALSE;
+								 arMainlineFixtureData[arCurFixtureNumStation[9]].stProduct.xLidChecking_OK:=TRUE; 
 							END_IF
 						END_IF
 					END_FOR
 				END_FOR
 				tsModuleProcess[4].xProcessCompleted:=TRUE;
-				station.iStepAuto:=350;
-		350://数据load
-			IF  bCounter =1 OR bCounter =2 OR bCounter=3 THEN
-				MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[5]]),ADR(arProcessDataStation[1]),SIZEOF(arProcessDataStation[1]));
-				MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[6]]),ADR(arProcessDataStation[2]),SIZEOF(arProcessDataStation[2]));
-			END_IF
-			IF bCounter =2 OR bCounter =3 OR bEndCounter =1 THEN
-				MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[7]]),ADR(arProcessDataStation[3]),SIZEOF(arProcessDataStation[3]));
-				MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[8]]),ADR(arProcessDataStation[4]),SIZEOF(arProcessDataStation[4]));
-			END_IF
-			IF bCounter =3 OR bEndCounter =2 THEN
-				MEMCPY(ADR(arMainlineFixtureData[arCurFixtureNumStation[9]]),ADR(arProcessDataStation[5]),SIZEOF(arProcessDataStation[5]));
-			END_IF
-				station.iStepAuto:= 360;
- 		360://循环计数
-			tsModuleProcess[4].xQDataCompleted:=TRUE;
-			IF   bEndCounter =0 THEN
-				bCounter:=bCounter +1;
-			ELSIF  bCounter =0 THEN
-				bEndCounter := bEndCounter +1;
-			END_IF
-			station.iStepAuto:=370;
-			
-		370://循环统计
-			IF  bCounter >3 THEN
-				bCounter :=3;
-			END_IF
-			station.iStepAuto:=999;
-		
+				station.iStepAuto:=999;
 	////产品流程结束
 	999://----Single Run Finish----
 		arManualNOKHmiButton[3]:=FALSE;
@@ -1056,6 +1366,47 @@ CASE station.iStepAuto OF
 				fbYAxisMove.xMoveInPos[1] THEN
 					station.iStepAuto:= 0;
 			END_IF		
+{region "清料程序"}
+  1010://开始请料
+		 //写入数据
+			arMainlineFixtureData[arCurFixtureNumStation[5]].xMaterialOnOff:=FALSE;
+			arMainlineFixtureData[arCurFixtureNumStation[6]].xMaterialOnOff:=FALSE;
+			arMainlineFixtureData[arCurFixtureNumStation[7]].xMaterialOnOff:=FALSE;
+			arMainlineFixtureData[arCurFixtureNumStation[8]].xMaterialOnOff:=FALSE;
+			arMainlineFixtureData[arCurFixtureNumStation[9]].xMaterialOnOff:=FALSE;		
+			arMainlineFixtureData[arCurFixtureNumStation[5]].stProduct.xLidChecking_NOK:=TRUE;
+			arMainlineFixtureData[arCurFixtureNumStation[5]].stProduct.xLidChecking_OK:=FALSE;	
+			arMainlineFixtureData[arCurFixtureNumStation[6]].stProduct.xLidChecking_NOK:=TRUE;
+			arMainlineFixtureData[arCurFixtureNumStation[6]].stProduct.xLidChecking_OK:=FALSE;	
+			arMainlineFixtureData[arCurFixtureNumStation[7]].stProduct.xLidChecking_NOK:=TRUE;
+			arMainlineFixtureData[arCurFixtureNumStation[7]].stProduct.xLidChecking_OK:=FALSE;	
+			arMainlineFixtureData[arCurFixtureNumStation[8]].stProduct.xLidChecking_NOK:=TRUE;
+			arMainlineFixtureData[arCurFixtureNumStation[8]].stProduct.xLidChecking_OK:=FALSE;	
+			arMainlineFixtureData[arCurFixtureNumStation[9]].stProduct.xLidChecking_NOK:=TRUE;
+			arMainlineFixtureData[arCurFixtureNumStation[9]].stProduct.xLidChecking_OK:=FALSE;	
+			arMainlineFixtureData[arCurFixtureNumStation[5]].stProduct.xEmptying:=TRUE;
+			arMainlineFixtureData[arCurFixtureNumStation[6]].stProduct.xEmptying:=TRUE;
+			arMainlineFixtureData[arCurFixtureNumStation[7]].stProduct.xEmptying:=TRUE;
+			arMainlineFixtureData[arCurFixtureNumStation[8]].stProduct.xEmptying:=TRUE;
+			arMainlineFixtureData[arCurFixtureNumStation[9]].stProduct.xEmptying:=TRUE;		
+			station.iStepAuto:=1020;
+ 1020://XY轴回参考点
+				fbXAxisMove.xMoveAuto[1]:=TRUE;
+				fbYAxisMove.xMoveAuto[1]:=TRUE;
+			IF	fbxAxisMove.xMoveInPos[1] AND 
+				fbYAxisMove.xMoveInPos[1] THEN
+					station.iStepAuto:= 1100;
+			END_IF			
+ 1100://清料完成
+			station.xEmptying:=FALSE;
+			station.xEmptyDone:=TRUE;
+			station.iStepAuto:=0;
+{endregion}			
+			
+			
+			
+			
+			
 		
 	ELSE
 		;	
@@ -1079,14 +1430,16 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
-	FOR i:=2 TO 17 BY 1 DO
-		fbCamera[i].xlInit:=TRUE;
-		fbCamera[i].xlTrigger:=FALSE;
-	END_FOR
-	FOR i:=1 TO gc_ModuleProNo BY 1 DO
-				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
-			END_FOR
-	station.iStepInit :=20;
+		MEMSET(ADR(arCameraResult),0,SIZEOF(arCameraResult));
+		MEMSET(ADR(arCameraResultHmi),0,SIZEOF(arCameraResultHmi));
+		FOR i:=2 TO 17 BY 1 DO
+			fbCamera[i].xlInit:=TRUE;
+			fbCamera[i].xlTrigger:=FALSE;
+		END_FOR
+		FOR i:=1 TO gc_ModuleProNo BY 1 DO
+					MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
+				END_FOR
+		station.iStepInit :=20;
 	 
 20://伺服上电
   	fbXAxisMove.xPowerInit := TRUE ;
@@ -1107,7 +1460,6 @@ CASE station.iStepInit OF
 			station.iStepInit:=50;	
 		END_IF
 50://水平调整气缸回原位
-		
 				fbHOZAdjustCyl_1.xinit:=TRUE;
         fbHOZAdjustCyl_2.xinit:=TRUE;
         fbHOZAdjustCyl_3.xinit:=true;
@@ -1164,38 +1516,11 @@ CASE bClearProcessStep OF
 	
 END_CASE
 {endregion}
-	 
-	 
-{region "拍照结果放到HMI中"}
 
-MEMCPY(ADR(arCameraResultHmi),ADR(arCameraResult),SIZEOF(arCameraResultHmi));
-//测试使用
-IF xtest THEN
-	MEMSET(ADR(arCameraResult),0,SIZEOF(arCameraResult));
-	MEMSET(ADR(arCameraResultHmi),0,SIZEOF(arCameraResultHmi));
-ELSIF xnext THEN	
- 	IF 	bCounter =2 THEN 
-	 				FOR i:=1 TO 2 BY 1 DO
-							FOR j:=1 TO 4 BY 1 DO
-									 FOR k:=1 TO 12 BY 1 DO
-									MEMCPY(ADR(arCameraResult[i+2,j,k]),ADR(arCameraResult[i,j,k]),SIZEOF(arCameraResult[i,j,k]));
-									MEMSET(ADR(arCameraResult[i,j,k]),0,SIZEOF(arCameraResult[i,j,k]));	
-								END_FOR
-							END_FOR
-				END_FOR
-	END_IF
-	IF  bCounter =3 THEN 
-									FOR j:=1 TO 4 BY 1 DO
-									 	FOR k:=1 TO 12 BY 1 DO
-											MEMCPY(ADR(arCameraResult[5,j,k]),ADR(arCameraResult[3,j,k]),SIZEOF(arCameraResult[3,j,k]));
-											MEMSET(ADR(arCameraResult[3,j,k]),0,SIZEOF(arCameraResult[3,j,k]));	
-								END_FOR
-							END_FOR
- END_IF
-
-	xnext:=FALSE;
+{region "HMI中操作bCounter计数"}
+IF station.xSingleRunning THEN
+bCounter:=bS03Counter;
 END_IF
-
 {endregion}]]></ST>
       </Implementation>
     </Action>
@@ -1400,40 +1725,35 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="1161" Count="4" />
       <LineId Id="1167" Count="17" />
       <LineId Id="3236" Count="0" />
-      <LineId Id="3724" Count="3" />
+      <LineId Id="3725" Count="2" />
       <LineId Id="1890" Count="0" />
       <LineId Id="1536" Count="0" />
-      <LineId Id="3695" Count="2" />
-      <LineId Id="3720" Count="0" />
-      <LineId Id="3699" Count="0" />
-      <LineId Id="3698" Count="0" />
-      <LineId Id="3722" Count="0" />
       <LineId Id="3730" Count="1" />
       <LineId Id="1539" Count="0" />
+      <LineId Id="5419" Count="0" />
+      <LineId Id="5361" Count="0" />
+      <LineId Id="5366" Count="0" />
+      <LineId Id="5396" Count="22" />
+      <LineId Id="5360" Count="0" />
       <LineId Id="1546" Count="0" />
       <LineId Id="1717" Count="2" />
       <LineId Id="1721" Count="0" />
       <LineId Id="3703" Count="1" />
-      <LineId Id="1733" Count="0" />
-      <LineId Id="2217" Count="0" />
       <LineId Id="3706" Count="1" />
-      <LineId Id="2216" Count="0" />
-      <LineId Id="3735" Count="0" />
       <LineId Id="1724" Count="0" />
       <LineId Id="2201" Count="3" />
-      <LineId Id="1730" Count="1" />
-      <LineId Id="2219" Count="0" />
-      <LineId Id="1732" Count="0" />
-      <LineId Id="1729" Count="0" />
-      <LineId Id="3734" Count="0" />
+      <LineId Id="1731" Count="0" />
+      <LineId Id="5330" Count="0" />
       <LineId Id="2221" Count="0" />
-      <LineId Id="2208" Count="6" />
-      <LineId Id="2220" Count="0" />
-      <LineId Id="2215" Count="0" />
-      <LineId Id="2205" Count="0" />
-      <LineId Id="2207" Count="0" />
-      <LineId Id="1548" Count="0" />
+      <LineId Id="5309" Count="0" />
+      <LineId Id="5313" Count="2" />
+      <LineId Id="5310" Count="1" />
+      <LineId Id="5331" Count="0" />
+      <LineId Id="5316" Count="6" />
+      <LineId Id="5332" Count="0" />
+      <LineId Id="5325" Count="0" />
       <LineId Id="1550" Count="0" />
+      <LineId Id="5420" Count="0" />
       <LineId Id="3234" Count="0" />
       <LineId Id="3239" Count="0" />
       <LineId Id="3242" Count="1" />
@@ -1462,6 +1782,18 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="3256" Count="0" />
       <LineId Id="3258" Count="0" />
       <LineId Id="3255" Count="0" />
+      <LineId Id="4954" Count="0" />
+      <LineId Id="4957" Count="0" />
+      <LineId Id="5001" Count="6" />
+      <LineId Id="4977" Count="0" />
+      <LineId Id="4960" Count="2" />
+      <LineId Id="4978" Count="0" />
+      <LineId Id="4963" Count="0" />
+      <LineId Id="4979" Count="0" />
+      <LineId Id="4964" Count="1" />
+      <LineId Id="4993" Count="0" />
+      <LineId Id="4985" Count="0" />
+      <LineId Id="4955" Count="1" />
       <LineId Id="2990" Count="0" />
       <LineId Id="3275" Count="1" />
       <LineId Id="2991" Count="9" />
@@ -1541,203 +1873,521 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="3851" Count="1" />
       <LineId Id="1558" Count="0" />
       <LineId Id="2517" Count="0" />
+      <LineId Id="4907" Count="0" />
       <LineId Id="1840" Count="0" />
       <LineId Id="1894" Count="0" />
       <LineId Id="3282" Count="0" />
+      <LineId Id="5190" Count="0" />
       <LineId Id="3314" Count="0" />
+      <LineId Id="5020" Count="0" />
       <LineId Id="3637" Count="0" />
+      <LineId Id="5021" Count="0" />
       <LineId Id="3317" Count="0" />
+      <LineId Id="5022" Count="0" />
       <LineId Id="3319" Count="0" />
+      <LineId Id="5023" Count="0" />
       <LineId Id="3321" Count="0" />
+      <LineId Id="5024" Count="0" />
       <LineId Id="3323" Count="0" />
+      <LineId Id="5025" Count="0" />
       <LineId Id="3325" Count="0" />
+      <LineId Id="5026" Count="0" />
       <LineId Id="3327" Count="0" />
       <LineId Id="3685" Count="0" />
       <LineId Id="3283" Count="0" />
-      <LineId Id="3286" Count="1" />
-      <LineId Id="3290" Count="16" />
-      <LineId Id="3855" Count="0" />
-      <LineId Id="3859" Count="0" />
-      <LineId Id="3863" Count="0" />
-      <LineId Id="3858" Count="0" />
-      <LineId Id="3307" Count="3" />
-      <LineId Id="3284" Count="0" />
-      <LineId Id="1969" Count="0" />
-      <LineId Id="3285" Count="0" />
+      <LineId Id="3942" Count="0" />
+      <LineId Id="3947" Count="0" />
+      <LineId Id="3950" Count="0" />
+      <LineId Id="3994" Count="0" />
+      <LineId Id="3953" Count="0" />
+      <LineId Id="3957" Count="0" />
+      <LineId Id="3960" Count="0" />
+      <LineId Id="5028" Count="0" />
+      <LineId Id="3961" Count="1" />
+      <LineId Id="5029" Count="0" />
+      <LineId Id="3963" Count="1" />
+      <LineId Id="5030" Count="0" />
+      <LineId Id="3965" Count="1" />
+      <LineId Id="5031" Count="0" />
+      <LineId Id="3967" Count="1" />
+      <LineId Id="5032" Count="0" />
+      <LineId Id="3969" Count="1" />
+      <LineId Id="5033" Count="0" />
+      <LineId Id="3971" Count="1" />
+      <LineId Id="5034" Count="0" />
+      <LineId Id="3973" Count="1" />
+      <LineId Id="5035" Count="0" />
+      <LineId Id="3975" Count="0" />
+      <LineId Id="3958" Count="0" />
+      <LineId Id="3976" Count="0" />
+      <LineId Id="3986" Count="0" />
+      <LineId Id="3991" Count="0" />
+      <LineId Id="3987" Count="2" />
+      <LineId Id="3985" Count="0" />
+      <LineId Id="3955" Count="0" />
+      <LineId Id="3977" Count="0" />
+      <LineId Id="3981" Count="0" />
+      <LineId Id="3995" Count="0" />
+      <LineId Id="3984" Count="0" />
+      <LineId Id="3993" Count="0" />
+      <LineId Id="3997" Count="0" />
+      <LineId Id="3996" Count="0" />
+      <LineId Id="3980" Count="0" />
+      <LineId Id="3948" Count="1" />
+      <LineId Id="4910" Count="0" />
+      <LineId Id="4123" Count="0" />
+      <LineId Id="4126" Count="0" />
       <LineId Id="1921" Count="0" />
       <LineId Id="3329" Count="0" />
-      <LineId Id="3357" Count="1" />
+      <LineId Id="5016" Count="0" />
+      <LineId Id="3357" Count="0" />
+      <LineId Id="5008" Count="0" />
+      <LineId Id="3358" Count="0" />
+      <LineId Id="5009" Count="0" />
       <LineId Id="3360" Count="0" />
+      <LineId Id="5010" Count="0" />
       <LineId Id="3362" Count="0" />
       <LineId Id="3687" Count="0" />
+      <LineId Id="4911" Count="0" />
       <LineId Id="3330" Count="0" />
-      <LineId Id="3334" Count="1" />
-      <LineId Id="3338" Count="8" />
-      <LineId Id="3865" Count="3" />
-      <LineId Id="3864" Count="0" />
-      <LineId Id="3348" Count="2" />
-      <LineId Id="3331" Count="2" />
-      <LineId Id="2007" Count="0" />
+      <LineId Id="4003" Count="5" />
+      <LineId Id="4042" Count="0" />
+      <LineId Id="5014" Count="0" />
+      <LineId Id="4043" Count="1" />
+      <LineId Id="5015" Count="0" />
+      <LineId Id="4045" Count="1" />
+      <LineId Id="5017" Count="0" />
+      <LineId Id="4047" Count="1" />
+      <LineId Id="5018" Count="0" />
+      <LineId Id="4049" Count="0" />
+      <LineId Id="4025" Count="16" />
+      <LineId Id="3998" Count="0" />
+      <LineId Id="3332" Count="0" />
+      <LineId Id="4913" Count="0" />
+      <LineId Id="4142" Count="0" />
+      <LineId Id="4908" Count="0" />
       <LineId Id="1844" Count="0" />
       <LineId Id="2009" Count="0" />
       <LineId Id="3369" Count="0" />
-      <LineId Id="3420" Count="1" />
+      <LineId Id="5036" Count="0" />
+      <LineId Id="3420" Count="0" />
+      <LineId Id="5037" Count="0" />
+      <LineId Id="3421" Count="0" />
+      <LineId Id="5038" Count="0" />
       <LineId Id="3423" Count="0" />
+      <LineId Id="5040" Count="0" />
       <LineId Id="3425" Count="0" />
+      <LineId Id="5041" Count="0" />
       <LineId Id="3427" Count="0" />
+      <LineId Id="5042" Count="0" />
       <LineId Id="3429" Count="0" />
+      <LineId Id="5043" Count="0" />
       <LineId Id="3431" Count="0" />
+      <LineId Id="5044" Count="0" />
       <LineId Id="3433" Count="0" />
+      <LineId Id="5045" Count="0" />
       <LineId Id="3435" Count="0" />
+      <LineId Id="5046" Count="0" />
       <LineId Id="3437" Count="0" />
+      <LineId Id="5047" Count="0" />
       <LineId Id="3439" Count="0" />
+      <LineId Id="5048" Count="0" />
       <LineId Id="3441" Count="0" />
+      <LineId Id="5049" Count="0" />
       <LineId Id="3443" Count="0" />
+      <LineId Id="5050" Count="0" />
       <LineId Id="3445" Count="0" />
+      <LineId Id="5051" Count="0" />
       <LineId Id="3447" Count="0" />
+      <LineId Id="5052" Count="0" />
       <LineId Id="3449" Count="0" />
       <LineId Id="3688" Count="0" />
       <LineId Id="3370" Count="0" />
-      <LineId Id="3374" Count="1" />
-      <LineId Id="3378" Count="28" />
-      <LineId Id="3740" Count="0" />
-      <LineId Id="3408" Count="2" />
-      <LineId Id="3869" Count="3" />
-      <LineId Id="3411" Count="3" />
-      <LineId Id="3371" Count="2" />
+      <LineId Id="4052" Count="5" />
+      <LineId Id="4083" Count="0" />
+      <LineId Id="5053" Count="0" />
+      <LineId Id="4084" Count="1" />
+      <LineId Id="5054" Count="0" />
+      <LineId Id="4086" Count="1" />
+      <LineId Id="5055" Count="0" />
+      <LineId Id="4088" Count="1" />
+      <LineId Id="5056" Count="0" />
+      <LineId Id="4090" Count="1" />
+      <LineId Id="5057" Count="0" />
+      <LineId Id="4092" Count="1" />
+      <LineId Id="5058" Count="0" />
+      <LineId Id="4094" Count="1" />
+      <LineId Id="5059" Count="0" />
+      <LineId Id="4096" Count="1" />
+      <LineId Id="5060" Count="0" />
+      <LineId Id="4098" Count="1" />
+      <LineId Id="5061" Count="0" />
+      <LineId Id="4100" Count="1" />
+      <LineId Id="5062" Count="0" />
+      <LineId Id="4102" Count="1" />
+      <LineId Id="5064" Count="0" />
+      <LineId Id="4104" Count="1" />
+      <LineId Id="5065" Count="0" />
+      <LineId Id="4106" Count="1" />
+      <LineId Id="5066" Count="0" />
+      <LineId Id="4108" Count="1" />
+      <LineId Id="5067" Count="0" />
+      <LineId Id="4110" Count="1" />
+      <LineId Id="5068" Count="0" />
+      <LineId Id="4112" Count="1" />
+      <LineId Id="5069" Count="0" />
+      <LineId Id="4114" Count="1" />
+      <LineId Id="4067" Count="11" />
+      <LineId Id="4080" Count="2" />
+      <LineId Id="4050" Count="0" />
+      <LineId Id="3372" Count="1" />
+      <LineId Id="4146" Count="0" />
       <LineId Id="2016" Count="0" />
       <LineId Id="3456" Count="0" />
+      <LineId Id="5070" Count="0" />
       <LineId Id="2079" Count="0" />
+      <LineId Id="5073" Count="0" />
       <LineId Id="2081" Count="0" />
+      <LineId Id="5075" Count="0" />
       <LineId Id="2083" Count="0" />
+      <LineId Id="5077" Count="0" />
       <LineId Id="2085" Count="0" />
+      <LineId Id="5079" Count="0" />
       <LineId Id="2087" Count="0" />
+      <LineId Id="5081" Count="0" />
       <LineId Id="2089" Count="0" />
+      <LineId Id="5083" Count="0" />
       <LineId Id="2091" Count="0" />
+      <LineId Id="5085" Count="0" />
       <LineId Id="2093" Count="0" />
+      <LineId Id="5088" Count="0" />
       <LineId Id="2095" Count="0" />
+      <LineId Id="5090" Count="0" />
       <LineId Id="2097" Count="0" />
+      <LineId Id="5092" Count="0" />
       <LineId Id="2099" Count="0" />
+      <LineId Id="5094" Count="0" />
       <LineId Id="2101" Count="0" />
       <LineId Id="3689" Count="0" />
       <LineId Id="3457" Count="0" />
-      <LineId Id="3461" Count="1" />
-      <LineId Id="3465" Count="24" />
-      <LineId Id="3873" Count="3" />
-      <LineId Id="3490" Count="3" />
-      <LineId Id="3458" Count="1" />
+      <LineId Id="4150" Count="5" />
+      <LineId Id="4188" Count="0" />
+      <LineId Id="5071" Count="0" />
+      <LineId Id="4237" Count="1" />
+      <LineId Id="5074" Count="0" />
+      <LineId Id="4239" Count="1" />
+      <LineId Id="5076" Count="0" />
+      <LineId Id="4241" Count="1" />
+      <LineId Id="5078" Count="0" />
+      <LineId Id="4243" Count="1" />
+      <LineId Id="5080" Count="0" />
+      <LineId Id="4245" Count="1" />
+      <LineId Id="5082" Count="0" />
+      <LineId Id="4247" Count="1" />
+      <LineId Id="5084" Count="0" />
+      <LineId Id="4249" Count="1" />
+      <LineId Id="5086" Count="0" />
+      <LineId Id="4251" Count="1" />
+      <LineId Id="5089" Count="0" />
+      <LineId Id="4253" Count="1" />
+      <LineId Id="5091" Count="0" />
+      <LineId Id="4255" Count="1" />
+      <LineId Id="5093" Count="0" />
+      <LineId Id="4257" Count="1" />
+      <LineId Id="5095" Count="0" />
+      <LineId Id="4259" Count="1" />
+      <LineId Id="4189" Count="11" />
+      <LineId Id="4202" Count="2" />
+      <LineId Id="4149" Count="0" />
       <LineId Id="2011" Count="0" />
-      <LineId Id="1847" Count="0" />
-      <LineId Id="2114" Count="0" />
+      <LineId Id="4914" Count="0" />
+      <LineId Id="4428" Count="0" />
+      <LineId Id="4426" Count="0" />
+      <LineId Id="4269" Count="0" />
       <LineId Id="2117" Count="0" />
       <LineId Id="3494" Count="0" />
+      <LineId Id="5191" Count="0" />
       <LineId Id="2123" Count="0" />
+      <LineId Id="5194" Count="0" />
       <LineId Id="2125" Count="0" />
+      <LineId Id="5195" Count="0" />
       <LineId Id="2127" Count="0" />
+      <LineId Id="5196" Count="0" />
       <LineId Id="2129" Count="0" />
+      <LineId Id="5200" Count="0" />
       <LineId Id="2131" Count="0" />
+      <LineId Id="5202" Count="0" />
       <LineId Id="2133" Count="0" />
+      <LineId Id="5204" Count="0" />
       <LineId Id="2135" Count="0" />
+      <LineId Id="5206" Count="0" />
       <LineId Id="2137" Count="0" />
+      <LineId Id="5209" Count="0" />
       <LineId Id="2139" Count="0" />
+      <LineId Id="5212" Count="0" />
       <LineId Id="2141" Count="0" />
+      <LineId Id="5214" Count="0" />
       <LineId Id="2143" Count="0" />
+      <LineId Id="5216" Count="0" />
       <LineId Id="2145" Count="0" />
+      <LineId Id="5218" Count="0" />
       <LineId Id="3638" Count="0" />
+      <LineId Id="5220" Count="0" />
       <LineId Id="2149" Count="0" />
+      <LineId Id="5222" Count="0" />
       <LineId Id="2151" Count="0" />
+      <LineId Id="5223" Count="0" />
       <LineId Id="2153" Count="0" />
       <LineId Id="3690" Count="0" />
       <LineId Id="3495" Count="0" />
-      <LineId Id="3498" Count="1" />
-      <LineId Id="3502" Count="29" />
-      <LineId Id="3808" Count="0" />
-      <LineId Id="3532" Count="2" />
-      <LineId Id="3877" Count="3" />
-      <LineId Id="3535" Count="3" />
-      <LineId Id="3496" Count="1" />
+      <LineId Id="4271" Count="5" />
+      <LineId Id="4318" Count="0" />
+      <LineId Id="5192" Count="0" />
+      <LineId Id="4348" Count="1" />
+      <LineId Id="5197" Count="0" />
+      <LineId Id="4350" Count="1" />
+      <LineId Id="5198" Count="0" />
+      <LineId Id="4352" Count="1" />
+      <LineId Id="5199" Count="0" />
+      <LineId Id="4354" Count="1" />
+      <LineId Id="5201" Count="0" />
+      <LineId Id="4356" Count="1" />
+      <LineId Id="5203" Count="0" />
+      <LineId Id="4358" Count="1" />
+      <LineId Id="5205" Count="0" />
+      <LineId Id="4360" Count="1" />
+      <LineId Id="5207" Count="0" />
+      <LineId Id="4362" Count="1" />
+      <LineId Id="5210" Count="0" />
+      <LineId Id="4364" Count="1" />
+      <LineId Id="5213" Count="0" />
+      <LineId Id="4366" Count="1" />
+      <LineId Id="5215" Count="0" />
+      <LineId Id="4368" Count="0" />
+      <LineId Id="4380" Count="0" />
+      <LineId Id="5217" Count="0" />
+      <LineId Id="4370" Count="1" />
+      <LineId Id="5219" Count="0" />
+      <LineId Id="4372" Count="1" />
+      <LineId Id="5221" Count="0" />
+      <LineId Id="4374" Count="4" />
+      <LineId Id="5225" Count="0" />
+      <LineId Id="4379" Count="0" />
+      <LineId Id="4320" Count="0" />
+      <LineId Id="4302" Count="14" />
+      <LineId Id="4270" Count="0" />
+      <LineId Id="3497" Count="0" />
+      <LineId Id="4429" Count="0" />
+      <LineId Id="4486" Count="0" />
       <LineId Id="2158" Count="0" />
       <LineId Id="3539" Count="0" />
-      <LineId Id="2165" Count="1" />
+      <LineId Id="5096" Count="0" />
+      <LineId Id="2165" Count="0" />
+      <LineId Id="5098" Count="0" />
+      <LineId Id="2166" Count="0" />
+      <LineId Id="5100" Count="0" />
       <LineId Id="2168" Count="0" />
+      <LineId Id="5102" Count="0" />
       <LineId Id="2170" Count="0" />
+      <LineId Id="5105" Count="0" />
       <LineId Id="2172" Count="0" />
+      <LineId Id="5107" Count="0" />
       <LineId Id="2174" Count="0" />
+      <LineId Id="5109" Count="0" />
       <LineId Id="2176" Count="0" />
+      <LineId Id="5112" Count="0" />
       <LineId Id="3639" Count="0" />
+      <LineId Id="5114" Count="0" />
       <LineId Id="2180" Count="0" />
+      <LineId Id="5116" Count="0" />
       <LineId Id="2182" Count="0" />
+      <LineId Id="5118" Count="0" />
       <LineId Id="2184" Count="0" />
+      <LineId Id="5120" Count="0" />
       <LineId Id="2186" Count="0" />
+      <LineId Id="5122" Count="0" />
       <LineId Id="2192" Count="0" />
+      <LineId Id="5124" Count="0" />
       <LineId Id="2194" Count="0" />
+      <LineId Id="5126" Count="0" />
       <LineId Id="2196" Count="0" />
+      <LineId Id="5127" Count="0" />
       <LineId Id="2198" Count="0" />
       <LineId Id="3691" Count="0" />
       <LineId Id="3540" Count="0" />
-      <LineId Id="3545" Count="1" />
-      <LineId Id="3549" Count="29" />
-      <LineId Id="3807" Count="0" />
-      <LineId Id="3579" Count="2" />
-      <LineId Id="3881" Count="3" />
-      <LineId Id="3582" Count="3" />
-      <LineId Id="3543" Count="0" />
-      <LineId Id="3541" Count="0" />
-      <LineId Id="2116" Count="0" />
-      <LineId Id="1848" Count="0" />
-      <LineId Id="2515" Count="1" />
+      <LineId Id="4431" Count="5" />
+      <LineId Id="4470" Count="0" />
+      <LineId Id="5097" Count="0" />
+      <LineId Id="4490" Count="1" />
+      <LineId Id="5099" Count="0" />
+      <LineId Id="4492" Count="1" />
+      <LineId Id="5101" Count="0" />
+      <LineId Id="4494" Count="1" />
+      <LineId Id="5104" Count="0" />
+      <LineId Id="4496" Count="1" />
+      <LineId Id="5106" Count="0" />
+      <LineId Id="4498" Count="1" />
+      <LineId Id="5108" Count="0" />
+      <LineId Id="4500" Count="1" />
+      <LineId Id="5111" Count="0" />
+      <LineId Id="4502" Count="1" />
+      <LineId Id="5113" Count="0" />
+      <LineId Id="4504" Count="1" />
+      <LineId Id="5115" Count="0" />
+      <LineId Id="4506" Count="1" />
+      <LineId Id="5117" Count="0" />
+      <LineId Id="4508" Count="1" />
+      <LineId Id="5119" Count="0" />
+      <LineId Id="4510" Count="1" />
+      <LineId Id="5121" Count="0" />
+      <LineId Id="4512" Count="1" />
+      <LineId Id="5123" Count="0" />
+      <LineId Id="4514" Count="1" />
+      <LineId Id="5125" Count="0" />
+      <LineId Id="4516" Count="4" />
+      <LineId Id="5128" Count="0" />
+      <LineId Id="4521" Count="1" />
+      <LineId Id="4471" Count="14" />
+      <LineId Id="4430" Count="0" />
+      <LineId Id="4530" Count="0" />
+      <LineId Id="4916" Count="0" />
+      <LineId Id="4488" Count="0" />
+      <LineId Id="4634" Count="0" />
+      <LineId Id="2516" Count="0" />
       <LineId Id="2244" Count="1" />
       <LineId Id="3586" Count="0" />
-      <LineId Id="2260" Count="1" />
+      <LineId Id="5129" Count="0" />
+      <LineId Id="2260" Count="0" />
+      <LineId Id="5131" Count="0" />
+      <LineId Id="2261" Count="0" />
+      <LineId Id="5133" Count="0" />
       <LineId Id="2263" Count="0" />
+      <LineId Id="5135" Count="0" />
       <LineId Id="2265" Count="0" />
+      <LineId Id="5138" Count="0" />
       <LineId Id="2531" Count="0" />
+      <LineId Id="5140" Count="0" />
       <LineId Id="2533" Count="0" />
+      <LineId Id="5142" Count="0" />
       <LineId Id="2535" Count="0" />
+      <LineId Id="5144" Count="0" />
       <LineId Id="2537" Count="0" />
       <LineId Id="3692" Count="0" />
       <LineId Id="3587" Count="0" />
-      <LineId Id="3591" Count="1" />
-      <LineId Id="3595" Count="16" />
-      <LineId Id="3885" Count="3" />
-      <LineId Id="3612" Count="3" />
-      <LineId Id="3588" Count="2" />
+      <LineId Id="4540" Count="5" />
+      <LineId Id="4596" Count="0" />
+      <LineId Id="5130" Count="0" />
+      <LineId Id="4604" Count="1" />
+      <LineId Id="5132" Count="0" />
+      <LineId Id="4606" Count="1" />
+      <LineId Id="5134" Count="0" />
+      <LineId Id="4608" Count="1" />
+      <LineId Id="5136" Count="0" />
+      <LineId Id="4610" Count="1" />
+      <LineId Id="5139" Count="0" />
+      <LineId Id="4612" Count="1" />
+      <LineId Id="5141" Count="0" />
+      <LineId Id="4614" Count="1" />
+      <LineId Id="5143" Count="0" />
+      <LineId Id="4616" Count="1" />
+      <LineId Id="5145" Count="0" />
+      <LineId Id="4618" Count="1" />
+      <LineId Id="4580" Count="14" />
+      <LineId Id="4531" Count="0" />
+      <LineId Id="3589" Count="1" />
+      <LineId Id="4635" Count="0" />
       <LineId Id="2270" Count="0" />
       <LineId Id="3641" Count="0" />
+      <LineId Id="5146" Count="0" />
       <LineId Id="2276" Count="0" />
+      <LineId Id="5147" Count="0" />
       <LineId Id="2278" Count="0" />
+      <LineId Id="5150" Count="0" />
       <LineId Id="2280" Count="0" />
+      <LineId Id="5153" Count="0" />
       <LineId Id="2282" Count="0" />
+      <LineId Id="5155" Count="0" />
       <LineId Id="2556" Count="0" />
+      <LineId Id="5158" Count="0" />
       <LineId Id="2558" Count="0" />
+      <LineId Id="5160" Count="0" />
       <LineId Id="2560" Count="0" />
+      <LineId Id="5161" Count="0" />
       <LineId Id="2562" Count="0" />
+      <LineId Id="5164" Count="0" />
       <LineId Id="2564" Count="0" />
+      <LineId Id="5166" Count="0" />
       <LineId Id="2566" Count="0" />
+      <LineId Id="5168" Count="0" />
       <LineId Id="2568" Count="0" />
+      <LineId Id="5170" Count="0" />
       <LineId Id="2570" Count="0" />
       <LineId Id="3693" Count="0" />
       <LineId Id="3642" Count="0" />
-      <LineId Id="3646" Count="1" />
-      <LineId Id="3650" Count="24" />
-      <LineId Id="3889" Count="3" />
-      <LineId Id="3675" Count="3" />
-      <LineId Id="3643" Count="2" />
-      <LineId Id="2287" Count="1" />
+      <LineId Id="4694" Count="5" />
+      <LineId Id="4791" Count="0" />
+      <LineId Id="5148" Count="0" />
+      <LineId Id="4792" Count="1" />
+      <LineId Id="5149" Count="0" />
+      <LineId Id="4794" Count="1" />
+      <LineId Id="5152" Count="0" />
+      <LineId Id="4796" Count="1" />
+      <LineId Id="5154" Count="0" />
+      <LineId Id="4798" Count="1" />
+      <LineId Id="5156" Count="0" />
+      <LineId Id="4800" Count="1" />
+      <LineId Id="5159" Count="0" />
+      <LineId Id="4802" Count="1" />
+      <LineId Id="5162" Count="0" />
+      <LineId Id="4804" Count="1" />
+      <LineId Id="5163" Count="0" />
+      <LineId Id="4806" Count="1" />
+      <LineId Id="5165" Count="0" />
+      <LineId Id="4808" Count="1" />
+      <LineId Id="5167" Count="0" />
+      <LineId Id="4810" Count="1" />
+      <LineId Id="5169" Count="0" />
+      <LineId Id="4812" Count="1" />
+      <LineId Id="5172" Count="0" />
+      <LineId Id="4814" Count="0" />
+      <LineId Id="4716" Count="15" />
+      <LineId Id="4639" Count="0" />
+      <LineId Id="2287" Count="0" />
+      <LineId Id="4917" Count="0" />
+      <LineId Id="4636" Count="0" />
+      <LineId Id="4815" Count="0" />
+      <LineId Id="2288" Count="0" />
+      <LineId Id="4918" Count="0" />
+      <LineId Id="4923" Count="0" />
+      <LineId Id="4926" Count="0" />
+      <LineId Id="4924" Count="0" />
       <LineId Id="2330" Count="0" />
       <LineId Id="3616" Count="0" />
-      <LineId Id="2336" Count="2" />
+      <LineId Id="5181" Count="0" />
+      <LineId Id="2337" Count="0" />
+      <LineId Id="5184" Count="0" />
+      <LineId Id="2338" Count="0" />
+      <LineId Id="5186" Count="0" />
       <LineId Id="2340" Count="0" />
+      <LineId Id="5188" Count="0" />
       <LineId Id="2342" Count="0" />
       <LineId Id="3694" Count="0" />
       <LineId Id="2362" Count="0" />
-      <LineId Id="3620" Count="1" />
-      <LineId Id="3624" Count="8" />
-      <LineId Id="3893" Count="3" />
-      <LineId Id="3633" Count="3" />
-      <LineId Id="3618" Count="1" />
-      <LineId Id="2363" Count="0" />
+      <LineId Id="4853" Count="5" />
+      <LineId Id="4899" Count="0" />
+      <LineId Id="5182" Count="1" />
+      <LineId Id="4900" Count="1" />
+      <LineId Id="5185" Count="0" />
+      <LineId Id="4902" Count="1" />
+      <LineId Id="5187" Count="0" />
+      <LineId Id="4904" Count="1" />
+      <LineId Id="5189" Count="0" />
+      <LineId Id="4906" Count="0" />
+      <LineId Id="4883" Count="15" />
+      <LineId Id="4816" Count="0" />
+      <LineId Id="4818" Count="0" />
       <LineId Id="2228" Count="0" />
+      <LineId Id="4928" Count="1" />
       <LineId Id="3233" Count="0" />
       <LineId Id="1892" Count="0" />
       <LineId Id="2586" Count="4" />
@@ -1772,16 +2422,6 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="3128" Count="0" />
       <LineId Id="3130" Count="0" />
       <LineId Id="3144" Count="1" />
-      <LineId Id="3131" Count="0" />
-      <LineId Id="2713" Count="0" />
-      <LineId Id="3143" Count="0" />
-      <LineId Id="3829" Count="0" />
-      <LineId Id="3833" Count="0" />
-      <LineId Id="3835" Count="0" />
-      <LineId Id="3837" Count="1" />
-      <LineId Id="3836" Count="0" />
-      <LineId Id="3834" Count="0" />
-      <LineId Id="2712" Count="0" />
       <LineId Id="2808" Count="4" />
       <LineId Id="3736" Count="0" />
       <LineId Id="2813" Count="2" />
@@ -1801,23 +2441,6 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="2851" Count="3" />
       <LineId Id="3146" Count="0" />
       <LineId Id="2839" Count="0" />
-      <LineId Id="2651" Count="0" />
-      <LineId Id="2759" Count="5" />
-      <LineId Id="2770" Count="0" />
-      <LineId Id="2766" Count="3" />
-      <LineId Id="2752" Count="0" />
-      <LineId Id="1568" Count="0" />
-      <LineId Id="3147" Count="0" />
-      <LineId Id="2655" Count="1" />
-      <LineId Id="2658" Count="1" />
-      <LineId Id="2657" Count="0" />
-      <LineId Id="2661" Count="0" />
-      <LineId Id="2945" Count="0" />
-      <LineId Id="1572" Count="0" />
-      <LineId Id="2708" Count="1" />
-      <LineId Id="1573" Count="0" />
-      <LineId Id="3148" Count="0" />
-      <LineId Id="3251" Count="0" />
       <LineId Id="1577" Count="0" />
       <LineId Id="1212" Count="2" />
       <LineId Id="1453" Count="2" />
@@ -1825,6 +2448,26 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="1451" Count="0" />
       <LineId Id="3823" Count="5" />
       <LineId Id="3818" Count="0" />
+      <LineId Id="5226" Count="0" />
+      <LineId Id="5233" Count="0" />
+      <LineId Id="5276" Count="0" />
+      <LineId Id="5285" Count="0" />
+      <LineId Id="5284" Count="0" />
+      <LineId Id="5283" Count="0" />
+      <LineId Id="5282" Count="0" />
+      <LineId Id="5281" Count="0" />
+      <LineId Id="5279" Count="0" />
+      <LineId Id="5277" Count="0" />
+      <LineId Id="5286" Count="7" />
+      <LineId Id="5422" Count="3" />
+      <LineId Id="5421" Count="0" />
+      <LineId Id="5296" Count="1" />
+      <LineId Id="5299" Count="4" />
+      <LineId Id="5298" Count="0" />
+      <LineId Id="5271" Count="0" />
+      <LineId Id="5305" Count="2" />
+      <LineId Id="5232" Count="0" />
+      <LineId Id="5227" Count="4" />
       <LineId Id="3822" Count="0" />
       <LineId Id="1218" Count="6" />
     </LineIds>
@@ -1832,6 +2475,7 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="437" Count="5" />
       <LineId Id="535" Count="0" />
       <LineId Id="443" Count="3" />
+      <LineId Id="538" Count="1" />
       <LineId Id="475" Count="0" />
       <LineId Id="530" Count="0" />
       <LineId Id="537" Count="0" />
@@ -1847,7 +2491,7 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="499" Count="0" />
       <LineId Id="497" Count="1" />
       <LineId Id="495" Count="0" />
-      <LineId Id="500" Count="1" />
+      <LineId Id="500" Count="0" />
       <LineId Id="503" Count="7" />
       <LineId Id="518" Count="3" />
       <LineId Id="523" Count="3" />
@@ -1859,31 +2503,12 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
     </LineIds>
     <LineIds Name="S03_LidChecking.General">
       <LineId Id="382" Count="21" />
-      <LineId Id="517" Count="1" />
-      <LineId Id="516" Count="0" />
-      <LineId Id="519" Count="0" />
-      <LineId Id="404" Count="0" />
-      <LineId Id="414" Count="0" />
-      <LineId Id="434" Count="0" />
-      <LineId Id="433" Count="0" />
-      <LineId Id="436" Count="1" />
-      <LineId Id="458" Count="0" />
-      <LineId Id="461" Count="2" />
-      <LineId Id="513" Count="0" />
-      <LineId Id="464" Count="0" />
-      <LineId Id="468" Count="1" />
-      <LineId Id="459" Count="0" />
-      <LineId Id="470" Count="0" />
-      <LineId Id="482" Count="0" />
-      <LineId Id="487" Count="3" />
-      <LineId Id="492" Count="0" />
-      <LineId Id="471" Count="0" />
-      <LineId Id="444" Count="0" />
-      <LineId Id="453" Count="0" />
-      <LineId Id="440" Count="0" />
-      <LineId Id="435" Count="0" />
-      <LineId Id="522" Count="0" />
       <LineId Id="521" Count="0" />
+      <LineId Id="523" Count="0" />
+      <LineId Id="529" Count="0" />
+      <LineId Id="525" Count="0" />
+      <LineId Id="530" Count="0" />
+      <LineId Id="524" Count="0" />
     </LineIds>
     <LineIds Name="S03_LidChecking.ILC">
       <LineId Id="234" Count="4" />

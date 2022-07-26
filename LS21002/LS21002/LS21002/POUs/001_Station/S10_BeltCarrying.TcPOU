@@ -20,7 +20,6 @@ VAR
 	bClearProcessStep	:BYTE;
 	i,t: INT;
 	bCounter:BYTE;
-
 	 //报警屏蔽
 	_AlarmDisable: BOOL;
 	//首次循环
@@ -176,14 +175,6 @@ CASE station.iStepAuto OF
 		   _xFirstCycle := TRUE ;
 		 END_IF
 		   station.iStepAuto:=110;	
-	//100://判断伺服位置是否合理
-	//		IF      ( ABS(stData.Axis[16].rMovePosition[3]+stData.Axis[16].rRelativeDistance))+0.1>=ABS(stData.Axis[16].rMovePosition[2]) AND 
-	//				  ( ABS(stData.Axis[16].rMovePosition[3]+stData.Axis[16].rRelativeDistance))-0.1<=ABS(stData.Axis[16].rMovePosition[2]) THEN
-	//				  station.iStepAuto:=120;(*伺服已经移动过了*)
-	//		ELSIF  ABS(stData.Axis[16].rMovePosition[3])+0.1>=ABS(stData.Axis[16].rMovePosition[2]) AND 
-	//			   ABS(stData.Axis[16].rMovePosition[3])-0.1<=ABS(stData.Axis[16].rMovePosition[2]) THEN
-	//			     station.iStepAuto:=110;(*伺服需要移动*)
-	//		END_IF
 	110://数据更新 位置
 				 tsModuleProcess[1].xProcessStarted:=TRUE;
 				 stData.Axis[16].rMovePosition[2] := stData.Axis[16].rMovePosition[2] +stData.Axis[16].rRelativeDistance ;
@@ -497,7 +488,7 @@ fbROTAxisMove.xRelativeILC:=TRUE;
       <LineId Id="2096" Count="1" />
       <LineId Id="2124" Count="4" />
       <LineId Id="2123" Count="0" />
-      <LineId Id="2098" Count="12" />
+      <LineId Id="2106" Count="4" />
       <LineId Id="2112" Count="9" />
       <LineId Id="2093" Count="0" />
       <LineId Id="2129" Count="0" />

@@ -25,6 +25,7 @@
 	gc_uiValveNum								:INT:=2;//真空发生器个数
 	gc_uiSlaveNum								:INT:=4;//电柜EtherCAT状态
 	gc_uiLoadcellNum						:INT:=6;//压力传感器个数
+	gc_uiCimcorNum							:INT:=1;//离子风棒个数
 END_VAR]]></Declaration>
   </GVL>
 </TcPlcObject>

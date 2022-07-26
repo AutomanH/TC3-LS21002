@@ -321,7 +321,7 @@ QxET02IonControlSignal1	:BOOL;//	卡片搬运工位¶离子风棒¶外部给定�
 QxET02IonControlSignal2	:BOOL;//	卡片搬运工位¶离子风棒¶外部给定信号2
 QxET02IonStopControl	:BOOL;//	卡片搬运工位¶离子风棒¶停止放电信号
 QxET02IonResetControl	:BOOL;//	卡片搬运工位¶离子风棒¶复位信号
-QxShare79	:BOOL;//	备用
+QxS09ControlValve	:BOOL;//	卡片工位离子风棒气路控制
 QxS04HOZAdjustCyl_1WP	:BOOL;//	热熔工位¶上层水平调整气缸1¶动点输出
 QxS04HOZAdjustCyl_1HP	:BOOL;//	热熔工位¶上层水平调整气缸1¶原点输出
 QxShare75	:BOOL;//	备用

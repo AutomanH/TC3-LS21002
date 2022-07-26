@@ -81,9 +81,10 @@ ACT_Init();]]></ST>
         <ST><![CDATA[
 
 {region "链板线程序"}
-tTimeOut(IN:= bFlowLineStepOld =bFlowLineStep AND bFlowLineStepOld<>0,PT:=T#10S , Q=> , ET=> );
+tTimeOut(IN:= bFlowLineStepOld =bFlowLineStep AND bFlowLineStepOld<>0,PT:=T#15S , Q=> , ET=> );
 IF  tTimeOut.Q THEN
-		xQError:=TRUE;  			
+		xQError:=TRUE; 
+		tTimeOut(IN:=FALSE); 			
 END_IF
 	CASE bFlowLineStep OF
 	0://启动
@@ -111,8 +112,6 @@ END_IF
 				bFlowLineStep:=bFlowLineStep +1;
 	2://判断回原是否完成
 		 	bFlowLineStepOld :=bFlowLineStep;
-			arTonDelay[01](IN:=NOT xQError  , PT:=T#5S , Q=> , ET=> );
-			IF  NOT arTonDelay[01].Q THEN
 				FOR  i:=1 TO iColumnsNum BY 1 DO
 					IF  NOT arIVTCCylHPSensor[i] THEN
 						EXIT;	
@@ -120,13 +119,8 @@ END_IF
 							bFlowLineStep:=bFlowLineStep +1;
 					 END_IF
 				 END_FOR
-			ELSE
-				xQError:=TRUE;   
-			END_IF
-			
 	3://到位传感器检测
-		 bFlowLineStepOld :=bFlowLineStep;
-		arTonDelay[01](IN:=FALSE);
+		// bFlowLineStepOld :=bFlowLineStep;
 		IF NOT xITryRun THEN
 			FOR  i:=1 TO iColumnsNum BY 1 DO
 				IF  NOT arIReachedSensor[i]  THEN
@@ -174,6 +168,7 @@ CASE bInitStep OF
 		IF	InitR_TRIG.Q THEN
 				bFlowLineStep:=0;
 				xQBusy:=FALSE;
+				xQError:=FALSE;
 				bInitStep:=bInitStep +1;
 		 END_IF
  1://气缸回原
@@ -189,7 +184,7 @@ CASE bInitStep OF
 			xQBusy:=FALSE;
 			bInitStep:=0;
 END_CASE
-]]></ST>
+xIInit:=FALSE;]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_Manual" Id="{be38eeb0-0032-4be1-8538-9852e13dc970}">
@@ -252,6 +247,7 @@ END_CASE]]></ST>
       <LineId Id="99" Count="0" />
       <LineId Id="101" Count="0" />
       <LineId Id="120" Count="1" />
+      <LineId Id="126" Count="0" />
       <LineId Id="123" Count="0" />
       <LineId Id="5" Count="5" />
       <LineId Id="94" Count="0" />
@@ -264,10 +260,9 @@ END_CASE]]></ST>
       <LineId Id="106" Count="0" />
       <LineId Id="18" Count="5" />
       <LineId Id="105" Count="0" />
-      <LineId Id="24" Count="10" />
-      <LineId Id="36" Count="2" />
+      <LineId Id="26" Count="6" />
+      <LineId Id="38" Count="0" />
       <LineId Id="107" Count="0" />
-      <LineId Id="39" Count="0" />
       <LineId Id="41" Count="4" />
       <LineId Id="109" Count="0" />
       <LineId Id="50" Count="4" />
@@ -293,6 +288,7 @@ END_CASE]]></ST>
       <LineId Id="15" Count="0" />
       <LineId Id="30" Count="1" />
       <LineId Id="34" Count="0" />
+      <LineId Id="43" Count="0" />
       <LineId Id="33" Count="0" />
       <LineId Id="32" Count="0" />
       <LineId Id="20" Count="0" />

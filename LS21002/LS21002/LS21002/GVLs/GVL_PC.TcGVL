@@ -5,6 +5,7 @@
   sPLC_TO_PC   			AT%MW400  :DUT_PCReceive;
   sPLC_From_PC  		AT%MW0    :DUT_PCSend;
   sCamera_TO_Plc 		AT%MW100  :DUT_CameraSend;
+	sCamera_From_Plc	AT%MW150	:DUT_CameraReceive;
   sModbus_200SMART :DUT_200SMART;
 END_VAR	]]></Declaration>
   </GVL>

@@ -145,9 +145,9 @@ CASE station.iStepAuto OF
 			 	 station.iStepAuto:=60;
 			END_IF
 		60://等待NG流道检测
-			IF  arxBoxCheckSensor[2] THEN
+			//IF  arxBoxCheckSensor[2] THEN
 			 	 station.iStepAuto:=70;
-			END_IF
+			//END_IF
 		70://NG流道退料气缸伸出
 			fbHOZCyl_2.xAuto:=TRUE;
 			IF fbHOZCyl_2.xWP_Delay THEN

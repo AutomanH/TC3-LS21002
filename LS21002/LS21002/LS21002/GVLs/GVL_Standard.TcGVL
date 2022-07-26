@@ -29,6 +29,7 @@
 	fbMCK										 :FB_MT_MKC_New;
 	fbSmcVacuum							:ARRAY[1..gc_uiValveNum] OF FB_SmcVacuum;
 	fbLoadCell							:ARRAY[1..gc_uiLoadcellNum] OF FB_LoadCell;
+	fbCimcor								:ARRAY[1..gc_uiCimcorNum] OF FB_Cimcor_IZN10E;
    xNot_power					: ARRAY[1..gc_uiAxisNum] OF BOOL;//设原点时断使能
 	cnSlaveAddr	        : ARRAY[1..gc_uiAxisNum] OF UINT;//伺服的从站地址
 	sDeviceNetId AT%I* : AmsNetID ; //设备的ethercat地址
@@ -61,7 +62,7 @@
 	
 	xAllRudongPumpEmpty:BOOL;//所有蠕动泵排空
 	xRudongPumpEmptyDone:BOOL;//排空结束
-	
+	arxRudongPumpEmptyBypass:ARRAY[1..12] OF BOOL;	
 END_VAR
 
 VAR_GLOBAL 
@@ -80,11 +81,12 @@ VAR_GLOBAL
 	arCameraResult:ARRAY[1..gc_uiCameraNum] OF INT;
 	//各工位手动NG触摸屏按钮
 	arManualNOKHmiButton:ARRAY[1..gc_uiStationNum] OF  BOOL;
-	//临时使用 待删除
-	xAutoModeTest: BOOL;
 	//屏蔽蜂鸣器
 	_BuzzerBypassButton:BOOL;
 	_BuzzerBypassLamp:BOOL;
+	//相机检测工位循环选择
+	bS03Counter:BYTE:=1;
+	
 END_VAR
 
 VAR_GLOBAL PERSISTENT

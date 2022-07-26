@@ -4,7 +4,7 @@
     <Declaration><![CDATA[TYPE DUT_MainlineFixture :
 STRUCT
 		xMaterialOnOff : BOOL ;
-        stProduct : DUT_PartStatus ;
+    stProduct : DUT_PartStatus ;
 		stProductFlag :DUT_PartFlag;
 		stProcessData:DUT_LidChecking;
 		arCycletimeStation: ARRAY[1..20] OF REAL;

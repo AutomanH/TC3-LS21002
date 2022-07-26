@@ -20,6 +20,7 @@ VAR
 	tCounter1R_TRIG: R_TRIG;
 	tCounter2R_TRIG: R_TRIG;
 	tPCAlarmR_TRIG: R_TRIG;
+	artEmptyMachineR_TRIG:ARRAY[1..2] OF R_TRIG;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[A_Input();
@@ -202,23 +203,30 @@ fbMachine[1].xAlarm:=
     </Action>
     <Action Name="EmptyDone" Id="{2aec48a2-7e6f-44b6-b88a-567108dc02b2}">
       <Implementation>
-        <ST><![CDATA[(*
-tonEmptyDone(
-	IN:=fbMachine[1].xEmptying AND ( abClearMaterialOver[gc_uiStationNum] OR NOT _xMaterialOnFlag ) AND fbMachine[1].xRunning,
-	PT:=T#2S,
-	Q=>, ET=>
-);
-
-IF tonEmptyDone.Q THEN
-   fbMachine[1].xEmptyDone:=TRUE;
-   FOR i :=1 TO gc_uiStationNum DO 
-	  abClearMaterialOver[i] :=FALSE;  
-   END_FOR
-   ////////////////工站间的交互信号处理或者其他信号///////////////////
+        <ST><![CDATA[{region"第一站清料信号"}
+artEmptyMachineR_TRIG[1](CLK:=fbMachine[1].xEmptying, Q=> );
+IF artEmptyMachineR_TRIG[1].Q THEN
+			fbStation[1].xEmptying:=TRUE;
 END_IF
-*)
-
-
+{region}
+	 
+{region "复位各工位的清空完成信号"}
+artEmptyMachineR_TRIG[2](CLK:=fbMachine[1].xEmptyDone, Q=> );
+IF artEmptyMachineR_TRIG[2].Q THEN
+		FOR i:=1 TO gc_uiStationNum BY 1 DO
+			fbStation[i].xEmptyDone:=FALSE;
+		END_FOR 
+END_IF
+{endregion}
+{region "整机请料完成信号"}
+FOR i:=1 TO gc_uiStationNum BY 1 DO
+ 		IF NOT fbStation[i].xEmptyDone THEN
+			EXIT;
+		ELSIF i =		gc_uiStationNum THEN
+				fbMachine[1].xEmptyDone:=TRUE;
+		END_IF
+END_FOR
+{endregion}
 ]]></ST>
       </Implementation>
     </Action>
@@ -411,9 +419,25 @@ END_IF]]></ST>
       <LineId Id="5" Count="0" />
     </LineIds>
     <LineIds Name="ControlMachine.EmptyDone">
-      <LineId Id="299" Count="2" />
-      <LineId Id="303" Count="13" />
+      <LineId Id="347" Count="0" />
+      <LineId Id="350" Count="1" />
+      <LineId Id="353" Count="0" />
+      <LineId Id="342" Count="0" />
+      <LineId Id="357" Count="1" />
+      <LineId Id="329" Count="0" />
       <LineId Id="298" Count="0" />
+      <LineId Id="317" Count="1" />
+      <LineId Id="321" Count="1" />
+      <LineId Id="319" Count="0" />
+      <LineId Id="328" Count="0" />
+      <LineId Id="327" Count="0" />
+      <LineId Id="323" Count="1" />
+      <LineId Id="330" Count="0" />
+      <LineId Id="332" Count="1" />
+      <LineId Id="331" Count="0" />
+      <LineId Id="325" Count="0" />
+      <LineId Id="334" Count="0" />
+      <LineId Id="340" Count="0" />
     </LineIds>
     <LineIds Name="ControlMachine.General">
       <LineId Id="13" Count="6" />

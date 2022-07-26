@@ -20,6 +20,9 @@
     <Compile Include="DUTs\Camera\DUT_CameraSend.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="DUTs\Camera\DUT_CameraReceive.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="DUTs\Camera\ST_CameraPara.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -298,6 +301,9 @@
     <Compile Include="POUs\003_FB\062_LoadCell\ST_LoadCell_ParOut.TcDUT">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="POUs\003_FB\063_Cimcor\FB_Cimcor_IZN10E.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="POUs\003_FB\07_RGI_14_new\不带旋转的电动夹爪\FB_RGI_14_Modbus.TcPOU">
       <SubType>Code</SubType>
     </Compile>
@@ -409,16 +415,16 @@
     <Compile Include="POUs\003_FB\50_Recipe\ST_Recipe.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\003_FB\52_Temperature\FB_TempControl_FUSHI.TcPOU">
+    <Compile Include="POUs\003_FB\064_Temperature\FB_TempControl_FUSHI.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\003_FB\52_Temperature\ST_FUSHI_PXF_ParRead.TcDUT">
+    <Compile Include="POUs\003_FB\064_Temperature\ST_FUSHI_PXF_ParRead.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\003_FB\52_Temperature\ST_FUSHI_PXF_ParSet.TcDUT">
+    <Compile Include="POUs\003_FB\064_Temperature\ST_FUSHI_PXF_ParSet.TcDUT">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\003_FB\52_Temperature\ST_FUSHI_PXF_Sys_Pointer.TcDUT">
+    <Compile Include="POUs\003_FB\064_Temperature\ST_FUSHI_PXF_Sys_Pointer.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\DUTs\RudongPump_CMD.TcDUT">
@@ -643,7 +649,7 @@
     <Folder Include="POUs\003_FB\41_GetSystemTime" />
     <Folder Include="POUs\003_FB\43_implicit checks" />
     <Folder Include="POUs\003_FB\50_Recipe" />
-    <Folder Include="POUs\003_FB\52_Temperature" />
+    <Folder Include="POUs\003_FB\064_Temperature" />
     <Folder Include="POUs\003_FB\53_RudongPump" />
     <Folder Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB" />
     <Folder Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB\DUTs" />
@@ -664,6 +670,7 @@
     <Folder Include="POUs\003_FB\060_LocalClient" />
     <Folder Include="POUs\003_FB\061_MKC204C" />
     <Folder Include="POUs\003_FB\062_LoadCell" />
+    <Folder Include="POUs\003_FB\063_Cimcor" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB\DUTs" />
     <Folder Include="POUs\004_FC\001_Parallel" />

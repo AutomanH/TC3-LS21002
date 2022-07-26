@@ -98,7 +98,8 @@ ACT_M0dbus_200Smart();
 ACT_Encoder();
 ACT_ATV12();
 ACT_SmcVacuum();
-ACT_LoadCell();]]></ST>
+ACT_LoadCell();
+ACT_Cimcor();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{423c098f-672e-4e09-b9e7-666319181834}">
       <Implementation>
@@ -439,7 +440,41 @@ ELSE
 END_IF
 
 //相机触发
-QxCameraTrigger	:= fbCamera[18].xQStart; ]]></ST>
+QxCameraTrigger	:= fbCamera[18].xQStart; 
+
+
+//相机型号
+sCamera_From_Plc.iBoxType:=iBoxChoose;]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Cimcor" Id="{ab6ebf84-bf03-4a4d-a074-6941ccc45ff6}">
+      <Implementation>
+        <ST><![CDATA[FOR  i:= 1  TO gc_uiCimcorNum   BY 1  DO 
+	fbCimcor[i](
+	xIStart:= , 
+	xIStop:= , 
+	xIReset:= , 
+	xICimcorMaint:= , 
+	xIError:= , 
+	xICimcorStarted:= , 
+	xQError=> , 
+	xQCimcorStart=> , 
+	xQCimcorReset=> , 
+	xQValveStart=> , 
+	xQNeedMaint=> );
+END_FOR
+//离子风棒已开启
+fbCimcor[1].xICimcorStarted:=IxStartSignal;
+fbCimcor[1].xICimcorMaint:=IxMaintenanceSignal_1;//	卡片搬运工位¶离子风棒¶维护信号
+fbCimcor[1].xIError:= NOT  IxErrorSignal_1;//	卡片搬运工位¶离子风棒¶异常信号
+
+QxET02IonResetControl:=fbCimcor[1].xQCimcorReset;//	卡片搬运工位¶离子风棒¶复位信号
+QxET02IonStopControl:=fbCimcor[1].xQCimcorStart;//卡片搬运工位¶离子风棒¶停止放电信号
+										
+//QxET02IonControlSignal1	:BOOL;//	卡片搬运工位¶离子风棒¶外部给定信号1
+//QxET02IonControlSignal2	:BOOL;//	卡片搬运工位¶离子风棒¶外部给定信号2
+//电磁阀控制
+QxS09ControlValve:=fbCimcor[1].xQValveStart;//	卡片工位离子风棒气路控制]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_Comm" Id="{b17cb29c-5b77-4461-9112-d1cc0492c03a}">
@@ -788,34 +823,31 @@ fbRudongPump[3].stPara.strSlaveIP:='192.168.1.62';
 fbRudongPump[3].stPara.iSlavePort:=1031;
 fbRudongPump[3].stPara.bySlaveID:=1;
 
-
 fbRudongPump[4].stPara.strSlaveIP:='192.168.1.63';
 fbRudongPump[4].stPara.iSlavePort:=1031;
 fbRudongPump[4].stPara.bySlaveID:=1;
 
-
-fbRudongPump[5].stPara.strSlaveIP:='192.168.1.64';
+fbRudongPump[5].stPara.strSlaveIP:='192.168.1.66';
 fbRudongPump[5].stPara.iSlavePort:=1031;
 fbRudongPump[5].stPara.bySlaveID:=1;
-
 
 fbRudongPump[6].stPara.strSlaveIP:='192.168.1.65';
 fbRudongPump[6].stPara.iSlavePort:=1031;
 fbRudongPump[6].stPara.bySlaveID:=1;
 
-fbRudongPump[7].stPara.strSlaveIP:='192.168.1.66';
+fbRudongPump[7].stPara.strSlaveIP:='192.168.1.67';
 fbRudongPump[7].stPara.iSlavePort:=1031;
 fbRudongPump[7].stPara.bySlaveID:=1;
 
-fbRudongPump[8].stPara.strSlaveIP:='192.168.1.67';
+fbRudongPump[8].stPara.strSlaveIP:='192.168.1.68';
 fbRudongPump[8].stPara.iSlavePort:=1031;
 fbRudongPump[8].stPara.bySlaveID:=1;
 
-fbRudongPump[9].stPara.strSlaveIP:='192.168.1.68';
+fbRudongPump[9].stPara.strSlaveIP:='192.168.1.69';
 fbRudongPump[9].stPara.iSlavePort:=1031;
 fbRudongPump[9].stPara.bySlaveID:=1;
 
-fbRudongPump[10].stPara.strSlaveIP:='192.168.1.69';
+fbRudongPump[10].stPara.strSlaveIP:='192.168.1.71';
 fbRudongPump[10].stPara.iSlavePort:=1031;
 fbRudongPump[10].stPara.bySlaveID:=1;
 
@@ -823,9 +855,10 @@ fbRudongPump[11].stPara.strSlaveIP:='192.168.1.70';
 fbRudongPump[11].stPara.iSlavePort:=1031;
 fbRudongPump[11].stPara.bySlaveID:=1;
 
-fbRudongPump[12].stPara.strSlaveIP:='192.168.1.71';
+fbRudongPump[12].stPara.strSlaveIP:='192.168.1.64';
 fbRudongPump[12].stPara.iSlavePort:=1031;
 fbRudongPump[12].stPara.bySlaveID:=1;
+
 //如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
 stData.RudongPump[1].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
 stData.RudongPump[1].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
@@ -844,8 +877,8 @@ stData.RudongPump[4].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定�
 stData.RudongPump[4].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
 //如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
 stData.RudongPump[5].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
-stData.RudongPump[5].iPumpTypeSet:=RudongPump_PumpHeadType.HandyPump01;//设定泵泵头类型
-stData.RudongPump[5].iHosePipeTypeSet:=RudongPump_SoftPipeType.P13;//设定泵软管类型
+stData.RudongPump[5].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
+stData.RudongPump[5].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
 //如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
 stData.RudongPump[6].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
 stData.RudongPump[6].iPumpTypeSet:=RudongPump_PumpHeadType.HandyPump01;//设定泵泵头类型
@@ -872,11 +905,22 @@ stData.RudongPump[11].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定�
 stData.RudongPump[11].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
 //如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
 stData.RudongPump[12].iPumpType:=RudongPump_PumpType.DFPluse;//设定泵控制器类型
-stData.RudongPump[12].iPumpTypeSet:=RudongPump_PumpHeadType.MiniPump01;//设定泵泵头类型
-stData.RudongPump[12].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+stData.RudongPump[12].iPumpTypeSet:=RudongPump_PumpHeadType.HandyPump01;//设定泵泵头类型
+stData.RudongPump[12].iHosePipeTypeSet:=RudongPump_SoftPipeType.P13;//设定泵软管类型
 
-
-
+///方向设定
+fbRudongPump[1].iDirectionSet:=1;
+fbRudongPump[2].iDirectionSet:=0;
+fbRudongPump[3].iDirectionSet:=1;
+fbRudongPump[4].iDirectionSet:=0;
+fbRudongPump[5].iDirectionSet:=1;
+fbRudongPump[6].iDirectionSet:=0;
+fbRudongPump[7].iDirectionSet:=0;
+fbRudongPump[8].iDirectionSet:=1;
+fbRudongPump[9].iDirectionSet:=0;
+fbRudongPump[10].iDirectionSet:=1;
+fbRudongPump[11].iDirectionSet:=0;
+fbRudongPump[12].iDirectionSet:=1;
 
 
 
@@ -1294,7 +1338,7 @@ ELSE
 			xStart:= (fbMachine[1].xStart ) , 
 			xStop:= fbMachine[1].xStop , 
 			xPause:= fbMachine[1].xPause , 
-			xMovePermit:=  fbMachine[1].xAlarm  AND stFromRobot.xLocal_Remote,
+			xMovePermit:=  fbStation[7].xAlarm AND  NOT  fbMachine[1].xSafety AND stFromRobot.xLocal_Remote,
 			xContinue:= , 
 			//xInitExte:= S03_Robot.xInit, 
 			xInitExte:=,
@@ -1485,6 +1529,7 @@ END_FOR]]></ST>
       <LineId Id="1062" Count="0" />
       <LineId Id="1130" Count="1" />
       <LineId Id="1267" Count="0" />
+      <LineId Id="1335" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.A_Input">
       <LineId Id="12" Count="2" />
@@ -1623,6 +1668,27 @@ END_FOR]]></ST>
       <LineId Id="179" Count="0" />
       <LineId Id="183" Count="1" />
       <LineId Id="182" Count="0" />
+      <LineId Id="186" Count="1" />
+      <LineId Id="185" Count="0" />
+      <LineId Id="188" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_Cimcor">
+      <LineId Id="11" Count="0" />
+      <LineId Id="38" Count="10" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="15" Count="0" />
+      <LineId Id="13" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="36" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="35" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="16" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.ACT_Comm">
       <LineId Id="2" Count="1" />
@@ -1772,25 +1838,28 @@ END_FOR]]></ST>
       <LineId Id="140" Count="0" />
       <LineId Id="146" Count="1" />
       <LineId Id="141" Count="0" />
-      <LineId Id="149" Count="1" />
+      <LineId Id="292" Count="0" />
       <LineId Id="153" Count="1" />
       <LineId Id="151" Count="0" />
-      <LineId Id="156" Count="3" />
-      <LineId Id="155" Count="0" />
-      <LineId Id="161" Count="3" />
+      <LineId Id="265" Count="2" />
+      <LineId Id="262" Count="0" />
+      <LineId Id="288" Count="0" />
+      <LineId Id="163" Count="1" />
       <LineId Id="160" Count="0" />
-      <LineId Id="166" Count="2" />
-      <LineId Id="165" Count="0" />
       <LineId Id="170" Count="2" />
       <LineId Id="169" Count="0" />
       <LineId Id="174" Count="2" />
       <LineId Id="173" Count="0" />
       <LineId Id="178" Count="2" />
       <LineId Id="177" Count="0" />
+      <LineId Id="281" Count="2" />
+      <LineId Id="280" Count="0" />
       <LineId Id="182" Count="2" />
       <LineId Id="181" Count="0" />
-      <LineId Id="186" Count="2" />
+      <LineId Id="186" Count="0" />
+      <LineId Id="260" Count="1" />
       <LineId Id="185" Count="0" />
+      <LineId Id="293" Count="0" />
       <LineId Id="189" Count="2" />
       <LineId Id="148" Count="0" />
       <LineId Id="193" Count="2" />
@@ -1799,26 +1868,29 @@ END_FOR]]></ST>
       <LineId Id="196" Count="0" />
       <LineId Id="201" Count="2" />
       <LineId Id="200" Count="0" />
-      <LineId Id="205" Count="2" />
-      <LineId Id="204" Count="0" />
+      <LineId Id="276" Count="2" />
+      <LineId Id="268" Count="0" />
       <LineId Id="209" Count="2" />
       <LineId Id="208" Count="0" />
-      <LineId Id="213" Count="2" />
-      <LineId Id="212" Count="0" />
       <LineId Id="217" Count="2" />
       <LineId Id="216" Count="0" />
       <LineId Id="221" Count="2" />
       <LineId Id="220" Count="0" />
       <LineId Id="225" Count="2" />
       <LineId Id="224" Count="0" />
+      <LineId Id="285" Count="2" />
+      <LineId Id="284" Count="0" />
       <LineId Id="229" Count="2" />
       <LineId Id="228" Count="0" />
-      <LineId Id="233" Count="2" />
-      <LineId Id="232" Count="0" />
-      <LineId Id="239" Count="0" />
+      <LineId Id="270" Count="2" />
       <LineId Id="243" Count="0" />
-      <LineId Id="241" Count="1" />
-      <LineId Id="236" Count="0" />
+      <LineId Id="295" Count="7" />
+      <LineId Id="304" Count="1" />
+      <LineId Id="311" Count="0" />
+      <LineId Id="306" Count="0" />
+      <LineId Id="308" Count="1" />
+      <LineId Id="294" Count="0" />
+      <LineId Id="289" Count="0" />
       <LineId Id="136" Count="0" />
       <LineId Id="132" Count="0" />
       <LineId Id="71" Count="23" />

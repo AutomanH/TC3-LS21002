@@ -63,6 +63,8 @@ ACT_Alarm();]]></ST>
       <Implementation>
         <ST><![CDATA[IF NOT xlReady THEN
 	xQHmiAlarm:='Not Ready';
+ELSIF xlReady AND NOT xQBusy THEN
+ 	xQHmiAlarm:='Ready';
 ELSIF xQAlarm THEN
 	xQHmiAlarm:='Time out';
 END_IF]]></ST>
@@ -157,7 +159,9 @@ END_CASE]]></ST>
     </LineIds>
     <LineIds Name="FB_Camera.ACT_Alarm">
       <LineId Id="1" Count="0" />
-      <LineId Id="4" Count="1" />
+      <LineId Id="4" Count="0" />
+      <LineId Id="9" Count="1" />
+      <LineId Id="5" Count="0" />
       <LineId Id="8" Count="0" />
       <LineId Id="3" Count="0" />
     </LineIds>

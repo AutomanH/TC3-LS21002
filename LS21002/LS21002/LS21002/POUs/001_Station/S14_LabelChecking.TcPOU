@@ -226,11 +226,10 @@ CASE station.iStepInit OF
     station.iStepInit:=20;	
 20://阻挡气缸回原
 			fbHOZCyl_1.xInit:=TRUE;
-	  	fbHOZCyl_2.xInit:=TRUE;
-		IF  fbHOZCyl_1.xHP_Delay  AND 
-				fbHOZCyl_2.xHP_Delay THEN
+		IF  fbHOZCyl_1.xHP_Delay   THEN
 				station.iStepInit:=999;	
 		END_IF
+	station.iStepInit:=999;
 999://初始化完成	
 	station.iStepInit:=0;
 	station.xInitDone:=TRUE;  
@@ -384,10 +383,8 @@ QxS12HOZCyl_2HP	:=fbHOZCyl_2.xHP_Valve;//	贴标检测工位¶推料气缸2¶原
       <LineId Id="461" Count="0" />
       <LineId Id="467" Count="0" />
       <LineId Id="476" Count="0" />
-      <LineId Id="469" Count="0" />
-      <LineId Id="472" Count="0" />
-      <LineId Id="477" Count="0" />
-      <LineId Id="473" Count="1" />
+      <LineId Id="472" Count="2" />
+      <LineId Id="478" Count="0" />
       <LineId Id="462" Count="4" />
       <LineId Id="436" Count="0" />
     </LineIds>

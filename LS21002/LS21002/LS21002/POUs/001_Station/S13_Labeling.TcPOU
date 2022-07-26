@@ -146,7 +146,7 @@ CASE station.iStepAuto OF
 							station.iStepAuto:=110;
 					END_IF							
 		110://等待贴标完成
-					xQLabelStart:=FALSE;			//	贴标机Start
+					xQLabelStart:=FALSE;			//	贴标机stop
 					station.iStepAuto:=999;
 
 		999://----Single Run Finish----
