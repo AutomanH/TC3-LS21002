@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="RGI_14_ERROR" Id="{c2ffa6b7-2198-4852-9d84-5e7b794f91c7}">
+    <Declaration><![CDATA[TYPE RGI_14_ERROR :
+(
+	NO_ERROR := 0,
+	/// E-Gripper 参数配置有错误
+	FLT_PARA := 1,
+	/// E-Gripper not ready 有通信报警
+	FLT_CONNECT := 2,
+	/// E-Gripper read/write command while not ready 预留
+	FLT_RDYCMD := 3,
+	///驱动器报警
+	FLT_DEVICE_ERROR := 4,
+	///没有上电
+	FLT_POWERON := 5,
+	/// E-Gripper 夹紧超时 
+	FLT_CLAMP_TIMEOUT := 10,
+	/// E-Gripper 松开超时 
+	FLT_ROTATE_TIMEOUT := 11,
+	/// E-Gripper 回原点超时 
+	FLT_ORG_TIMEOUT := 12,
+	/// E-Gripper 夹紧指令执行超时 
+	FLT_CLAMPCMD_TIMEOUT := 13,
+	/// E-Gripper 松开指令执行超时 
+	FLT_ROTATECMDABS_TIMEOUT := 14,
+	/// E-Gripper 松开指令执行超时 
+	FLT_ROTATECMDREF_TIMEOUT := 17,
+	/// E-Gripper 回原点指令执行超时 
+	FLT_ORGCMD_TIMEOUT := 15,
+	///物体掉落
+	FLT_CLAMP_DROP := 16,
+	/// E-Gripper reference not OK 没有回原点过程中执行指令
+	FLT_xRefOk := 20,
+	/// E-Gripper Clamp Para error 发送夹紧参数错误
+	FLT_CLAMP_PARA := 21,
+	/// E-Gripper 松开指令超时
+	FLT_ClAMP_RELEASEFAIL := 24,
+	/// E-Gripper 夹紧物体失败 
+	FLT_ClAMP_CLAMPFAIL := 25,
+	/// E-Gripper 关盖失败
+	FLT_ROTATE_CLAMPFAIL := 26,
+	/// E-Gripper 开盖失败 
+	FLT_ROTATE_RELEASEFAIL := 27
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

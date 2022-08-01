@@ -3,7 +3,7 @@
   <DUT Name="ST_AutoCal_SysPar" Id="{633e80f0-3e96-4d5f-9906-1b34391354b4}">
     <Declaration><![CDATA[TYPE ST_AutoCal_SysPar :
 STRUCT
-	fbMTMCK204C				: POINTER TO FB_MT_MKC_New;//调用秤体FB
+	fbMTMCK204C				: POINTER TO FB_MKC204C;//调用秤体FB
 	fbRuDongPump			: POINTER TO FB_RuDongPump_modbus_DF600Plus;//调用蠕动泵FB	
 	iRuDongPumpHeadNum		:INT:=9;//蠕动泵数量,最大不超过32
 END_STRUCT

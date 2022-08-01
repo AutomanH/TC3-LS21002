@@ -1023,13 +1023,8 @@ QxS01VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;
       <LineId Id="3059" Count="0" />
       <LineId Id="3062" Count="0" />
       <LineId Id="2409" Count="2" />
-      <LineId Id="1880" Count="0" />
-      <LineId Id="2434" Count="0" />
-      <LineId Id="3707" Count="0" />
-      <LineId Id="3495" Count="0" />
-      <LineId Id="3708" Count="0" />
-      <LineId Id="3509" Count="0" />
-      <LineId Id="3759" Count="2" />
+      <LineId Id="3921" Count="7" />
+      <LineId Id="3761" Count="0" />
       <LineId Id="3807" Count="1" />
       <LineId Id="3814" Count="0" />
       <LineId Id="3816" Count="0" />

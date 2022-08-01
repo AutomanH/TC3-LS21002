@@ -1,0 +1,27 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="stEasyPumpSoftType" Id="{2b06bd5e-8b3b-4dc8-aaec-b1924f9e1390}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE stEasyPumpSoftType :
+(
+	i_P13:=1,//13#软管,0.8x1.6
+	i_P14:=2,//14#软管,1.6x1.6
+	i_P15:=15,//15#软管,1.6x1.6
+	i_P19:=3,//19#软管,2.4x1.6
+	i_P16:=4,//16软管,3.1x1.6
+	i_P25:=5,//25#软管,4.8x1.6	
+	i_P1_1:=6,//1x1#软管,1x1
+	i_P2_1:=7,//2x1#软管,2x1
+	i_P2_5_1:=8,//2.5x1#软管,2.5x1	
+	i_P3_1:=9,//3x1#软管,3x1
+	i_P17:=10,//17#软管,6.4x1.6		
+	i_P18:=11,//18#软管,7.9x1.6	
+	i_P24:=12,//24#软管,6.4x2.4		
+	i_P35:=13,//34#软管,7.9x2.4
+	i_P36:=14//36#软管,9.6x2.4
+)INT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

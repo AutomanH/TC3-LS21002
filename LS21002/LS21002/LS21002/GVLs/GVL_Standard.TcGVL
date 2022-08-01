@@ -26,10 +26,11 @@
 	fbModbus_200Smart				:FB_Modbus_200Smart;
 	fbEncoder								:FB_Encoder;
 	fbATV12									:FB_ATV12;
-	fbMCK										 :FB_MT_MKC_New;
+	fbMCK										 :FB_MKC204C;
 	fbSmcVacuum							:ARRAY[1..gc_uiValveNum] OF FB_SmcVacuum;
 	fbLoadCell							:ARRAY[1..gc_uiLoadcellNum] OF FB_LoadCell;
 	fbCimcor								:ARRAY[1..gc_uiCimcorNum] OF FB_Cimcor_IZN10E;
+	fbEasyPumps							:ARRAY[1..gc_uiRudongPump] OF FB_KF300;
    xNot_power					: ARRAY[1..gc_uiAxisNum] OF BOOL;//设原点时断使能
 	cnSlaveAddr	        : ARRAY[1..gc_uiAxisNum] OF UINT;//伺服的从站地址
 	sDeviceNetId AT%I* : AmsNetID ; //设备的ethercat地址
@@ -62,7 +63,9 @@
 	
 	xAllRudongPumpEmpty:BOOL;//所有蠕动泵排空
 	xRudongPumpEmptyDone:BOOL;//排空结束
-	arxRudongPumpEmptyBypass:ARRAY[1..12] OF BOOL;	
+	arxRudongPumpEmptyBypass:ARRAY[1..12] OF BOOL;//蠕动泵排空屏蔽	
+	arxRudongPumpCalibBypass:ARRAY[1..12] OF BOOL;//蠕动泵校准功能屏蔽	
+	stManualCalib:stEasyPumpsParamter;//手动校准功能
 END_VAR
 
 VAR_GLOBAL 

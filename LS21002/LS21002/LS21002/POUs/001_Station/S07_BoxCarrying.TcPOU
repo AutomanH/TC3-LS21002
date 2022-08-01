@@ -318,7 +318,9 @@ CASE station.iStepAuto OF
 					stToRobot1.xClampPartDone:=FALSE;
 					station.iStepAuto :=97;
 	97://等皮带线前进完成后再做放料判断
-			IF 	S10_BeltCarrying.station.xDone  AND  NOT station.xDone THEN
+			IF 	S10_BeltCarrying.station.xDone  AND  NOT station.xDone  AND 
+					arBeltLineFixtureData[5].stProduct.xCardLoading_OK   AND
+					arBeltLineFixtureData[6].stProduct.xCardLoading_OK THEN
 			 	station.iStepAuto :=100;
 			END_IF
 	100:	////Restore_after_Estop_Process4/Process5 机械手第1/2次放料流程
@@ -1076,7 +1078,9 @@ END_CASE
       <LineId Id="3704" Count="0" />
       <LineId Id="3702" Count="1" />
       <LineId Id="3753" Count="0" />
-      <LineId Id="4182" Count="1" />
+      <LineId Id="4182" Count="0" />
+      <LineId Id="4254" Count="1" />
+      <LineId Id="4183" Count="0" />
       <LineId Id="4200" Count="1" />
       <LineId Id="4214" Count="0" />
       <LineId Id="4198" Count="0" />

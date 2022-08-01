@@ -22,6 +22,8 @@ VAR
 	// 贴标到位传感器
 	arSensorReached: ARRAY[1..2]of BOOL;
 	
+	// 设备停止延时
+	tStopDelay: TON;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -100,7 +102,6 @@ IF NOT station.xInitDone
 THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
-	station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
 ELSIF station.xRunning  OR   station.xRunningOffProhibit
 THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
@@ -191,7 +192,14 @@ END_IF
     </Action>
     <Action Name="General" Id="{7e130351-797e-4ca7-9bb7-b3cd5e7898e1}">
       <Implementation>
-        <ST><![CDATA[]]></ST>
+        <ST><![CDATA[{region "停止"}
+tStopDelay(IN:= fbMachine[1].xManualMode, PT:=T#60S , Q=> , ET=> );
+IF tStopDelay.Q THEN
+		station.xRunningOffProhibit:=FALSE;
+ELSIF  station.iStepAuto =10 THEN
+		station.xRunningOffProhibit:=TRUE;
+END_IF	 
+{endregion}]]></ST>
       </Implementation>
     </Action>
     <Action Name="ILC" Id="{a47065cb-3ca4-400c-a537-51952fd23503}">
@@ -271,9 +279,7 @@ QxLabelReset	:=xQLabelReset;		//	贴标机RESET
       <LineId Id="40" Count="0" />
     </LineIds>
     <LineIds Name="S13_Labeling.FlowAuto">
-      <LineId Id="1155" Count="5" />
-      <LineId Id="1253" Count="0" />
-      <LineId Id="1161" Count="4" />
+      <LineId Id="1155" Count="10" />
       <LineId Id="1167" Count="15" />
       <LineId Id="1452" Count="0" />
       <LineId Id="1183" Count="1" />
@@ -312,6 +318,7 @@ QxLabelReset	:=xQLabelReset;		//	贴标机RESET
       <LineId Id="436" Count="0" />
     </LineIds>
     <LineIds Name="S13_Labeling.General">
+      <LineId Id="382" Count="6" />
       <LineId Id="381" Count="0" />
     </LineIds>
     <LineIds Name="S13_Labeling.ILC">

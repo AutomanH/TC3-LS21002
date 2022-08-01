@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_ReadPara" Id="{371dda59-2e37-4553-ba18-d9aeb9566cbd}">
+    <Declaration><![CDATA[TYPE ST_ReadPara :
+STRUCT
+ rFluVolume:REAL;//显示液量
+ rRuntime:REAL;//显示运行时间
+ iDirectionSet:INT;//显示方向
+ iCycleNumber		: INT;//重复次数
+ iModuleAdress:INT;//显示单元
+ iRunning:INT;//显示是否在运行
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -1,0 +1,17 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="DUT_DeviceOpe" Id="{8a1c779f-5c53-4a50-82bb-8b7e0aba483b}">
+    <Declaration><![CDATA[TYPE DUT_DeviceOpe :
+STRUCT
+	xReadGROSSHmi,xReadGROSSAuto							:BOOL;//读取总值GROSS
+	//xReadNETHmi,xReadNETAuto									:BOOL;//读取净值NET
+	//xReadPEAKHmi,xReadPEAKAuto								:BOOL;//读取峰值PEAK
+	//xReadPVHmi,xReadPVAuto										:BOOL;//读取峰-谷值P-V
+	//xReadDISPHmi,xReadDISPAuto								:BOOL;//读取显示值
+	xSetZEROHmi,XSetZEROAuto									:BOOL;//设定零点
+	xSetZEROSaveHmi,xSetZEROSaveAuto					:BOOL;//保存零点
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

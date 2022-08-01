@@ -1,0 +1,1571 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_KF300" Id="{d17c1c4b-fe6d-4914-b0e5-26831df67b43}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_KF300 EXTENDS FB_Modbus_Tcp
+(*
+********************************************************************************
+* Name: FB_KF300
+*
+* Author:  Automanh
+* Version: 1.0.0
+*
+* Description:
+*  KF300 Control for ShenChen
+*
+* Remarks:
+*
+* Revisions:
+*   1.0 -AutomanH Rebuild
+*********************************************************************************)
+VAR_INPUT
+	xIReset:BOOL;
+	xIManualMode:BOOL;
+	xIAutoMode:BOOL;
+	xIDeviceRunning:BOOL;
+	LocalClient:stModbusPara;
+	stRunPara	:ST_SetPara;//运行参数	
+	stDeviceOpe	: stEasyPumpHmi;//操作按钮
+END_VAR
+VAR_OUTPUT
+ 	xQRdyCmd:BOOL;
+	xQError:BOOL;
+	xQBusy:BOOL;
+	xQDone:BOOL;
+	strQErrorID:STRING;
+	xQCalibrationOK:BOOL;
+	rMaxRunTime	:REAL;//最大运行时间,单位s
+	rMinRunTime	:REAL;//最小运行时间,单位s
+END_VAR
+VAR
+ 	xStart:BOOL;
+ {attribute 'tc_no_symbol'}
+ iParaStep,iOldParaStep,iRunStep,iOldRunStep:INT;
+ {attribute 'tc_no_symbol'}
+ iCalibStep,iOldCalibStep:INT;
+ {attribute 'tc_no_symbol'}
+ stLocalPara:ST_LocalPara;
+ {attribute 'tc_no_symbol'}
+ stPara,stRun,stCalibInit,stCalibPara,stCalibration:ST_StepStatus; 
+ {attribute 'tc_no_symbol'}
+ stPump:st_EasyPump;
+  {attribute 'tc_no_symbol'}
+	tTimeout:ARRAY[1..5] OF TON;
+ {attribute 'tc_no_symbol'}
+	// 蠕动泵读取的液量
+	rCurrVolum: REAL;
+	{attribute 'tc_no_symbol'}
+	//从蠕动泵读取的参数
+	stReadPara:ST_ReadPara;
+	{attribute 'tc_no_symbol'}
+	// 数据数组
+	arwData: ARRAY[1..2] OF WORD;
+	{attribute 'tc_no_symbol'}
+	eErrorID		: PumpError;(*错误码*)
+	{attribute 'tc_no_symbol'}
+	// 根据设定计算的转速
+	rSetSpeed: REAL;
+	{attribute 'tc_no_symbol'}
+	// 设定的数据
+	arwSetData: ARRAY [1..2] OF WORD;
+	{attribute 'tc_no_symbol'}
+	// 虚拟的较大时间
+	rVirtualTime: REAL;
+	{attribute 'tc_no_symbol'}
+	OperR_TRIG:ARRAY[1..20] OF R_TRIG;
+	{attribute 'tc_no_symbol'}
+	// 循环计数
+	i: INT;
+	{attribute 'tc_no_symbol'}
+	// 操作类型
+	iOperType: INT;
+	{attribute 'tc_no_symbol'}
+	iOperCounter:INT;
+	{attribute 'tc_no_symbol'}
+	artDelay:ARRAY[1..5] OF TON;
+	{attribute 'tc_no_symbol'}
+	tSetTime:TIME;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[MEMCPY(ADR(SUPER^.stModbusPara),ADR(LocalClient),SIZEOF(localClient));
+SUPER^.M_Modbus();
+ACT_RunPara();
+ACT_Operation();
+ACT_Running();
+ACT_ParaCalc();
+ACT_Calibration();
+ACT_Reset();
+ACT_Error();]]></ST>
+    </Implementation>
+    <Action Name="ACT_Calibration" Id="{e04bb569-1c60-418c-908e-e90a0e6ac504}">
+      <Implementation>
+        <ST><![CDATA[CASE iCalibStep OF
+ 			0://等待启动
+				 IF	stCalibInit.xStart THEN
+							stCalibInit.xStart:=FALSE;
+							stCalibInit.xBusy:=TRUE;
+							stCalibInit.xDone:=FALSE;	
+							iCalibStep:=10;//初始化校准参数
+				 ELSIF stCalibPara.xStart THEN
+						 	 stCalibPara.xStart :=FALSE;
+							 stCalibPara.xBusy :=TRUE;
+							 stCalibPara.xDone :=FALSE;
+							 iCalibStep:=20;//校准参数设定
+					ELSIF stCalibration.xStart THEN
+					 		 stCalibration.xStart :=FALSE;
+							 stCalibration.xBusy :=TRUE;
+							 stCalibration.xDone :=FALSE;
+							 iCalibStep:=30;//校准
+				 END_IF
+			10://初始化校准参数
+					 iOldCalibStep:=iCalibStep;
+					 arwDataWriteRegs[1]:=1;
+					 wQuantityWriteRegs:=1;
+					 wMBAddWriteRegs:=2007;
+					 xWriteRegs:=TRUE;
+					 IF  fbWriteRegs.bBusy THEN
+							 xWriteRegs:=FALSE;
+							 iCalibStep:=iCalibStep+1;
+					END_IF
+			11://液量设定完成
+							 iOldCalibStep:=iCalibStep;
+							 IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+											iCalibStep:=iCalibStep+1;
+								ELSIF   	fbReadRegs.bError THEN
+										 iCalibStep:=999;				
+										 eErrorID:=PumpError.FLT_SET_PARA;					
+								END_IF		
+		
+			12://初始化校准参数完成
+						 stCalibInit.xBusy:=FALSE;
+							stCalibInit.xDone:=TRUE;	
+						 	iCalibStep:=0;
+						 
+			
+			 20://检查实际液量与设定液量的误差范围
+					 IF   (stLocalPara.rFluVolumeSet - stLocalPara.iModuleRealVolume )<stLocalPara.rFluVolumeSet*0.5 THEN
+							 //误差不能超过0.3ml
+							 iCalibStep:=iCalibStep +1;				
+					 ELSE
+								 eERRORID := PumpError.FLT_Calib_OverFlow;//误差过大
+								 iCalibStep:=999;	
+					 END_IF
+			 21://需要设定实际液量--实际液量最好是三组液量的平均值
+							iOldCalibStep:=iCalibStep;
+							MEMCPY(ADR(arwSetData[1]),ADR(stLocalPara.iModuleRealVolume),SIZEOF(stLocalPara.iModuleRealVolume) ); 
+							arwDataWriteRegs[1]:=arwSetData[2];
+							arwDataWriteRegs[2]:=arwSetData[1];
+							wQuantityWriteRegs:=2;
+							wMBAddWriteRegs:=2004;
+							xWriteRegs:=TRUE;
+							IF  fbWriteRegs.bBusy THEN
+									xWriteRegs:=FALSE;
+									 iCalibStep:=iCalibStep +1;		
+						 END_IF
+			 22://液量设定完成
+							iOldCalibStep:=iCalibStep;
+						 IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+											 iCalibStep:=iCalibStep +1;		
+							ELSIF   	fbReadRegs.bError THEN
+										 iCalibStep:=999;				
+										 eErrorID:=PumpError.FLT_CALIB_PARA;					
+							END_IF		
+			 23://校准实际液量设定结束
+						 stCalibPara.xBusy :=FALSE;
+						 stCalibPara.xDone :=TRUE;
+						 iCalibStep:=0;				 
+			30://校准微调-微调幅度为(设定量*0.001),这里要根据客户要求的精度进行调整
+					 xQCalibrationOK:=FALSE;
+					 iCalibStep:=iCalibStep +1;
+			31://检测数据是否在精度范围内
+					 iOldCalibStep:=iCalibStep;
+					 IF  stLocalPara.iModuleRealVolume>=stLocalPara.rFluVolumeSet-(stLocalPara.rFluVolumeSet*stLocalPara.iAccuracySet) AND 
+							 stLocalPara.iModuleRealVolume<=stLocalPara.rFluVolumeSet+(stLocalPara.rFluVolumeSet*stLocalPara.iAccuracySet) THEN
+							 	 xQCalibrationOK:=TRUE;
+								 iCalibStep:=36;
+					ELSIF stLocalPara.iModuleRealVolume>=stLocalPara.rFluVolumeSet-(stLocalPara.rFluVolumeSet*stLocalPara.iAccuracySet) THEN
+								 iCalibStep:=iCalibStep +1;	//需要减小
+					ELSIF  stLocalPara.iModuleRealVolume<=stLocalPara.rFluVolumeSet+(stLocalPara.rFluVolumeSet*stLocalPara.iAccuracySet) THEN
+								 iCalibStep:=iCalibStep +3;	//需要增大
+					END_IF
+			32://发送微调指令
+					iOldParaStep:=iParaStep;
+					arwDataWriteRegs[1]:=0;
+					wQuantityWriteRegs:=1;
+					wMBAddWriteRegs:=2006;
+					xWriteRegs:=TRUE;
+					IF  fbWriteRegs.bBusy THEN
+							xWriteRegs:=FALSE;
+							iCalibStep:=iCalibStep+1;
+				 END_IF
+		  33://微调执行完成
+					 iOldParaStep:=iParaStep;
+					 IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+									 iCalibStep:=36;
+						ELSIF   	fbReadRegs.bError THEN
+								 iCalibStep:=999;				
+								 eErrorID:=PumpError.FLT_SET_PARA;					
+						END_IF			 
+			34://发送微调指令
+					iOldParaStep:=iParaStep;
+					arwDataWriteRegs[1]:=1;
+					wQuantityWriteRegs:=1;
+					wMBAddWriteRegs:=2006;
+					xWriteRegs:=TRUE;
+					IF  fbWriteRegs.bBusy THEN
+							xWriteRegs:=FALSE;
+							iCalibStep:=iCalibStep+1;
+				 END_IF
+		  35://微调执行完成
+					 iOldParaStep:=iParaStep;
+					 IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+									 iCalibStep:=36;
+						ELSIF   	fbReadRegs.bError THEN
+								 iCalibStep:=999;				
+								 eErrorID:=PumpError.FLT_SET_PARA;					
+						END_IF			 			
+			 36://微调完成
+							 stCalibration.xBusy :=FALSE;
+							 stCalibration.xDone :=TRUE;
+							 iCalibStep:=0;//校准			
+END_CASE]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Error" Id="{8e071d61-e5ef-43ab-8951-287a6ba9ed2b}">
+      <Implementation>
+        <ST><![CDATA[tTimeout[1](IN:= iParaStep =iOldParaStep AND iParaStep<>0 , PT:= T#5S, Q=> , ET=> );
+tTimeout[2](IN:= iRunStep =iOldRunStep AND iRunStep<>0 , PT:= T#5S, Q=> , ET=> );
+tTimeout[3](IN:= iCalibStep =iOldCalibStep AND iCalibStep<>0 , PT:= T#5S, Q=> , ET=> );
+IF		tTimeout[1].Q THEN
+	  	stPara.xError:=TRUE;
+	  	stPara.xBusy:=FALSE;
+			eErrorID:=PumpError.FLT_CMD_TIMEOUT;
+	    iParaStep := 999;
+END_IF
+
+IF		tTimeout[2].Q THEN
+			stRun.xError:=TRUE;
+			stRun.xBusy:=FALSE;
+			eErrorID:=PumpError.FLT_CMD_TIMEOUT;
+			iRunStep := 999;
+END_IF
+
+IF		tTimeout[3].Q THEN
+			stCalibration.xError:=TRUE;
+			stCalibration.xBusy:=FALSE;
+			eErrorID:=PumpError.FLT_CMD_TIMEOUT;
+			iCalibStep := 999;
+END_IF
+
+IF  eErrorID <> PumpError.NO_ERROR THEN
+		xQError:=TRUE;
+END_IF
+//报错内容输出
+CASE eErrorID OF 
+		 PumpError.No_ERROR:
+			 strQErrorID:='NO ERROR';
+		 PumpError.FLT_PARA:
+			 strQErrorID:='FLT_PARA';
+		 PumpError.FLT_FLUVOLUM_TIME_PARA:
+			 strQErrorID:='FLT_FLUVOLUM_TIME_PARA';
+		 PumpError.FLT_SET_PARA:
+			 strQErrorID:='FLT_SET_PARA';	
+		 PumpError.FLT_CMD_TIMEOUT:
+			 strQErrorID:='FLT_CMD_TIMEOUT';	
+		 PumpError.FLT_RUN_ERROR:
+			 strQErrorID:='FLT_RUN_ERROR';
+		 PumpError.FLT_Calib_OverFlow:
+			 strQErrorID:='FLT_Calib_OverFlow';	
+		 PumpError.FLT_CALIB_PARA:
+			 strQErrorID:='FLT_CALIB_PARA';		
+		 PumpError.FLT_CONFIGURE_PARA:
+			 strQErrorID:='FLT_CONFIGURE_PARA';		
+END_CASE
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Operation" Id="{69bd1712-87b9-4687-a4b7-427e7b5c2cee}">
+      <Implementation>
+        <ST><![CDATA[OperR_TRIG[1](CLK:= (xIManualMode AND  stDeviceOpe.xPush_Hmi[1]) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xPush_Auto[1]) , Q=> );	//Push
+OperR_TRIG[2](CLK:= (xIManualMode AND  stDeviceOpe.xPush_Hmi[2]) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xPush_Auto[2]) , Q=> );	//Push
+OperR_TRIG[3](CLK:= (xIManualMode AND  stDeviceOpe.xPush_Hmi[3]) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xPush_Auto[3]) , Q=> );	//Push
+OperR_TRIG[4](CLK:= (xIManualMode AND  stDeviceOpe.xPush_Hmi[4]) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xPush_Auto[4]) , Q=> );	//Push
+OperR_TRIG[5](CLK:= (xIManualMode AND  stDeviceOpe.xPush_Hmi[5]) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xPush_Auto[5]) , Q=> );	//Push
+OperR_TRIG[6](CLK:= (xIManualMode AND  stDeviceOpe.xPull_Hmi[1]) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xPull_Auto[1]) , Q=> );	//Pull
+OperR_TRIG[7](CLK:= (xIManualMode AND  stDeviceOpe.xPull_Hmi[2]) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xPull_Auto[2]) , Q=> );	//Pull
+OperR_TRIG[8](CLK:= (xIManualMode AND  stDeviceOpe.xPull_Hmi[3]) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xPull_Auto[3]) , Q=> );	//Pull
+OperR_TRIG[9](CLK:= (xIManualMode AND  stDeviceOpe.xPull_Hmi[4]) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xPull_Auto[4]) , Q=> );	//Pull
+OperR_TRIG[10](CLK:= (xIManualMode AND  stDeviceOpe.xPull_Hmi[5]) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xPull_Auto[5]) , Q=> );	//Pull
+OperR_TRIG[11](CLK:= (xIManualMode AND  stDeviceOpe.xModulePush_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xModulePush_Auto) , Q=> );		//ModulePush	
+OperR_TRIG[12](CLK:= (xIManualMode AND  stDeviceOpe.xFullSpeedPush_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xFullSpeedPush_Auto) , Q=> );//FullSpeedPush
+OperR_TRIG[13](CLK:= (xIManualMode AND  stDeviceOpe.xFullSpeedPull_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xFullSpeedPull_Auto) , Q=> );//FullSpeedPull
+OperR_TRIG[14](CLK:= (xIManualMode AND  stDeviceOpe.xFullSpeedStop_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xFullSpeedStop_Auto) , Q=> );//FullSpeedStop
+OperR_TRIG[15](CLK:= (xIManualMode AND  stDeviceOpe.xStop_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xStop_Auto) , Q=> );//Stop
+OperR_TRIG[16](CLK:= (xIManualMode AND  stDeviceOpe.xCalibParaWrite_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xCalibParaWrite_Auto) , Q=> );//Calibration Paramter Write
+OperR_TRIG[17](CLK:= (xIManualMode AND  stDeviceOpe.xCalibInit_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xCalibInit_Auto), Q=> );//Calibration Init
+OperR_TRIG[18](CLK:= (xIManualMode AND  stDeviceOpe.xCalibration_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xCalibration_Auto), Q=> );//Calibration Action
+
+
+FOR  i:= 1 TO 20 BY 1 DO
+ 	IF   OperR_TRIG[i].Q THEN
+				iOperCounter:= i;
+				xStart:=TRUE;
+				EXIT;
+	END_IF
+END_FOR
+//Push
+FOR  i:=1 TO 5 BY 1 DO
+ 		IF   iOperCounter =i THEN
+		 		stLocalPara.rFluVolumeSet	:=stRunPara.rPushFluVolume[i];
+				stLocalPara.rRuntimeSet	:=stRunPara.rPushRuntime[i];
+				stLocalPara.iCycleNumber	:=stRunPara.iPushCycleNumber[i];
+				stLocalPara.iDirectionSet:=stRunPara.iDirectionSet;
+				stLocalPara.rVirualTime:=rMaxRunTime -1;
+				iOperType:=stOperType.iPush;
+		END_IF
+END_FOR
+//pull
+FOR  i:=6 TO 10 BY 1 DO
+ 		IF   iOperCounter =i THEN
+		 		stLocalPara.rFluVolumeSet	:=stRunPara.rPullFluVolume[i-5];
+				stLocalPara.rRuntimeSet	:=stRunPara.rPullRuntime[i-5];
+				stLocalPara.iCycleNumber	:=stRunPara.iPullCycleNumber[i-5];
+				stLocalPara.iDirectionSet:=ABS(1-stRunPara.iDirectionSet);
+				stLocalPara.rVirualTime:=rMaxRunTime -1;
+				iOperType:=stOperType.iPull;
+		END_IF
+END_FOR 
+ //Module Push
+IF   iOperCounter =11 THEN
+		 		stLocalPara.rFluVolumeSet	:=stRunPara.rCalFluVolume;
+				stLocalPara.rRuntimeSet	 :=stRunPara.rCalTime;
+				stLocalPara.iCycleNumber :=1;
+				stLocalPara.iDirectionSet:=stRunPara.iDirectionSet;
+				stLocalPara.iModuleAdress:=stRunPara.iModuleAdress;
+				stLocalPara.iModuleSpeed:= stRunPara.rCalFluVolume * 60.0/(stRunPara.rSpeedRatio* stRunPara.rCalTime);
+				stLocalPara.rVirualTime:=rMaxRunTime -1;
+				iOperType:=stOperType.iModulePush;
+////FullSpeedPush
+ELSIF  iOperCounter =12 THEN
+ 				stLocalPara.iDirectionSet:=stRunPara.iDirectionSet;
+ 				iOperType:=stOperType.iFullSpeedPush;
+ELSIF  iOperCounter =13 THEN
+ 			stLocalPara.iDirectionSet:=ABS(1-stRunPara.iDirectionSet);
+ 			iOperType:=stOperType.iFullSpeedPull;
+ELSIF  iOperCounter =14 THEN
+ 			iOperType:=stOperType.iFullSpeedStop;
+ELSIF  iOperCounter =15 THEN
+ 			iOperType:=stOperType.iStop;
+ELSIF  iOperCounter =16  THEN
+ 			stLocalPara.iModuleRealVolume:=stRunPara.rModuleRealFluVolume;
+ 			iOperType:=stOperType.iCalibParaWrite;
+ELSIF  iOperCounter =17  THEN
+ 			iOperType:=stOperType.iCalibInit;	
+ELSIF    iOperCounter =18 THEN 
+ 			stLocalPara.iModuleRealVolume:=stRunPara.rModuleRealFluVolume;
+ 			stLocalPara.iAccuracySet:=stRunPara.iAccuracySet;
+ 			iOperType:=stOperType.iCalibration;	
+END_IF
+
+MEMSET(ADR(stDeviceOpe),0,SIZEOF(stDeviceOpe));
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_ParaCalc" Id="{082b3045-a19d-4f59-a04c-cbfd47d9616e}">
+      <Implementation>
+        <ST><![CDATA[//
+(*************************检测配置参数是否匹配成功*********************************)
+IF stRunPara.iPumpType=RudongPump_PumpType.DFPluse THEN
+	//MiniPump泵头
+	IF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.MiniPump01 THEN
+		stPump.iPumpType:=0;//泵头值为0
+			IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P13 THEN//13#软管
+				stPump.iHosePipeType:=13;//软管类型值13
+				IF  stLocalPara.rFluVolumeSet*1000/135<0.1 THEN
+					rMaxRunTime:=	0.1;
+				ELSE
+					rMaxRunTime:=	stLocalPara.rFluVolumeSet*1000/135;
+				END_IF
+				rMaxRunTime:=	(stLocalPara.rFluVolumeSet/0.45)*0.2;//最大流量(0.45微升/秒,0.0024ml/min)	
+			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P14 THEN//14#软管
+					stPump.iHosePipeType:=13;//软管类型值13
+				IF stLocalPara.rFluVolumeSet*1000/570<0.1 THEN
+							rMinRunTime:=	0.1;
+				ELSE
+						rMinRunTime:=	stLocalPara.rFluVolumeSet*1000/135;
+				END_IF
+				rMaxRunTime:=	(stLocalPara.rFluVolumeSet/1.9)*0.2;	
+			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P19 THEN//19#软管
+				stPump.iHosePipeType:=19;
+				IF stLocalPara.rFluVolumeSet*1000/1240<0.1 THEN
+					rMinRunTime:=	0.1;
+				ELSE
+					rMinRunTime:=	stLocalPara.rFluVolumeSet*1000/1240;
+				END_IF
+					rMaxRunTime:=	(stLocalPara.rFluVolumeSet*1000/4.13)*0.2;		
+			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P16 THEN//16#软管
+					stPump.iHosePipeType:=16;
+				IF stLocalPara.rFluVolumeSet*1000/1880<0.1 THEN
+					rMinRunTime:=	0.1;
+				ELSE
+					rMinRunTime:=	stLocalPara.rFluVolumeSet*1000/1880;
+				END_IF
+				rMaxRunTime:=	(stLocalPara.rFluVolumeSet*1000/6.28)*0.2;	
+			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P25 THEN//25#软管
+					stPump.iHosePipeType:=25;
+				IF stLocalPara.rFluVolumeSet*1000/3100<0.1 THEN
+					rMinRunTime:=	0.1;
+				ELSE
+					rMinRunTime:=	stLocalPara.rFluVolumeSet*1000/3100;
+				END_IF
+				rMaxRunTime:=	(stLocalPara.rFluVolumeSet*1000/10.33)*0.2;			
+		ELSE
+				eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;		
+		END_IF
+	//UD15
+	ELSIF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.UD15 THEN
+				stPump.iHosePipeType:=1;//泵头值为0
+			IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P16 THEN//16#软管
+				stPump.iHosePipeType:=16;
+				IF stLocalPara.rFluVolumeSet*1000/4000<0.1 THEN
+					rMinRunTime:=	0.1;
+				ELSE
+					rMinRunTime:=	stLocalPara.rFluVolumeSet*1000/4000;
+				END_IF
+				rMaxRunTime:=	(stLocalPara.rFluVolumeSet*1000/13.33)*0.2;		
+			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P17 THEN//17#软管
+				stPump.iHosePipeType:=17;
+				IF stLocalPara.rFluVolumeSet*1000/15000<0.1 THEN
+					rMinRunTime:=	0.1;
+				ELSE
+					rMinRunTime:=	stLocalPara.rFluVolumeSet*1000/15000;
+				END_IF
+				rMaxRunTime:=	(stLocalPara.rFluVolumeSet*1000/50)*0.2;	
+			ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P25 THEN//25#软管
+				stPump.iHosePipeType:=25;
+				IF stLocalPara.rFluVolumeSet*1000/8000<0.1 THEN
+					rMinRunTime:=	0.1;
+				ELSE
+					rMinRunTime:=	stLocalPara.rFluVolumeSet*1000/8000;
+				END_IF
+				 rMaxRunTime:=	(stLocalPara.rFluVolumeSet*1000/26.66)*0.2;			
+		ELSE
+				eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;		
+		END_IF
+	//HandyPump01泵头
+ELSIF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.HandyPump01 THEN
+ 			IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P13 THEN//13#软管,三滚轮
+				IF stLocalPara.rFluVolumeSet*1000/155<0.1 THEN
+					rMinRunTime:=	0.1;
+				ELSE
+					rMinRunTime:=	stLocalPara.rFluVolumeSet*1000/155;
+				END_IF
+					rMaxRunTime:=	(stLocalPara.rFluVolumeSet*1000/0.51)*0.2;	
+		
+	(*	IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P13 THEN//13#软管,三滚轮
+			iMinRunTime:=	(rFluVolumeSet/10)*60;
+			iMaxRunTime:=	(rFluVolumeSet/0.0033)*60;	
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P14 THEN//14#软管,三滚轮
+			iMinRunTime:=	(rFluVolumeSet/56)*60;
+			iMaxRunTime:=	(rFluVolumeSet/0.0187)*60;		
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P19 THEN//19#软管,三滚轮
+			iMinRunTime:=	(rFluVolumeSet/111)*60;
+			iMaxRunTime:=	(rFluVolumeSet/0.0371)*60;
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P16 THEN//16#软管,三滚轮
+			iMinRunTime:=	(rFluVolumeSet/190)*60;
+			iMaxRunTime:=	(rFluVolumeSet/0.0636)*60;		
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P25 THEN//25#软管,三滚轮
+			iMinRunTime:=	(rFluVolumeSet/365)*60;
+			iMaxRunTime:=	(rFluVolumeSet/0.1219)*60;
+	*)
+		ELSE
+				eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;						
+		END_IF
+	END_IF
+ELSE
+		eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;
+END_IF
+
+
+(*
+//MiniPump01泵头
+IF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.MiniPump01 THEN
+		IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P13 THEN//13#软管
+			iMinRunTime:=	(rFluVolumeSet/8)*60;//最大流量(135微升/秒,8.28ml/min)
+			iMaxRunTime:=	(rFluVolumeSet/0.45)*60;//最大流量(0.45微升/秒,0.0024ml/min)	
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P14 THEN//14#软管
+			iMinRunTime:=	(rFluVolumeSet/33)*60;
+			iMaxRunTime:=	(rFluVolumeSet/1.9)*60;
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P19 THEN//19#软管
+			iMinRunTime:=	(rFluVolumeSet/77)*60;
+			iMaxRunTime:=	(rFluVolumeSet/4.13)*60;	
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P16 THEN//16#软管
+			iMinRunTime:=	(rFluVolumeSet/114)*60;
+			iMaxRunTime:=	(rFluVolumeSet/6.28)*60;	
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P25 THEN//25#软管
+			iMinRunTime:=	(rFluVolumeSet/190)*60;
+			iMaxRunTime:=	(rFluVolumeSet/10.33)*60;		
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P1_1 THEN//1x1#软管
+			iMinRunTime:=	(rFluVolumeSet/15)*60;
+			iMaxRunTime:=	(rFluVolumeSet/4.5)*60;	
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P2_1 THEN//2x1#软管
+			iMinRunTime:=	(rFluVolumeSet/54)*60;
+			iMaxRunTime:=	(rFluVolumeSet/4.5)*60;		
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P2_5_1 THEN//2.5x1#软管
+			iMinRunTime:=	(rFluVolumeSet/76)*60;
+			iMaxRunTime:=	(rFluVolumeSet/5)*60;		
+		ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P3_1 THEN//3x1#软管
+			iMinRunTime:=	(rFluVolumeSet/108)*60;
+			iMaxRunTime:=	(rFluVolumeSet/5)*60;
+	ELSE
+			eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;		
+	END_IF		
+	
+//MiniPump02泵头
+ELSIF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.MiniPump02 THEN
+	IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P1_1 THEN//1x1#软管
+		iMinRunTime:=	(rFluVolumeSet/15.01)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.005)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P2_1 THEN//2x1#软管
+		iMinRunTime:=	(rFluVolumeSet/54.63)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.018)*60;		
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P2_5_1 THEN//2.5x1#软管
+		iMinRunTime:=	(rFluVolumeSet/76.84)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0256)*60;
+	ELSE
+			eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;						
+	END_IF	
+
+//HandyPump01泵头
+ELSIF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.HandyPump01 THEN
+	IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P13 THEN//13#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/10)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0033)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P14 THEN//14#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/56)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0187)*60;		
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P19 THEN//19#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/111)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0371)*60;
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P16 THEN//16#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/190)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0636)*60;		
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P25 THEN//25#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/365)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.1219)*60;
+	ELSE
+			eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;						
+	END_IF
+
+//HandyPump02泵头
+ELSIF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.HandyPump02 THEN
+	IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P13 THEN//13#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/10)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0033)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P14 THEN//14#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/56)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0187)*60;		
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P19 THEN//19#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/111)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0371)*60;
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P16 THEN//16#软管,三滚轮
+		iMinRunTime:=	(rFluVolumeSet/190)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0636)*60;	
+	ELSE
+			eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;							
+	END_IF
+
+//EasyPumpI_III泵头,单通道
+ELSIF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.EasyPumpI_III THEN
+	IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P13 THEN//13#软管
+		iMinRunTime:=	(rFluVolumeSet/32)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0053)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P14 THEN//14#软管
+		iMinRunTime:=	(rFluVolumeSet/162)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.027)*60;		
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P19 THEN//19#软管
+		iMinRunTime:=	(rFluVolumeSet/330)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.055)*60;
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P16 THEN//16#软管
+		iMinRunTime:=	(rFluVolumeSet/560)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.093)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P25 THEN//25#软管
+		iMinRunTime:=	(rFluVolumeSet/1180)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.197)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P17 THEN//17#软管
+		iMinRunTime:=	(rFluVolumeSet/2000)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.333)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P18 THEN//18#软管
+		iMinRunTime:=	(rFluVolumeSet/2580)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.430)*60;	
+	ELSE
+			eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;							
+	END_IF
+
+//EasyPumpII_IV泵头,单通道
+ELSIF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.EasyPumpII_IV THEN
+	IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P15 THEN//15#软管
+		iMinRunTime:=	(rFluVolumeSet/1080)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0180)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P24 THEN//24#软管
+		iMinRunTime:=	(rFluVolumeSet/1640)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.273)*60;		
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P35 THEN//35#软管
+		iMinRunTime:=	(rFluVolumeSet/2300)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.383)*60;
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P36 THEN//36#软管
+		iMinRunTime:=	(rFluVolumeSet/3100)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.517)*60;	
+	ELSE
+			eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;							
+	END_IF
+
+//EasyPumpV_VI泵头,双通道
+ELSIF  stRunPara.iPumpTypeSet=RudongPump_PumpHeadType.EasyPumpV_VI THEN
+		IF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P13 THEN//13#软管
+		iMinRunTime:=	(rFluVolumeSet/32)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0053)*60;	
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P14 THEN//14#软管
+		iMinRunTime:=	(rFluVolumeSet/162)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0027)*60;		
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P19 THEN//19#软管
+		iMinRunTime:=	(rFluVolumeSet/330)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.0055)*60;
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P16 THEN//16#软管
+		iMinRunTime:=	(rFluVolumeSet/560)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.093)*60;		
+	ELSIF stRunPara.iHosePipeTypeSet=RudongPump_SoftPipeType.P25 THEN//25#软管
+		iMinRunTime:=	(rFluVolumeSet/1180)*60;
+		iMaxRunTime:=	(rFluVolumeSet/0.197)*60;
+	ELSE
+			eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;							
+	END_IF
+	
+END_IF
+
+
+END_IF
+
+*)
+		
+
+
+//参数超出范围报错	
+IF stLocalPara.rFluVolumeSet<>0 THEN
+	IF stLocalPara.rRuntimeSet<rMinRunTime OR stLocalPara.rRuntimeSet>rMaxRunTime OR  rMaxRunTime<rMinRunTime THEN
+		eERRORID:=RudongPump_ERROR.FLT_CONFIGURE_PARA;
+	END_IF
+END_IF	
+	]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Reset" Id="{eb57277f-057a-445d-b2fc-44fbe77c82fc}">
+      <Implementation>
+        <ST><![CDATA[IF   xIReset THEN
+ 
+ 	 iParaStep:=0;
+	 iRunStep:=0;
+ 	 iCalibStep:=0;
+	 
+	 stPara.xStart:=FALSE;
+	 stPara.xBusy:=FALSE;
+	 stPara.xError:=FALSE;
+ 
+	 stRun.xStart:=FALSE;
+	 stRun.xBusy:=FALSE;
+	 stRun.xError:=FALSE;
+		
+	 stCalibInit.xStart:=FALSE;
+	 stCalibInit.xBusy:=FALSE;
+	 stCalibInit.xDone:=FALSE;
+	 
+	 stCalibPara.xStart:=FALSE;
+	 stCalibPara.xBusy :=FALSE;
+	 stCalibPara.xDone :=FALSE;
+	 
+	 stCalibration.xStart:=FALSE;
+	 stCalibration.xBusy :=FALSE;
+	 stCalibration.xDone :=FALSE;
+	 
+	 iOldParaStep:=0;
+	 iOldRunStep:=0;
+	 iOldCalibStep:=0;
+	 
+	 eErrorID := PumpError.NO_ERROR;
+	 xIReset:=FALSE;
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Running" Id="{f72b25a7-4f66-439b-b942-35021509e771}">
+      <Implementation>
+        <ST><![CDATA[IF  NOT  xQBusy THEN
+ 		xQRdyCmd:=TRUE;
+ELSE
+ 		xQRdyCmd:=FALSE;	
+END_IF
+
+CASE  iRunStep OF 
+ 0://等待开始
+ 		IF  xStart THEN
+		 		xStart:=FALSE;
+				xQBusy:=TRUE;
+				xQDone:=FALSE;
+				iRunStep:=iRunStep +1;
+		END_IF
+ 1://检查是否是全速
+ 		IF    iOperType=stOperType.iFullSpeedPull OR 
+					iOperType=stOperType.iFullSpeedPush  THEN
+					iRunStep:=iRunStep +3;
+		ELSE
+		 			iRunStep:=iRunStep +1;
+ 		END_IF
+ 2://参数传递
+ 		 iOldRunStep:=iRunStep;
+ 		 stPara.xStart:=TRUE;
+		 iRunStep:=iRunStep +1;
+ 3://等待参数传递完成
+ 		 	iOldRunStep:=iRunStep;
+ 		 IF  stPara.xDone   THEN
+				iRunStep:=iRunStep +1;
+		 END_IF
+ 4://开始执行
+ 			iOldRunStep:=iRunStep;
+	  IF 		 iOperType=stOperType.iPush OR
+					 iOperType=stOperType.iPull  THEN
+    				iRunStep:=10;
+		ELSIF   iOperType=stOperType.iStop OR 
+						iOperType=stOperType.iFullSpeedStop  THEN
+    			  iRunStep:=20;
+		ELSIF   iOperType=stOperType.iFullSpeedPull OR 
+						iOperType=stOperType.iFullSpeedPush  THEN
+		 				iRunStep:=30;
+		ELSIF     iOperType=stOperType.iModulePush THEN
+    				iRunStep:=40;
+		ELSIF     iOperType=stOperType.iCalibParaWrite THEN
+    				iRunStep:=50;
+		ELSIF  		iOperType=stOperType.iCalibInit THEN
+		 				iRunStep:=60;
+		ELSIF   		iOperType=stOperType.iCalibration THEN
+		 				iRunStep:=70;
+		END_IF	
+ 10://Pull/push
+				iOldRunStep:=iRunStep;
+				arwDataWriteRegs[1]:=1;//启动
+				wQuantityWriteRegs:=1;
+				wMBAddWriteRegs:=1011;
+				xWriteRegs:=TRUE;
+				IF  fbWriteRegs.bBusy THEN
+						xWriteRegs:=FALSE;
+						iRunStep:=iRunStep+1;
+			 END_IF
+ 11://启动完成
+			iOldRunStep:=iRunStep;
+	  	IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+	  	 				iRunStep:=iRunStep +1;
+	  	 ELSIF   	fbReadRegs.bError THEN
+	  	 			iRunStep:=999;				
+	  	 			eErrorID:=PumpError.FLT_RUN_ERROR;					
+	  	 END_IF		
+  12://等待运行结束
+			iOldParaStep:=iParaStep;
+			wMBAddReadRegs:=1011;
+			wQuantityReadRegs:=1;
+			xReadRegs:=TRUE;
+			IF  fbReadRegs.bBusy THEN
+			 	xReadRegs:=FALSE;
+				iRunStep:=iRunStep+1;
+			END_IF
+	13://等待读取完成
+			 	iOldParaStep:=iParaStep;
+	  	  IF  NOT 	fbReadRegs.bBusy AND  NOT  	fbReadRegs.bError THEN
+				 				 stReadPara.iRunning:=arwDataReadRegs[1];
+	  		 				 iRunStep:=iRunStep+1;
+	  		 ELSIF   	fbReadRegs.bError THEN
+	  		 			iRunStep:=999;				
+	  		 			eErrorID:=PumpError.FLT_READ_PARA;					
+	  		 END_IF	
+				 artDelay[1](IN:=FALSE);
+	14://检查是否已经停止运行
+				IF  stReadPara.iRunning =0 THEN
+				 			iRunStep:=100;
+				ELSE //再次读取
+						artDelay[1](IN:= TRUE, PT:= T#100MS, Q=> , ET=> );
+						IF  artDelay[1].Q  THEN
+								 iRunStep:=12;
+								 artDelay[1](IN:= FALSE);
+						END_IF
+				END_IF			 
+	20://Stop
+				 iOldRunStep:=iRunStep;
+				 arwDataWriteRegs[1]:=0;//停止
+				 arwDataWriteRegs[2]:=0;//全速停止
+				 wQuantityWriteRegs:=2;
+				 wMBAddWriteRegs:=1011;
+				 xWriteRegs:=TRUE;
+				 IF  fbWriteRegs.bBusy THEN
+						 xWriteRegs:=FALSE;
+						 iRunStep:=iRunStep+1;
+				END_IF
+	21://运行完成
+			 iOldRunStep:=iRunStep;
+			 IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+							 iRunStep:=100;
+				ELSIF   	fbReadRegs.bError THEN
+						 iRunStep:=999;				
+						 eErrorID:=PumpError.FLT_RUN_ERROR;					
+				END_IF				
+	30://写入方向
+				iOldParaStep:=iParaStep;
+				MEMCPY(ADR(arwDataWriteRegs[1]),ADR(stLocalPara.iDirectionSet),SIZEOF (stLocalPara.iDirectionSet));
+				wQuantityWriteRegs:=1;
+				wMBAddWriteRegs:=1010;
+				xWriteRegs:=TRUE;
+				IF  fbWriteRegs.bBusy THEN
+						xWriteRegs:=FALSE;
+						iRunStep:=iRunStep+1;
+			 END_IF
+	 31://方向写入完成
+			 iOldParaStep:=iParaStep;
+			 IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+							 iRunStep:=iRunStep +1;
+				ELSIF   	fbReadRegs.bError THEN
+						 iRunStep:=999;				
+						 eErrorID:=PumpError.FLT_SET_PARA;					
+				END_IF		
+	32://FullSpeed
+				 iOldRunStep:=iRunStep;
+				 arwDataWriteRegs[1]:=1;//全速启动
+				 wQuantityWriteRegs:=1;
+				 wMBAddWriteRegs:=1012;
+				 xWriteRegs:=TRUE;
+				 IF  fbWriteRegs.bBusy THEN
+						 xWriteRegs:=FALSE;
+						 iRunStep:=iRunStep+1;
+				END_IF
+	33://全速启动
+			 iOldRunStep:=iRunStep;
+			 IF  NOT 	fbWriteRegs.bBusy AND  NOT fbWriteRegs.bError THEN
+							 iRunStep:=100;
+				ELSIF   	fbReadRegs.bError THEN
+						 iRunStep:=999;				
+						 eErrorID:=PumpError.FLT_RUN_ERROR;					
+				END_IF		
+	40://Module Push
+				 iOldRunStep:=iRunStep;
+				 arwDataWriteRegs[1]:=1;//单元启动
+				 wQuantityWriteRegs:=1;
+				 wMBAddWriteRegs:=2003;
+				 xWriteRegs:=TRUE;
+				 IF  fbWriteRegs.bBusy THEN
+						 xWriteRegs:=FALSE;
+						 iRunStep:=iRunStep+1;
+				END_IF
+	41://单元启动注液
+			 iOldRunStep:=iRunStep;
+			 IF  NOT 	fbWriteRegs.bBusy AND  NOT fbWriteRegs.bError THEN
+							 iRunStep:=iRunStep +1;
+				ELSIF   	fbReadRegs.bError THEN
+						 iRunStep:=999;				
+						 eErrorID:=PumpError.FLT_RUN_ERROR;					
+				END_IF
+	 42://等待运行结束
+			 iOldParaStep:=iParaStep;
+			 wMBAddReadRegs:=2003;
+			 wQuantityReadRegs:=1;
+			 xReadRegs:=TRUE;
+			 IF  fbReadRegs.bBusy THEN
+				 xReadRegs:=FALSE;
+				 iRunStep:=iRunStep+1;
+			 END_IF
+	 43://等待读取完成
+				 iOldParaStep:=iParaStep;
+				 IF  NOT 	fbReadRegs.bBusy AND  NOT  	fbReadRegs.bError THEN
+									stReadPara.iRunning:=arwDataReadRegs[1];
+									iRunStep:=iRunStep+1;
+					ELSIF   	fbReadRegs.bError THEN
+							 iRunStep:=999;				
+							 eErrorID:=PumpError.FLT_READ_PARA;					
+					END_IF	
+					artDelay[1](IN:=FALSE);
+	 44://检查是否已经停止运行
+				 IF  stReadPara.iRunning =0 THEN
+							 iRunStep:=100;
+				 ELSE //再次读取
+						 artDelay[1](IN:= TRUE, PT:= T#100MS, Q=> , ET=> );
+						 IF  artDelay[1].Q  THEN
+									iRunStep:=12;
+									artDelay[1](IN:= FALSE);
+						 END_IF
+				 END_IF			 			 
+				 
+		50://写入实际液量	
+					 MEMCPY(ADR(arwSetData[1]),ADR(stLocalPara.iModuleRealVolume),SIZEOF(stLocalPara.iModuleRealVolume) ); 
+					 arwDataWriteRegs[1]:=arwSetData[2];
+					 arwDataWriteRegs[2]:=arwSetData[1];
+					 iRunStep:=iRunStep +1;
+		
+		51://开始写入
+					 iOldRunStep:=iRunStep;
+					 wQuantityWriteRegs:=2;
+					 wMBAddWriteRegs:=2004;
+					 xWriteRegs:=TRUE;
+					 IF  fbWriteRegs.bBusy THEN
+							 xWriteRegs:=FALSE;
+							 iRunStep:=iRunStep+1;
+					END_IF
+		52://等待运行结束
+				 iOldParaStep:=iParaStep;
+				 wMBAddReadRegs:=1011;
+				 wQuantityReadRegs:=1;
+				 xReadRegs:=TRUE;
+				 IF  fbReadRegs.bBusy THEN
+					 xReadRegs:=FALSE;
+					 iRunStep:=iRunStep+1;
+				 END_IF
+		 53://等待读取完成
+					 iOldParaStep:=iParaStep;
+					 IF  NOT 	fbReadRegs.bBusy AND  NOT  	fbReadRegs.bError THEN
+										stReadPara.iRunning:=arwDataReadRegs[1];
+										iRunStep:=iRunStep+1;
+						ELSIF   	fbReadRegs.bError THEN
+								 iRunStep:=999;				
+								 eErrorID:=PumpError.FLT_READ_PARA;					
+						END_IF	
+						artDelay[1](IN:=FALSE);
+		 54://检查是否已经停止运行
+					 IF  stReadPara.iRunning =0 THEN
+								 iRunStep:=100;
+					 ELSE //再次读取
+							 artDelay[1](IN:= TRUE, PT:= T#100MS, Q=> , ET=> );
+							 IF  artDelay[1].Q  THEN
+										iRunStep:=12;
+										artDelay[1](IN:= FALSE);
+							 END_IF
+					 END_IF			 
+		 60://初始化校准参数
+					 stCalibInit.xStart :=TRUE;
+					 iRunStep:=iRunStep +1;
+		 61://等待
+				 IF  stCalibInit.xBusy THEN
+						 iRunStep:=iRunStep +1;
+				 END_IF
+		 62://完成
+				 IF stCalibInit.xDone THEN
+							 iRunStep:=100;
+				 END_IF 
+		 70://校准
+					 stCalibration.xStart :=TRUE;
+					 iRunStep:=iRunStep +1;
+		 71://等待
+				 IF  stCalibration.xBusy THEN
+						 iRunStep:=iRunStep +1;
+				 END_IF
+		 72://完成
+				 IF stCalibration.xDone THEN
+							 iRunStep:=100;
+				 END_IF 		 
+	
+		 100://运行结束
+					xQBusy:=FALSE;
+					xQDone:=TRUE;
+					iRunStep:=0;
+ END_CASE
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_RunPara" Id="{de4ccdf8-7874-4800-9b27-4ec05af2e4ab}">
+      <Implementation>
+        <ST><![CDATA[
+
+
+CASE iParaStep OF	
+	0://开始
+			IF   stPara.xStart THEN
+			 		 stPara.xStart:=FALSE;
+					 stPara.xBusy:=TRUE;
+					 stPara.xDone:=FALSE;
+					  iParaStep := iParaStep + 1;
+			 END_IF
+ 	1://查流量设定的转速是否在0.1rpm-600rpm之间
+			iOldParaStep:=iParaStep;
+			IF 	stLocalPara.rRuntimeSet = 0  THEN 
+					 eERRORID := PumpError.FLT_FLUVOLUM_TIME_PARA;		
+					 iParaStep := 0;
+		  ELSE
+					rSetSpeed := stLocalPara.rFluVolumeSet * 60.0 / stRunPara.rSpeedRatio / stLocalPara.rRuntimeSet;
+					IF rSetSpeed >= 0.001 AND  rSetSpeed <= 600 THEN
+						iParaStep := iParaStep + 1;
+					ELSE
+						eERRORID := PumpError.FLT_FLUVOLUM_TIME_PARA;		
+						iParaStep := 0;
+			END_IF
+		END_IF		
+	2://读取液量（2word）、时间(2word)、间隔时间(2word)、灌装次数(word)、回吸角度(word)、运行方向(word)
+			iOldParaStep:=iParaStep;
+			wMBAddReadRegs:=1002;
+			wQuantityReadRegs:=10;
+			xReadRegs:=TRUE;
+			IF  fbReadRegs.bBusy THEN
+			 	xReadRegs:=FALSE;
+				iParaStep:=iParaStep+1;
+			END_IF
+	3://等待读取完成
+			 	iOldParaStep:=iParaStep;
+	  	  IF  NOT 	fbReadRegs.bBusy AND  NOT  	fbReadRegs.bError THEN
+				 				//液量
+				 				SUPER^.pInputData:=ADR(arwDataReadRegs[1]);
+								stReadPara.rFluVolume:=M_Binary32REAL();
+								//时间
+								SUPER^.pInputData:=ADR(arwDataReadRegs[3]);
+								stReadPara.rRuntime:=M_Binary32REAL();
+								
+	  		 				 iParaStep:=iParaStep+1;
+	  		 ELSIF   	fbReadRegs.bError THEN
+	  		 			iParaStep:=999;				
+	  		 			eErrorID:=PumpError.FLT_READ_PARA;					
+	  		 END_IF	
+	4://设定与显示进行比较
+				iOldParaStep:=iParaStep;
+				IF stLocalPara.rFluVolumeSet <> stReadPara.rFluVolume OR 
+				 	 stLocalPara.rRuntimeSet <> stReadPara.rRuntime   THEN
+					 iParaStep:=iParaStep + 1;	
+				ELSE
+					 iParaStep:=iParaStep+8;
+				END_IF
+	5://设定虚假时间
+			 MEMCPY(ADR(arwSetData[1]),ADR(stLocalPara.rVirualTime),SIZEOF(stLocalPara.rVirualTime) ); 
+			 arwDataWriteRegs[1]:=arwSetData[2];
+			 arwDataWriteRegs[2]:=arwSetData[1];
+			 iParaStep:=iParaStep +1;
+	6://需要传送虚假的时间
+			 iOldParaStep:=iParaStep;
+			 wQuantityWriteRegs:=2;
+			 wMBAddWriteRegs:=1004;
+			 xWriteRegs:=TRUE;
+			 IF  fbWriteRegs.bBusy THEN
+					 xWriteRegs:=FALSE;
+					 iParaStep:=iParaStep+1;
+			END_IF	
+	7://等待设定完成
+				iOldParaStep:=iParaStep;
+			 IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+							  iParaStep:=iParaStep +1;
+				ELSIF   	fbReadRegs.bError THEN
+						 iParaStep:=999;				
+						 eErrorID:=PumpError.FLT_SET_PARA;					
+				END_IF				
+  8://需要设定液量
+			 iOldParaStep:=iParaStep;
+			 MEMCPY(ADR(arwSetData[1]),ADR(stLocalPara.rFluVolumeSet),SIZEOF(stLocalPara.rFluVolumeSet) ); 
+			 arwDataWriteRegs[1]:=arwSetData[2];
+			 arwDataWriteRegs[2]:=arwSetData[1];
+			 wQuantityWriteRegs:=2;
+			 wMBAddWriteRegs:=1002;
+			 xWriteRegs:=TRUE;
+			 IF  fbWriteRegs.bBusy THEN
+					 xWriteRegs:=FALSE;
+					 iParaStep:=iParaStep+1;
+			END_IF
+	9://液量设定完成
+			iOldParaStep:=iParaStep;
+	  	IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+	  	 				iParaStep:=iParaStep + 1;
+	  	 ELSIF   	fbReadRegs.bError THEN
+	  	 			iParaStep:=999;				
+	  	 			eErrorID:=PumpError.FLT_SET_PARA;					
+	  	 END_IF		
+  10://设定运行时间
+			 iOldParaStep:=iParaStep;
+			 MEMCPY(ADR(arwSetData[1]),ADR(stLocalPara.rRuntimeSet),SIZEOF(stLocalPara.rRuntimeSet) ); 
+			 arwDataWriteRegs[1]:=arwSetData[2];
+			 arwDataWriteRegs[2]:=arwSetData[1];
+			 wQuantityWriteRegs:=2;
+			 wMBAddWriteRegs:=1004;
+			 xWriteRegs:=TRUE;
+			 IF  fbWriteRegs.bBusy THEN
+					 xWriteRegs:=FALSE;
+					 iParaStep:=iParaStep+1;
+			END_IF
+	11://等待时间设定完成
+			iOldParaStep:=iParaStep;
+	  	IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+	  	 				iParaStep:=iParaStep + 1;
+	  	 ELSIF   	fbReadRegs.bError THEN
+	  	 			iParaStep:=999;				
+	  	 			eErrorID:=PumpError.FLT_SET_PARA;					
+	  	 END_IF		
+	12://比较方向
+				iOldParaStep:=iParaStep;
+				//方向
+				stReadPara.iDirectionSet:=WORD_TO_INT(arwDataReadRegs[9]);
+				IF stLocalPara.iDirectionSet<> stReadPara.iDirectionSet   THEN
+										iParaStep:=iParaStep+1;	
+				ELSE
+										iParaStep:=iParaStep+3;	
+				END_IF
+	13://写入方向
+			 iOldParaStep:=iParaStep;
+			 MEMCPY(ADR(arwDataWriteRegs[1]),ADR(stLocalPara.iDirectionSet),SIZEOF (stLocalPara.iDirectionSet));
+			 wQuantityWriteRegs:=1;
+			 wMBAddWriteRegs:=1010;
+			 xWriteRegs:=TRUE;
+			 IF  fbWriteRegs.bBusy THEN
+					 xWriteRegs:=FALSE;
+					 iParaStep:=iParaStep+1;
+			END_IF
+  14://方向写入完成
+			iOldParaStep:=iParaStep;
+	  	IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+	  	 				iParaStep:=iParaStep +1;
+	  	 ELSIF   	fbReadRegs.bError THEN
+	  	 			iParaStep:=999;				
+	  	 			eErrorID:=PumpError.FLT_SET_PARA;					
+	  	 END_IF		
+	15://比较重复次数
+				iOldParaStep:=iParaStep;
+				//重复次数
+				stReadPara.iCycleNumber:=WORD_TO_INT(arwDataReadRegs[7]);
+				IF stLocalPara.iCycleNumber<> stReadPara.iCycleNumber   THEN
+					 iParaStep:=iParaStep+1;	
+				ELSE
+					 iParaStep:=iParaStep+3;
+				END_IF	
+	16://写入重复次数
+			 iOldParaStep:=iParaStep;
+			 MEMCPY(ADR(arwDataWriteRegs[1]),ADR(stLocalPara.iCycleNumber),SIZEOF(stLocalPara.iCycleNumber));
+			 wQuantityWriteRegs:=1;
+			 wMBAddWriteRegs:=1008;
+			 xWriteRegs:=TRUE;
+			 IF  fbWriteRegs.bBusy THEN
+					 xWriteRegs:=FALSE;
+					 iParaStep:=iParaStep+1;
+			END_IF
+  17://重复次数写入完成
+			iOldParaStep:=iParaStep;
+	  	IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+	  	 				iParaStep:=iParaStep +1;
+	  	 ELSIF   	fbReadRegs.bError THEN
+	  	 			iParaStep:=999;				
+	  	 			eErrorID:=PumpError.FLT_SET_PARA;					
+	  	 END_IF		
+	18://判断是否执行ModulePush
+      IF   iOperType=stOperType.iModulePush THEN
+						iParaStep:=iParaStep +1;
+			ELSE
+						iParaStep:=100;
+			END_IF
+	19://单元地址设定	
+				 iOldParaStep:=iParaStep;
+				 MEMCPY(ADR(arwDataWriteRegs[1]),ADR(stLocalPara.iModuleAdress),SIZEOF(stLocalPara.iModuleAdress));
+				 wQuantityWriteRegs:=1;
+				 wMBAddWriteRegs:=2000;
+				 xWriteRegs:=TRUE;
+				 IF  fbWriteRegs.bBusy THEN
+						 xWriteRegs:=FALSE;
+						 iParaStep:=iParaStep+1;
+				END_IF
+	20://单元地址设定完成
+				iOldParaStep:=iParaStep;
+				IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+								iParaStep:=100;
+				 ELSIF   	fbReadRegs.bError THEN
+							iParaStep:=999;				
+							eErrorID:=PumpError.FLT_SET_PARA;					
+				 END_IF			 
+	//21://设定单元速度
+	//		 iOldParaStep:=iParaStep;
+	//		 MEMCPY(ADR(arwSetData[1]),ADR(stLocalPara.iModuleSpeed),SIZEOF(stLocalPara.iModuleSpeed) ); 
+	//		 arwDataWriteRegs[1]:=arwSetData[2];
+	//		 arwDataWriteRegs[2]:=arwSetData[1];
+	//		 iParaStep:=iParaStep +1;
+  //22://传送单元速度
+	//		 iOldParaStep:=iParaStep;
+	//		 wQuantityWriteRegs:=2;
+	//		 wMBAddWriteRegs:=2001;
+	//		 xWriteRegs:=TRUE;
+	//		 IF  fbWriteRegs.bBusy THEN
+	//				 xWriteRegs:=FALSE;
+	//				 iParaStep:=iParaStep+1;
+	//		END_IF	
+	//23://等待设定完成
+	//			iOldParaStep:=iParaStep;
+	//		 IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+	//						  iParaStep:=100;
+	//			ELSIF   	fbReadRegs.bError THEN
+	//					 iParaStep:=999;				
+	//					 eErrorID:=PumpError.FLT_SET_PARA;					
+	//			END_IF				
+	100://参数写入完成
+				iOperType:=stOperType.iWait;
+				stPara.xBusy:=FALSE;
+				stPara.xDone:=TRUE;
+				iParaStep:=0;		
+	ELSE
+		;	
+END_CASE
+]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="FB_KF300">
+      <LineId Id="268" Count="6" />
+      <LineId Id="238" Count="0" />
+      <LineId Id="275" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_KF300.ACT_Calibration">
+      <LineId Id="30" Count="5" />
+      <LineId Id="110" Count="0" />
+      <LineId Id="105" Count="0" />
+      <LineId Id="128" Count="3" />
+      <LineId Id="124" Count="3" />
+      <LineId Id="120" Count="3" />
+      <LineId Id="116" Count="3" />
+      <LineId Id="43" Count="16" />
+      <LineId Id="62" Count="0" />
+      <LineId Id="73" Count="21" />
+      <LineId Id="132" Count="0" />
+      <LineId Id="96" Count="8" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="133" Count="0" />
+      <LineId Id="211" Count="0" />
+      <LineId Id="150" Count="0" />
+      <LineId Id="149" Count="0" />
+      <LineId Id="157" Count="0" />
+      <LineId Id="136" Count="0" />
+      <LineId Id="146" Count="0" />
+      <LineId Id="212" Count="0" />
+      <LineId Id="147" Count="0" />
+      <LineId Id="145" Count="0" />
+      <LineId Id="138" Count="0" />
+      <LineId Id="158" Count="1" />
+      <LineId Id="137" Count="0" />
+      <LineId Id="160" Count="0" />
+      <LineId Id="163" Count="15" />
+      <LineId Id="156" Count="0" />
+      <LineId Id="179" Count="16" />
+      <LineId Id="155" Count="0" />
+      <LineId Id="140" Count="0" />
+      <LineId Id="198" Count="0" />
+      <LineId Id="213" Count="0" />
+      <LineId Id="196" Count="0" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_KF300.ACT_Error">
+      <LineId Id="13" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="14" Count="2" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="20" Count="0" />
+      <LineId Id="4" Count="2" />
+      <LineId Id="38" Count="0" />
+      <LineId Id="7" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="29" Count="0" />
+      <LineId Id="33" Count="2" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="36" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="28" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="43" Count="8" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="75" Count="4" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="80" Count="0" />
+      <LineId Id="82" Count="0" />
+      <LineId Id="53" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_KF300.ACT_Operation">
+      <LineId Id="2" Count="0" />
+      <LineId Id="115" Count="3" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="114" Count="0" />
+      <LineId Id="119" Count="2" />
+      <LineId Id="4" Count="0" />
+      <LineId Id="99" Count="0" />
+      <LineId Id="101" Count="0" />
+      <LineId Id="103" Count="0" />
+      <LineId Id="102" Count="0" />
+      <LineId Id="123" Count="0" />
+      <LineId Id="100" Count="0" />
+      <LineId Id="133" Count="0" />
+      <LineId Id="143" Count="0" />
+      <LineId Id="142" Count="0" />
+      <LineId Id="6" Count="2" />
+      <LineId Id="95" Count="0" />
+      <LineId Id="10" Count="2" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="122" Count="0" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="54" Count="0" />
+      <LineId Id="63" Count="1" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="130" Count="0" />
+      <LineId Id="96" Count="0" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="53" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="70" Count="4" />
+      <LineId Id="131" Count="0" />
+      <LineId Id="97" Count="0" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="80" Count="0" />
+      <LineId Id="75" Count="4" />
+      <LineId Id="81" Count="1" />
+      <LineId Id="132" Count="0" />
+      <LineId Id="98" Count="0" />
+      <LineId Id="107" Count="0" />
+      <LineId Id="104" Count="0" />
+      <LineId Id="139" Count="0" />
+      <LineId Id="106" Count="0" />
+      <LineId Id="108" Count="0" />
+      <LineId Id="138" Count="0" />
+      <LineId Id="109" Count="0" />
+      <LineId Id="111" Count="0" />
+      <LineId Id="110" Count="0" />
+      <LineId Id="113" Count="0" />
+      <LineId Id="112" Count="0" />
+      <LineId Id="126" Count="0" />
+      <LineId Id="137" Count="0" />
+      <LineId Id="127" Count="2" />
+      <LineId Id="135" Count="0" />
+      <LineId Id="148" Count="0" />
+      <LineId Id="147" Count="0" />
+      <LineId Id="136" Count="0" />
+      <LineId Id="60" Count="0" />
+      <LineId Id="141" Count="0" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_KF300.ACT_ParaCalc">
+      <LineId Id="2" Count="279" />
+      <LineId Id="285" Count="0" />
+      <LineId Id="283" Count="1" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_KF300.ACT_Reset">
+      <LineId Id="1" Count="0" />
+      <LineId Id="41" Count="0" />
+      <LineId Id="8" Count="0" />
+      <LineId Id="10" Count="0" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="11" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="14" Count="0" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="20" Count="1" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="22" Count="2" />
+      <LineId Id="26" Count="1" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="28" Count="1" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="35" Count="0" />
+      <LineId Id="51" Count="1" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="49" Count="0" />
+      <LineId Id="54" Count="0" />
+      <LineId Id="46" Count="0" />
+      <LineId Id="4" Count="0" />
+      <LineId Id="3" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_KF300.ACT_Running">
+      <LineId Id="457" Count="3" />
+      <LineId Id="187" Count="0" />
+      <LineId Id="195" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="4" Count="0" />
+      <LineId Id="10" Count="1" />
+      <LineId Id="13" Count="2" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="427" Count="1" />
+      <LineId Id="430" Count="3" />
+      <LineId Id="429" Count="0" />
+      <LineId Id="6" Count="0" />
+      <LineId Id="426" Count="0" />
+      <LineId Id="16" Count="2" />
+      <LineId Id="425" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="7" Count="0" />
+      <LineId Id="424" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="224" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="223" Count="0" />
+      <LineId Id="33" Count="0" />
+      <LineId Id="197" Count="0" />
+      <LineId Id="225" Count="0" />
+      <LineId Id="198" Count="0" />
+      <LineId Id="34" Count="0" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="226" Count="1" />
+      <LineId Id="370" Count="1" />
+      <LineId Id="422" Count="1" />
+      <LineId Id="35" Count="0" />
+      <LineId Id="8" Count="0" />
+      <LineId Id="69" Count="7" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="78" Count="6" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="312" Count="27" />
+      <LineId Id="307" Count="0" />
+      <LineId Id="93" Count="2" />
+      <LineId Id="150" Count="0" />
+      <LineId Id="96" Count="13" />
+      <LineId Id="88" Count="0" />
+      <LineId Id="440" Count="16" />
+      <LineId Id="438" Count="0" />
+      <LineId Id="110" Count="17" />
+      <LineId Id="152" Count="16" />
+      <LineId Id="89" Count="0" />
+      <LineId Id="379" Count="27" />
+      <LineId Id="173" Count="0" />
+      <LineId Id="407" Count="0" />
+      <LineId Id="228" Count="0" />
+      <LineId Id="255" Count="2" />
+      <LineId Id="248" Count="2" />
+      <LineId Id="234" Count="0" />
+      <LineId Id="236" Count="5" />
+      <LineId Id="229" Count="0" />
+      <LineId Id="340" Count="27" />
+      <LineId Id="232" Count="0" />
+      <LineId Id="408" Count="0" />
+      <LineId Id="410" Count="0" />
+      <LineId Id="412" Count="2" />
+      <LineId Id="417" Count="0" />
+      <LineId Id="416" Count="0" />
+      <LineId Id="411" Count="0" />
+      <LineId Id="418" Count="0" />
+      <LineId Id="421" Count="0" />
+      <LineId Id="420" Count="0" />
+      <LineId Id="464" Count="9" />
+      <LineId Id="462" Count="1" />
+      <LineId Id="177" Count="3" />
+      <LineId Id="3" Count="0" />
+      <LineId Id="46" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_KF300.ACT_RunPara">
+      <LineId Id="1250" Count="0" />
+      <LineId Id="1169" Count="0" />
+      <LineId Id="1177" Count="0" />
+      <LineId Id="357" Count="0" />
+      <LineId Id="764" Count="0" />
+      <LineId Id="842" Count="0" />
+      <LineId Id="1162" Count="0" />
+      <LineId Id="1165" Count="1" />
+      <LineId Id="1164" Count="0" />
+      <LineId Id="1163" Count="0" />
+      <LineId Id="358" Count="0" />
+      <LineId Id="766" Count="0" />
+      <LineId Id="749" Count="0" />
+      <LineId Id="751" Count="4" />
+      <LineId Id="757" Count="5" />
+      <LineId Id="747" Count="0" />
+      <LineId Id="844" Count="0" />
+      <LineId Id="767" Count="2" />
+      <LineId Id="834" Count="0" />
+      <LineId Id="837" Count="0" />
+      <LineId Id="770" Count="0" />
+      <LineId Id="836" Count="0" />
+      <LineId Id="773" Count="0" />
+      <LineId Id="808" Count="1" />
+      <LineId Id="902" Count="0" />
+      <LineId Id="830" Count="0" />
+      <LineId Id="832" Count="0" />
+      <LineId Id="1259" Count="2" />
+      <LineId Id="906" Count="0" />
+      <LineId Id="815" Count="3" />
+      <LineId Id="801" Count="0" />
+      <LineId Id="839" Count="0" />
+      <LineId Id="1258" Count="0" />
+      <LineId Id="774" Count="0" />
+      <LineId Id="908" Count="0" />
+      <LineId Id="748" Count="0" />
+      <LineId Id="780" Count="0" />
+      <LineId Id="782" Count="1" />
+      <LineId Id="1263" Count="0" />
+      <LineId Id="1271" Count="2" />
+      <LineId Id="1264" Count="0" />
+      <LineId Id="909" Count="0" />
+      <LineId Id="926" Count="0" />
+      <LineId Id="930" Count="5" />
+      <LineId Id="910" Count="1" />
+      <LineId Id="938" Count="5" />
+      <LineId Id="937" Count="0" />
+      <LineId Id="700" Count="0" />
+      <LineId Id="850" Count="0" />
+      <LineId Id="1275" Count="1" />
+      <LineId Id="1274" Count="0" />
+      <LineId Id="788" Count="1" />
+      <LineId Id="792" Count="0" />
+      <LineId Id="862" Count="2" />
+      <LineId Id="861" Count="0" />
+      <LineId Id="865" Count="0" />
+      <LineId Id="867" Count="1" />
+      <LineId Id="871" Count="3" />
+      <LineId Id="866" Count="0" />
+      <LineId Id="952" Count="1" />
+      <LineId Id="1278" Count="1" />
+      <LineId Id="1277" Count="0" />
+      <LineId Id="957" Count="13" />
+      <LineId Id="1220" Count="0" />
+      <LineId Id="1180" Count="0" />
+      <LineId Id="996" Count="0" />
+      <LineId Id="1240" Count="1" />
+      <LineId Id="1497" Count="0" />
+      <LineId Id="999" Count="0" />
+      <LineId Id="1499" Count="2" />
+      <LineId Id="875" Count="0" />
+      <LineId Id="1003" Count="0" />
+      <LineId Id="1006" Count="6" />
+      <LineId Id="1002" Count="0" />
+      <LineId Id="1013" Count="6" />
+      <LineId Id="878" Count="0" />
+      <LineId Id="1047" Count="1" />
+      <LineId Id="1242" Count="1" />
+      <LineId Id="1049" Count="3" />
+      <LineId Id="1027" Count="0" />
+      <LineId Id="1053" Count="16" />
+      <LineId Id="1020" Count="0" />
+      <LineId Id="1350" Count="0" />
+      <LineId Id="1423" Count="2" />
+      <LineId Id="1427" Count="1" />
+      <LineId Id="1351" Count="0" />
+      <LineId Id="1438" Count="7" />
+      <LineId Id="1429" Count="0" />
+      <LineId Id="1446" Count="6" />
+      <LineId Id="1352" Count="0" />
+      <LineId Id="1470" Count="0" />
+      <LineId Id="1511" Count="0" />
+      <LineId Id="1471" Count="4" />
+      <LineId Id="1510" Count="0" />
+      <LineId Id="1477" Count="9" />
+      <LineId Id="1491" Count="0" />
+      <LineId Id="1488" Count="2" />
+      <LineId Id="1353" Count="0" />
+      <LineId Id="1159" Count="0" />
+      <LineId Id="1514" Count="0" />
+      <LineId Id="1160" Count="0" />
+      <LineId Id="1167" Count="0" />
+      <LineId Id="1158" Count="0" />
+      <LineId Id="698" Count="1" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="1248" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

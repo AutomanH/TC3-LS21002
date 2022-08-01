@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_MCK_ParOut" Id="{691faa5a-1f31-49ff-9b00-e7df8d3094f9}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE ST_MCK_ParOut :
+STRUCT
+	sSrialNumber		:STRING;//序列号
+	rCurrentWeight		:REAL;//当前重量
+	rCurrentTareWight	:REAL;//当前皮重
+	rWeightMax			:REAL;//最大称重值
+	rWeightMin			:REAL;//最小称重值	
+	sWeightUnit			:STRING;//单位
+	sErrorID			:STRING;//报错内容
+	xContinuesRead	:BOOL;//连续读取重量中
+	rStableWeight	:REAL;//稳态重量记录
+	rRepeatWeight:REAL;//循环读取中
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

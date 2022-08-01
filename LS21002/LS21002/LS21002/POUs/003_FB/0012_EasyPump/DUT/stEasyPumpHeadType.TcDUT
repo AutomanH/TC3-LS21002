@@ -1,0 +1,30 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="stEasyPumpHeadType" Id="{a26b565c-c923-46e1-ab7c-12366f1f73b1}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE stEasyPumpHeadType :
+(
+	i_MiniPump01:=1,
+	i_MiniPump02:=2,	
+	
+	i_HandyPump01:=3,
+	i_HandyPump02:=4,	
+	
+	i_EasyPumpI_III:=5,//单通道
+	i_EasyPumpII_IV:=6,//单通道
+	i_EasyPumpV_VI:=7,//双通道
+
+	i_AMC1_AMC12:=8,//适用(内径x壁厚0.13-3/0.8-1mm)
+	i_YZ1515x:=9,//适用13#,14#,16#,17#,18#,19#,25#管
+	i_YZ2515x:=10,//适用15#,24#管	
+	
+	iDY15:=11,//
+	iDY25:=12,
+	
+	iUD15:=13
+)INT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

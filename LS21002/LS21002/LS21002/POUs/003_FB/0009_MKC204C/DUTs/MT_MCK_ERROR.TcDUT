@@ -1,0 +1,32 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="MT_MCK_ERROR" Id="{a47b9c1e-c680-4e07-91c0-bcb1f2c598b1}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE MT_MCK_ERROR :
+(
+ 	No_ERROR := 0,	
+  	FLT_PARA             			  	:= 1, (* E-Gripper Parameter fault   程序配置参数有问题 *)
+  	FLT_CONNECT       		        	:= 2, (* E-Gripper not ready 旋转有通信报警*)  
+  	FLT_RDYCMD           			    := 3, (* E-Gripper read/write command while not ready 预留*)  
+  	FLT_STOP_TIMEOUT 					:= 12, (* E-Gripper org command execute Timeout *)  
+	FLT_CMD_TIMEOUT    		 			:= 15, (* E-Gripper release command execute Timeout *) 
+  	FLT_LogicaL     					:= 17, (* 逻辑错误 *)  
+ 	FLT_Syntax     						:= 18, (* 语言错误 *) 
+ 	FLT_CommandCantSend     			:= 19, (* 命令不能发送 *) 
+  	FLT_Par     						:= 20, (* 参数错误 *) 
+  	FLT_ZI     							:= 21, (* 清零未响应 *) 
+  	FLT_ZOverMax     					:= 22, (* 清零超出上限 *) 	
+  	FLT_ZOverMin     					:= 23,(* 清零低于上限 *)
+  	FLT_CmdFeedback     				:= 24,(* 指令反馈错误 *)	
+  	FLT_TOverMax     					:= 25, (* 去皮超出上限 *) 	
+  	FLT_TOverMin     					:= 26,(* 去皮低于上限 *)	
+		FLT_CannotExecutable			:=27,(*理解指令，但不能执行*)
+		FLT_SIROverMIN						:=28,(*重复读取超出下限*)
+		FLT_SIROverMAX						:=29,(*重复读取超出上限*)
+		FLT_SIRERROR						 :=30(*重复读取报错*)
+)INT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

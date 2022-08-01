@@ -1,0 +1,41 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="stEasyPumpsParamter" Id="{03770599-bb0d-430f-95ea-fb5139a79cb3}">
+    <Declaration><![CDATA[TYPE stEasyPumpsParamter :
+STRUCT
+ 		xRdyCmd:BOOL;
+		xStart:BOOL;
+		xReset:BOOL;
+		xBusy:BOOL;
+		xError:BOOL;
+		xDone:BOOL; 
+		
+		// 手动校准步骤
+		iMCalibStep,iOldMCalibStep: INT;
+
+ 		iPumpContorller:INT;
+		iPumpModule:INT;
+		rSetVolume:REAL;
+		rRunTime :REAL;
+		iCycleNum:INT;
+		rAverageRealVolume:REAL;
+		arrRealVolume:ARRAY[1..3] OF REAL;
+		arrTestRealVolume:ARRAY[1..10] OF REAL;
+		iInjectCounter:INT;
+		iCalibCounter:INT;
+		iRecordCounter:INT;
+		//操作
+		
+		xModulePushStart:BOOL;//单通道注液开始
+		xCalibTestStart:BOOL;//校准测试开始
+		xRecordDataStart:BOOL;//记录数据开始
+		xModulePushOK:BOOL;//注液OK
+		xCalibTestOK:BOOL;//校准测试OK
+		xRecordDataOK:BOOL;//记录数据OK
+		tStableDelay:TON;
+		
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

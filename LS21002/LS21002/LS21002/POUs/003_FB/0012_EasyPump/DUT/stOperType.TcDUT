@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="stOperType" Id="{f796eafe-b0db-42a7-9b39-1d870a76d1dc}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE stOperType :
+(
+ 	iWait:=0,
+	iPush := 1,
+	iPull :=2,
+	iModulePush:=3,
+	iStop:=4,
+	iFullSpeedPush:=5,
+	iFullSpeedPull:=6,
+	iFullSpeedStop:=7,
+	iCalibParaWrite:=8,
+	iCalibInit:=9,
+	iCalibration:=10
+)INT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

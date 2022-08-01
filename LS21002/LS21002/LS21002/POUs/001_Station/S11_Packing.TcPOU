@@ -7,13 +7,16 @@ VAR
 	station					: REFERENCE TO FB_Station:=fbstation[11];
 	//200smart通讯
 	Modbus_200Smart	: REFERENCE TO FB_Modbus_200Smart:=fbModbus_200Smart;
+	// 设备停止延时
+	tStopDelay:Tc2_Standard.TON;
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[FlowAuto();
 FlowInit();
 ILC();
-Mapping();]]></ST>
+Mapping();
+General();]]></ST>
     </Implementation>
     <Action Name="FlowAuto" Id="{355e307b-1950-4a77-9294-826bb6ef49f8}">
       <Implementation>
@@ -23,7 +26,7 @@ IF NOT station.xInitDone
 THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
-ELSIF station.xRunning  
+ELSIF station.xRunning  OR station.xRunningOffProhibit
 THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
 CASE station.iStepAuto OF	  
@@ -47,9 +50,8 @@ CASE station.iStepAuto OF
 			
 			station.iStepAuto:= 10;
 		END_IF
-    10: //复位数据 
+   10: //复位数据 
 			station.iStepAuto :=20;
-
 	 20:	
 				IF  sModbus_200SMART.iTemperatureReached  =1 THEN 
 						station.iStepAuto:= 999;
@@ -98,6 +100,18 @@ END_IF
 ]]></ST>
       </Implementation>
     </Action>
+    <Action Name="General" Id="{57b7b1e1-58d7-46b7-be34-80b068e5db99}">
+      <Implementation>
+        <ST><![CDATA[{region "停止"}
+tStopDelay(IN:= fbMachine[1].xManualMode, PT:=T#60S , Q=> , ET=> );
+IF tStopDelay.Q THEN
+		station.xRunningOffProhibit:=FALSE;
+ELSIF  station.iStepAuto =10 THEN
+		station.xRunningOffProhibit:=TRUE;
+END_IF	 
+{endregion}]]></ST>
+      </Implementation>
+    </Action>
     <Action Name="ILC" Id="{d805c2dd-9919-420c-8847-e831a9b1ca0f}">
       <Implementation>
         <ST><![CDATA[
@@ -127,6 +141,7 @@ Modbus_200Smart.stPara.bySlaveID:=1;
       <LineId Id="12" Count="0" />
       <LineId Id="11" Count="0" />
       <LineId Id="21" Count="0" />
+      <LineId Id="29" Count="0" />
     </LineIds>
     <LineIds Name="S11_Packing.FlowAuto">
       <LineId Id="1155" Count="10" />
@@ -135,7 +150,6 @@ Modbus_200Smart.stPara.bySlaveID:=1;
       <LineId Id="1184" Count="0" />
       <LineId Id="1256" Count="0" />
       <LineId Id="1970" Count="0" />
-      <LineId Id="1975" Count="0" />
       <LineId Id="1974" Count="0" />
       <LineId Id="1979" Count="0" />
       <LineId Id="1976" Count="1" />
@@ -143,7 +157,8 @@ Modbus_200Smart.stPara.bySlaveID:=1;
       <LineId Id="1453" Count="2" />
       <LineId Id="1215" Count="5" />
       <LineId Id="1224" Count="0" />
-      <LineId Id="1972" Count="1" />
+      <LineId Id="1981" Count="0" />
+      <LineId Id="1973" Count="0" />
       <LineId Id="1971" Count="0" />
     </LineIds>
     <LineIds Name="S11_Packing.FlowInit">
@@ -152,6 +167,15 @@ Modbus_200Smart.stPara.bySlaveID:=1;
       <LineId Id="467" Count="4" />
       <LineId Id="462" Count="4" />
       <LineId Id="436" Count="0" />
+    </LineIds>
+    <LineIds Name="S11_Packing.General">
+      <LineId Id="2" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="7" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="16" Count="1" />
+      <LineId Id="5" Count="0" />
+      <LineId Id="3" Count="0" />
     </LineIds>
     <LineIds Name="S11_Packing.ILC">
       <LineId Id="234" Count="4" />

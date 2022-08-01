@@ -13,13 +13,15 @@ VAR
 	xPreLineMoveStop: BOOL;
 	MotorStartR_TRIG: R_TRIG;
 	MotorStopR_TRIG: R_TRIG;
+	//设备停止延时
+	tStopDelay:Tc2_Standard.TON;
 END_VAR]]></Declaration>
     <Implementation>
       <ST><![CDATA[A_Input();
 FlowAuto();
 FlowInit();
 ILC();
-
+General();
 Z_Output();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{329a0dfa-30d3-446b-bc5c-165dca73422f}">
@@ -41,7 +43,7 @@ IF NOT station.xInitDone
 THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
-ELSIF station.xRunning  
+ELSIF station.xRunning   OR station.xRunningOffProhibit  
 THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
 CASE station.iStepAuto OF	  
@@ -109,6 +111,18 @@ END_IF
 ]]></ST>
       </Implementation>
     </Action>
+    <Action Name="General" Id="{4f4e7763-e62d-44df-8815-b1cc16b09160}">
+      <Implementation>
+        <ST><![CDATA[{region "停止"}
+tStopDelay(IN:= fbMachine[1].xManualMode, PT:=T#60S , Q=> , ET=> );
+IF tStopDelay.Q THEN
+		station.xRunningOffProhibit:=FALSE;
+ELSIF  station.iStepAuto =10 THEN
+		station.xRunningOffProhibit:=TRUE;
+END_IF	 
+{endregion}]]></ST>
+      </Implementation>
+    </Action>
     <Action Name="ILC" Id="{a9cfde94-ebcb-4ae0-be24-a4394fab2264}">
       <Implementation>
         <ST><![CDATA[
@@ -164,6 +178,10 @@ ATV12.xIDeviceRunning:=station.xSingleRunning;]]></ST>
       <LineId Id="471" Count="0" />
       <LineId Id="462" Count="4" />
       <LineId Id="436" Count="0" />
+    </LineIds>
+    <LineIds Name="S12_PreLine.General">
+      <LineId Id="2" Count="6" />
+      <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="S12_PreLine.ILC">
       <LineId Id="234" Count="4" />

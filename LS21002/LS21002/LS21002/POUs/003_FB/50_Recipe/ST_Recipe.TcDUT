@@ -12,6 +12,7 @@ STRUCT
 	TURIN						:ARRAY[1..gc_uiTURINRobot_Num] OF ST_TURINROBOT_Data;
 	Camera						:ARRAY[1..gc_uiCameraNum] OF ST_CameraPara;
    TimeS						:ARRAY[1..10] OF TIME;//[1]-贴标延时
+	 EasyPumps					:ARRAY[1..gc_uiRudongPump] OF ST_SetPara;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

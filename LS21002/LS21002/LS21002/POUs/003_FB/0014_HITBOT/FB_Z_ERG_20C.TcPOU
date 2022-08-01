@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_Z_ERG_20C" Id="{57dae0ee-a580-49ba-acae-310696fcca36}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_Z_ERG_20C EXTENDS FB_Modbus_Tcp
+(*
+********************************************************************************
+* Name: FB_Z_ERG_20C
+*
+* Author:  Automanh
+* Version: 1.0.0
+*
+* Description:
+*  HITBOT AutoClamp of Rotate and Holding 
+*
+* Remarks:
+*
+* Revisions:
+*   1.0.0 -AutomanH Rebuild
+*********************************************************************************)
+VAR_INPUT
+
+END_VAR
+VAR_OUTPUT
+END_VAR
+VAR
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[]]></ST>
+    </Implementation>
+    <LineIds Name="FB_Z_ERG_20C">
+      <LineId Id="9" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

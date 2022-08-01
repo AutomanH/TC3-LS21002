@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="PumpError" Id="{a59b5ea9-c961-47ed-aeef-8793d1ce5b6f}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE PumpError :
+(
+ 	NO_ERROR :=0,//无错误
+	FLT_PARA :=1,//参数错误
+	FLT_FLUVOLUM_TIME_PARA:=2,//时间参数错误
+	FLT_READ_PARA:=3,//读取参数错误
+	FLT_SET_PARA:=4,//参数设定错误
+	FLT_CMD_TIMEOUT:=5,//命令超时
+	FLT_RUN_ERROR:=6,//运行报错
+	FLT_Calib_OverFlow:=7,//误差过大
+	FLT_CALIB_PARA:=8,//校准参数设定错误
+	FLT_CONFIGURE_PARA:=9//配置错误
+);
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

@@ -785,7 +785,6 @@ END_IF
 CASE _diCmdState OF	
 		
 	0://单元实际液量设定
-		
 		_tonDelay(IN:= TRUE,pt:=T#20MS);//保证执行的是最新的一次
 		st_IOData.O_ModuleRealVolume := iModuleRealVolume	;	
 			st_IOData.O_FluVolumeSet := rFluVolumeSet	;	
@@ -2580,9 +2579,7 @@ xComplete:=1;
       <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="FB_RuDongPump_modbus_DF600Plus.CmdCalParWrite">
-      <LineId Id="3" Count="8" />
-      <LineId Id="52" Count="0" />
-      <LineId Id="12" Count="1" />
+      <LineId Id="3" Count="10" />
       <LineId Id="53" Count="0" />
       <LineId Id="14" Count="33" />
       <LineId Id="2" Count="0" />

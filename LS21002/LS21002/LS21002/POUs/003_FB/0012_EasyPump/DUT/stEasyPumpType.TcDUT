@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="stEasyPumpType" Id="{a8cf6787-e555-4da2-a63c-ff5be0047a6a}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE stEasyPumpType :
+(
+	i_LabV:=1,//LabV系列
+	i_LabF1:=2,//0.1-150rpm
+	i_LabF3:=3,//0.1-350rpm	
+	i_LabF4:=4,//0.1-600rpm	
+	i_F:=5,//F系列
+	i_M:=6,//M系列
+	i_V:=7,//V系列
+	i_BT_D:=8,//BT_D系列	
+	i_PDS:=9,//PDS系列	,五位蠕动泵	
+	i_DFPluse:=10//DFPluse系列
+)INT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

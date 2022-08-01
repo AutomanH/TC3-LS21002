@@ -1,0 +1,16 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_RGI_14_Sys_Para" Id="{a392a32e-5568-4c1a-bdaf-d8f342cbcb99}">
+    <Declaration><![CDATA[TYPE ST_RGI_14_Sys_Para :
+STRUCT
+	///modbus子站IP地址
+	strSlaveIP: STRING(15) := '127.0.0.0';
+	///默认是502
+	iSlavePort: UINT := 502;
+	///modbus rtu子站地址		
+	bySlaveID: BYTE;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

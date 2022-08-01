@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_RGI_Opera" Id="{199630d0-0bcd-4df1-a7c1-0e2333b1ed09}">
+    <Declaration><![CDATA[TYPE ST_RGI_Opera :
+STRUCT
+	///初始化控制
+	xHMInitButton: BOOL;
+	///初始化控制
+	xInitControl: BOOL;
+	///夹爪控制
+	aHMIClampButton: ARRAY[1..10] OF BOOL;
+	///夹爪控制
+	aHMIReleaseButton: ARRAY[1..10] OF BOOL;
+	///夹爪控制
+	aClampControl: ARRAY[1..10] OF BOOL;
+	///夹爪控制
+	aReleaseControl: ARRAY[1..10] OF BOOL;
+	///绝对旋转控制
+	aHMIRotateClampButton: ARRAY[1..10] OF BOOL;
+	///绝对旋转控制
+	aHMIRotateReleaseButton: ARRAY[1..10] OF BOOL;
+	///绝对旋转控制
+	aRotateClampControl: ARRAY[1..10] OF BOOL;
+	///绝对旋转控制
+	aRotateReleaseControl: ARRAY[1..10] OF BOOL;
+	///相对旋转控制	
+	aHMIRotateClampRefButton: ARRAY[1..10] OF BOOL;
+	///相对旋转控制	
+	aHMIRotateReleaseRefButton: ARRAY[1..10] OF BOOL;
+	///相对旋转控制	
+	aRotateClampRefControl: ARRAY[1..10] OF BOOL;
+	///相对旋转控制	
+	aRotateReleaseRefControl: ARRAY[1..10] OF BOOL;
+	xHMIReset: BOOL;
+	xHMIPower: BOOL;
+	///测试模式时候不做NG检测
+	xTestMode: BOOL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

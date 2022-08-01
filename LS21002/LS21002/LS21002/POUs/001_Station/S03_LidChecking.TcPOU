@@ -417,47 +417,46 @@ CASE station.iStepAuto OF
 			(*开始循环*)
 			tsModuleProcess[bXCounter+1].xProcessStarted :=TRUE;
 			IF   bCounter =1  (*17.18位置有产品*)  THEN
-					IF  bXCounter =1 THEN
-							FOR i:=2 TO  9 BY 1 DO
-								fbCamera[i].xlTrigger:=TRUE;
-							END_FOR
-					ELSIF bXCounter =2 THEN
-							FOR i:=2 TO  5 BY 1 DO
-								fbCamera[i].xlTrigger:=TRUE;
-							END_FOR
-					END_IF
+							IF  bXCounter =1 THEN
+									FOR i:=2 TO  9 BY 1 DO
+										fbCamera[i].xlTrigger:=TRUE;
+									END_FOR
+							ELSIF bXCounter =2 THEN
+									FOR i:=2 TO  5 BY 1 DO
+										fbCamera[i].xlTrigger:=TRUE;
+									END_FOR
+							END_IF
 			ELSIF  bCounter=2  THEN
-					IF  bXCounter =1 THEN
-								FOR i:=2 TO 17 BY 1 DO
-									fbCamera[i].xlTrigger:=TRUE;
-								END_FOR
-					ELSIF   bXCounter =2 THEN
-								FOR i:=2 TO 13 BY 1 DO
-									fbCamera[i].xlTrigger:=TRUE;
-								END_FOR	
-					END_IF
+							IF  bXCounter =1 THEN
+										FOR i:=2 TO 17 BY 1 DO
+											fbCamera[i].xlTrigger:=TRUE;
+										END_FOR
+							ELSIF   bXCounter =2 THEN
+										FOR i:=2 TO 13 BY 1 DO
+											fbCamera[i].xlTrigger:=TRUE;
+										END_FOR	
+							END_IF
 			ELSIF   bCounter=3 THEN
-					FOR i:=2 TO 17 BY 1 DO
-						fbCamera[i].xlTrigger:=TRUE;
-					END_FOR
-			END_IF
+							FOR i:=2 TO 17 BY 1 DO
+								fbCamera[i].xlTrigger:=TRUE;
+							END_FOR
 			(*结束循环*)
-			IF   bEndCounter =1 (*17.18位置无产品*)  THEN
-					IF  bXCounter =1 THEN
-								FOR i:=6 TO  17 BY 1 DO
-									fbCamera[i].xlTrigger:=TRUE;
-								END_FOR
-					ELSIF bXCounter =2 THEN
-								FOR i:=2 TO  17 BY 1 DO
-									fbCamera[i].xlTrigger:=TRUE;
-								END_FOR
-					END_IF
+			ELSIF   bEndCounter =1 (*17.18位置无产品*)  THEN
+							IF  bXCounter =1 THEN
+										FOR i:=6 TO  17 BY 1 DO
+											fbCamera[i].xlTrigger:=TRUE;
+										END_FOR
+							ELSIF bXCounter =2 THEN
+										FOR i:=2 TO  17 BY 1 DO
+											fbCamera[i].xlTrigger:=TRUE;
+										END_FOR
+							END_IF
 			ELSIF  bEndCounter =2 THEN
-			 		IF  bXCounter =2 THEN
-							FOR i:=14 TO  17 BY 1 DO
-									fbCamera[i].xlTrigger:=TRUE;
-							END_FOR	
-					END_IF
+							IF  bXCounter =2 THEN
+									FOR i:=14 TO  17 BY 1 DO
+											fbCamera[i].xlTrigger:=TRUE;
+									END_FOR	
+							END_IF
 			END_IF
 			arTonDelay[07](IN:=FALSE);
 			station.iStepAuto:=145;
@@ -596,7 +595,7 @@ CASE station.iStepAuto OF
 						END_IF
 {endregion}
 {region "bCounter =2 and bXCounter =1"}
-		ELSIF  bCounter=2 THEN
+			 ELSIF  bCounter=2 THEN
 					IF bXCounter =1 THEN
 										 IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
 												 							arMainlineFixtureData[arCurFixtureNumStation[5]].stProcessData.arCameraResult[3,bYCounter]:=
@@ -1021,7 +1020,7 @@ CASE station.iStepAuto OF
 {endregion}
 {region "bEndCounter =1 and bXCounter =1"}
 		(*结束循环*)
-			 IF   bEndCounter =1 (*17.18位置无产品*)  THEN	
+			ELSIF   bEndCounter =1 (*17.18位置无产品*)  THEN	
 				  	IF  bXCounter =1 THEN
 							IF   axBypassSignal[3] OR  fbMachine[1].xTryRun THEN
 											arMainlineFixtureData[arCurFixtureNumStation[7]].stProcessData.arCameraResult[3,3+bYCounter]:=	
@@ -1238,8 +1237,7 @@ CASE station.iStepAuto OF
 											END_CASE 
 							END_IF								
 						END_IF
-				END_IF	
-		END_IF
+			END_IF	
 {endregion}	
 		160://Y循环+1
 			bYCounter :=bYCounter +1 ;
@@ -1854,7 +1852,6 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="2481" Count="0" />
       <LineId Id="2484" Count="1" />
       <LineId Id="2483" Count="0" />
-      <LineId Id="1809" Count="0" />
       <LineId Id="2486" Count="0" />
       <LineId Id="2455" Count="0" />
       <LineId Id="2487" Count="7" />
@@ -1864,7 +1861,7 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="2509" Count="1" />
       <LineId Id="2508" Count="0" />
       <LineId Id="2500" Count="0" />
-      <LineId Id="2451" Count="0" />
+      <LineId Id="5426" Count="0" />
       <LineId Id="3854" Count="0" />
       <LineId Id="3227" Count="0" />
       <LineId Id="3849" Count="1" />
@@ -1967,7 +1964,7 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="4142" Count="0" />
       <LineId Id="4908" Count="0" />
       <LineId Id="1844" Count="0" />
-      <LineId Id="2009" Count="0" />
+      <LineId Id="5427" Count="0" />
       <LineId Id="3369" Count="0" />
       <LineId Id="5036" Count="0" />
       <LineId Id="3420" Count="0" />
@@ -2387,7 +2384,7 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="4816" Count="0" />
       <LineId Id="4818" Count="0" />
       <LineId Id="2228" Count="0" />
-      <LineId Id="4928" Count="1" />
+      <LineId Id="4928" Count="0" />
       <LineId Id="3233" Count="0" />
       <LineId Id="1892" Count="0" />
       <LineId Id="2586" Count="4" />

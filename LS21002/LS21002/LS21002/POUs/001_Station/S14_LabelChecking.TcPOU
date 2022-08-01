@@ -23,6 +23,8 @@ VAR
 	xNGFlag: BOOL;
 	//运行结束
 	XFlowAutoDone:BOOL;
+		// 设备停止延时
+	tStopDelay: TON;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -105,7 +107,6 @@ IF NOT station.xInitDone
 THEN
  	station.iStepAuto:=0;
  	station.xDone:=FALSE;
-	station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
 ELSIF station.xRunning  OR   station.xRunningOffProhibit
 THEN
 //-----------------------------------------动作步骤--------------------------------------------------------
@@ -240,7 +241,14 @@ END_IF
     </Action>
     <Action Name="General" Id="{4e5f5ae7-ceae-48cf-bdf4-41d615a5187b}">
       <Implementation>
-        <ST><![CDATA[
+        <ST><![CDATA[{region "停止"}
+tStopDelay(IN:= fbMachine[1].xManualMode, PT:=T#60S , Q=> , ET=> );
+IF tStopDelay.Q THEN
+		station.xRunningOffProhibit:=FALSE;
+ELSIF  station.iStepAuto =10 THEN
+		station.xRunningOffProhibit:=TRUE;
+END_IF	 
+{endregion}
 ]]></ST>
       </Implementation>
     </Action>
@@ -328,9 +336,7 @@ QxS12HOZCyl_2HP	:=fbHOZCyl_2.xHP_Valve;//	贴标检测工位¶推料气缸2¶原
       <LineId Id="40" Count="0" />
     </LineIds>
     <LineIds Name="S14_LabelChecking.FlowAuto">
-      <LineId Id="1155" Count="5" />
-      <LineId Id="1253" Count="0" />
-      <LineId Id="1161" Count="4" />
+      <LineId Id="1155" Count="10" />
       <LineId Id="1167" Count="15" />
       <LineId Id="1452" Count="0" />
       <LineId Id="1183" Count="1" />
@@ -389,6 +395,7 @@ QxS12HOZCyl_2HP	:=fbHOZCyl_2.xHP_Valve;//	贴标检测工位¶推料气缸2¶原
       <LineId Id="436" Count="0" />
     </LineIds>
     <LineIds Name="S14_LabelChecking.General">
+      <LineId Id="382" Count="6" />
       <LineId Id="361" Count="0" />
       <LineId Id="381" Count="0" />
     </LineIds>

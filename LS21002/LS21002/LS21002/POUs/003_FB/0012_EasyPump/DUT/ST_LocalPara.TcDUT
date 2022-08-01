@@ -1,0 +1,19 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_LocalPara" Id="{459e4e2d-a0f4-43f1-91df-921369a83276}">
+    <Declaration><![CDATA[TYPE ST_LocalPara :
+STRUCT
+	rFluVolumeSet   : REAL;//液量设定 0.0-99999.0 mL(0.1ml)
+	rRuntimeSet     : REAL;//运行时间设定 0.1-9999s(0.1s)
+	iCycleNumber		: INT;//重复次数
+	iModuleAdress		: INT;//灌装单元地址
+	iModuleSpeed		: REAL;//灌装单元速度
+	iModuleRealVolume	: REAL;//灌装实际液量	
+	iDirectionSet:INT;//方向
+	rVirualTime			:REAL;//虚假的时间
+  iAccuracySet				:REAL;//精度要求，如果是4%请填写0.04
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

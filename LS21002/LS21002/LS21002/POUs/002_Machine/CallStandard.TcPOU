@@ -99,7 +99,8 @@ ACT_Encoder();
 ACT_ATV12();
 ACT_SmcVacuum();
 ACT_LoadCell();
-ACT_Cimcor();]]></ST>
+ACT_Cimcor();
+ACT_EasyPump();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{423c098f-672e-4e09-b9e7-666319181834}">
       <Implementation>
@@ -523,6 +524,153 @@ fbCylinder[i](
 	xHP_Delay=> , 
 	xWP_Delay=> );
 END_FOR]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_EasyPump" Id="{fcb43c3f-3271-46fc-b327-5e9560180812}">
+      <Implementation>
+        <ST><![CDATA[fbEasyPumps[1].LocalClient.strSlaveIP:='192.168.1.60';
+fbEasyPumps[1].LocalClient.iSlavePort:=1031;
+fbEasyPumps[1].LocalClient.bySlaveID:=1;
+
+fbEasyPumps[2].LocalClient.strSlaveIP:='192.168.1.61';
+fbEasyPumps[2].LocalClient.iSlavePort:=1031;
+fbEasyPumps[2].LocalClient.bySlaveID:=1;
+
+fbEasyPumps[3].LocalClient.strSlaveIP:='192.168.1.62';
+fbEasyPumps[3].LocalClient.iSlavePort:=1031;
+fbEasyPumps[3].LocalClient.bySlaveID:=1;
+
+fbEasyPumps[4].LocalClient.strSlaveIP:='192.168.1.63';
+fbEasyPumps[4].LocalClient.iSlavePort:=1031;
+fbEasyPumps[4].LocalClient.bySlaveID:=1;
+
+fbEasyPumps[5].LocalClient.strSlaveIP:='192.168.1.66';
+fbEasyPumps[5].LocalClient.iSlavePort:=1031;
+fbEasyPumps[5].LocalClient.bySlaveID:=1;
+
+fbEasyPumps[6].LocalClient.strSlaveIP:='192.168.1.65';
+fbEasyPumps[6].LocalClient.iSlavePort:=1031;
+fbEasyPumps[6].LocalClient.bySlaveID:=1;
+
+fbEasyPumps[7].LocalClient.strSlaveIP:='192.168.1.67';
+fbEasyPumps[7].LocalClient.iSlavePort:=1031;
+fbEasyPumps[7].LocalClient.bySlaveID:=1;
+
+fbEasyPumps[8].LocalClient.strSlaveIP:='192.168.1.68';
+fbEasyPumps[8].LocalClient.iSlavePort:=1031;
+fbEasyPumps[8].LocalClient.bySlaveID:=1;
+
+fbEasyPumps[9].LocalClient.strSlaveIP:='192.168.1.69';
+fbEasyPumps[9].LocalClient.iSlavePort:=1031;
+fbEasyPumps[9].LocalClient.bySlaveID:=1;
+
+fbEasyPumps[10].LocalClient.strSlaveIP:='192.168.1.71';
+fbEasyPumps[10].LocalClient.iSlavePort:=1031;
+fbEasyPumps[10].LocalClient.bySlaveID:=1;
+
+fbEasyPumps[11].LocalClient.strSlaveIP:='192.168.1.70';
+fbEasyPumps[11].LocalClient.iSlavePort:=1031;
+fbEasyPumps[11].LocalClient.bySlaveID:=1;
+
+fbEasyPumps[12].LocalClient.strSlaveIP:='192.168.1.64';
+fbEasyPumps[12].LocalClient.iSlavePort:=1031;
+fbEasyPumps[12].LocalClient.bySlaveID:=1;
+
+
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.EasyPumps[1].iPumpType:=stEasyPumpType.i_DFPluse;//设定泵控制器类型
+stData.EasyPumps[1].iPumpTypeSet:=stEasyPumpHeadType.i_MiniPump01;//设定泵泵头类型
+stData.EasyPumps[1].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.EasyPumps[2].iPumpType:=stEasyPumpType.i_DFPluse;//设定泵控制器类型
+stData.EasyPumps[2].iPumpTypeSet:=stEasyPumpHeadType.i_MiniPump01;//设定泵泵头类型
+stData.EasyPumps[2].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.EasyPumps[3].iPumpType:=stEasyPumpType.i_DFPluse;//设定泵控制器类型
+stData.EasyPumps[3].iPumpTypeSet:=stEasyPumpHeadType.i_MiniPump01;//设定泵泵头类型
+stData.EasyPumps[3].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.EasyPumps[4].iPumpType:=stEasyPumpType.i_DFPluse;//设定泵控制器类型
+stData.EasyPumps[4].iPumpTypeSet:=stEasyPumpHeadType.i_MiniPump01;//设定泵泵头类型
+stData.EasyPumps[4].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.EasyPumps[5].iPumpType:=stEasyPumpType.i_DFPluse;//设定泵控制器类型
+stData.EasyPumps[5].iPumpTypeSet:=stEasyPumpHeadType.i_MiniPump01;//设定泵泵头类型
+stData.EasyPumps[5].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.EasyPumps[6].iPumpType:=stEasyPumpType.i_DFPluse;//设定泵控制器类型
+stData.EasyPumps[6].iPumpTypeSet:=stEasyPumpHeadType.i_HandyPump01;//设定泵泵头类型
+stData.EasyPumps[6].iHosePipeTypeSet:=RudongPump_SoftPipeType.P13;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.EasyPumps[7].iPumpType:=stEasyPumpType.i_DFPluse;//设定泵控制器类型
+stData.EasyPumps[7].iPumpTypeSet:=stEasyPumpHeadType.i_MiniPump01;//设定泵泵头类型
+stData.EasyPumps[7].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.EasyPumps[8].iPumpType:=stEasyPumpType.i_DFPluse;//设定泵控制器类型
+stData.EasyPumps[8].iPumpTypeSet:=stEasyPumpHeadType.i_MiniPump01;//设定泵泵头类型
+stData.EasyPumps[8].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.EasyPumps[9].iPumpType:=stEasyPumpType.i_DFPluse;//设定泵控制器类型
+stData.EasyPumps[9].iPumpTypeSet:=stEasyPumpHeadType.i_MiniPump01;//设定泵泵头类型
+stData.EasyPumps[9].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.EasyPumps[10].iPumpType:=stEasyPumpType.i_DFPluse;//设定泵控制器类型
+stData.EasyPumps[10].iPumpTypeSet:=stEasyPumpHeadType.i_MiniPump01;//设定泵泵头类型
+stData.EasyPumps[10].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.EasyPumps[11].iPumpType:=stEasyPumpType.i_DFPluse;//设定泵控制器类型
+stData.EasyPumps[11].iPumpTypeSet:=stEasyPumpHeadType.i_MiniPump01;//设定泵泵头类型
+stData.EasyPumps[11].iHosePipeTypeSet:=RudongPump_SoftPipeType.P19;//设定泵软管类型
+//如果泵参数固定，就直接配置好，如果不固定，就在触摸屏配置
+stData.EasyPumps[12].iPumpType:=stEasyPumpType.i_DFPluse;//设定泵控制器类型
+stData.EasyPumps[12].iPumpTypeSet:=stEasyPumpHeadType.i_HandyPump01;//设定泵泵头类型
+stData.EasyPumps[12].iHosePipeTypeSet:=RudongPump_SoftPipeType.P13;//设定泵软管类型
+
+///方向设定
+stData.EasyPumps[1].iDirectionSet:=1;
+stData.EasyPumps[2].iDirectionSet:=0;
+stData.EasyPumps[3].iDirectionSet:=1;
+stData.EasyPumps[4].iDirectionSet:=0;
+stData.EasyPumps[5].iDirectionSet:=1;
+stData.EasyPumps[6].iDirectionSet:=0;
+stData.EasyPumps[7].iDirectionSet:=0;
+stData.EasyPumps[8].iDirectionSet:=1;
+stData.EasyPumps[9].iDirectionSet:=0;
+stData.EasyPumps[10].iDirectionSet:=1;
+stData.EasyPumps[11].iDirectionSet:=0;
+stData.EasyPumps[12].iDirectionSet:=1;
+
+
+
+stData.EasyPumps[1].iAccuracySet:=0.03;
+stData.EasyPumps[2].iAccuracySet:=0.03;
+stData.EasyPumps[3].iAccuracySet:=0.03;
+stData.EasyPumps[4].iAccuracySet:=0.03;
+stData.EasyPumps[5].iAccuracySet:=0.03;
+stData.EasyPumps[6].iAccuracySet:=0.05;
+stData.EasyPumps[7].iAccuracySet:=0.03;
+stData.EasyPumps[8].iAccuracySet:=0.03;
+stData.EasyPumps[9].iAccuracySet:=0.03;
+stData.EasyPumps[10].iAccuracySet:=0.03;
+stData.EasyPumps[11].iAccuracySet:=0.03;
+stData.EasyPumps[12].iAccuracySet:=0.05;
+
+
+FOR i:=1 TO gc_uiRudongPump BY 1 DO
+ 		fbEasyPumps[i](
+							xIReset:= , 
+							xIManualMode:=fbMachine[1].xManualMode, 
+							xIAutoMode:= fbMachine[1].xAutoMode, 
+							xIDeviceRunning:=TRUE, 
+							stRunPara:= stData.EasyPumps[i], 
+							stDeviceOpe:= , 
+							xQBusy=> , 
+							xQDone=> , 
+							rMaxRunTime=> , 
+							rMinRunTime=> );
+END_FOR
+
+]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_Encoder" Id="{f1ea336b-559f-45dc-b193-b39e15392513}">
@@ -1530,6 +1678,7 @@ END_FOR]]></ST>
       <LineId Id="1130" Count="1" />
       <LineId Id="1267" Count="0" />
       <LineId Id="1335" Count="0" />
+      <LineId Id="1403" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.A_Input">
       <LineId Id="12" Count="2" />
@@ -1703,6 +1852,23 @@ END_FOR]]></ST>
       <LineId Id="64" Count="0" />
       <LineId Id="20" Count="7" />
       <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_EasyPump">
+      <LineId Id="220" Count="45" />
+      <LineId Id="191" Count="0" />
+      <LineId Id="268" Count="0" />
+      <LineId Id="272" Count="50" />
+      <LineId Id="335" Count="11" />
+      <LineId Id="349" Count="2" />
+      <LineId Id="348" Count="0" />
+      <LineId Id="193" Count="0" />
+      <LineId Id="352" Count="10" />
+      <LineId Id="46" Count="1" />
+      <LineId Id="64" Count="4" />
+      <LineId Id="70" Count="5" />
+      <LineId Id="63" Count="0" />
+      <LineId Id="42" Count="0" />
+      <LineId Id="41" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.ACT_Encoder">
       <LineId Id="11" Count="5" />

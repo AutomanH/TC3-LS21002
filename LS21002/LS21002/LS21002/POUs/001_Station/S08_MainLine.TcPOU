@@ -343,16 +343,16 @@ CASE station.iStepInit OF
 	IF  fbMainLineAxis.xPowerOn THEN
 			station.iStepInit:=30;
 	END_IF
-30://确定皮带线上是否有产品
-			//FOR i:= 1 TO gc_MainLineFixtureNumber BY 1 DO
-			//	IF   arMainlineFixtureData[i].xMaterialOnOff  THEN
-			//		station.iStepInit:=0;	
-			//		EXIT;
-			//	ELSIF  i =  gc_MainLineFixtureNumber THEN
-			//		station.iStepInit:=35;
-			//	END_IF
-			//END_FOR
-				station.iStepInit:=35;
+30://等待其他设备初始化完成
+			IF  S01_Loading.station.xInitDone  		AND 
+			S02_LidInjecting.station.xInitDone  AND 
+			S03_LidChecking.station.xInitDone 	AND 
+			S04_AluCovering.station.xInitDone  		AND 
+			S05_Adjusting.station.xInitDone  AND 
+			S06_Cutting.station.xInitDone 	AND 
+			S07_BoxCarrying.station.xInitDone 	THEN
+			station.iStepInit:=35;
+		END_IF
 35://传感器检测
 		IF   IxS01Sensor1Reached  OR
 			  IxS01Sensor2Reached  OR
@@ -726,15 +726,8 @@ END_IF
       <LineId Id="478" Count="0" />
       <LineId Id="492" Count="0" />
       <LineId Id="494" Count="4" />
-      <LineId Id="504" Count="0" />
-      <LineId Id="511" Count="0" />
-      <LineId Id="515" Count="0" />
-      <LineId Id="519" Count="0" />
-      <LineId Id="513" Count="0" />
-      <LineId Id="516" Count="0" />
-      <LineId Id="514" Count="0" />
-      <LineId Id="512" Count="0" />
-      <LineId Id="570" Count="0" />
+      <LineId Id="578" Count="7" />
+      <LineId Id="577" Count="0" />
       <LineId Id="539" Count="1" />
       <LineId Id="547" Count="0" />
       <LineId Id="552" Count="1" />

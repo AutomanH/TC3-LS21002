@@ -1,0 +1,20 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="stEasyPumpHmi" Id="{41605321-699a-479f-99e2-17d7ee35ea56}">
+    <Declaration><![CDATA[TYPE stEasyPumpHmi :
+STRUCT
+	xPush_Hmi,xPush_Auto 										: ARRAY[1..5] OF BOOL;
+	xPull_Hmi,xPull_Auto 										: ARRAY[1..5] OF BOOL;	
+	xStop_Hmi,xStop_Auto 										: BOOL;
+	xFullSpeedPush_Hmi,xFullSpeedPush_Auto 	: BOOL;
+	xFullSpeedPull_Hmi,xFullSpeedPull_Auto 	: BOOL;
+	xFullSpeedStop_Hmi,xFullSpeedStop_Auto 	: BOOL;
+	xModulePush_Hmi,xModulePush_Auto		 		: BOOL;	
+	xCalibParaWrite_Hmi,xCalibParaWrite_Auto : BOOL;
+	xCalibInit_Hmi,xCalibInit_Auto					: BOOL;	
+	xCalibration_Hmi,xCalibration_Auto			: BOOL;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

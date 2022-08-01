@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="st_EasyPump" Id="{8bf84668-2b6c-4155-81ca-3fed971bc40c}">
+    <Declaration><![CDATA[TYPE st_EasyPump :
+STRUCT
+ iPumpType:INT;//泵头类型
+ iHosePipeType:INT;//软管类型
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

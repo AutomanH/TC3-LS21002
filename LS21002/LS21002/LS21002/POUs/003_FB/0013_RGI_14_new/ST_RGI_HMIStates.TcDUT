@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="ST_RGI_HMIStates" Id="{28abda4c-2736-4e43-be25-bb785586327a}">
+    <Declaration><![CDATA[TYPE ST_RGI_HMIStates :
+STRUCT
+	///完成条件满足
+	xDone: BOOL;
+	///动作正在执行
+	xBusy: BOOL;
+	///指令被打断
+	xAborted: BOOL;
+	///错误条件满足
+	xError: BOOL;
+	///错误码
+	eErrorID: RGI_14_ERROR;
+	///eMobbusErrorID: MODBUS_ERROR;//modubs 报警信息
+	xRdyCmd: BOOL;
+	xRefOk: BOOL;
+	eClampActCmd: RGI_14_CMD;
+	///0：运动中，1：到达位置；2：夹住物体；3：物体掉落
+	iClampStatus: INT;
+	///夹爪夹空
+	xGripClampEmpty: BOOL;
+	///掉落发生
+	xDropOccur: BOOL;
+	///关盖失败
+	xClosecoverFailure: BOOL;
+	///开盖失败
+	xOpencoverFailure: BOOL;
+	sHmiError: STRING;
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>
