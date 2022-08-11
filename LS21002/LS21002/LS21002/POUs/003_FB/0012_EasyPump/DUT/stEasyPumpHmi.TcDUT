@@ -10,9 +10,9 @@ STRUCT
 	xFullSpeedPull_Hmi,xFullSpeedPull_Auto 	: BOOL;
 	xFullSpeedStop_Hmi,xFullSpeedStop_Auto 	: BOOL;
 	xModulePush_Hmi,xModulePush_Auto		 		: BOOL;	
-	xCalibParaWrite_Hmi,xCalibParaWrite_Auto : BOOL;
+	xCalibAction_Hmi,xCalibAction_Auto : BOOL;
 	xCalibInit_Hmi,xCalibInit_Auto					: BOOL;	
-	xCalibration_Hmi,xCalibration_Auto			: BOOL;
+	xAdjust_Hmi,xAdjust_Auto			: BOOL;
 END_STRUCT
 END_TYPE
 ]]></Declaration>

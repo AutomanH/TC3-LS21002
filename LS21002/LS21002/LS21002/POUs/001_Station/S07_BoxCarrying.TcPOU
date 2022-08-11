@@ -754,6 +754,7 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
+	stToRobot1.xStepRunPermit :=FALSE ;
 	fbClamp.xExecute :=FALSE;
 	fbClamp.stOper.xInitControl:=FALSE ;	
 	FOR i:=1 TO gc_ModuleProNo BY 1 DO
@@ -802,7 +803,6 @@ CASE station.iStepInit OF
 			//stToRobot1.iMoveMode := CmdRobot1.Cmd_GoHome ;
 			station.iStepInit:=70;	
 70://机械手初始化	
-	
 		IF  stFromRobot1.xStepRunning THEN
 		 		station.iStepInit:=80;	
 				stToRobot1.iMoveMode := CmdRobot1.noCmd ;
@@ -1243,6 +1243,7 @@ END_CASE
     </LineIds>
     <LineIds Name="S07_BoxCarrying.FlowInit">
       <LineId Id="437" Count="9" />
+      <LineId Id="763" Count="0" />
       <LineId Id="724" Count="0" />
       <LineId Id="740" Count="0" />
       <LineId Id="721" Count="1" />
@@ -1269,9 +1270,7 @@ END_CASE
       <LineId Id="638" Count="3" />
       <LineId Id="633" Count="0" />
       <LineId Id="717" Count="2" />
-      <LineId Id="742" Count="0" />
-      <LineId Id="762" Count="0" />
-      <LineId Id="743" Count="2" />
+      <LineId Id="742" Count="3" />
       <LineId Id="704" Count="0" />
       <LineId Id="702" Count="0" />
       <LineId Id="664" Count="8" />

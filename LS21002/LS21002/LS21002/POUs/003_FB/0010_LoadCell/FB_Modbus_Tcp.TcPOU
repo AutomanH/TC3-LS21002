@@ -2,6 +2,21 @@
 <TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
   <POU Name="FB_Modbus_Tcp" Id="{b8aebcb4-f74a-4fad-ac5e-649e260e6632}" SpecialFunc="None">
     <Declaration><![CDATA[FUNCTION_BLOCK FB_Modbus_Tcp
+(*
+********************************************************************************
+* Name: FB_Modbus_TCP
+*
+* Author:  Automanh
+* Version: 1.0.0
+*
+* Description:
+*   List all modbus TCP Function Block
+*
+* Remarks:
+*
+* Revisions:
+*   1.0 -AutomanH Rebuild
+*********************************************************************************)
 VAR_INPUT
 END_VAR
 VAR_OUTPUT
@@ -75,7 +90,6 @@ iMathStep,iMathOldstep:INT;
 l_b_repeat:BOOL;
 {endregion}
 {region "32位单精度浮点数转化为实数"}
-pInputData:POINTER TO WORD ;
 ardwData: DWORD;
 arwTempData:ARRAY[1..2]OF WORD;
 arwInputData:ARRAY[1..2]OF WORD;
@@ -90,16 +104,17 @@ END_VAR
 	 
 	 ]]></ST>
     </Implementation>
-    <Method Name="M_Binary32REAL" Id="{3eebb3c9-9ef1-474b-be14-c002a612f78a}">
-      <Declaration><![CDATA[METHOD M_Binary32REAL : REAL
-VAR_INPUT
+    <Method Name="M_Big_Endian" Id="{9c4bebbc-9ac1-41c4-b856-fc394c7d8ec6}">
+      <Declaration><![CDATA[METHOD M_Big_Endian : REAL
+ VAR_INPUT
+ wInputData_1: WORD ;
+ wInputData_2: WORD ;
 END_VAR
 ]]></Declaration>
       <Implementation>
-        <ST><![CDATA[		MEMCPY(ADR(arwInputData),pInputData,SIZEOF(arwInputData) ); 
-	  arwTempData[1]:=arwInputData[2];
-	  arwTempData[2]:=arwInputData[1];
-	  MEMCPY(ADR(M_Binary32REAL),ADR(arwTempData[1] ),SIZEOF(M_Binary32REAL));]]></ST>
+        <ST><![CDATA[		arwTempData[1]:=	wInputData_1;
+		arwTempData[2]:=	wInputData_2;
+	  MEMCPY(ADR(M_Big_Endian),ADR(arwTempData[1] ),SIZEOF(M_Big_Endian));]]></ST>
       </Implementation>
     </Method>
     <Method Name="M_IEEE754" Id="{481be5b5-8461-48fb-a5df-9d578407a47b}">
@@ -228,7 +243,38 @@ END_REPEAT;
 ]]></ST>
       </Implementation>
     </Method>
-    <Method Name="M_Modbus" Id="{99d6a75f-350b-4653-9116-8208d970ab3b}">
+    <Method Name="M_Little_Endian" Id="{3eebb3c9-9ef1-474b-be14-c002a612f78a}">
+      <Declaration><![CDATA[METHOD M_Little_Endian : REAL
+(*
+********************************************************************************
+* Name: M_Little_Endian
+*
+* Author:  Automanh
+* Version: 1.0.0
+*
+* Description:
+*   Little-Endian Mode
+*
+*
+* Remarks:
+*
+* Revisions:
+*   1.0 -AutomanH Rebuild
+*********************************************************************************)
+VAR_INPUT
+ pInputData:POINTER TO ARRAY[1..2] OF WORD ;
+END_VAR
+]]></Declaration>
+      <Implementation>
+        <ST><![CDATA[		//MEMCPY(ADR(arwInputData),pInputData,SIZEOF(arwInputData) ); 
+	  //arwTempData[1]:=arwInputData[2];
+	  //arwTempData[2]:=arwInputData[1];
+		arwTempData[1]:=	pInputData^[2];
+		arwTempData[2]:=	pInputData^[1];
+	  MEMCPY(ADR(M_Little_Endian),ADR(arwTempData[1] ),SIZEOF(M_Little_Endian));]]></ST>
+      </Implementation>
+    </Method>
+    <Method Name="M_Modbus" Id="{18263dfa-25ba-4f4a-a7c8-2b434ec57b49}">
       <Declaration><![CDATA[METHOD M_Modbus : BOOL
 VAR_INPUT
 END_VAR
@@ -370,8 +416,9 @@ M_RealToWord[2]:=arwTempData[1];]]></ST>
     <LineIds Name="FB_Modbus_Tcp">
       <LineId Id="194" Count="2" />
     </LineIds>
-    <LineIds Name="FB_Modbus_Tcp.M_Binary32REAL">
-      <LineId Id="6" Count="3" />
+    <LineIds Name="FB_Modbus_Tcp.M_Big_Endian">
+      <LineId Id="10" Count="1" />
+      <LineId Id="5" Count="0" />
     </LineIds>
     <LineIds Name="FB_Modbus_Tcp.M_IEEE754">
       <LineId Id="377" Count="0" />
@@ -415,10 +462,14 @@ M_RealToWord[2]:=arwTempData[1];]]></ST>
       <LineId Id="157" Count="0" />
       <LineId Id="53" Count="0" />
     </LineIds>
+    <LineIds Name="FB_Modbus_Tcp.M_Little_Endian">
+      <LineId Id="29" Count="0" />
+      <LineId Id="7" Count="1" />
+      <LineId Id="50" Count="1" />
+      <LineId Id="9" Count="0" />
+    </LineIds>
     <LineIds Name="FB_Modbus_Tcp.M_Modbus">
-      <LineId Id="6" Count="73" />
-      <LineId Id="127" Count="0" />
-      <LineId Id="80" Count="43" />
+      <LineId Id="6" Count="118" />
       <LineId Id="5" Count="0" />
     </LineIds>
     <LineIds Name="FB_Modbus_Tcp.M_RealToWord">

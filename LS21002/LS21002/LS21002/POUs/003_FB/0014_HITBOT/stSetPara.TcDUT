@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="stSetPara" Id="{37998ad6-f090-4c71-aed3-1a84bf9ab97e}">
+    <Declaration><![CDATA[TYPE stSetPara :
+STRUCT
+ 	aHMIClampPara , aHMIReleasePara : ARRAY[1..5] OF stRealPara;//夹紧轴点位信息
+	aHMIRotateClampPara , aHMIRotateReleasePara : ARRAY[1..5] OF stRealPara;//旋转轴点位信息
+	aHMIRotateRelClampPara , aHMIRotateRelReleasePara : ARRAY[1..5] OF stRealPara;//旋转轴点位信息
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

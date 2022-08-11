@@ -362,24 +362,28 @@ CASE station.iStepAuto OF
 			ELSIF  bCounter =2 OR  bCounter =3 OR bEndCounter =1 OR bEndCounter =2 THEN
 					IF  iBoxChoose =1 THEN
 						(*上层水平调整气缸*)
-						fbHOZAdjustCyl_1.xAuto :=TRUE;
-						fbHOZAdjustCyl_2.xAuto :=TRUE;
+						IF   bEndCounter =0 THEN
+							 fbHOZAdjustCyl_1.xAuto :=TRUE;
+							 fbHOZAdjustCyl_2.xAuto :=TRUE;
+						END_IF
 						fbHOZAdjustCyl_5.xAuto :=TRUE;
 						fbHOZAdjustCyl_6.xAuto :=TRUE;
-						IF  fbHOZAdjustCyl_1.xWP_Delay  AND 
-								fbHOZAdjustCyl_2.xWP_Delay  AND
+						IF ( (fbHOZAdjustCyl_1.xWP_Delay  AND 
+								fbHOZAdjustCyl_2.xWP_Delay ) OR  bEndCounter >0) AND
 								 fbHOZAdjustCyl_5.xWP_Delay AND
 								 fbHOZAdjustCyl_6.xWP_Delay THEN
 								station.iStepAuto:= 90;
 						END_IF
 					ELSIF  iBoxChoose= 2 THEN
 						(*下层水平调整气缸*)
-						fbHOZAdjustCyl_3.xAuto :=TRUE;
-						fbHOZAdjustCyl_4.xAuto :=TRUE;
+						IF   bEndCounter =0 THEN
+							 fbHOZAdjustCyl_3.xAuto :=TRUE;
+							 fbHOZAdjustCyl_4.xAuto :=TRUE;
+						END_IF
 						fbHOZAdjustCyl_7.xAuto :=TRUE;
 						fbHOZAdjustCyl_8.xAuto :=TRUE;
-						IF  fbHOZAdjustCyl_3.xWP_Delay AND 
-								fbHOZAdjustCyl_4.xWP_Delay AND 
+						IF  ((fbHOZAdjustCyl_3.xWP_Delay AND 
+								fbHOZAdjustCyl_4.xWP_Delay ) OR  bEndCounter >0) AND 
 								fbHOZAdjustCyl_7.xWP_Delay AND 
 								fbHOZAdjustCyl_8.xWP_Delay  THEN
 								station.iStepAuto:= 90;
@@ -1184,7 +1188,7 @@ CASE station.iStepAuto OF
 {region "bEndCounter=2 and bXCounter =1"}
 			ELSIF  bEndCounter=2 THEN
 					IF  bXCounter =1 THEN
-							;//需要添加内容
+							station.iStepAuto:=160;//需要添加内容
 {endregion}	
 {region "bEndCounter=2 and bXCounter =1"}
 					ELSIF bXCounter =2 THEN
@@ -1800,13 +1804,17 @@ QxS03HOZAdjustCyl_8HP	:=	fbHOZAdjustCyl_8.xHP_Valve	;
       <LineId Id="3010" Count="0" />
       <LineId Id="3005" Count="0" />
       <LineId Id="3172" Count="19" />
+      <LineId Id="5428" Count="0" />
       <LineId Id="3732" Count="0" />
       <LineId Id="3840" Count="0" />
+      <LineId Id="5429" Count="0" />
       <LineId Id="3192" Count="2" />
       <LineId Id="3842" Count="2" />
       <LineId Id="3195" Count="3" />
+      <LineId Id="5430" Count="0" />
       <LineId Id="3733" Count="0" />
       <LineId Id="3845" Count="0" />
+      <LineId Id="5431" Count="0" />
       <LineId Id="3199" Count="2" />
       <LineId Id="3846" Count="2" />
       <LineId Id="3202" Count="3" />

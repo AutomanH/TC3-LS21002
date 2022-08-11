@@ -6,10 +6,94 @@ VAR
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[]]></ST>
+      <ST><![CDATA[ACT_Send();]]></ST>
     </Implementation>
+    <Action Name="ACT_Receive" Id="{75141405-1e43-4ded-841f-ea6193d67288}">
+      <Implementation>
+        <ST><![CDATA[//1.iPCALive	:INT	;//	心跳	保持1s跳动为正常，否则5s为异常
+
+//2.打打印机准备就绪
+//	 iLableReady	:INT	;//	打印机贴标准备就绪	1=准备就绪  0=未就绪
+//	 iMachineLampButton	:INT	;//	设备灯控制	1=开灯，0=关灯
+//	 iInitComfirm	:INT	;//		1=初始化确认  
+//	 iShiftButton	:INT	;//	订单下发按钮	1=订单下发
+//	 iMachineEmptyButton	:INT	;//	设备清空按钮	1=设备清空
+//	 iPCAlarm	:INT	;//	PC报警	1=有报警   0 =无报警
+//	 iBodyType	:INT	;//	设备产品类型	1…n:分别代表的产品类型
+//	 iScrapLabel	:INT	;//	废弃空白标签	0=不废弃    1= 废弃空白标签
+//	 iShiftTotal	:INT	;//	订单总数	订单总数下发
+//	 iEmptyButtonComfirm:INT;//设备清空确认]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Send" Id="{de64d090-0d37-4528-8335-f91e22e8fcb5}">
+      <Implementation>
+        <ST><![CDATA[//1.心跳见ACT_ALIVE
+//2.清空完成信号
+IF  fbMachine[1].xEmptyDone THEN
+		sPLC_TO_PC.iMachineEmptyDone:=1;
+ELSE
+ 		sPLC_TO_PC.iMachineEmptyDone:=0;
+END_IF
+//3.贴标完成
+	IF  S13_Labeling.xQLabelCompleted THEN
+			sPLC_TO_PC.iLableCompeted:=1;
+	ELSE
+	 			sPLC_TO_PC.iLableCompeted:=0;
+	END_IF
+//4.设备初始化命令
+	IF  fbMachine[1].xInit THEN
+			sPLC_TO_PC.iInitCommand:=1;
+	END_IF
+//5.初始化完成命令
+	 IF   fbMachine[1].xInitDone THEN
+			sPLC_TO_PC.iInitFinished:=1;
+		END_IF
+//6.设备启动
+	 IF   fbMachine[1].xStart THEN
+			 sPLC_TO_PC.iMachineStart:=1;
+		END_IF
+
+//7.	iShiftOKTotal	:INT;		//	订单OK件计数		
+//8.	iShiftNGTotal	:INT;		//	订单NG件计数	
+
+//9.	iRobotUnloadSignal:INT	;//机械手下料信号	1=机械手下料完成   用于计算设备CT
+	
+
+
+
+
+]]></ST>
+      </Implementation>
+    </Action>
     <LineIds Name="CommWithPC">
       <LineId Id="5" Count="0" />
+    </LineIds>
+    <LineIds Name="CommWithPC.ACT_Receive">
+      <LineId Id="12" Count="2" />
+      <LineId Id="3" Count="8" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="CommWithPC.ACT_Send">
+      <LineId Id="6" Count="0" />
+      <LineId Id="20" Count="2" />
+      <LineId Id="27" Count="1" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="29" Count="2" />
+      <LineId Id="33" Count="1" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="35" Count="2" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="39" Count="2" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="42" Count="2" />
+      <LineId Id="11" Count="2" />
+      <LineId Id="49" Count="0" />
+      <LineId Id="48" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="2" Count="2" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="1" Count="0" />
     </LineIds>
   </POU>
 </TcPlcObject>

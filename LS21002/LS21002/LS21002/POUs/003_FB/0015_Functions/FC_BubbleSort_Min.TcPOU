@@ -1,0 +1,49 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FC_BubbleSort_Min" Id="{8bb52384-0111-4e33-a56b-f5e908c6b464}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION FC_BubbleSort_Min : REAL
+(*
+********************************************************************************
+* Name: FB_BubbleSort_Min
+*
+* Author:  Automanh
+* Version: 1.0.0
+*
+* Description:
+*     将数组元素从大到小排列
+*
+* Remarks:
+*
+* Revisions:
+*   1.0 -AutomanH Rebuild
+*         
+*  
+*********************************************************************************)
+VAR_INPUT
+ i_i_Counter:INT;
+ i_arrReal:ARRAY[1..3] OF REAL;
+END_VAR
+VAR
+ i,j:INT;
+ rRealTemp:REAL;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[FOR i:=1 TO (i_i_Counter-1) BY 1 DO//控制比较轮次，一共 n-1 趟
+ 		FOR  j:=1 TO i_i_Counter-i BY 1 DO//控制两个挨着的元素进行比较
+		 			IF i_arrReal[j]<i_arrReal[j+1] THEN
+					 			rRealTemp:=i_arrReal[j];
+								i_arrReal[j]:=i_arrReal[j+1];
+								i_arrReal[j+1]:=rRealTemp;
+					END_IF
+		END_FOR
+					
+END_FOR
+FC_BubbleSort_Min:=i_arrReal[i_i_Counter];]]></ST>
+    </Implementation>
+    <LineIds Name="FC_BubbleSort_Min">
+      <LineId Id="16" Count="9" />
+      <LineId Id="7" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

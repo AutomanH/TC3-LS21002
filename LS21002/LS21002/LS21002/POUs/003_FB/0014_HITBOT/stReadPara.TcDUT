@@ -1,0 +1,33 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="stReadPara" Id="{59f8b3d9-1420-43a7-a76f-149cd4bda761}">
+    <Declaration><![CDATA[TYPE stReadPara :
+STRUCT
+ rClampPosition:REAL;//夹持位置
+ rClampSpeed:REAL;//夹持速度
+ rClampCurrent:REAL;//夹持电流
+
+ rRotateAngle:REAL;//旋转角度
+ rRotateSpeed:REAL;//旋转速度
+ rRotateCurrent:REAL;//旋转电流
+ 
+ rRotateRelAngle:REAL;//相对旋转角度
+ 
+ 
+ iInitStatus:INT;//0-未初始化  5-初始化完成 其他-初始化中
+ iClampStatus:INT;//0 -到位  1-运动中 2-夹持 3-掉落
+ iRotateStatus:INT;//0-到位，1-运动中 2-堵转
+ rFeedBack_ClampPos	:REAL;//夹持位置反馈
+ rFeedBack_ClampSpeed	:REAL;//夹持速度反馈
+ rFeedBack_ClampCurrent	:REAL;//夹持电流反馈
+ 
+ rFeedBack_RotatePos	:REAL;//旋转角度反馈
+ rFeedBack_RotateSpeed	:REAL;//旋转速度反馈
+ rFeedBack_RotateCurrent	:REAL;//旋转电流反馈
+ 
+
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

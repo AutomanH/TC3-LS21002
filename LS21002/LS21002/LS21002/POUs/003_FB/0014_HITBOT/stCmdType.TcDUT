@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="stCmdType" Id="{e0d8a490-bf8d-45e5-aeac-d85bb348c4cb}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE stCmdType :
+(
+	iNO_CMD := 0,
+	iClamp:=1,
+	iRelease:=2,
+	iRotateClamp:=3,
+	iRotateRelease:=4,
+	iRotateRelClamp:=5,
+	iRotateRelRelease:=6,
+	iInit:=7
+	
+)INT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

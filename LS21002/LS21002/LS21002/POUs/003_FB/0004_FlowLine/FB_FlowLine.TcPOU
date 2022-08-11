@@ -55,7 +55,7 @@ VAR
 	bFlowLineStepOld:BYTE;
 	bMotorCtrlStep:BYTE;
 	// 延时
-	arTonDelay: ARRAY[1..10] OF ton;
+	arTonDelay: ARRAY[1..10] OF Tc2_Standard.TON;
 	i:INT;
 	_xFirstCycle: BOOL;
 	stMotorStatus:DUT_Motor;

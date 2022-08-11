@@ -1,0 +1,13 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="stRealPara" Id="{690384e6-39cc-4241-a01c-c503edafac03}">
+    <Declaration><![CDATA[TYPE stRealPara :
+STRUCT
+ 	rCurrentSet   		: REAL;//目标力值设置  ( 0.2 - 0.5A )
+	rSpeedSet    			: REAL;//运行速度设置  (1-200mm)	
+	rPositionSet 		  : REAL;//位置设置值	 (夹持 0-20mm，旋转-36000000-3600000) 
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

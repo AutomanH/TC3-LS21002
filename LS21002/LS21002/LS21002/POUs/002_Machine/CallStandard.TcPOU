@@ -86,7 +86,7 @@ ACT_UPS();
 ACT_Recipe();
 ACT_Z_ERG_20();
 ACT_Camera();
-ACT_PeristalticPump();
+//ACT_PeristalticPump();
 //ACT_PeristalticPump_1();
 ACT_TURINRobot();
 //ACT_MT_MCK();
@@ -100,7 +100,8 @@ ACT_ATV12();
 ACT_SmcVacuum();
 ACT_LoadCell();
 ACT_Cimcor();
-ACT_EasyPump();]]></ST>
+ACT_EasyPump();
+//ACT_ERG_20C();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{423c098f-672e-4e09-b9e7-666319181834}">
       <Implementation>
@@ -111,13 +112,20 @@ END_IF]]></ST>
     </Action>
     <Action Name="ACT_Alive" Id="{8c363e7b-0adc-484e-b6ea-1c3c645d0dff}">
       <Implementation>
-        <ST><![CDATA[fbAlive[1].iAliveSingle:=sCamera_TO_Plc.iCameraAlive[1];
+        <ST><![CDATA[//检测心跳
+fbAlive[1].iAliveSingle:=sCamera_TO_Plc.iCameraAlive[1];
 fbAlive[2].iAliveSingle:=sCamera_TO_Plc.iCameraAlive[2];
 fbAlive[3].iAliveSingle:=sCamera_TO_Plc.iCameraAlive[3];
-fbAlive[4].iAliveSingle:=sPLC_From_PC.iPCAlive[1];
-fbAlive[5].iAliveSingle:=sPLC_From_PC.iPCAlive[1];
-fbAlive[6].iAliveSingle:=sPLC_From_PC.iPCAlive[1];
+fbAlive[4].iAliveSingle:=sPLC_From_PC.iPCAlive;
 fbAlive[7].iAliveSingle:=sModbus_200SMART.iAlive;
+
+//PLC心跳
+ IF  fbAlive[5].xQAlive THEN
+		sPLC_TO_PC.iPLCALive:=1;
+ ELSE
+		sPLC_TO_PC.iPLCALive:=0;
+ END_IF
+
 FOR i:=1 TO gc_AliveNum DO
 		fbAlive[i](iAliveSingle:= , xQAlive=> , xQAliveError=> );
 END_FOR]]></ST>
@@ -130,6 +138,7 @@ END_FOR]]></ST>
 	xIMotorStartHMI:= , 
 	xIMotorStop:= , 
 	xIMotorStopHMI:= , 
+	xIEStop:=NOT fbMachine[1].xEStop , 
 	xIAutoMode:=	fbMachine[1].xAutoMode , 
 	xIManualMode:= fbMachine[1].xManualMode, 
 	xIDeviceRunning:= , 
@@ -434,7 +443,7 @@ QxCamera15Trigger   := fbCamera[15].xQStart;
 QxCamera16Trigger   := fbCamera[16].xQStart;
 QxCamera17Trigger   := fbCamera[17].xQStart;
 //贴标工位相机光源触发
-IF  fbCamera[18].xQLight THEN
+IF  fbCamera[18].xQLight  THEN
  			QxCameraLight4Trigger:=TRUE;
 ELSE
  			QxCameraLight4Trigger:=FALSE;
@@ -647,20 +656,23 @@ stData.EasyPumps[2].iAccuracySet:=0.03;
 stData.EasyPumps[3].iAccuracySet:=0.03;
 stData.EasyPumps[4].iAccuracySet:=0.03;
 stData.EasyPumps[5].iAccuracySet:=0.03;
-stData.EasyPumps[6].iAccuracySet:=0.05;
+stData.EasyPumps[6].iAccuracySet:=0.065;
 stData.EasyPumps[7].iAccuracySet:=0.03;
 stData.EasyPumps[8].iAccuracySet:=0.03;
 stData.EasyPumps[9].iAccuracySet:=0.03;
 stData.EasyPumps[10].iAccuracySet:=0.03;
 stData.EasyPumps[11].iAccuracySet:=0.03;
-stData.EasyPumps[12].iAccuracySet:=0.05;
-
+stData.EasyPumps[12].iAccuracySet:=0.065;
 
 FOR i:=1 TO gc_uiRudongPump BY 1 DO
+ 		IF  fbMachine[1].xReset THEN
+ 			  fbEasyPumps[i].xIReset:=TRUE;
+	  END_IF
  		fbEasyPumps[i](
 							xIReset:= , 
 							xIManualMode:=fbMachine[1].xManualMode, 
 							xIAutoMode:= fbMachine[1].xAutoMode, 
+							xIEstop:= NOT fbMachine[1].xEStop,
 							xIDeviceRunning:=TRUE, 
 							stRunPara:= stData.EasyPumps[i], 
 							stDeviceOpe:= , 
@@ -682,6 +694,68 @@ END_FOR
 	xQError=> , 
 	iQErrorNo=> , 
 	rQBeltSpeed=> );]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_ERG_20C" Id="{103d88d2-46c2-497a-83dd-4108bc1998eb}">
+      <Implementation>
+        <ST><![CDATA[	fbERG[1].LocalClient.bySlaveID := 1;
+	fbERG[1].LocalClient.strSlaveIP := '192.168.1.20';//从站IP地址
+	fbERG[1].LocalClient.iSlavePort := 1030;	//四端口智嵌物联
+	
+	fbERG[2].LocalClient.bySlaveID := 1;
+	fbERG[2].LocalClient.strSlaveIP := '192.168.1.21';//从站IP地址
+	fbERG[2].LocalClient.iSlavePort := 1031;
+
+
+FOR i:=1 TO gc_uiHITBOT_Number BY 1 DO
+	IF fbMachine[1].xReset THEN
+			  fbERG[i].xIReset:=TRUE;
+	END_IF
+ fbERG[i](
+	xIReset:= , 
+	xIManualMode:= fbMachine[1].xManualMode, 
+	xIAutoMode:= fbMachine[1].xAutoMode, 
+	xIDeviceRunning:=TRUE ,
+	stRunPara:=stData.ERG20C[i] , 
+	stDeviceOpe:= , 
+	stDevice=> , 
+	stPara=> , 
+	stReadPara=> , 
+	iQErrorID=> , 
+	strQErrorID=> );
+END_FOR
+
+stData.ERG20C[1].aHMIClampPara[1].rCurrentSet:=0.4;
+stData.ERG20C[1].aHMIClampPara[1].rPositionSet:=5;
+stData.ERG20C[1].aHMIClampPara[1].rSpeedSet:=200;
+stData.ERG20C[1].aHMIReleasePara[1].rCurrentSet:=0.4;
+stData.ERG20C[1].aHMIReleasePara[1].rPositionSet:=15;
+stData.ERG20C[1].aHMIReleasePara[1].rSpeedSet:=200;
+
+
+stData.ERG20C[1].aHMIRotateClampPara[1].rCurrentSet:=0.5;
+stData.ERG20C[1].aHMIRotateClampPara[1].rPositionSet:=180;
+stData.ERG20C[1].aHMIRotateClampPara[1].rSpeedSet:=500;
+
+stData.ERG20C[1].aHMIRotateReleasePara[1].rCurrentSet:=0.5;
+stData.ERG20C[1].aHMIRotateReleasePara[1].rPositionSet:=0;
+stData.ERG20C[1].aHMIRotateReleasePara[1].rSpeedSet:=300;
+
+stData.ERG20C[2].aHMIClampPara[1].rCurrentSet:=0.4;
+stData.ERG20C[2].aHMIClampPara[1].rPositionSet:=5;
+stData.ERG20C[2].aHMIClampPara[1].rSpeedSet:=200;
+stData.ERG20C[2].aHMIReleasePara[1].rCurrentSet:=0.4;
+stData.ERG20C[2].aHMIReleasePara[1].rPositionSet:=15;
+stData.ERG20C[2].aHMIReleasePara[1].rSpeedSet:=200;
+
+
+stData.ERG20C[2].aHMIRotateClampPara[1].rCurrentSet:=0.9;
+stData.ERG20C[2].aHMIRotateClampPara[1].rPositionSet:=180;
+stData.ERG20C[2].aHMIRotateClampPara[1].rSpeedSet:=500;
+
+stData.ERG20C[2].aHMIRotateReleasePara[1].rCurrentSet:=0.6;
+stData.ERG20C[2].aHMIRotateReleasePara[1].rPositionSet:=0;
+stData.ERG20C[2].aHMIRotateReleasePara[1].rSpeedSet:=300;]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_EtherCATSlaveState" Id="{82baf70d-045c-409e-acbd-7228533e07f2}">
@@ -810,6 +884,8 @@ QxLoadCell_3ZeroInput:=fbLoadCell[3].xQZeroSingle;
 QxLoadCell_4ZeroInput:=fbLoadCell[4].xQZeroSingle;
 QxLoadCell_5ZeroInput:=fbLoadCell[5].xQZeroSingle;
 QxLoadCell_6ZeroInput:=fbLoadCell[6].xQZeroSingle;
+
+
 ]]></ST>
       </Implementation>
     </Action>
@@ -1679,21 +1755,32 @@ END_FOR]]></ST>
       <LineId Id="1267" Count="0" />
       <LineId Id="1335" Count="0" />
       <LineId Id="1403" Count="0" />
+      <LineId Id="1471" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.A_Input">
       <LineId Id="12" Count="2" />
     </LineIds>
     <LineIds Name="CallStandard.ACT_Alive">
+      <LineId Id="19" Count="0" />
       <LineId Id="2" Count="0" />
       <LineId Id="6" Count="0" />
-      <LineId Id="12" Count="3" />
+      <LineId Id="12" Count="1" />
       <LineId Id="10" Count="0" />
+      <LineId Id="17" Count="1" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="21" Count="0" />
       <LineId Id="3" Count="0" />
       <LineId Id="1" Count="0" />
       <LineId Id="5" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.ACT_ATV12">
-      <LineId Id="2" Count="9" />
+      <LineId Id="2" Count="4" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="7" Count="4" />
       <LineId Id="1" Count="0" />
       <LineId Id="14" Count="1" />
       <LineId Id="13" Count="0" />
@@ -1862,9 +1949,13 @@ END_FOR]]></ST>
       <LineId Id="349" Count="2" />
       <LineId Id="348" Count="0" />
       <LineId Id="193" Count="0" />
-      <LineId Id="352" Count="10" />
+      <LineId Id="352" Count="9" />
       <LineId Id="46" Count="1" />
-      <LineId Id="64" Count="4" />
+      <LineId Id="367" Count="1" />
+      <LineId Id="371" Count="0" />
+      <LineId Id="64" Count="3" />
+      <LineId Id="372" Count="0" />
+      <LineId Id="68" Count="0" />
       <LineId Id="70" Count="5" />
       <LineId Id="63" Count="0" />
       <LineId Id="42" Count="0" />
@@ -1873,6 +1964,27 @@ END_FOR]]></ST>
     <LineIds Name="CallStandard.ACT_Encoder">
       <LineId Id="11" Count="5" />
       <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="CallStandard.ACT_ERG_20C">
+      <LineId Id="19" Count="5" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="57" Count="0" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="59" Count="2" />
+      <LineId Id="5" Count="4" />
+      <LineId Id="11" Count="5" />
+      <LineId Id="2" Count="1" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="27" Count="4" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="36" Count="0" />
+      <LineId Id="32" Count="2" />
+      <LineId Id="38" Count="2" />
+      <LineId Id="35" Count="0" />
+      <LineId Id="42" Count="14" />
+      <LineId Id="41" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.ACT_EtherCATSlaveState">
       <LineId Id="2" Count="2" />
@@ -1930,7 +2042,9 @@ END_FOR]]></ST>
       <LineId Id="80" Count="0" />
       <LineId Id="75" Count="4" />
       <LineId Id="72" Count="0" />
-      <LineId Id="74" Count="0" />
+      <LineId Id="90" Count="0" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="81" Count="0" />
     </LineIds>
     <LineIds Name="CallStandard.ACT_M0dbus_200Smart">
       <LineId Id="2" Count="0" />

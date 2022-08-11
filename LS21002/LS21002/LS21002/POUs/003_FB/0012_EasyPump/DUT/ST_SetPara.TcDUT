@@ -24,6 +24,7 @@ STRUCT
 	rCalFluVolume		:REAL;//校准液量
 	rCalTime			:REAL;//校准时间
 	rCalNum				:INT;//校准加液次数	
+	rCalBackAngle:INT;//校准回吸角度
 	
 	rSpeedRatio  : REAL:=2.733;//根据泵头软管型号不同有变化
 END_STRUCT

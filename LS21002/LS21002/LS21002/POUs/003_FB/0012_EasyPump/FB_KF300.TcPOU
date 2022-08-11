@@ -21,6 +21,7 @@ VAR_INPUT
 	xIReset:BOOL;
 	xIManualMode:BOOL;
 	xIAutoMode:BOOL;
+	xIEstop:BOOL;
 	xIDeviceRunning:BOOL;
 	LocalClient:stModbusPara;
 	stRunPara	:ST_SetPara;//运行参数	
@@ -45,7 +46,7 @@ VAR
  {attribute 'tc_no_symbol'}
  stLocalPara:ST_LocalPara;
  {attribute 'tc_no_symbol'}
- stPara,stRun,stCalibInit,stCalibPara,stCalibration:ST_StepStatus; 
+ stPara,stRun,stCalibInit,stCalibAction,stAdjust:ST_StepStatus; 
  {attribute 'tc_no_symbol'}
  stPump:st_EasyPump;
   {attribute 'tc_no_symbol'}
@@ -84,6 +85,8 @@ VAR
 	artDelay:ARRAY[1..5] OF TON;
 	{attribute 'tc_no_symbol'}
 	tSetTime:TIME;
+	tModuleDelay:TON;
+	iCalibNum:INT:=1;//校准灌装次数
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -106,16 +109,16 @@ ACT_Error();]]></ST>
 							stCalibInit.xBusy:=TRUE;
 							stCalibInit.xDone:=FALSE;	
 							iCalibStep:=10;//初始化校准参数
-				 ELSIF stCalibPara.xStart THEN
-						 	 stCalibPara.xStart :=FALSE;
-							 stCalibPara.xBusy :=TRUE;
-							 stCalibPara.xDone :=FALSE;
-							 iCalibStep:=20;//校准参数设定
-					ELSIF stCalibration.xStart THEN
-					 		 stCalibration.xStart :=FALSE;
-							 stCalibration.xBusy :=TRUE;
-							 stCalibration.xDone :=FALSE;
-							 iCalibStep:=30;//校准
+				 ELSIF stCalibAction.xStart THEN
+						 	 stCalibAction.xStart :=FALSE;
+							 stCalibAction.xBusy :=TRUE;
+							 stCalibAction.xDone :=FALSE;
+							 iCalibStep:=20;//校准
+					ELSIF stAdjust.xStart THEN
+					 		 stAdjust.xStart :=FALSE;
+							 stAdjust.xBusy :=TRUE;
+							 stAdjust.xDone :=FALSE;
+							 iCalibStep:=30;//微调
 				 END_IF
 			10://初始化校准参数
 					 iOldCalibStep:=iCalibStep;
@@ -129,12 +132,12 @@ ACT_Error();]]></ST>
 					END_IF
 			11://液量设定完成
 							 iOldCalibStep:=iCalibStep;
-							 IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
-											iCalibStep:=iCalibStep+1;
-								ELSIF   	fbReadRegs.bError THEN
-										 iCalibStep:=999;				
-										 eErrorID:=PumpError.FLT_SET_PARA;					
-								END_IF		
+						 IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+										iCalibStep:=iCalibStep+1;
+							ELSIF   	fbReadRegs.bError THEN
+									 iCalibStep:=999;				
+									 eErrorID:=PumpError.FLT_SET_PARA;					
+							END_IF		
 		
 			12://初始化校准参数完成
 						 stCalibInit.xBusy:=FALSE;
@@ -171,8 +174,8 @@ ACT_Error();]]></ST>
 										 eErrorID:=PumpError.FLT_CALIB_PARA;					
 							END_IF		
 			 23://校准实际液量设定结束
-						 stCalibPara.xBusy :=FALSE;
-						 stCalibPara.xDone :=TRUE;
+						 stCalibAction.xBusy :=FALSE;
+						 stCalibAction.xDone :=TRUE;
 						 iCalibStep:=0;				 
 			30://校准微调-微调幅度为(设定量*0.001),这里要根据客户要求的精度进行调整
 					 xQCalibrationOK:=FALSE;
@@ -225,17 +228,25 @@ ACT_Error();]]></ST>
 								 eErrorID:=PumpError.FLT_SET_PARA;					
 						END_IF			 			
 			 36://微调完成
-							 stCalibration.xBusy :=FALSE;
-							 stCalibration.xDone :=TRUE;
+							 stAdjust.xBusy :=FALSE;
+							 stAdjust.xDone :=TRUE;
 							 iCalibStep:=0;//校准			
-END_CASE]]></ST>
+END_CASE
+ //防止程序二次执行
+ IF	stCalibInit.xBusy THEN
+			stCalibInit.xStart:=FALSE;
+ ELSIF stCalibAction.xBusy THEN
+			stCalibAction.xStart :=FALSE;
+ ELSIF stAdjust.xBusy THEN
+			stAdjust.xStart :=FALSE;
+ END_IF]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_Error" Id="{8e071d61-e5ef-43ab-8951-287a6ba9ed2b}">
       <Implementation>
-        <ST><![CDATA[tTimeout[1](IN:= iParaStep =iOldParaStep AND iParaStep<>0 , PT:= T#5S, Q=> , ET=> );
-tTimeout[2](IN:= iRunStep =iOldRunStep AND iRunStep<>0 , PT:= T#5S, Q=> , ET=> );
-tTimeout[3](IN:= iCalibStep =iOldCalibStep AND iCalibStep<>0 , PT:= T#5S, Q=> , ET=> );
+        <ST><![CDATA[tTimeout[1](IN:= iParaStep =iOldParaStep AND iParaStep<>0 , PT:= T#15S, Q=> , ET=> );
+tTimeout[2](IN:= iRunStep =iOldRunStep AND iRunStep<>0 , PT:= T#15S, Q=> , ET=> );
+tTimeout[3](IN:= iCalibStep =iOldCalibStep AND iCalibStep<>0 , PT:= T#15S, Q=> , ET=> );
 IF		tTimeout[1].Q THEN
 	  	stPara.xError:=TRUE;
 	  	stPara.xBusy:=FALSE;
@@ -251,8 +262,8 @@ IF		tTimeout[2].Q THEN
 END_IF
 
 IF		tTimeout[3].Q THEN
-			stCalibration.xError:=TRUE;
-			stCalibration.xBusy:=FALSE;
+			stAdjust.xError:=TRUE;
+			stAdjust.xBusy:=FALSE;
 			eErrorID:=PumpError.FLT_CMD_TIMEOUT;
 			iCalibStep := 999;
 END_IF
@@ -300,11 +311,11 @@ OperR_TRIG[11](CLK:= (xIManualMode AND  stDeviceOpe.xModulePush_Hmi) OR((xIAutoM
 OperR_TRIG[12](CLK:= (xIManualMode AND  stDeviceOpe.xFullSpeedPush_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xFullSpeedPush_Auto) , Q=> );//FullSpeedPush
 OperR_TRIG[13](CLK:= (xIManualMode AND  stDeviceOpe.xFullSpeedPull_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xFullSpeedPull_Auto) , Q=> );//FullSpeedPull
 OperR_TRIG[14](CLK:= (xIManualMode AND  stDeviceOpe.xFullSpeedStop_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xFullSpeedStop_Auto) , Q=> );//FullSpeedStop
-OperR_TRIG[15](CLK:= (xIManualMode AND  stDeviceOpe.xStop_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xStop_Auto) , Q=> );//Stop
-OperR_TRIG[16](CLK:= (xIManualMode AND  stDeviceOpe.xCalibParaWrite_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xCalibParaWrite_Auto) , Q=> );//Calibration Paramter Write
+OperR_TRIG[15](CLK:= (xIManualMode AND  stDeviceOpe.xStop_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xStop_Auto  ) , Q=> );//Stop
+OperR_TRIG[16](CLK:= (xIManualMode AND  stDeviceOpe.xCalibAction_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xCalibAction_Auto) , Q=> );//Calibration Action
 OperR_TRIG[17](CLK:= (xIManualMode AND  stDeviceOpe.xCalibInit_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xCalibInit_Auto), Q=> );//Calibration Init
-OperR_TRIG[18](CLK:= (xIManualMode AND  stDeviceOpe.xCalibration_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xCalibration_Auto), Q=> );//Calibration Action
-
+OperR_TRIG[18](CLK:= (xIManualMode AND  stDeviceOpe.xAdjust_Hmi) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xAdjust_Auto), Q=> );//Adjust
+OperR_TRIG[19](CLK:= xIEstop, Q=> );//Estop
 
 FOR  i:= 1 TO 20 BY 1 DO
  	IF   OperR_TRIG[i].Q THEN
@@ -319,6 +330,7 @@ FOR  i:=1 TO 5 BY 1 DO
 		 		stLocalPara.rFluVolumeSet	:=stRunPara.rPushFluVolume[i];
 				stLocalPara.rRuntimeSet	:=stRunPara.rPushRuntime[i];
 				stLocalPara.iCycleNumber	:=stRunPara.iPushCycleNumber[i];
+				stLocalPara.iBackAngle:=stRunPara.iPushBackAngle[i];
 				stLocalPara.iDirectionSet:=stRunPara.iDirectionSet;
 				stLocalPara.rVirualTime:=rMaxRunTime -1;
 				iOperType:=stOperType.iPush;
@@ -330,6 +342,7 @@ FOR  i:=6 TO 10 BY 1 DO
 		 		stLocalPara.rFluVolumeSet	:=stRunPara.rPullFluVolume[i-5];
 				stLocalPara.rRuntimeSet	:=stRunPara.rPullRuntime[i-5];
 				stLocalPara.iCycleNumber	:=stRunPara.iPullCycleNumber[i-5];
+				stLocalPara.iBackAngle:=stRunPara.iPullBackAngle[i-5];
 				stLocalPara.iDirectionSet:=ABS(1-stRunPara.iDirectionSet);
 				stLocalPara.rVirualTime:=rMaxRunTime -1;
 				iOperType:=stOperType.iPull;
@@ -339,7 +352,8 @@ END_FOR
 IF   iOperCounter =11 THEN
 		 		stLocalPara.rFluVolumeSet	:=stRunPara.rCalFluVolume;
 				stLocalPara.rRuntimeSet	 :=stRunPara.rCalTime;
-				stLocalPara.iCycleNumber :=1;
+				stLocalPara.iCycleNumber :=stRunPara.rCalNum;
+				stLocalPara.iBackAngle:=stRunPara.rCalBackAngle;
 				stLocalPara.iDirectionSet:=stRunPara.iDirectionSet;
 				stLocalPara.iModuleAdress:=stRunPara.iModuleAdress;
 				stLocalPara.iModuleSpeed:= stRunPara.rCalFluVolume * 60.0/(stRunPara.rSpeedRatio* stRunPara.rCalTime);
@@ -354,21 +368,21 @@ ELSIF  iOperCounter =13 THEN
  			iOperType:=stOperType.iFullSpeedPull;
 ELSIF  iOperCounter =14 THEN
  			iOperType:=stOperType.iFullSpeedStop;
-ELSIF  iOperCounter =15 THEN
+ELSIF  iOperCounter =15 OR iOperCounter =19  THEN
  			iOperType:=stOperType.iStop;
-ELSIF  iOperCounter =16  THEN
+ELSIF  iOperCounter =16  THEN//Calibration
  			stLocalPara.iModuleRealVolume:=stRunPara.rModuleRealFluVolume;
- 			iOperType:=stOperType.iCalibParaWrite;
+ 			iOperType:=stOperType.iCalibAction;
 ELSIF  iOperCounter =17  THEN
  			iOperType:=stOperType.iCalibInit;	
-ELSIF    iOperCounter =18 THEN 
+ELSIF    iOperCounter =18 THEN //adjust
  			stLocalPara.iModuleRealVolume:=stRunPara.rModuleRealFluVolume;
  			stLocalPara.iAccuracySet:=stRunPara.iAccuracySet;
- 			iOperType:=stOperType.iCalibration;	
+ 			iOperType:=stOperType.iAdjust;	
 END_IF
 
-MEMSET(ADR(stDeviceOpe),0,SIZEOF(stDeviceOpe));
-]]></ST>
+
+MEMSET(ADR(stDeviceOpe),0,SIZEOF(stDeviceOpe));]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_ParaCalc" Id="{082b3045-a19d-4f59-a04c-cbfd47d9616e}">
@@ -667,6 +681,10 @@ END_IF
 	 iRunStep:=0;
  	 iCalibStep:=0;
 	 
+	 iOldParaStep:=0;
+	 iOldRunStep:=0;
+	 iOldCalibStep:=0;
+	 
 	 stPara.xStart:=FALSE;
 	 stPara.xBusy:=FALSE;
 	 stPara.xError:=FALSE;
@@ -679,17 +697,18 @@ END_IF
 	 stCalibInit.xBusy:=FALSE;
 	 stCalibInit.xDone:=FALSE;
 	 
-	 stCalibPara.xStart:=FALSE;
-	 stCalibPara.xBusy :=FALSE;
-	 stCalibPara.xDone :=FALSE;
+	 stCalibAction.xStart:=FALSE;
+	 stCalibAction.xBusy :=FALSE;
+	 stCalibAction.xDone :=FALSE;
 	 
-	 stCalibration.xStart:=FALSE;
-	 stCalibration.xBusy :=FALSE;
-	 stCalibration.xDone :=FALSE;
+	 stAdjust.xStart:=FALSE;
+	 stAdjust.xBusy :=FALSE;
+	 stAdjust.xDone :=FALSE;
 	 
-	 iOldParaStep:=0;
-	 iOldRunStep:=0;
-	 iOldCalibStep:=0;
+	
+	 
+	 xQBusy:=FALSE;
+	 //xQDone:=FALSE;
 	 
 	 eErrorID := PumpError.NO_ERROR;
 	 xIReset:=FALSE;
@@ -714,7 +733,9 @@ CASE  iRunStep OF
 		END_IF
  1://检查是否是全速
  		IF    iOperType=stOperType.iFullSpeedPull OR 
-					iOperType=stOperType.iFullSpeedPush  THEN
+					iOperType=stOperType.iFullSpeedPush OR
+					iOperType=stOperType.iStop OR
+					iOperType=stOperType.iFullSpeedStop THEN
 					iRunStep:=iRunStep +3;
 		ELSE
 		 			iRunStep:=iRunStep +1;
@@ -722,7 +743,9 @@ CASE  iRunStep OF
  2://参数传递
  		 iOldRunStep:=iRunStep;
  		 stPara.xStart:=TRUE;
-		 iRunStep:=iRunStep +1;
+		 IF   stPara.xBusy THEN
+				 iRunStep:=iRunStep +1;
+		 END_IF
  3://等待参数传递完成
  		 	iOldRunStep:=iRunStep;
  		 IF  stPara.xDone   THEN
@@ -741,11 +764,11 @@ CASE  iRunStep OF
 		 				iRunStep:=30;
 		ELSIF     iOperType=stOperType.iModulePush THEN
     				iRunStep:=40;
-		ELSIF     iOperType=stOperType.iCalibParaWrite THEN
+		ELSIF     iOperType=stOperType.iCalibAction THEN
     				iRunStep:=50;
 		ELSIF  		iOperType=stOperType.iCalibInit THEN
 		 				iRunStep:=60;
-		ELSIF   		iOperType=stOperType.iCalibration THEN
+		ELSIF   		iOperType=stOperType.iAdjust THEN
 		 				iRunStep:=70;
 		END_IF	
  10://Pull/push
@@ -762,7 +785,7 @@ CASE  iRunStep OF
 			iOldRunStep:=iRunStep;
 	  	IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
 	  	 				iRunStep:=iRunStep +1;
-	  	 ELSIF   	fbReadRegs.bError THEN
+	  	 ELSIF   	fbWriteRegs.bError THEN
 	  	 			iRunStep:=999;				
 	  	 			eErrorID:=PumpError.FLT_RUN_ERROR;					
 	  	 END_IF		
@@ -810,7 +833,7 @@ CASE  iRunStep OF
 			 iOldRunStep:=iRunStep;
 			 IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
 							 iRunStep:=100;
-				ELSIF   	fbReadRegs.bError THEN
+				ELSIF   	fbWriteRegs.bError THEN
 						 iRunStep:=999;				
 						 eErrorID:=PumpError.FLT_RUN_ERROR;					
 				END_IF				
@@ -828,7 +851,7 @@ CASE  iRunStep OF
 			 iOldParaStep:=iParaStep;
 			 IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
 							 iRunStep:=iRunStep +1;
-				ELSIF   	fbReadRegs.bError THEN
+				ELSIF   	fbWriteRegs.bError THEN
 						 iRunStep:=999;				
 						 eErrorID:=PumpError.FLT_SET_PARA;					
 				END_IF		
@@ -846,11 +869,14 @@ CASE  iRunStep OF
 			 iOldRunStep:=iRunStep;
 			 IF  NOT 	fbWriteRegs.bBusy AND  NOT fbWriteRegs.bError THEN
 							 iRunStep:=100;
-				ELSIF   	fbReadRegs.bError THEN
+				ELSIF   	fbWriteRegs.bError THEN
 						 iRunStep:=999;				
 						 eErrorID:=PumpError.FLT_RUN_ERROR;					
-				END_IF		
-	40://Module Push
+				END_IF	
+	40://
+			iCalibNum:=1;
+			iRunStep:=iRunStep+1;
+	41://Module Push
 				 iOldRunStep:=iRunStep;
 				 arwDataWriteRegs[1]:=1;//单元启动
 				 wQuantityWriteRegs:=1;
@@ -860,15 +886,15 @@ CASE  iRunStep OF
 						 xWriteRegs:=FALSE;
 						 iRunStep:=iRunStep+1;
 				END_IF
-	41://单元启动注液
+	42://单元启动注液
 			 iOldRunStep:=iRunStep;
 			 IF  NOT 	fbWriteRegs.bBusy AND  NOT fbWriteRegs.bError THEN
 							 iRunStep:=iRunStep +1;
-				ELSIF   	fbReadRegs.bError THEN
+				ELSIF   	fbWriteRegs.bError THEN
 						 iRunStep:=999;				
 						 eErrorID:=PumpError.FLT_RUN_ERROR;					
 				END_IF
-	 42://等待运行结束
+	43://等待运行结束
 			 iOldParaStep:=iParaStep;
 			 wMBAddReadRegs:=2003;
 			 wQuantityReadRegs:=1;
@@ -877,7 +903,7 @@ CASE  iRunStep OF
 				 xReadRegs:=FALSE;
 				 iRunStep:=iRunStep+1;
 			 END_IF
-	 43://等待读取完成
+	 44://等待读取完成
 				 iOldParaStep:=iParaStep;
 				 IF  NOT 	fbReadRegs.bBusy AND  NOT  	fbReadRegs.bError THEN
 									stReadPara.iRunning:=arwDataReadRegs[1];
@@ -887,17 +913,32 @@ CASE  iRunStep OF
 							 eErrorID:=PumpError.FLT_READ_PARA;					
 					END_IF	
 					artDelay[1](IN:=FALSE);
-	 44://检查是否已经停止运行
+	 45://检查是否已经停止运行
 				 IF  stReadPara.iRunning =0 THEN
-							 iRunStep:=100;
+							 	iRunStep:=iRunStep +1;
 				 ELSE //再次读取
 						 artDelay[1](IN:= TRUE, PT:= T#100MS, Q=> , ET=> );
 						 IF  artDelay[1].Q  THEN
 									iRunStep:=12;
 									artDelay[1](IN:= FALSE);
 						 END_IF
-				 END_IF			 			 
-				 
+				 END_IF		
+		46://检查灌装次数
+				iCalibNum:=iCalibNum +1 ;
+				iRunStep:=iRunStep +1;
+	  47://
+				IF  iCalibNum > stLocalPara.iCycleNumber THEN
+				 				iRunStep:=100;
+				ELSE
+								iRunStep:=iRunStep +1;		
+				END_IF			 			 
+		48://检查单元注液时间等待0.5
+			 tModuleDelay(IN:=TRUE, PT:= T#1500MS, Q=> , ET=> );
+			 IF	  	tModuleDelay.Q THEN
+							 tModuleDelay(IN:=FALSE);	
+							 iRunStep:=41;
+			 END_IF	
+			 
 		50://写入实际液量	
 					 MEMCPY(ADR(arwSetData[1]),ADR(stLocalPara.iModuleRealVolume),SIZEOF(stLocalPara.iModuleRealVolume) ); 
 					 arwDataWriteRegs[1]:=arwSetData[2];
@@ -953,32 +994,37 @@ CASE  iRunStep OF
 				 IF stCalibInit.xDone THEN
 							 iRunStep:=100;
 				 END_IF 
-		 70://校准
-					 stCalibration.xStart :=TRUE;
+		 70://微调
+					 stAdjust.xStart :=TRUE;
 					 iRunStep:=iRunStep +1;
 		 71://等待
-				 IF  stCalibration.xBusy THEN
+				 IF  stAdjust.xBusy THEN
 						 iRunStep:=iRunStep +1;
 				 END_IF
 		 72://完成
-				 IF stCalibration.xDone THEN
+				 IF stAdjust.xDone THEN
 							 iRunStep:=100;
-				 END_IF 		 
-	
-		 100://运行结束
+				 END_IF 
+	   100://等待S钟 
+					artDelay[2](IN:=TRUE , PT:= T#1S, Q=> , ET=> );		 
+					IF  artDelay[2].Q THEN
+					     iRunStep:=iRunStep +1;
+							 artDelay[2](IN:=FALSE);
+					END_IF
+		 101://运行结束
 					xQBusy:=FALSE;
 					xQDone:=TRUE;
 					iRunStep:=0;
  END_CASE
-]]></ST>
+ //防止程序二次执行
+	IF  xQBusy THEN
+		 		xStart:=FALSE;
+  END_IF]]></ST>
       </Implementation>
     </Action>
     <Action Name="ACT_RunPara" Id="{de4ccdf8-7874-4800-9b27-4ec05af2e4ab}">
       <Implementation>
-        <ST><![CDATA[
-
-
-CASE iParaStep OF	
+        <ST><![CDATA[CASE iParaStep OF	
 	0://开始
 			IF   stPara.xStart THEN
 			 		 stPara.xStart:=FALSE;
@@ -1013,11 +1059,9 @@ CASE iParaStep OF
 			 	iOldParaStep:=iParaStep;
 	  	  IF  NOT 	fbReadRegs.bBusy AND  NOT  	fbReadRegs.bError THEN
 				 				//液量
-				 				SUPER^.pInputData:=ADR(arwDataReadRegs[1]);
-								stReadPara.rFluVolume:=M_Binary32REAL();
+								stReadPara.rFluVolume:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[1]));
 								//时间
-								SUPER^.pInputData:=ADR(arwDataReadRegs[3]);
-								stReadPara.rRuntime:=M_Binary32REAL();
+								stReadPara.rRuntime:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[3]));
 								
 	  		 				 iParaStep:=iParaStep+1;
 	  		 ELSIF   	fbReadRegs.bError THEN
@@ -1096,7 +1140,6 @@ CASE iParaStep OF
 	  	 END_IF		
 	12://比较方向
 				iOldParaStep:=iParaStep;
-				//方向
 				stReadPara.iDirectionSet:=WORD_TO_INT(arwDataReadRegs[9]);
 				IF stLocalPara.iDirectionSet<> stReadPara.iDirectionSet   THEN
 										iParaStep:=iParaStep+1;	
@@ -1148,13 +1191,41 @@ CASE iParaStep OF
 	  	 			iParaStep:=999;				
 	  	 			eErrorID:=PumpError.FLT_SET_PARA;					
 	  	 END_IF		
-	18://判断是否执行ModulePush
+//////////////////////////待开放回吸角度/////////////////////////////////////////	 
+	18://比较回吸角度
+				iOldParaStep:=iParaStep;
+				stReadPara.iBackAngle:=WORD_TO_INT(arwDataReadRegs[8]);
+				IF stLocalPara.iBackAngle<> stReadPara.iBackAngle   THEN
+					 iParaStep:=iParaStep+1;	
+				ELSE
+					 iParaStep:=iParaStep+3;
+				END_IF	
+	19://写入回吸角度
+			 iOldParaStep:=iParaStep;
+			 MEMCPY(ADR(arwDataWriteRegs[1]),ADR(stLocalPara.iBackAngle),SIZEOF(stLocalPara.iBackAngle));
+			 wQuantityWriteRegs:=1;
+			 wMBAddWriteRegs:=1009;
+			 xWriteRegs:=TRUE;
+			 IF  fbWriteRegs.bBusy THEN
+					 xWriteRegs:=FALSE;
+					 iParaStep:=iParaStep+1;
+			END_IF
+  20://写入回吸角度完成
+			iOldParaStep:=iParaStep;
+	  	IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+	  	 				iParaStep:=iParaStep +1;
+	  	 ELSIF   	fbReadRegs.bError THEN
+	  	 			iParaStep:=999;				
+	  	 			eErrorID:=PumpError.FLT_SET_PARA;					
+	  	 END_IF				 
+			 
+	21://判断是否执行ModulePush
       IF   iOperType=stOperType.iModulePush THEN
 						iParaStep:=iParaStep +1;
 			ELSE
 						iParaStep:=100;
 			END_IF
-	19://单元地址设定	
+	22://单元地址设定	
 				 iOldParaStep:=iParaStep;
 				 MEMCPY(ADR(arwDataWriteRegs[1]),ADR(stLocalPara.iModuleAdress),SIZEOF(stLocalPara.iModuleAdress));
 				 wQuantityWriteRegs:=1;
@@ -1164,14 +1235,51 @@ CASE iParaStep OF
 						 xWriteRegs:=FALSE;
 						 iParaStep:=iParaStep+1;
 				END_IF
-	20://单元地址设定完成
+	23://单元地址设定完成
 				iOldParaStep:=iParaStep;
 				IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
-								iParaStep:=100;
+								iParaStep:=iParaStep +1;
 				 ELSIF   	fbReadRegs.bError THEN
 							iParaStep:=999;				
 							eErrorID:=PumpError.FLT_SET_PARA;					
-				 END_IF			 
+				 END_IF			
+	24://写入回吸角度
+				 iOldParaStep:=iParaStep;
+				 MEMCPY(ADR(arwDataWriteRegs[1]),ADR(stLocalPara.iBackAngle),SIZEOF(stLocalPara.iBackAngle));
+				 wQuantityWriteRegs:=1;
+				 wMBAddWriteRegs:=1009;
+				 xWriteRegs:=TRUE;
+				 IF  fbWriteRegs.bBusy THEN
+						 xWriteRegs:=FALSE;
+						 iParaStep:=iParaStep+1;
+				END_IF
+	25://写入回吸角度完成
+				iOldParaStep:=iParaStep;
+				IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+								iParaStep:=iParaStep +1;
+				 ELSIF   	fbReadRegs.bError THEN
+							iParaStep:=999;				
+							eErrorID:=PumpError.FLT_SET_PARA;					
+				 END_IF				 
+	26://写入重复次数
+			 iOldParaStep:=iParaStep;
+			 MEMCPY(ADR(arwDataWriteRegs[1]),ADR(stLocalPara.iCycleNumber),SIZEOF(stLocalPara.iCycleNumber));
+			 wQuantityWriteRegs:=1;
+			 wMBAddWriteRegs:=1008;
+			 xWriteRegs:=TRUE;
+			 IF  fbWriteRegs.bBusy THEN
+					 xWriteRegs:=FALSE;
+					 iParaStep:=iParaStep+1;
+			END_IF
+  27://重复次数写入完成
+			iOldParaStep:=iParaStep;
+	  	IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError THEN
+	  	 				iParaStep:=100;
+	  	 ELSIF   	fbReadRegs.bError THEN
+	  	 			iParaStep:=999;				
+	  	 			eErrorID:=PumpError.FLT_SET_PARA;					
+	  	 END_IF				  
+
 	//21://设定单元速度
 	//		 iOldParaStep:=iParaStep;
 	//		 MEMCPY(ADR(arwSetData[1]),ADR(stLocalPara.iModuleSpeed),SIZEOF(stLocalPara.iModuleSpeed) ); 
@@ -1203,11 +1311,17 @@ CASE iParaStep OF
 	ELSE
 		;	
 END_CASE
+//防止程序二次执行
+IF   stPara.xBusy THEN
+		 stPara.xStart:=FALSE;
+END_IF
 ]]></ST>
       </Implementation>
     </Action>
     <LineIds Name="FB_KF300">
-      <LineId Id="268" Count="6" />
+      <LineId Id="268" Count="0" />
+      <LineId Id="363" Count="0" />
+      <LineId Id="270" Count="4" />
       <LineId Id="238" Count="0" />
       <LineId Id="275" Count="0" />
     </LineIds>
@@ -1248,6 +1362,11 @@ END_CASE
       <LineId Id="213" Count="0" />
       <LineId Id="196" Count="0" />
       <LineId Id="1" Count="0" />
+      <LineId Id="233" Count="0" />
+      <LineId Id="218" Count="1" />
+      <LineId Id="223" Count="1" />
+      <LineId Id="228" Count="1" />
+      <LineId Id="217" Count="0" />
     </LineIds>
     <LineIds Name="FB_KF300.ACT_Error">
       <LineId Id="13" Count="0" />
@@ -1306,6 +1425,7 @@ END_CASE
       <LineId Id="52" Count="0" />
       <LineId Id="54" Count="0" />
       <LineId Id="63" Count="1" />
+      <LineId Id="155" Count="0" />
       <LineId Id="68" Count="0" />
       <LineId Id="130" Count="0" />
       <LineId Id="96" Count="0" />
@@ -1313,13 +1433,17 @@ END_CASE
       <LineId Id="53" Count="0" />
       <LineId Id="14" Count="0" />
       <LineId Id="56" Count="0" />
-      <LineId Id="70" Count="4" />
+      <LineId Id="70" Count="3" />
+      <LineId Id="154" Count="0" />
+      <LineId Id="74" Count="0" />
       <LineId Id="131" Count="0" />
       <LineId Id="97" Count="0" />
       <LineId Id="59" Count="0" />
       <LineId Id="17" Count="0" />
       <LineId Id="80" Count="0" />
-      <LineId Id="75" Count="4" />
+      <LineId Id="75" Count="3" />
+      <LineId Id="156" Count="0" />
+      <LineId Id="79" Count="0" />
       <LineId Id="81" Count="1" />
       <LineId Id="132" Count="0" />
       <LineId Id="98" Count="0" />
@@ -1342,9 +1466,8 @@ END_CASE
       <LineId Id="147" Count="0" />
       <LineId Id="136" Count="0" />
       <LineId Id="60" Count="0" />
-      <LineId Id="141" Count="0" />
+      <LineId Id="149" Count="1" />
       <LineId Id="26" Count="0" />
-      <LineId Id="1" Count="0" />
     </LineIds>
     <LineIds Name="FB_KF300.ACT_ParaCalc">
       <LineId Id="2" Count="279" />
@@ -1358,6 +1481,9 @@ END_CASE
       <LineId Id="8" Count="0" />
       <LineId Id="10" Count="0" />
       <LineId Id="2" Count="0" />
+      <LineId Id="58" Count="0" />
+      <LineId Id="60" Count="1" />
+      <LineId Id="59" Count="0" />
       <LineId Id="31" Count="0" />
       <LineId Id="11" Count="0" />
       <LineId Id="19" Count="0" />
@@ -1373,9 +1499,9 @@ END_CASE
       <LineId Id="34" Count="0" />
       <LineId Id="12" Count="0" />
       <LineId Id="35" Count="0" />
-      <LineId Id="51" Count="1" />
-      <LineId Id="50" Count="0" />
+      <LineId Id="51" Count="0" />
       <LineId Id="49" Count="0" />
+      <LineId Id="55" Count="2" />
       <LineId Id="54" Count="0" />
       <LineId Id="46" Count="0" />
       <LineId Id="4" Count="0" />
@@ -1391,11 +1517,18 @@ END_CASE
       <LineId Id="13" Count="2" />
       <LineId Id="12" Count="0" />
       <LineId Id="427" Count="1" />
-      <LineId Id="430" Count="3" />
+      <LineId Id="430" Count="0" />
+      <LineId Id="484" Count="0" />
+      <LineId Id="486" Count="0" />
+      <LineId Id="431" Count="2" />
       <LineId Id="429" Count="0" />
       <LineId Id="6" Count="0" />
       <LineId Id="426" Count="0" />
-      <LineId Id="16" Count="2" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="481" Count="0" />
+      <LineId Id="17" Count="0" />
+      <LineId Id="482" Count="0" />
+      <LineId Id="18" Count="0" />
       <LineId Id="425" Count="0" />
       <LineId Id="19" Count="0" />
       <LineId Id="24" Count="0" />
@@ -1431,11 +1564,21 @@ END_CASE
       <LineId Id="440" Count="16" />
       <LineId Id="438" Count="0" />
       <LineId Id="110" Count="17" />
+      <LineId Id="534" Count="2" />
       <LineId Id="152" Count="16" />
       <LineId Id="89" Count="0" />
       <LineId Id="379" Count="27" />
       <LineId Id="173" Count="0" />
+      <LineId Id="509" Count="0" />
+      <LineId Id="520" Count="1" />
+      <LineId Id="525" Count="0" />
+      <LineId Id="518" Count="0" />
+      <LineId Id="527" Count="0" />
+      <LineId Id="529" Count="1" />
+      <LineId Id="510" Count="0" />
+      <LineId Id="504" Count="4" />
       <LineId Id="407" Count="0" />
+      <LineId Id="532" Count="0" />
       <LineId Id="228" Count="0" />
       <LineId Id="255" Count="2" />
       <LineId Id="248" Count="2" />
@@ -1454,117 +1597,34 @@ END_CASE
       <LineId Id="421" Count="0" />
       <LineId Id="420" Count="0" />
       <LineId Id="464" Count="9" />
-      <LineId Id="462" Count="1" />
+      <LineId Id="462" Count="0" />
+      <LineId Id="474" Count="3" />
+      <LineId Id="479" Count="1" />
       <LineId Id="177" Count="3" />
       <LineId Id="3" Count="0" />
+      <LineId Id="492" Count="0" />
+      <LineId Id="487" Count="1" />
       <LineId Id="46" Count="0" />
     </LineIds>
     <LineIds Name="FB_KF300.ACT_RunPara">
-      <LineId Id="1250" Count="0" />
-      <LineId Id="1169" Count="0" />
-      <LineId Id="1177" Count="0" />
-      <LineId Id="357" Count="0" />
-      <LineId Id="764" Count="0" />
-      <LineId Id="842" Count="0" />
-      <LineId Id="1162" Count="0" />
-      <LineId Id="1165" Count="1" />
-      <LineId Id="1164" Count="0" />
-      <LineId Id="1163" Count="0" />
-      <LineId Id="358" Count="0" />
-      <LineId Id="766" Count="0" />
-      <LineId Id="749" Count="0" />
-      <LineId Id="751" Count="4" />
-      <LineId Id="757" Count="5" />
-      <LineId Id="747" Count="0" />
-      <LineId Id="844" Count="0" />
-      <LineId Id="767" Count="2" />
-      <LineId Id="834" Count="0" />
-      <LineId Id="837" Count="0" />
-      <LineId Id="770" Count="0" />
-      <LineId Id="836" Count="0" />
-      <LineId Id="773" Count="0" />
-      <LineId Id="808" Count="1" />
-      <LineId Id="902" Count="0" />
-      <LineId Id="830" Count="0" />
-      <LineId Id="832" Count="0" />
-      <LineId Id="1259" Count="2" />
-      <LineId Id="906" Count="0" />
-      <LineId Id="815" Count="3" />
-      <LineId Id="801" Count="0" />
-      <LineId Id="839" Count="0" />
-      <LineId Id="1258" Count="0" />
-      <LineId Id="774" Count="0" />
-      <LineId Id="908" Count="0" />
-      <LineId Id="748" Count="0" />
-      <LineId Id="780" Count="0" />
-      <LineId Id="782" Count="1" />
-      <LineId Id="1263" Count="0" />
-      <LineId Id="1271" Count="2" />
-      <LineId Id="1264" Count="0" />
-      <LineId Id="909" Count="0" />
-      <LineId Id="926" Count="0" />
-      <LineId Id="930" Count="5" />
-      <LineId Id="910" Count="1" />
-      <LineId Id="938" Count="5" />
-      <LineId Id="937" Count="0" />
-      <LineId Id="700" Count="0" />
-      <LineId Id="850" Count="0" />
-      <LineId Id="1275" Count="1" />
-      <LineId Id="1274" Count="0" />
-      <LineId Id="788" Count="1" />
-      <LineId Id="792" Count="0" />
-      <LineId Id="862" Count="2" />
-      <LineId Id="861" Count="0" />
-      <LineId Id="865" Count="0" />
-      <LineId Id="867" Count="1" />
-      <LineId Id="871" Count="3" />
-      <LineId Id="866" Count="0" />
-      <LineId Id="952" Count="1" />
-      <LineId Id="1278" Count="1" />
-      <LineId Id="1277" Count="0" />
-      <LineId Id="957" Count="13" />
-      <LineId Id="1220" Count="0" />
-      <LineId Id="1180" Count="0" />
-      <LineId Id="996" Count="0" />
-      <LineId Id="1240" Count="1" />
-      <LineId Id="1497" Count="0" />
-      <LineId Id="999" Count="0" />
-      <LineId Id="1499" Count="2" />
-      <LineId Id="875" Count="0" />
-      <LineId Id="1003" Count="0" />
-      <LineId Id="1006" Count="6" />
-      <LineId Id="1002" Count="0" />
-      <LineId Id="1013" Count="6" />
-      <LineId Id="878" Count="0" />
-      <LineId Id="1047" Count="1" />
-      <LineId Id="1242" Count="1" />
-      <LineId Id="1049" Count="3" />
-      <LineId Id="1027" Count="0" />
-      <LineId Id="1053" Count="16" />
-      <LineId Id="1020" Count="0" />
-      <LineId Id="1350" Count="0" />
-      <LineId Id="1423" Count="2" />
-      <LineId Id="1427" Count="1" />
-      <LineId Id="1351" Count="0" />
-      <LineId Id="1438" Count="7" />
-      <LineId Id="1429" Count="0" />
-      <LineId Id="1446" Count="6" />
-      <LineId Id="1352" Count="0" />
-      <LineId Id="1470" Count="0" />
-      <LineId Id="1511" Count="0" />
-      <LineId Id="1471" Count="4" />
-      <LineId Id="1510" Count="0" />
-      <LineId Id="1477" Count="9" />
-      <LineId Id="1491" Count="0" />
-      <LineId Id="1488" Count="2" />
-      <LineId Id="1353" Count="0" />
-      <LineId Id="1159" Count="0" />
-      <LineId Id="1514" Count="0" />
-      <LineId Id="1160" Count="0" />
-      <LineId Id="1167" Count="0" />
-      <LineId Id="1158" Count="0" />
-      <LineId Id="698" Count="1" />
-      <LineId Id="1" Count="0" />
+      <LineId Id="1515" Count="34" />
+      <LineId Id="1551" Count="1" />
+      <LineId Id="1554" Count="78" />
+      <LineId Id="1634" Count="50" />
+      <LineId Id="1745" Count="0" />
+      <LineId Id="1763" Count="1" />
+      <LineId Id="1766" Count="22" />
+      <LineId Id="1746" Count="0" />
+      <LineId Id="1789" Count="0" />
+      <LineId Id="1685" Count="23" />
+      <LineId Id="1797" Count="17" />
+      <LineId Id="1827" Count="16" />
+      <LineId Id="1796" Count="0" />
+      <LineId Id="1817" Count="0" />
+      <LineId Id="1709" Count="30" />
+      <LineId Id="1795" Count="0" />
+      <LineId Id="1790" Count="1" />
+      <LineId Id="1741" Count="0" />
       <LineId Id="1248" Count="0" />
     </LineIds>
   </POU>

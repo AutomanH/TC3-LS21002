@@ -220,7 +220,43 @@
     <Compile Include="POUs\003_FB\0000_FB_Alive\FB_Alive.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\003_FB\0014_HITBOT\FB_Z_ERG_20C.TcPOU">
+    <Compile Include="POUs\003_FB\0014_HITBOT\HITBOT_ERROR.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\0014_HITBOT\stCmdType.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\0014_HITBOT\stHIBOTLocalPara.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\0014_HITBOT\FB_ERG_20C.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\0014_HITBOT\stDeviceStatus.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\0014_HITBOT\stOper_Para.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\0014_HITBOT\stReadPara.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\0014_HITBOT\stRealPara.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\0014_HITBOT\stSetPara.TcDUT">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\0015_Functions\001_Parallel\FC_ParallelFinished.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\0015_Functions\001_Parallel\FC_ParallelRequest.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\0015_Functions\FC_BubbleSort_Max.TcPOU">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="POUs\003_FB\0015_Functions\FC_BubbleSort_Min.TcPOU">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\003_FB\03_TURINRobotFB\DUTs\CmdRobot.TcDUT">
@@ -469,10 +505,10 @@
     <Compile Include="POUs\003_FB\43_implicit checks\CheckRangeUnsigned.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\003_FB\50_Recipe\FB_Recipes.TcPOU">
+    <Compile Include="POUs\003_FB\0016_Recipe\FB_Recipes.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\003_FB\50_Recipe\ST_Recipe.TcDUT">
+    <Compile Include="POUs\003_FB\0016_Recipe\ST_Recipe.TcDUT">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="POUs\003_FB\064_Temperature\FB_TempControl_FUSHI.TcPOU">
@@ -628,12 +664,6 @@
     <Compile Include="POUs\003_FB\Z_ERG_20 FB\FB_ERG_20_Modbus.TcPOU">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="POUs\004_FC\001_Parallel\FC_ParallelFinished.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="POUs\004_FC\001_Parallel\FC_ParallelRequest.TcPOU">
-      <SubType>Code</SubType>
-    </Compile>
     <Compile Include="POUs\40_TcpIp\40_TcpIp\E_ClientSteps.TcDUT">
       <SubType>Code</SubType>
     </Compile>
@@ -675,6 +705,7 @@
     <Folder Include="POUs\001_Station\001_Mapping" />
     <Folder Include="POUs\002_Machine" />
     <Folder Include="POUs\003_FB" />
+    <Folder Include="POUs\003_FB\0015_Functions\001_Parallel" />
     <Folder Include="POUs\003_FB\03_TURINRobotFB" />
     <Folder Include="POUs\003_FB\03_TURINRobotFB\DUTs" />
     <Folder Include="POUs\003_FB\0001_200Smart\S7-200SMART" />
@@ -692,7 +723,7 @@
     <Folder Include="POUs\003_FB\19-AxisFB" />
     <Folder Include="POUs\003_FB\41_GetSystemTime" />
     <Folder Include="POUs\003_FB\43_implicit checks" />
-    <Folder Include="POUs\003_FB\50_Recipe" />
+    <Folder Include="POUs\003_FB\0016_Recipe" />
     <Folder Include="POUs\003_FB\064_Temperature" />
     <Folder Include="POUs\003_FB\53_RudongPump" />
     <Folder Include="POUs\003_FB\53_RudongPump\08_PeristalticPumpFB" />
@@ -716,9 +747,10 @@
     <Folder Include="POUs\003_FB\0011_Cimcor" />
     <Folder Include="POUs\003_FB\0012_EasyPump" />
     <Folder Include="POUs\003_FB\0014_HITBOT" />
+    <Folder Include="POUs\003_FB\0015_Functions" />
+    <Folder Include="POUs\003_FB\0017_TURIN" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB" />
     <Folder Include="POUs\003_FB\Z_ERG_20 FB\DUTs" />
-    <Folder Include="POUs\004_FC\001_Parallel" />
     <Folder Include="POUs\004_FC" />
     <Folder Include="POUs\40_TcpIp" />
     <Folder Include="POUs\40_TcpIp\40_TcpIp" />

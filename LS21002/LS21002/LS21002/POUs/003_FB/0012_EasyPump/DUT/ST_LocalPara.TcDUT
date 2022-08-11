@@ -12,6 +12,7 @@ STRUCT
 	iDirectionSet:INT;//方向
 	rVirualTime			:REAL;//虚假的时间
   iAccuracySet				:REAL;//精度要求，如果是4%请填写0.04
+	iBackAngle:INT;//回吸角度  0-360
 END_STRUCT
 END_TYPE
 ]]></Declaration>

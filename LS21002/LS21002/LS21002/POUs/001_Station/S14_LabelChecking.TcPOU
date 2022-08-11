@@ -202,7 +202,7 @@ CASE station.iStepAuto OF
 		
 		station.xCycleEnable:=FALSE;	
 	//	station.xDone:=TRUE;
-		station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
+	//	station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
 	ELSE
 		;	
 END_CASE
@@ -228,9 +228,13 @@ CASE station.iStepInit OF
 20://阻挡气缸回原
 			fbHOZCyl_1.xInit:=TRUE;
 		IF  fbHOZCyl_1.xHP_Delay   THEN
+				station.iStepInit:=30;	
+		END_IF
+30://升降气缸回原
+			fbHOZCyl_2.xInit:=TRUE;
+		IF  fbHOZCyl_2.xHP_Delay   THEN
 				station.iStepInit:=999;	
 		END_IF
-	station.iStepInit:=999;
 999://初始化完成	
 	station.iStepInit:=0;
 	station.xInitDone:=TRUE;  
@@ -390,7 +394,7 @@ QxS12HOZCyl_2HP	:=fbHOZCyl_2.xHP_Valve;//	贴标检测工位¶推料气缸2¶原
       <LineId Id="467" Count="0" />
       <LineId Id="476" Count="0" />
       <LineId Id="472" Count="2" />
-      <LineId Id="478" Count="0" />
+      <LineId Id="483" Count="4" />
       <LineId Id="462" Count="4" />
       <LineId Id="436" Count="0" />
     </LineIds>

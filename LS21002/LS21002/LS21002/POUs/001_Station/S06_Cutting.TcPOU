@@ -40,6 +40,10 @@ VAR
 	xClearModuleProcessDone:BOOL;
 	bClearProcessStep	:BYTE;
 
+	// //废弃铝膜吹气电磁阀
+	xScrapBlowValve: BOOL;
+	// //废弃铝膜吹气步骤
+	iScrapBlowStep: INT;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -123,7 +127,7 @@ arTonDelay[05](IN:= fbGlampAdjustCyl_2.xWP_Valve AND  NOT IxS06GlampAdjustCyl_2H
 arTonDelay[06](IN:= fbGlampAdjustCyl_3.xWP_Valve AND  NOT IxS06GlampAdjustCyl_3HP, PT:=T#500MS , Q=> , ET=> );
 arTonDelay[07](IN:= , PT:=T#0.1S , Q=> , ET=> );
 arTonDelay[08](IN:= , PT:=T#0.1S , Q=> , ET=> );
-arTonDelay[09](IN:= , PT:=T#0.1S , Q=> , ET=> );
+arTonDelay[09](IN:= , PT:=T#0.1S , Q=> , ET=> );//铝膜吹气已使用
 arTonDelay[10](IN:= NOT fbROTAxisMove.xbusy , PT:=T#0.1S , Q=> , ET=> );//TipAuto使用
 
 
@@ -361,7 +365,9 @@ CASE station.iStepAuto OF
 			END_IF	
 	150://旋转伺服去工作位置
 		 fbROTAxisMove.xMoveAuto[2]:=TRUE;
+		
 		 IF fbROTAxisMove.xMoveInPos[2] THEN
+			 xScrapBlowValve:=TRUE;//废弃铝膜吹气打开
 			 station.iStepAuto :=170; 
 		 END_IF
 //	155://垂直切膜气缸上升
@@ -566,6 +572,7 @@ CASE station.iStepInit OF
   	  station.iStepInit:=10;	
   	END_IF	
 10://复位数据
+	iScrapBlowStep:=0;
 	FOR i:=1 TO gc_ModuleProNo BY 1 DO
 				MEMSET(ADR(tsModuleProcess[i]),0,SIZEOF(tsModuleProcess[i]));
 	END_FOR
@@ -607,6 +614,7 @@ CASE station.iStepInit OF
 80://旋转伺服旋转到位置1
 	fbROTAxisMove.xMoveAuto[2]:=TRUE;
 	IF  fbROTAxisMove.xMoveInPos[2] THEN
+	 	xScrapBlowValve:=TRUE;//废弃铝膜吹气打开
 		station.iStepInit :=90;
 	END_IF
 90://水平切莫气缸收回
@@ -810,7 +818,38 @@ QxS06PressCyl_1HP	    		:=    fbPressCyl_1.xHP_Valve;
 QxS06PressCyl_2WP	    		:=    fbPressCyl_2.xWP_Valve;
 QxS06PressCyl_2HP	    		:=    fbPressCyl_2.xHP_Valve;
 QxS06VTCCylWP				   		:=    fbVTCCyl.xWP_Valve;
-QxS06VTCCylHP	    				:=    fbVTCCyl.xHP_Valve;]]></ST>
+QxS06VTCCylHP	    				:=    fbVTCCyl.xHP_Valve;
+//铝膜吹气电磁阀手动
+IF  fbMachine[1].xManualMode THEN
+		 IF  xS06AluBlowValve THEN
+				QxS06BlowValve:=TRUE;
+		 ELSE
+				QxS06BlowValve:=FALSE;
+		 END_IF
+END_IF
+
+//铝膜吹气电磁阀自动
+//每次使能吹气2s
+CASE  iScrapBlowStep OF
+ 0://等待信号
+ 		IF xScrapBlowValve THEN
+		 	 QxS06BlowValve:=FALSE;
+			 xScrapBlowValve:=FALSE;
+			iScrapBlowStep:=iScrapBlowStep +1; 
+		END_IF
+  1://开始吹气
+  		QxS06BlowValve:=TRUE;
+			arTonDelay[09](IN:= TRUE, PT:=T#2S , Q=> , ET=> );
+			IF arTonDelay[09].Q THEN
+			 		arTonDelay[09](IN:= FALSE);
+			 		iScrapBlowStep:=iScrapBlowStep +1; 
+			END_IF
+	2://吹气关闭
+			QxS06BlowValve:=FALSE;
+			iScrapBlowStep:=0;
+END_CASE
+
+]]></ST>
       </Implementation>
     </Action>
     <LineIds Name="S06_Cutting">
@@ -938,7 +977,9 @@ QxS06VTCCylHP	    				:=    fbVTCCyl.xHP_Valve;]]></ST>
       <LineId Id="1803" Count="0" />
       <LineId Id="1660" Count="0" />
       <LineId Id="1809" Count="0" />
+      <LineId Id="2453" Count="0" />
       <LineId Id="1811" Count="0" />
+      <LineId Id="2454" Count="0" />
       <LineId Id="1814" Count="0" />
       <LineId Id="1813" Count="0" />
       <LineId Id="2282" Count="0" />
@@ -1017,6 +1058,7 @@ QxS06VTCCylHP	    				:=    fbVTCCyl.xHP_Valve;]]></ST>
     </LineIds>
     <LineIds Name="S06_Cutting.FlowInit">
       <LineId Id="437" Count="9" />
+      <LineId Id="618" Count="0" />
       <LineId Id="596" Count="1" />
       <LineId Id="595" Count="0" />
       <LineId Id="467" Count="0" />
@@ -1048,7 +1090,9 @@ QxS06VTCCylHP	    				:=    fbVTCCyl.xHP_Valve;]]></ST>
       <LineId Id="518" Count="0" />
       <LineId Id="486" Count="0" />
       <LineId Id="521" Count="0" />
-      <LineId Id="523" Count="1" />
+      <LineId Id="523" Count="0" />
+      <LineId Id="616" Count="0" />
+      <LineId Id="524" Count="0" />
       <LineId Id="522" Count="0" />
       <LineId Id="525" Count="4" />
       <LineId Id="487" Count="1" />
@@ -1128,6 +1172,29 @@ QxS06VTCCylHP	    				:=    fbVTCCyl.xHP_Valve;]]></ST>
       <LineId Id="39" Count="17" />
       <LineId Id="20" Count="0" />
       <LineId Id="57" Count="4" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="89" Count="0" />
+      <LineId Id="92" Count="0" />
+      <LineId Id="87" Count="0" />
+      <LineId Id="93" Count="2" />
+      <LineId Id="91" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="62" Count="0" />
+      <LineId Id="65" Count="1" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="71" Count="0" />
+      <LineId Id="88" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="70" Count="0" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="75" Count="1" />
+      <LineId Id="79" Count="0" />
+      <LineId Id="77" Count="1" />
+      <LineId Id="80" Count="2" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="63" Count="1" />
     </LineIds>
   </POU>
 </TcPlcObject>

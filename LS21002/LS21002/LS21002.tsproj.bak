@@ -4433,7 +4433,7 @@ External Setpoint Generation:
 			</NC>
 		</Motion>
 		<Plc>
-			<Project GUID="{A9506CAE-9DB1-4445-8AFA-F1453ADA065C}" Name="LS21002" PrjFilePath="LS21002\LS21002.plcproj" TmcFilePath="LS21002\LS21002.tmc" ReloadTmc="true" AmsPort="851" FileArchiveSettings="#x000e" CopyTmcToTarget="true" SymbolicMapping="true">
+			<Project GUID="{A9506CAE-9DB1-4445-8AFA-F1453ADA065C}" Name="LS21002" PrjFilePath="LS21002\LS21002.plcproj" TmcFilePath="LS21002\LS21002.tmc" ReloadTmc="true" AmsPort="851" FileArchiveSettings="#x001e" CopyTmcToTarget="true" SymbolicMapping="true">
 				<Instance Id="#x08502000" TcSmClass="TComPlcObjDef" KeepUnrestoredLinks="2" TmcPath="LS21002\LS21002.tmc">
 					<Name>LS21002 Instance</Name>
 					<CLSID ClassFactory="TcPlc30">{08500001-0000-0000-F000-000000000064}</CLSID>

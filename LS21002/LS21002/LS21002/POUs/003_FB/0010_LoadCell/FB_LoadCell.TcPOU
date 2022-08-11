@@ -48,18 +48,20 @@ VAR
 	// 操作类型
 	iOperType: INT;
 	i:INT;
+	rTempData:REAL;
 END_VAR
 ]]></Declaration>
     <Implementation>
-      <ST><![CDATA[ACT_Op();
+      <ST><![CDATA[MEMCPY(ADR(SUPER^.stModbusPara),ADR(LocalClient),SIZEOF(localClient));
+SUPER^.M_Modbus();
+ACT_Op();
 ACT_Cmd();
 ACT_Reset();
 ACT_Error();]]></ST>
     </Implementation>
     <Action Name="ACT_Cmd" Id="{4d20a460-1fe8-4974-863f-5f7f4f91b116}">
       <Implementation>
-        <ST><![CDATA[MEMCPY(ADR(SUPER^.stModbusPara),ADR(LocalClient),SIZEOF(localClient));
-SUPER^.M_Modbus();
+        <ST><![CDATA[
 IF  NOT  xQBusy THEN
  		xQRdyCmd:=TRUE;
 ELSE
@@ -112,8 +114,8 @@ CASE iCmdStep OF
 	  5://接收数据
 	  	 	iCmdOldStep:=iCmdStep;
 	  	 	IF  NOT 	fbReadInputRegs.bBusy AND  NOT  	fbReadInputRegs.bError THEN
-				 			SUPER^.pInputData:=ADR(arwDataReadInputRegs[1]);
-								stParOut.rGROSSWeight:=M_Binary32REAL();
+				 				MEMCPY(ADR(rTempData),ADR(arwDataReadRegs[1]),SIZEOF(rTempData));
+								stParOut.rGROSSWeight:=rTempData;
 	  						iCmdStep:=iCmdStep +1;
 	  		ELSIF   	fbReadInputRegs.bError THEN
 	  					iCmdStep:=0;		
@@ -198,12 +200,15 @@ END_IF]]></ST>
       </Implementation>
     </Action>
     <LineIds Name="FB_LoadCell">
-      <LineId Id="53" Count="2" />
+      <LineId Id="108" Count="0" />
+      <LineId Id="113" Count="0" />
+      <LineId Id="110" Count="2" />
       <LineId Id="9" Count="0" />
     </LineIds>
     <LineIds Name="FB_LoadCell.ACT_Cmd">
-      <LineId Id="487" Count="60" />
-      <LineId Id="554" Count="7" />
+      <LineId Id="701" Count="52" />
+      <LineId Id="768" Count="0" />
+      <LineId Id="754" Count="13" />
       <LineId Id="413" Count="0" />
     </LineIds>
     <LineIds Name="FB_LoadCell.ACT_Error">

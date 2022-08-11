@@ -22,6 +22,7 @@ VAR
 	fbMKC204C:REFERENCE TO FB_MT_MKC:=fbMCK204w;
 	//自动校准
 	fbAutoCalib	:REFERENCE TO FB_AutoCal:=fbAutoCal;
+	//压力传感器
 
 	//延时
 	arTonDelay :ARRAY[1..20] OF TON;
@@ -62,8 +63,37 @@ VAR
 	//校准步骤
 	iCalibStep:INT;
 	tMCalibTimeOut:TON;
+	//标志位
+	arxPushBusy:ARRAY[1..12] OF BOOL;
 	// 临时变量
-	arrVolume: ARRAY[1..2] of REAL;
+	arrVolume: ARRAY[1..2] OF REAL;
+	arrTest:ARRAY[1..10] OF REAL;
+	rTEST:REAL;
+		// 压力传感器读取步骤
+	iRepeatLoadCellStep,iOldRepeatLoadCellStep: INT;
+	arxLoadCellBusy:ARRAY[1..6] OF BOOL;
+	tLoadCellDelay:TON;
+	tLoadCellTimeout:TON;
+	//VBA表格使用的变量
+	arrVBARecordData:ARRAY[1..50] OF REAL;
+	iEasyPumpController:INT;
+	iEasyPumpGHead:INT;
+	iCycleCounter:INT;
+	iBackAngle:INT;
+	rAccuracySet:REAL;
+	rSetVolume:REAL;
+	rRunTime:REAL;
+	
+
+
+	// //泵头类型
+	iPumpType: INT;
+	// //软管类型
+	iSoftType: INT;
+	//泵头类型
+	iPumpHeadType: INT;
+	//校准次数
+	iCalibCounter:INT;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -76,7 +106,8 @@ General();
 ILC();
 TipAuto();
 TipManual();
-Z_Output();]]></ST>
+Z_Output();
+ACT_test();]]></ST>
     </Implementation>
     <Action Name="A_Input" Id="{36d6adff-dfed-4462-bb55-6ba3884a334f}">
       <Implementation>
@@ -91,6 +122,290 @@ fbROTCyl.xHP_Sensor	:=	IxS02ROTCylHP	;
 
 xSensorReached[1]:=IxS02Sensor1Reached	;//	注液工位¶到位传感器1
 xSensorReached[2]:=IxS02Sensor2Reached	;//	注液工位¶到位传感器2]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_test" Id="{8bb9faba-fb67-4182-834e-9f5cedd090a1}">
+      <Implementation>
+        <ST><![CDATA[
+CASE stManualCalib.iMCalibStep OF
+ 0://等待按键
+		IF  stManualCalib.xStart  AND
+			  stManualCalib.iPumpContorller>=1 AND 
+				stManualCalib.iPumpContorller<=12 AND 
+				stManualCalib.iPumpModule>=1 AND 
+				stManualCalib.iPumpModule<=9 THEN
+			  stManualCalib.xModulePushStart:=FALSE;		 
+				stManualCalib.xModulePushOK:=FALSE;			
+				stManualCalib.xCalibTestStart:=FALSE;				 
+				stManualCalib.xCalibTestOK:=FALSE;						
+				stManualCalib.xRecordDataStart:=FALSE;	
+				stManualCalib.xRecordDataOK:=FALSE;						 
+				stManualCalib.xStart  :=FALSE;
+				stManualCalib.xBusy  :=TRUE;
+				stManualCalib.xDone :=FALSE;	 
+				stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
+		ELSIF   stManualCalib.xGotoPosition THEN
+		 		stManualCalib.iMCalibStep:=50;
+		END_IF
+1://参数赋值
+	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+		stData.EasyPumps[stManualCalib.iPumpContorller].rCalFluVolume:=stManualCalib.rSetVolume;
+		stData.EasyPumps[stManualCalib.iPumpContorller].iModuleAdress:=stManualCalib.iPumpModule;
+		stData.EasyPumps[stManualCalib.iPumpContorller].rCalTime:=stManualCalib.rRunTime;
+		//stData.EasyPumps[stManualCalib.iPumpContorller].rCalNum:=stManualCalib.iCycleNum;
+		stData.EasyPumps[stManualCalib.iPumpContorller].rModuleRealFluVolume:=stManualCalib.rAverageRealVolume;
+		stData.EasyPumps[stManualCalib.iPumpContorller].rCalBackAngle:=stManualCalib.iBackAngle;
+		stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
+2://写入校准参数
+	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+		stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+3://等待写入完成
+	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+	  stManualCalib.xModulePushStart:=TRUE;
+		stManualCalib.xModulePushOK:=FALSE;
+		stManualCalib.xNeedInjectAgain:=FALSE;
+		stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+4://清除原有数据
+	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+		MEMSET(ADR(stManualCalib.arrRealVolume[1]),0,SIZEOF(stManualCalib.arrRealVolume));
+		stManualCalib.rAverageRealVolume:=0; 
+		stManualCalib.iInjectCounter:=1;
+	 	stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+5://检查
+		IF   stManualCalib.xModulePushStart THEN
+			stData.EasyPumps[stManualCalib.iPumpContorller].rCalNum:=6;	//连续注液六次	
+		ELSIF    stManualCalib.xCalibTestStart THEN
+		 	stData.EasyPumps[stManualCalib.iPumpContorller].rCalNum:=1;	//连续注液两次
+		ELSIF   stManualCalib.xRecordDataStart THEN
+			stData.EasyPumps[stManualCalib.iPumpContorller].rCalNum:=1;	//注液一次
+		END_IF  
+		stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+6://称清零
+	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+	  fbMCK.stDeviceOpe.xClearZeroInstanly_HMI:=TRUE;
+		IF fbMCK.xQBusy THEN
+							 stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+		END_IF
+7://等待清零完成
+	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+	  IF  fbMCK.xQDone THEN
+			  	stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
+		 ELSIF  fbMCK.xQError THEN
+				  fbMCK.xIReset:=TRUE;
+					stManualCalib.iMCalibStep:=6;	
+		 END_IF
+8://开始单通道注液
+	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+	  fbEasyPumps[stManualCalib.iPumpContorller].stDeviceOpe.xModulePush_Auto:=TRUE;
+		IF  fbEasyPumps[stManualCalib.iPumpContorller].xQBusy THEN
+				stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+		END_IF
+9://等待注液完成
+	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+	 	stManualCalib.tStableDelay(IN:= FALSE);
+	 	IF  fbEasyPumps[stManualCalib.iPumpContorller].xQDone THEN
+				stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+		END_IF
+10://等待
+					 stManualCalib.tStableDelay(IN:= TRUE, PT:=T#6S , Q=> , ET=> );
+					 IF  stManualCalib.tStableDelay.Q THEN
+									stManualCalib.tStableDelay(IN:= FALSE);
+									stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+					 END_IF			 
+11://读取称的读数
+	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+	 	fbMCK.stDeviceOpe.xAcquireWeight_RealTime_HMI:=TRUE;
+		IF fbMCK.xQBusy THEN
+					stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+		END_IF
+12://等待完成
+	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+	  IF  fbMCK.xQDone THEN
+				IF  (fbMCK.stParOut.rCurrentWeight <=stManualCalib.rSetVolume*0.1 )THEN
+										stManualCalib.iMCalibStep:=6;
+				ELSE
+							IF  stManualCalib.xModulePushStart   THEN
+									stManualCalib.arrRealVolume[stManualCalib.iInjectCounter]:=fbMCK.stParOut.rCurrentWeight;
+							ELSIF  stManualCalib.xCalibTestStart THEN
+								 stManualCalib.arrRealVolume[stManualCalib.iCalibCounter]:=fbMCK.stParOut.rCurrentWeight;	
+							ELSIF  stManualCalib.xRecordDataStart THEN
+									stManualCalib.arrRecordVolume[stManualCalib.iRecordCounter]:=fbMCK.stParOut.rCurrentWeight;
+							END_IF
+			  			stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+					END_IF
+		 ELSIF  fbMCK.xQError THEN
+				  fbMCK.xIReset:=TRUE;
+					 stManualCalib.iMCalibStep:=6;
+		 END_IF
+13://注液计数
+	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+	 	IF  stManualCalib.xModulePushStart THEN
+	  			stManualCalib.iInjectCounter := stManualCalib.iInjectCounter +1;
+		ELSIF   stManualCalib.xCalibTestStart THEN
+				 	stManualCalib.iCalibCounter := stManualCalib.iCalibCounter +1;
+		ELSIF  stManualCalib.xRecordDataStart THEN
+						stManualCalib.iRecordCounter := stManualCalib.iRecordCounter +1;
+		END_IF
+	 	stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+14://
+	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+	 	IF   stManualCalib.xModulePushStart THEN
+				IF 	 stManualCalib.iInjectCounter >1 THEN
+							stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
+				ELSE
+							stManualCalib.iMCalibStep:=6;
+				END_IF
+		ELSIF   stManualCalib.xCalibTestStart THEN
+				IF 	 stManualCalib.iCalibCounter >3 THEN
+							stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
+				ELSE
+							stManualCalib.iMCalibStep:=6;
+				END_IF
+		ELSIF   stManualCalib.xRecordDataStart THEN
+				IF 	 stManualCalib.iRecordCounter >50 THEN
+							stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
+				ELSE
+							stManualCalib.iMCalibStep:=6;
+				END_IF			 
+		END_IF
+			 
+15://计算平均液量或者校准的精度
+	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+		IF  stManualCalib.xModulePushStart THEN
+						stManualCalib.rAverageRealVolume:=stManualCalib.arrRealVolume[1]/6; 
+						stManualCalib.rESVolume:=(stManualCalib.rAverageRealVolume-stManualCalib.rSetVolume)/stManualCalib.rSetVolume;//偏差值
+						IF  ABS( stManualCalib.rESVolume)>stData.EasyPumps[stManualCalib.iPumpContorller].iAccuracySet*0.7 THEN
+						 		stManualCalib.xNeedInjectAgain:=TRUE;
+						END_IF
+								stManualCalib.xModulePushStart:=FALSE;
+								stManualCalib.xModulePushOK:=TRUE;
+								stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
+		 ELSIF  stManualCalib.xCalibTestStart THEN
+									stManualCalib.rESVolume:=FC_BubbleSort_Max(i_i_Counter:=3 , i_arrReal:= stManualCalib.arrRealVolume);//最大值
+									stManualCalib.rEIVolume:=FC_BubbleSort_Min(i_i_Counter:=3, i_arrReal:= stManualCalib.arrRealVolume);//最小值
+									stManualCalib.rESVolume:=(stManualCalib.rESVolume-stManualCalib.rSetVolume)/stManualCalib.rSetVolume;//上偏差
+									stManualCalib.rEIVolume:=(stManualCalib.rEIVolume-stManualCalib.rSetVolume)/stManualCalib.rSetVolume;//下偏差	 
+									 IF  stManualCalib.rESVolume>stData.EasyPumps[stManualCalib.iPumpContorller].iAccuracySet*0.9  OR 
+											 	stManualCalib.rEIVolume<-1*stData.EasyPumps[stManualCalib.iPumpContorller].iAccuracySet*0.9 	THEN
+													 	FOR i:=1 TO 3 BY 1 DO
+																stManualCalib.rAverageRealVolume:=stManualCalib.rAverageRealVolume +stManualCalib.arrRealVolume[i];
+														END_FOR
+														 stManualCalib.rAverageRealVolume:=stManualCalib.rAverageRealVolume/3;
+													 stManualCalib.xCalibTestStart:=FALSE;
+													 stManualCalib.xCalibTestOK:=FALSE;
+													 stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
+											//	//如果上下偏差不均衡  我们需要进行微调处理
+										  // IF  ABS(ABS( stManualCalib.rESVolume)-ABS(stManualCalib.rEIVolume))<=stData.EasyPumps[stManualCalib.iPumpContorller].iAccuracySet*0.5 THEN
+											//		 stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
+											// ELSE
+											//		  stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +3;
+											// END_IF
+									 ELSE
+													 stManualCalib.xCalibTestStart:=FALSE;
+													 stManualCalib.xCalibTestOK:=TRUE;
+													 stManualCalib.xRecordDataStart:=TRUE;
+													 stManualCalib.xRecordDataOK:=FALSE;
+													 stManualCalib.iRecordCounter:=1;
+													 stManualCalib.iMCalibStep:=4;
+									 END_IF
+			ELSIF stManualCalib.xRecordDataStart THEN
+											stManualCalib.xRecordDataStart:=FALSE;
+											stManualCalib.xRecordDataOK:=TRUE;	
+											 stManualCalib.xBusy  :=FALSE;
+											 stManualCalib.xDone  :=TRUE;	 
+											 stManualCalib.iMCalibStep:=0;			
+		  END_IF
+16://写入校准参数
+	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+				stData.EasyPumps[stManualCalib.iPumpContorller].rModuleRealFluVolume:=stManualCalib.rAverageRealVolume;
+				fbEasyPumps[stManualCalib.iPumpContorller].stDeviceOpe.xCalibAction_Hmi:=TRUE;
+				IF  fbEasyPumps[stManualCalib.iPumpContorller].xQBusy THEN
+							stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+				END_IF
+17://等待写入完成
+	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+	 	IF  fbEasyPumps[stManualCalib.iPumpContorller].xQDone THEN
+				stManualCalib.xCalibTestStart:=TRUE;
+				stManualCalib.iCalibCounter:=1;
+					stManualCalib.iMCalibStep:=20;	
+		END_IF	
+	
+18://开始微调
+	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+		fbEasyPumps[stManualCalib.iPumpContorller].stDeviceOpe.xAdjust_Hmi:=TRUE;
+		IF  fbEasyPumps[stManualCalib.iPumpContorller].xQBusy THEN
+				stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+		END_IF
+19://等待写入完成
+	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+	 	IF  fbEasyPumps[stManualCalib.iPumpContorller].xQDone THEN
+		 		stManualCalib.xCalibTestStart:=TRUE;
+				stManualCalib.iMCalibStep:=20;	
+		END_IF
+20://校准结束,开始测试校准效果
+			IF  stManualCalib.xNeedInjectAgain THEN
+			 	stManualCalib.iMCalibStep:=1;
+			ELSE
+			 	stManualCalib.iMCalibStep:=4;
+			END_IF
+50://伺服上电
+			 fbXAxisMove.xPowerInit := TRUE ;
+			 fbYAxisMove.xPowerInit := TRUE ;
+			 fbZAxisMove.xPowerInit := TRUE ;
+			IF fbXAxisMove.xPowerOn AND   fbYAxisMove.xPowerOn AND  fbZAxisMove.xPowerOn THEN 
+						stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+			END_IF	
+51://停止蠕动泵
+		 FOR i:=1 TO  12 BY 1 DO
+						fbEasyPumps[i].stDeviceOpe.xStop_Hmi:=TRUE;
+						IF  fbEasyPumps[i].xQBusy THEN
+						 		arxPushBusy[i]:=TRUE;
+						END_IF
+		 END_FOR
+		 	FOR   i :=1 TO 12 BY  1  DO
+			 			IF NOT  arxPushBusy[i] THEN
+						 		EXIT;
+						ELSIF i =12 THEN
+						 	  stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+					  END_IF
+			END_FOR
+
+52://等待蠕动泵全部停止
+				 IF   		fbEasyPumps[1].xQDone AND
+									fbEasyPumps[2].xQDone AND
+									fbEasyPumps[3].xQDone AND
+								  fbEasyPumps[4].xQDone AND
+									fbEasyPumps[5].xQDone AND
+									fbEasyPumps[6].xQDone AND
+									fbEasyPumps[7].xQDone AND
+								  fbEasyPumps[8].xQDone AND
+									fbEasyPumps[9].xQDone AND
+									fbEasyPumps[10].xQDone AND
+									fbEasyPumps[11].xQDone AND
+								  fbEasyPumps[12].xQDone THEN						
+								  stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;		
+					 END_IF;	
+
+53://Z轴伺服上升
+		fbZAxisMove.xMoveAuto[1]:=TRUE;
+		IF fbZAxisMove.xMoveInPos[1]   THEN
+			  stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+		END_IF	
+54://防滴液气缸回原
+	fbROTCyl.xInit:=TRUE;
+	IF fbROTCyl.xHP_Delay THEN
+		station.iStepInit :=50;
+	END_IF
+
+55://XY轴回参考位
+		fbXAxisMove.xMoveAuto[1]:=TRUE;
+		fbYAxisMove.xMoveAuto[1]:=TRUE;
+		IF fbXAxisMove.xMoveInPos[1]  AND fbYAxisMove.xMoveInPos[1]  THEN
+			station.iStepInit:=90;	
+		END_IF
+					
+			
+ END_CASE]]></ST>
       </Implementation>
     </Action>
     <Action Name="Alarm" Id="{830c4921-b54b-4c6d-a396-f5d5eb2c5278}">
@@ -128,7 +443,16 @@ station.adwAlarm[1].27	:=	fbZAxisMove.xMoveTimeout	;//	S02注液工位Z轴伺服
 //station.adwAlarm[1].30	:=	fbStirAxis.xMoveTimeout	;//	S02注液工位搅拌旋转伺服移动超时
 station.adwAlarm[1].31	:=	fbMKC204C.xError	;//	S03注液工位称重设备报警
 
-(*station.adwAlarm[2].0	:=	TRUE	;//S03注液工位排空超时.*)]]></ST>
+(*station.adwAlarm[2].0	:=	TRUE	;//S03注液工位排空超时.*)
+
+	//station.adwAlarm[2].01	:=	TRUE	;//	S02注液工位1号桶液量不足，请更换母液
+	//station.adwAlarm[2].02	:=	TRUE	;//	S02注液工位2号桶液量不足，请更换母液
+	//station.adwAlarm[2].03	:=	TRUE	;//	S02注液工位3号桶液量不足，请更换母液
+	//station.adwAlarm[2].04	:=	TRUE	;//	S02注液工位4号桶液量不足，请更换母液
+	//station.adwAlarm[2].05	:=	TRUE	;//	S02注液工位5号桶液量不足，请更换母液
+  //station.adwAlarm[2].06	:=	TRUE	;//	S02注液工位6号桶液量不足，请更换母液
+	//station.adwAlarm[2].07	:=	TRUE	;//	S02注液工位压力传感器读取超时报警，请检查
+						]]></ST>
       </Implementation>
     </Action>
     <Action Name="Delay" Id="{7f460a8e-34d3-43b7-a3e6-d254bf0f5a76}">
@@ -237,7 +561,6 @@ CASE station.iStepAuto OF
 		tsModuleProcess[1].xProcessCompleted:=TRUE;	
 		tsModuleProcess[1].xQDataCompleted:=TRUE;	
 		station.iStepAuto:= 30;
-
 	/////产品流程开始	
 	30: //判断产品状态
 			 IF NOT  fbMachine[1].xTryRun THEN
@@ -248,7 +571,17 @@ CASE station.iStepAuto OF
 							 arProcessDataStation[2].stProduct.xEmptying AND 
 							 NOT xSensorReached[1] AND  NOT   xSensorReached[2] THEN
 										station.xEmptying :=TRUE;	
-									  station.iStepAuto:= 2000;        
+									  station.iStepAuto:= 2000; 
+					ELSIF //第一站由于需要增加节拍增加了并行程序，所以写入请料的时机不好把控
+					 			//在本站增加此条件以修正请料信号的位置
+							 arProcessDataStation[1].stProduct.xEmptying AND 
+							 arProcessDataStation[2].stProduct.xEmptying AND 
+							  xSensorReached[1] AND  xSensorReached[2] THEN
+										arProcessDataStation[1].stProduct.xEmptying :=FALSE; 		
+								    arProcessDataStation[2].stProduct.xEmptying :=FALSE;
+										arProcessDataStation[1].xMaterialOnOff :=TRUE; 		
+								    arProcessDataStation[2].xMaterialOnOff :=TRUE;  
+									  station.iStepAuto:= 40;
 					ELSIF   (arProcessDataStation[1].xMaterialOnOff   AND
 								  arProcessDataStation[2].xMaterialOnOff ) OR
 									(xSensorReached[1] AND   xSensorReached[2])  THEN
@@ -325,6 +658,9 @@ CASE station.iStepAuto OF
 			station.iStepAuto:=125;
 		END_IF
 	125://屏蔽注液
+			FOR i:=1 TO  12 BY 1 DO
+					arxPushBusy[i]:=FALSE;
+		 END_FOR
 			IF   axBypassSignal[2] OR fbMachine[1].xTryRun THEN
 				station.iStepAuto:=145;
 			ELSE
@@ -333,14 +669,18 @@ CASE station.iStepAuto OF
 	130://开始注液
 		  tsModuleProcess[bXCounter+1].xProcessStarted:=TRUE;
 		 FOR i:=1 TO  12 BY 1 DO
-						fbEasyPumps[i].stDeviceOpe.xPush_Auto[iBoxChoose]:=TRUE;
-						IF NOT  fbEasyPumps[i].xQBusy THEN
-								EXIT;
-						ELSIF  i =12 THEN
-								 station.iStepAuto:= 140;
-					  END_IF
+						fbEasyPumps[i].stDeviceOpe.xPush_Auto[1]:=TRUE;
+						IF  fbEasyPumps[i].xQBusy THEN
+						 		arxPushBusy[i]:=TRUE;
+						END_IF
 		 END_FOR
-		
+		 	FOR   i :=1 TO 12 BY  1  DO
+			 			IF NOT  arxPushBusy[i] THEN
+						 		EXIT;
+						ELSIF i =12 THEN
+						 	  station.iStepAuto:=140;	
+					  END_IF
+			END_FOR
 	140://注液结束
 					arTonDelay[02](IN:=FALSE );
 					 IF   	fbEasyPumps[1].xQDone AND
@@ -679,7 +1019,7 @@ CASE station.iStepAuto OF
 				station.iStepAuto:=station.iStepAuto +1 ;	
 	1088://写入通道实际液量
 				iCalibStep:=station.iStepAuto;
-				fbEasyPumps[stCalibration.iYCounter].stDeviceOpe.xCalibParaWrite_Auto:=TRUE;
+				fbEasyPumps[stCalibration.iYCounter].stDeviceOpe.xCalibAction_Auto:=TRUE;
 				IF 	fbEasyPumps[stCalibration.iYCounter].xQBusy THEN
 						station.iStepAuto:=station.iStepAuto +1 ;	
 				END_IF
@@ -690,7 +1030,7 @@ CASE station.iStepAuto OF
 					END_IF
 	1090://开始校准
 				iCalibStep:=station.iStepAuto;
-				fbEasyPumps[stCalibration.iYCounter].stDeviceOpe.xCalibration_Auto:=TRUE;
+				fbEasyPumps[stCalibration.iYCounter].stDeviceOpe.xAdjust_Auto:=TRUE;
 				IF 	fbEasyPumps[stCalibration.iYCounter].xQBusy THEN
 						station.iStepAuto:=station.iStepAuto +1 ;	
 				END_IF				
@@ -787,26 +1127,26 @@ CASE station.iStepAuto OF
 				  station.iStepAuto:=2020;
   2020://停止蠕动泵
 				FOR i:=1 TO gc_uiRudongPump BY 1 DO
-					fbRudongPump[i].stDeviceOpe.xStop_Auto:=TRUE;
+					fbEasyPumps[i].stDeviceOpe.xStop_Auto:=TRUE;
 				END_FOR
 		   	station.iStepAuto :=2030;
 	2030://等待蠕动泵全部停止
-			 FOR i:=1 TO gc_uiRudongPump BY 1 DO
-				 IF  NOT  fbRudongPump[i].xDone  THEN
-						 EXIT;
-				 ELSE  
-					 fbRudongPump[i].xExecute:=FALSE;
-				 END_IF
-				 IF  i = gc_uiRudongPump THEN
-						 station.iStepAuto :=2040;
-				 END_IF
-			 END_FOR
-	2040://激活配置
-			 FOR i:=1 TO gc_uiRudongPump BY 1 DO
-					 fbRudongPump[i].xNeedConfigurePara:=TRUE;
-			 END_FOR
-				 station.iStepAuto :=2050;
-	2050://XYZ轴回参考位
+				IF   fbEasyPumps[1].xQDone AND 
+							 fbEasyPumps[2].xQDone AND 
+							 fbEasyPumps[3].xQDone AND 
+							 fbEasyPumps[4].xQDone AND 
+							 fbEasyPumps[5].xQDone AND 
+							 fbEasyPumps[6].xQDone AND 
+							 fbEasyPumps[7].xQDone AND 
+							 fbEasyPumps[8].xQDone AND 
+							 fbEasyPumps[9].xQDone AND 
+							 fbEasyPumps[10].xQDone AND 
+							 fbEasyPumps[11].xQDone AND
+							 fbEasyPumps[12].xQDone THEN
+							station.iStepAuto :=2040;
+				END_IF
+				
+	2040://XYZ轴回参考位
 				fbXAxisMove.xMoveAuto[1]:=TRUE;
 				fbYAxisMove.xMoveAuto[1]:=TRUE;
 				IF fbXAxisMove.xMoveInPos[1]  AND
@@ -869,7 +1209,8 @@ CASE station.iStepInit OF
   	END_IF	
 10://复位数据
 	FOR   i:=1 TO 12 BY 1	DO
-	 	fbRudongPump[i].xExecute:=FALSE;
+	 	fbEasyPumps[i].xIReset:=TRUE;
+		 arxPushBusy[i]:=FALSE;
 	END_FOR
 	fbMCK.xIReset:=TRUE;
 	FOR i:=1 TO gc_ModuleProNo BY 1 DO
@@ -877,34 +1218,29 @@ CASE station.iStepInit OF
 	END_FOR
 	station.iStepInit :=15;
 15://伺服上电
-  	fbXAxisMove.xPowerInit := TRUE ;
+   fbXAxisMove.xPowerInit := TRUE ;
 	 fbYAxisMove.xPowerInit := TRUE ;
 	 fbZAxisMove.xPowerInit := TRUE ;
 	IF fbXAxisMove.xPowerOn AND   fbYAxisMove.xPowerOn AND  fbZAxisMove.xPowerOn THEN 
     	station.iStepInit:=20;	
 	END_IF	
-20://Z轴伺服上升
-		fbZAxisMove.xMoveAuto[1]:=TRUE;
-		IF fbZAxisMove.xMoveInPos[1]   THEN
-			station.iStepInit:=30;	
-		END_IF	
-30://防滴液气缸回原
-	fbROTCyl.xInit:=TRUE;
-	IF fbROTCyl.xHP_Delay THEN
-		station.iStepInit :=50;
-	END_IF
-35://停止蠕动泵
-		FOR i:=1 TO gc_uiRudongPump BY 1 DO
-				fbEasyPumps[i].stDeviceOpe.xStop_Auto:=TRUE;
-				IF  NOT  fbEasyPumps[i].xQBusy THEN
-				 		EXIT;
-				ELSIF i =gc_uiRudongPump THEN
-				 		station.iStepInit :=40;
-				END_IF
-		END_FOR
-			
-40://等待蠕动泵全部停止
-				 IF   	fbEasyPumps[1].xQDone AND
+20://停止蠕动泵
+		 FOR i:=1 TO  12 BY 1 DO
+						fbEasyPumps[i].stDeviceOpe.xStop_Auto:=TRUE;
+						IF  fbEasyPumps[i].xQBusy THEN
+						 		arxPushBusy[i]:=TRUE;
+						END_IF
+		 END_FOR
+		 	FOR   i :=1 TO 12 BY  1  DO
+			 			IF NOT  arxPushBusy[i] THEN
+						 		EXIT;
+						ELSIF i =12 THEN
+						 	  station.iStepInit:=25;	
+					  END_IF
+			END_FOR
+
+25://等待蠕动泵全部停止
+				 IF   		fbEasyPumps[1].xQDone AND
 									fbEasyPumps[2].xQDone AND
 									fbEasyPumps[3].xQDone AND
 								  fbEasyPumps[4].xQDone AND
@@ -916,8 +1252,21 @@ CASE station.iStepInit OF
 									fbEasyPumps[10].xQDone AND
 									fbEasyPumps[11].xQDone AND
 								  fbEasyPumps[12].xQDone THEN						
-								 station.iStepInit:=50;	
-					 END_IF;
+								 station.iStepInit:=30;	
+					 END_IF;	
+	
+	
+30://Z轴伺服上升
+		fbZAxisMove.xMoveAuto[1]:=TRUE;
+		IF fbZAxisMove.xMoveInPos[1]   THEN
+			station.iStepInit:=40;	
+		END_IF	
+40://防滴液气缸回原
+	fbROTCyl.xInit:=TRUE;
+	IF fbROTCyl.xHP_Delay THEN
+		station.iStepInit :=50;
+	END_IF
+
 50://XY轴回参考位
 		fbXAxisMove.xMoveAuto[1]:=TRUE;
 		fbYAxisMove.xMoveAuto[1]:=TRUE;
@@ -978,19 +1327,15 @@ RudongPump_R_TRIG[2](CLK:=xRudongPumpEmptyDone , Q=> );
 //超时报警
 	tEmptyTimeOut(IN:= (iRudongPumpEmptyOldStep =iRudongPumpEmptyStep AND iRudongPumpEmptyStep <>0) , PT:=T#10S , Q=> , ET=> );
 	IF		tEmptyTimeOut.Q THEN
-			iRudongPumpEmptyStep:=0;
-				FOR i:=1 TO  12 BY 1 DO
-							fbRudongPump[i].xExecute:=FALSE;
-						fbRudongPump[i].stDeviceOpe.xFullSpeedPush_Hmi:=FALSE;
-						fbRudongPump[i].stDeviceOpe.xFullSpeedStop_Hmi:=TRUE;	
-				END_FOR
+				iRudongPumpEmptyStep:=0;
 				station.adwAlarm[2].0	:=	TRUE	;//S02注液工位排空超时
 	END_IF
 CASE  iRudongPumpEmptyStep OF
 		 0://等待触发信号
-				 iRudongPumpEmptyOldStep :=iRudongPumpEmptyStep;
 				 IF  RudongPump_R_TRIG[1].Q THEN
 							iRudongPumpEmptyStep:= iRudongPumpEmptyStep +1;
+				 ELSIF	RudongPump_R_TRIG[2].Q THEN
+							iRudongPumpEmptyStep:=5;		 
 				 END_IF
 				
 		 1://XY轴到排液位置
@@ -1016,27 +1361,51 @@ CASE  iRudongPumpEmptyStep OF
 						 END_IF
 						
 		 4://开始排空液体
+						iRudongPumpEmptyOldStep :=iRudongPumpEmptyStep;	
 						FOR i:=1 TO  12 BY 1 DO
 							  IF   NOT  arxRudongPumpEmptyBypass[i] THEN
-										fbRudongPump[i].stDeviceOpe.xFullSpeedPush_Hmi:=TRUE;
+										fbEasyPumps[i].stDeviceOpe.xFullSpeedPush_Hmi:=TRUE;
 								END_IF
+									arxPushBusy[i]:=FALSE;
 					 END_FOR
-						iRudongPumpEmptyOldStep :=iRudongPumpEmptyStep;	
-					 iRudongPumpEmptyStep:= iRudongPumpEmptyStep +1;		
 						
+					  iRudongPumpEmptyStep:= 0;		
 		 5://等待结束
-				 IF	RudongPump_R_TRIG[2].Q THEN
+						iRudongPumpEmptyOldStep :=iRudongPumpEmptyStep;	
 						 FOR i:=1 TO  12 BY 1 DO
-									 fbRudongPump[i].stDeviceOpe.xFullSpeedStop_Hmi:=TRUE;				
+									 fbEasyPumps[i].stDeviceOpe.xFullSpeedStop_Hmi:=TRUE;	
+									IF   	 fbEasyPumps[i].xQBusy THEN
+												arxPushBusy[i]:=TRUE;
+									END_IF		
 						 END_FOR		
-								iRudongPumpEmptyStep:= iRudongPumpEmptyStep +1;		
-				 END_IF	
-				 //	iRudongPumpEmptyOldStep :=iRudongPumpEmptyStep;
-		 6://结束
-							 iRudongPumpEmptyOldStep :=iRudongPumpEmptyStep;
-							 iRudongPumpEmptyStep:= 0;
+							 FOR i:=1 TO  12 BY 1 DO
+									 	IF   NOT  	 arxPushBusy[i] THEN
+												EXIT;
+										ELSIF  i =12 THEN
+												iRudongPumpEmptyStep:= iRudongPumpEmptyStep +1;		 
+										END_IF			
+							 END_FOR
+		6://等待结束			
+			 				iRudongPumpEmptyOldStep :=iRudongPumpEmptyStep;	
+			 			 IF   fbEasyPumps[1].xQDone AND
+									fbEasyPumps[2].xQDone AND
+									fbEasyPumps[3].xQDone AND
+								  fbEasyPumps[4].xQDone AND
+									fbEasyPumps[5].xQDone AND
+									fbEasyPumps[6].xQDone AND
+									fbEasyPumps[7].xQDone AND
+								  fbEasyPumps[8].xQDone AND
+									fbEasyPumps[9].xQDone AND
+									fbEasyPumps[10].xQDone AND
+									fbEasyPumps[11].xQDone AND
+								  fbEasyPumps[12].xQDone THEN						
+								 iRudongPumpEmptyStep:= iRudongPumpEmptyStep +1;	
+					 END_IF
+		7://结束
+							 iRudongPumpEmptyStep:= 0;		
 END_CASE	
 {endregion}
+	 
 {region "手动校准蠕动泵"}
 IF  stManualCalib.xReset THEN
 			  stManualCalib.xError:=FALSE;
@@ -1057,223 +1426,328 @@ IF		tMCalibTimeOut.Q THEN
  	stManualCalib.xError:=TRUE;
 	stManualCalib.iMCalibStep:=0;
 END_IF
-CASE stManualCalib.iMCalibStep OF
- 0://等待按键
-		IF  stManualCalib.xStart  AND
-			  stManualCalib.iPumpContorller>=1 AND 
-				stManualCalib.iPumpContorller<=12 AND 
-				stManualCalib.iPumpModule>=1 AND 
-				stManualCalib.iPumpModule<=9 THEN
-			  stManualCalib.xModulePushStart:=FALSE;		 
-				stManualCalib.xModulePushOK:=FALSE;			
-				stManualCalib.xCalibTestStart:=FALSE;				 
-				stManualCalib.xCalibTestOK:=FALSE;						
-				stManualCalib.xRecordDataStart:=FALSE;	
-				stManualCalib.xRecordDataOK:=FALSE;						 
-				stManualCalib.xStart  :=FALSE;
-				stManualCalib.xBusy  :=TRUE;
-				stManualCalib.xDone :=FALSE;	 
-				stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
-		 END_IF
-1://参数赋值
-	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
-		stData.EasyPumps[stManualCalib.iPumpContorller].rCalFluVolume:=stManualCalib.rSetVolume;
-		stData.EasyPumps[stManualCalib.iPumpContorller].iModuleAdress:=stManualCalib.iPumpModule;
-		stData.EasyPumps[stManualCalib.iPumpContorller].rCalTime:=stManualCalib.rRunTime;
-		stData.EasyPumps[stManualCalib.iPumpContorller].rCalNum:=stManualCalib.iCycleNum;
-		stData.EasyPumps[stManualCalib.iPumpContorller].rModuleRealFluVolume:=stManualCalib.rAverageRealVolume;
-		stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
-2://写入校准参数
-	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
-		stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
-		
-3://等待写入完成
-	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
-	  stManualCalib.xModulePushStart:=TRUE;
-		stManualCalib.xModulePushOK:=FALSE;
-		stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
-4://清除原有数据
-	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
-	 	//IF  stManualCalib.xModulePushStart  THEN
-			 MEMSET(ADR(stManualCalib.arrTestRealVolume[1]),0,SIZEOF(stManualCalib.arrTestRealVolume));
-			 MEMSET(ADR(stManualCalib.arrRealVolume[1]),0,SIZEOF(stManualCalib.arrRealVolume));
-				stManualCalib.rAverageRealVolume:=0; 
-			 stManualCalib.iInjectCounter:=1;
-		//ELSE
-		//	 stManualCalib.iCalibCounter:=1;
-		//END_IF
-	 	stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
-5://称清零
-	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
-	 IF   stManualCalib.xModulePushStart OR
-				stManualCalib.xCalibTestStart  OR
-				(stManualCalib.xRecordDataStart AND 
-					stManualCalib.iRecordCounter=1) THEN
-				 fbMCK.stDeviceOpe.xClearZeroInstanly_HMI:=TRUE;
-				 IF fbMCK.xQBusy THEN
-							 stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
-					END_IF
-	 ELSE
-			 stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +2;	
-	 END_IF
-6://等待清零完成
-	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
-	  IF  fbMCK.xQDone THEN
-			  	stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
-		 ELSIF  fbMCK.xQError THEN
-				  fbMCK.xIReset:=TRUE;
-					stManualCalib.iMCalibStep:=5;	
-		 END_IF
-7://开始单通道注液
-	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
-	  fbEasyPumps[stManualCalib.iPumpContorller].stDeviceOpe.xModulePush_Auto:=TRUE;
-		IF  fbEasyPumps[stManualCalib.iPumpContorller].xQBusy THEN
-				stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
-		END_IF
-8://等待注液完成
-	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
-	 	stManualCalib.tStableDelay(IN:= FALSE);
-	 	IF  fbEasyPumps[stManualCalib.iPumpContorller].xQDone THEN
-				stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
-		END_IF
-9://等待
-	 stManualCalib.tStableDelay(IN:= TRUE, PT:=T#10S , Q=> , ET=> );
-	 IF  stManualCalib.tStableDelay.Q THEN
-			 		stManualCalib.tStableDelay(IN:= FALSE);
-					stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
-	 END_IF
-10://读取称的读数
-	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
-	 	fbMCK.stDeviceOpe.xAcquireWeight_RealTime_HMI:=TRUE;
-		IF fbMCK.xQBusy THEN
-					stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
-		END_IF
-11://等待完成
-	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
-	  IF  fbMCK.xQDone THEN
-				IF  ((stManualCalib.xModulePushStart OR stManualCalib.xCalibTestStart OR
-								(stManualCalib.xRecordDataStart AND stManualCalib.iRecordCounter =1 )) AND
-							 fbMCK.stParOut.rCurrentWeight <=stManualCalib.rSetVolume*0.1)  OR 
-						 (	stManualCalib.xRecordDataStart  AND 
-							stManualCalib.iRecordCounter >1 AND  fbMCK.stParOut.rCurrentWeight < 
-							stManualCalib.arrTestRealVolume[stManualCalib.iRecordCounter-1]+ stManualCalib.rSetVolume*0.5)  THEN
-										stManualCalib.iMCalibStep:=5;
-				ELSE
-							IF  stManualCalib.xModulePushStart THEN
-									stManualCalib.arrRealVolume[stManualCalib.iInjectCounter]:=fbMCK.stParOut.rCurrentWeight;
-							ELSIF  stManualCalib.xCalibTestStart THEN
-									stManualCalib.arrTestRealVolume[stManualCalib.iCalibCounter]:=fbMCK.stParOut.rCurrentWeight;
-							ELSIF  stManualCalib.xRecordDataStart THEN
-									stManualCalib.arrTestRealVolume[stManualCalib.iRecordCounter]:=fbMCK.stParOut.rCurrentWeight;
-							END_IF
-			  			stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
-					END_IF
-		 ELSIF  fbMCK.xQError THEN
-				  fbMCK.xIReset:=TRUE;
-					 stManualCalib.iMCalibStep:=5;
-		 END_IF
-12://注液计数
-	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
-	 	IF  stManualCalib.xModulePushStart THEN
-	  			stManualCalib.iInjectCounter := stManualCalib.iInjectCounter +1;
-		ELSIF   stManualCalib.xCalibTestStart THEN
-				 	stManualCalib.iCalibCounter := stManualCalib.iCalibCounter +1;
-		ELSIF  stManualCalib.xRecordDataStart THEN
-						stManualCalib.iRecordCounter := stManualCalib.iRecordCounter +1;
-		END_IF
-	 	stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
-13://
-	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
-	 	IF   stManualCalib.xModulePushStart THEN
-				IF 	 stManualCalib.iInjectCounter >3 THEN
-							stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
-				ELSE
-							stManualCalib.iMCalibStep:=5;
-				END_IF
-		ELSIF   stManualCalib.xCalibTestStart THEN
-				IF 	 stManualCalib.iCalibCounter >10 THEN
-							stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
-				ELSE
-							stManualCalib.iMCalibStep:=5;
-				END_IF
-		ELSIF   stManualCalib.xRecordDataStart THEN
-				IF 	 stManualCalib.iRecordCounter >10 THEN
-							stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
-				ELSE
-							stManualCalib.iMCalibStep:=5;
-				END_IF			 
-		END_IF
-			 
-14://计算平均液量或者校准的精度
-	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
-		IF  stManualCalib.xModulePushStart THEN
-						FOR i:=1 TO 3 BY 1 DO
-									stManualCalib.rAverageRealVolume:=stManualCalib.rAverageRealVolume +stManualCalib.arrRealVolume[i];
-						END_FOR
-						 stManualCalib.rAverageRealVolume:=stManualCalib.rAverageRealVolume/3;
-						 stManualCalib.xModulePushStart:=FALSE;
-						 stManualCalib.xModulePushOK:=TRUE;
-						 stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
-		 ELSIF  stManualCalib.xCalibTestStart THEN
-						FOR i:=1 TO 8 BY 1 DO
-									arrVolume[1]:=ABS(stManualCalib.arrTestRealVolume[i] -stManualCalib.rSetVolume);
-									arrVolume[2]:=stManualCalib.rSetVolume*stData.EasyPumps[stManualCalib.iPumpContorller].iAccuracySet;
-									 IF  arrVolume[1]>arrVolume[2] THEN
-											stManualCalib.xCalibTestStart:=FALSE;
-											stManualCalib.xCalibTestOK:=FALSE;
-											stManualCalib.iMCalibStep:=1;
-									 ELSIF i=8 THEN
-											stManualCalib.xCalibTestStart:=FALSE;
-											stManualCalib.xCalibTestOK:=TRUE;
-											stManualCalib.xRecordDataStart:=TRUE;
-											stManualCalib.xRecordDataOK:=FALSE;
-											stManualCalib.iRecordCounter:=1;
-											stManualCalib.iMCalibStep:=4;
-									 END_IF
-						END_FOR	
-			ELSIF stManualCalib.xRecordDataStart THEN
-						 stManualCalib.xRecordDataStart:=FALSE;
-						 stManualCalib.xRecordDataOK:=TRUE;	
-							stManualCalib.xBusy  :=FALSE;
-							stManualCalib.xDone  :=TRUE;	 
-						 	stManualCalib.iMCalibStep:=0;			
-		  END_IF
-15://写入校准参数
-	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
-		IF  stManualCalib.xModulePushOK AND NOT stManualCalib.xCalibTestStart AND NOT  stManualCalib.xRecordDataStart THEN
-				stData.EasyPumps[stManualCalib.iPumpContorller].rModuleRealFluVolume:=stManualCalib.rAverageRealVolume;
-				fbEasyPumps[stManualCalib.iPumpContorller].stDeviceOpe.xCalibParaWrite_Hmi:=TRUE;
-				IF  fbEasyPumps[stManualCalib.iPumpContorller].xQBusy THEN
-							stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
-				END_IF
-		ELSE
-							stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +2;
-		END_IF
-16://等待写入完成
-	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
-	 	IF  fbEasyPumps[stManualCalib.iPumpContorller].xQDone THEN
-				stManualCalib.xCalibTestStart:=TRUE;
-				stManualCalib.iCalibCounter:=1;
-					stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
-		END_IF	
-	
-17://开始校准
-	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
-		fbEasyPumps[stManualCalib.iPumpContorller].stDeviceOpe.xCalibration_Auto:=TRUE;
-		IF  fbEasyPumps[stManualCalib.iPumpContorller].xQBusy THEN
-				stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
-		END_IF
-18://等待写入完成
-	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
-	 	IF  fbEasyPumps[stManualCalib.iPumpContorller].xQDone THEN
-				stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
-		END_IF
-19://校准结束,开始测试校准效果
-			stManualCalib.iMCalibStep:=5;	 
+	 
+			
+				 
+						
+							 
+//
+//CASE stManualCalib.iMCalibStep OF
+// 0://等待按键
+//		IF  stManualCalib.xStart  AND
+//			  stManualCalib.iPumpContorller>=1 AND 
+//				stManualCalib.iPumpContorller<=12 AND 
+//				stManualCalib.iPumpModule>=1 AND 
+//				stManualCalib.iPumpModule<=9 THEN
+//			  stManualCalib.xModulePushStart:=FALSE;		 
+//				stManualCalib.xModulePushOK:=FALSE;			
+//				stManualCalib.xCalibTestStart:=FALSE;				 
+//				stManualCalib.xCalibTestOK:=FALSE;						
+//				stManualCalib.xRecordDataStart:=FALSE;	
+//				stManualCalib.xRecordDataOK:=FALSE;						 
+//				stManualCalib.xStart  :=FALSE;
+//				stManualCalib.xBusy  :=TRUE;
+//				stManualCalib.xDone :=FALSE;	 
+//				stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
+//		 END_IF
+//1://参数赋值
+//	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+//		stData.EasyPumps[stManualCalib.iPumpContorller].rCalFluVolume:=stManualCalib.rSetVolume;
+//		stData.EasyPumps[stManualCalib.iPumpContorller].iModuleAdress:=stManualCalib.iPumpModule;
+//		stData.EasyPumps[stManualCalib.iPumpContorller].rCalTime:=stManualCalib.rRunTime;
+//		stData.EasyPumps[stManualCalib.iPumpContorller].rCalNum:=stManualCalib.iCycleNum;
+//		stData.EasyPumps[stManualCalib.iPumpContorller].rModuleRealFluVolume:=stManualCalib.rAverageRealVolume;
+//		stData.EasyPumps[stManualCalib.iPumpContorller].rCalBackAngle:=stManualCalib.iBackAngle;
+//		stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
+//2://写入校准参数
+//	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+//		stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+//3://等待写入完成
+//	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+//	  stManualCalib.xModulePushStart:=TRUE;
+//		stManualCalib.xModulePushOK:=FALSE;
+//		stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+//4://清除原有数据
+//	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+//		MEMSET(ADR(stManualCalib.arrRealVolume[1]),0,SIZEOF(stManualCalib.arrRealVolume));
+//		stManualCalib.rAverageRealVolume:=0; 
+//		stManualCalib.iInjectCounter:=1;
+//	 	stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+//5://称清零
+//	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+//		IF  stManualCalib.iInjectCounter >1 AND  stManualCalib.xRepeatMode THEN
+//				//如果需要连续注液，不需要中间清零
+//				stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +2;	
+//		ELSE
+//				 fbMCK.stDeviceOpe.xClearZeroInstanly_HMI:=TRUE;
+//				 IF fbMCK.xQBusy THEN
+//							 stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+//					END_IF
+//		END_IF
+//6://等待清零完成
+//	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+//	  IF  fbMCK.xQDone THEN
+//			  	stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
+//		 ELSIF  fbMCK.xQError THEN
+//				  fbMCK.xIReset:=TRUE;
+//					stManualCalib.iMCalibStep:=5;	
+//		 END_IF
+//7://开始单通道注液
+//	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+//	  fbEasyPumps[stManualCalib.iPumpContorller].stDeviceOpe.xModulePush_Auto:=TRUE;
+//		IF  fbEasyPumps[stManualCalib.iPumpContorller].xQBusy THEN
+//				stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+//		END_IF
+//8://等待注液完成
+//	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+//	 	stManualCalib.tStableDelay(IN:= FALSE);
+//	 	IF  fbEasyPumps[stManualCalib.iPumpContorller].xQDone THEN
+//				stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+//		END_IF
+//9://等待
+//	 IF (( stManualCalib.xModulePushStart AND stManualCalib.xRepeatMode AND  stManualCalib.iInjectCounter =5)OR
+//			stManualCalib.xCalibTestStart OR
+//			stManualCalib.xRecordDataStart) OR
+//			  NOT  stManualCalib.xRepeatMode  THEN
+//				
+//					 stManualCalib.tStableDelay(IN:= TRUE, PT:=T#6S , Q=> , ET=> );
+//					 IF  stManualCalib.tStableDelay.Q THEN
+//									stManualCalib.tStableDelay(IN:= FALSE);
+//									stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+//					 END_IF			 
+//	 ELSE
+//			 //如果需要连续注液，只有在最后一次才需要注液
+//						stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +2;	
+//	 END_IF
+//10://读取称的读数
+//	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+//	 	fbMCK.stDeviceOpe.xAcquireWeight_RealTime_HMI:=TRUE;
+//		IF fbMCK.xQBusy THEN
+//					stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+//		END_IF
+//11://等待完成
+//	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+//	  IF  fbMCK.xQDone THEN
+//				IF  (fbMCK.stParOut.rCurrentWeight <=stManualCalib.rSetVolume*0.1 AND NOT stManualCalib.xRepeatMode)  THEN
+//										stManualCalib.iMCalibStep:=5;
+//				ELSE
+//							IF  stManualCalib.xModulePushStart   THEN
+//									stManualCalib.arrRealVolume[stManualCalib.iInjectCounter]:=fbMCK.stParOut.rCurrentWeight;
+//							ELSIF  stManualCalib.xCalibTestStart THEN
+//								 stManualCalib.arrRealVolume[stManualCalib.iCalibCounter]:=fbMCK.stParOut.rCurrentWeight;	
+//							ELSIF  stManualCalib.xRecordDataStart THEN
+//									stManualCalib.arrRecordVolume[stManualCalib.iRecordCounter]:=fbMCK.stParOut.rCurrentWeight;
+//							END_IF
+//			  			stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+//					END_IF
+//		 ELSIF  fbMCK.xQError THEN
+//				  fbMCK.xIReset:=TRUE;
+//					 stManualCalib.iMCalibStep:=5;
+//		 END_IF
+//12://注液计数
+//	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+//	 	IF  stManualCalib.xModulePushStart THEN
+//	  			stManualCalib.iInjectCounter := stManualCalib.iInjectCounter +1;
+//		ELSIF   stManualCalib.xCalibTestStart THEN
+//				 	stManualCalib.iCalibCounter := stManualCalib.iCalibCounter +1;
+//		ELSIF  stManualCalib.xRecordDataStart THEN
+//						stManualCalib.iRecordCounter := stManualCalib.iRecordCounter +1;
+//		END_IF
+//	 	stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+//13://
+//	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+//	 	IF   stManualCalib.xModulePushStart THEN
+//				IF 	 stManualCalib.iInjectCounter >5 THEN
+//							stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
+//				ELSE
+//							stManualCalib.iMCalibStep:=5;
+//				END_IF
+//		ELSIF   stManualCalib.xCalibTestStart THEN
+//				IF 	 stManualCalib.iCalibCounter >5 THEN
+//							stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
+//				ELSE
+//							stManualCalib.iMCalibStep:=5;
+//				END_IF
+//		ELSIF   stManualCalib.xRecordDataStart THEN
+//				IF 	 stManualCalib.iRecordCounter >50 THEN
+//							stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
+//				ELSE
+//							stManualCalib.iMCalibStep:=5;
+//				END_IF			 
+//		END_IF
+//			 
+//14://计算平均液量或者校准的精度
+//	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+//		IF  stManualCalib.xModulePushStart THEN
+//				   IF  NOT stManualCalib.xRepeatMode THEN
+//								 FOR i:=1 TO 5 BY 1 DO
+//											 stManualCalib.rAverageRealVolume:=stManualCalib.rAverageRealVolume +stManualCalib.arrRealVolume[i];
+//								 END_FOR
+//									stManualCalib.rAverageRealVolume:=stManualCalib.rAverageRealVolume/5;
+//						ELSE
+//									stManualCalib.rAverageRealVolume:=stManualCalib.arrRealVolume[5]/5; 
+//						END_IF
+//						stManualCalib.xModulePushStart:=FALSE;
+//						stManualCalib.xModulePushOK:=TRUE;
+//						stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
+//		 ELSIF  stManualCalib.xCalibTestStart THEN
+//									stManualCalib.rESVolume:=FC_BubbleSort_Max(i_i_Counter:=5 , i_arrReal:= stManualCalib.arrRealVolume);//最大值
+//									stManualCalib.rEIVolume:=FC_BubbleSort_Min(i_i_Counter:=5, i_arrReal:= stManualCalib.arrRealVolume);//最小值
+//									stManualCalib.rESVolume:=(stManualCalib.rESVolume-stManualCalib.rSetVolume)/stManualCalib.rSetVolume;//上偏差
+//									stManualCalib.rEIVolume:=(stManualCalib.rEIVolume-stManualCalib.rSetVolume)/stManualCalib.rSetVolume;//下偏差	 
+//									 IF  stManualCalib.rESVolume>stData.EasyPumps[stManualCalib.iPumpContorller].iAccuracySet  OR 
+//											 	stManualCalib.rEIVolume<-1*stData.EasyPumps[stManualCalib.iPumpContorller].iAccuracySet 	THEN
+//											//-	>stData.EasyPumps[stManualCalib.iPumpContorller].iAccuracySet*0.5
+//													 	FOR i:=1 TO 5 BY 1 DO
+//																stManualCalib.rAverageRealVolume:=stManualCalib.rAverageRealVolume +stManualCalib.arrRealVolume[i];
+//														END_FOR
+//														 stManualCalib.rAverageRealVolume:=stManualCalib.rAverageRealVolume/5;
+//													 stManualCalib.xCalibTestStart:=FALSE;
+//													 stManualCalib.xCalibTestOK:=FALSE;
+//												//如果上下偏差不均衡  我们需要进行微调处理
+//										   IF  ABS(ABS( stManualCalib.rESVolume)-ABS(stManualCalib.rEIVolume))<=stData.EasyPumps[stManualCalib.iPumpContorller].iAccuracySet*0.5 THEN
+//													 stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;
+//											 ELSE
+//													  stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +3;
+//											 END_IF
+//									 ELSE
+//													 stManualCalib.xCalibTestStart:=FALSE;
+//													 stManualCalib.xCalibTestOK:=TRUE;
+//													 stManualCalib.xRecordDataStart:=TRUE;
+//													 stManualCalib.xRecordDataOK:=FALSE;
+//													 stManualCalib.iRecordCounter:=1;
+//													 stManualCalib.iMCalibStep:=4;
+//									 END_IF
+//			ELSIF stManualCalib.xRecordDataStart THEN
+//											stManualCalib.xRecordDataStart:=FALSE;
+//											stManualCalib.xRecordDataOK:=TRUE;	
+//											 stManualCalib.xBusy  :=FALSE;
+//											 stManualCalib.xDone  :=TRUE;	 
+//											 stManualCalib.iMCalibStep:=0;			
+//		  END_IF
+//15://写入校准参数
+//	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+//				stData.EasyPumps[stManualCalib.iPumpContorller].rModuleRealFluVolume:=stManualCalib.rAverageRealVolume;
+//				fbEasyPumps[stManualCalib.iPumpContorller].stDeviceOpe.xCalibAction_Hmi:=TRUE;
+//				IF  fbEasyPumps[stManualCalib.iPumpContorller].xQBusy THEN
+//							stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+//				END_IF
+//16://等待写入完成
+//	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+//	 	IF  fbEasyPumps[stManualCalib.iPumpContorller].xQDone THEN
+//				stManualCalib.xCalibTestStart:=TRUE;
+//				stManualCalib.iCalibCounter:=1;
+//					stManualCalib.iMCalibStep:=20;	
+//		END_IF	
+//	
+//17://开始微调
+//	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+//		fbEasyPumps[stManualCalib.iPumpContorller].stDeviceOpe.xAdjust_Hmi:=TRUE;
+//		IF  fbEasyPumps[stManualCalib.iPumpContorller].xQBusy THEN
+//				stManualCalib.iMCalibStep:=stManualCalib.iMCalibStep +1;	
+//		END_IF
+//18://等待写入完成
+//	 	stManualCalib.iOldMCalibStep:=stManualCalib.iMCalibStep;
+//	 	IF  fbEasyPumps[stManualCalib.iPumpContorller].xQDone THEN
+//				stManualCalib.iMCalibStep:=20;	
+//		END_IF
+//20://校准结束,开始测试校准效果
+//			stManualCalib.iMCalibStep:=4;	 
  
-END_CASE
+//END_CASE
+	//复位校准参数
+IF  stManualCalib.iMCalibStep =0 THEN
+			IF  stManualCalib.xInitCalibration THEN
+					 	fbEasyPumps[stManualCalib.iPumpContorller].stDeviceOpe.xCalibInit_Auto:=TRUE;
+						stManualCalib.xInitCalibration:=FALSE;
+			END_IF
+END_IF
 {endregion}
-]]></ST>
+{region "将记录的数据放入Excel中"}
+Tc2_System.MEMCPY(ADR(arrVBARecordData),ADR(stManualCalib.arrRecordVolume),SIZEOF(stManualCalib.arrRecordVolume));
+iEasyPumpController:= stManualCalib.iPumpContorller;
+iEasyPumpGHead:=stManualCalib.iPumpModule;
+iCycleCounter:=stManualCalib.iCycleNum;
+rAccuracySet:=stData.EasyPumps[stManualCalib.iPumpContorller].iAccuracySet;
+rSetVolume:=stManualCalib.rSetVolume;
+rRunTime:=stManualCalib.rRunTime;
+iBackAngle:=stManualCalib.iBackAngle;
+iPumpType:=stData.EasyPumps[stManualCalib.iPumpContorller].iPumpType;
+iSoftType:=stData.EasyPumps[stManualCalib.iPumpContorller].iHosePipeTypeSet;
+iPumpHeadType:=stData.EasyPumps[stManualCalib.iPumpContorller].iPumpTypeSet;	 
+{endregion}
+{region '压力传感器循环读取'}
+
+//循环触发
+CASE  iRepeatLoadCellStep OF 
+0://读取
+	 IF  fbMachine[1].xAutoMode OR TRUE THEN
+			 FOR i:=1 TO gc_uiLoadcellNum DO
+						fbLoadCell[i].stDeviceOpe.xReadGROSSAuto:=TRUE;
+						IF   fbLoadCell[i].xQBusy THEN
+						 		arxLoadCellBusy[i]:=TRUE;
+						END_IF
+			 END_FOR
+				FOR   i :=1 TO gc_uiLoadcellNum BY  1  DO
+			 			IF NOT  arxLoadCellBusy[i] THEN
+						 		EXIT;
+						ELSIF i =gc_uiLoadcellNum THEN
+						 	  iRepeatLoadCellStep:=iRepeatLoadCellStep +1;	
+					  END_IF
+			END_FOR
+	 END_IF 
+	1:	//等待
+		 	iOldRepeatLoadCellStep :=iRepeatLoadCellStep;
+			IF  fbLoadCell[1].xQDone AND 
+					fbLoadCell[2].xQDone AND 
+					fbLoadCell[3].xQDone AND 
+					fbLoadCell[4].xQDone AND 
+					fbLoadCell[5].xQDone AND 
+					fbLoadCell[6].xQDone THEN
+					 iRepeatLoadCellStep:=iRepeatLoadCellStep +1;	
+			END_IF
+	2://比较压力传感器的数值
+		 	iOldRepeatLoadCellStep :=iRepeatLoadCellStep;	
+			 FOR i:=1 TO gc_uiLoadcellNum DO
+					IF  fbLoadCell[i].stParOut.rGROSSWeight< -100 THEN
+							iRepeatLoadCellStep:=iRepeatLoadCellStep +1;	
+							EXIT;	
+					ELSIF  i=gc_uiLoadcellNum THEN
+							iRepeatLoadCellStep:=iRepeatLoadCellStep +2;	
+					END_IF
+			 END_FOR
+ 3://数值异常
+			IF    fbLoadCell[1].stParOut.rGROSSWeight<-100 THEN
+								station.adwAlarm[2].01	:=	TRUE	;//	S02注液工位1号桶液量不足，请更换母液
+			ELSIF    fbLoadCell[2].stParOut.rGROSSWeight< -100  THEN
+								station.adwAlarm[2].02	:=	TRUE	;//	S02注液工位2号桶液量不足，请更换母液
+			ELSIF    fbLoadCell[3].stParOut.rGROSSWeight< -100  THEN
+								station.adwAlarm[2].03	:=	TRUE	;//	S02注液工位3号桶液量不足，请更换母液
+			ELSIF    fbLoadCell[4].stParOut.rGROSSWeight< -100  THEN
+								station.adwAlarm[2].04	:=	TRUE	;//	S02注液工位4号桶液量不足，请更换母液
+			ELSIF    fbLoadCell[5].stParOut.rGROSSWeight< -100 THEN
+								station.adwAlarm[2].05	:=	TRUE	;//	S02注液工位5号桶液量不足，请更换母液
+			ELSIF    fbLoadCell[6].stParOut.rGROSSWeight< -100 THEN
+								station.adwAlarm[2].06	:=	TRUE	;//	S02注液工位6号桶液量不足，请更换母液
+			END_IF
+			 
+ 4://数值正常,继续延时
+			iOldRepeatLoadCellStep :=iRepeatLoadCellStep;
+			tLoadCellDelay(IN:=TRUE , PT:=T#1S , Q=> , ET=> );
+			IF  tLoadCellDelay.Q  THEN
+			   		iRepeatLoadCellStep:=0;	
+			END_IF
+END_CASE
+	 tLoadCellTimeout(IN:=  	iOldRepeatLoadCellStep =iRepeatLoadCellStep AND  iRepeatLoadCellStep<>0, PT:=T#10S , Q=> , ET=> );
+IF  		tLoadCellTimeout.Q THEN
+					station.adwAlarm[2].07	:=	TRUE	;//	S02注液工位压力传感器读取超时报警，请检查
+END_IF
+IF  fbMachine[1].xReset THEN
+		iRepeatLoadCellStep:=0;
+END_IF
+				 
+						
+{endregion}]]></ST>
       </Implementation>
     </Action>
     <Action Name="ILC" Id="{ee8acce8-8d32-4f66-8513-5ca456ae67c2}">
@@ -1320,6 +1794,20 @@ fbStirAxis.xMoveILC[3] :=
 fbStirAxis.xMoveILC[4] :=					
 fbStirAxis.xMoveILC[5] := 		TRUE			;
 ///蠕动泵
+fbEasyPumps[1].xideviceRunning:=
+fbEasyPumps[2].xideviceRunning:=
+fbEasyPumps[3].xideviceRunning:=
+fbEasyPumps[4].xideviceRunning:=
+fbEasyPumps[5].xideviceRunning:=
+fbEasyPumps[6].xideviceRunning:=
+fbEasyPumps[7].xideviceRunning:=
+fbEasyPumps[8].xideviceRunning:=
+fbEasyPumps[9].xideviceRunning:=
+fbEasyPumps[10].xideviceRunning:=
+fbEasyPumps[11].xideviceRunning:=
+fbEasyPumps[12].xideviceRunning:=TRUE;
+
+
 fbRudongPump[1].xDeviceRunning:=
 fbRudongPump[2].xDeviceRunning:=
 fbRudongPump[3].xDeviceRunning:=
@@ -1331,7 +1819,7 @@ fbRudongPump[8].xDeviceRunning:=
 fbRudongPump[9].xDeviceRunning:=
 fbRudongPump[10].xDeviceRunning:=
 fbRudongPump[11].xDeviceRunning:=
-fbRudongPump[12].xDeviceRunning:=station.xSingleRunning OR station.xRunning OR station.xIniting;
+fbRudongPump[12].xDeviceRunning:=TRUE;
 //称
 fbMCK.xIDeviceRunning:=TRUE;
 
@@ -1427,6 +1915,7 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
     <LineIds Name="S02_LidInjecting">
       <LineId Id="40" Count="8" />
       <LineId Id="5" Count="0" />
+      <LineId Id="132" Count="0" />
     </LineIds>
     <LineIds Name="S02_LidInjecting.A_Input">
       <LineId Id="28" Count="0" />
@@ -1437,9 +1926,57 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="67" Count="1" />
       <LineId Id="40" Count="0" />
     </LineIds>
+    <LineIds Name="S02_LidInjecting.ACT_test">
+      <LineId Id="2" Count="17" />
+      <LineId Id="237" Count="1" />
+      <LineId Id="20" Count="16" />
+      <LineId Id="308" Count="0" />
+      <LineId Id="37" Count="6" />
+      <LineId Id="224" Count="1" />
+      <LineId Id="227" Count="0" />
+      <LineId Id="226" Count="0" />
+      <LineId Id="231" Count="0" />
+      <LineId Id="233" Count="0" />
+      <LineId Id="229" Count="0" />
+      <LineId Id="228" Count="0" />
+      <LineId Id="234" Count="0" />
+      <LineId Id="44" Count="1" />
+      <LineId Id="50" Count="2" />
+      <LineId Id="54" Count="21" />
+      <LineId Id="81" Count="4" />
+      <LineId Id="90" Count="59" />
+      <LineId Id="156" Count="0" />
+      <LineId Id="300" Count="0" />
+      <LineId Id="302" Count="1" />
+      <LineId Id="306" Count="0" />
+      <LineId Id="158" Count="9" />
+      <LineId Id="169" Count="5" />
+      <LineId Id="236" Count="0" />
+      <LineId Id="175" Count="44" />
+      <LineId Id="299" Count="0" />
+      <LineId Id="220" Count="2" />
+      <LineId Id="309" Count="2" />
+      <LineId Id="313" Count="0" />
+      <LineId Id="312" Count="0" />
+      <LineId Id="239" Count="0" />
+      <LineId Id="242" Count="4" />
+      <LineId Id="241" Count="0" />
+      <LineId Id="247" Count="0" />
+      <LineId Id="252" Count="28" />
+      <LineId Id="282" Count="16" />
+      <LineId Id="250" Count="0" />
+      <LineId Id="249" Count="0" />
+      <LineId Id="248" Count="0" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
     <LineIds Name="S02_LidInjecting.Alarm">
       <LineId Id="374" Count="32" />
       <LineId Id="266" Count="0" />
+      <LineId Id="410" Count="0" />
+      <LineId Id="420" Count="4" />
+      <LineId Id="411" Count="0" />
+      <LineId Id="407" Count="0" />
+      <LineId Id="419" Count="0" />
     </LineIds>
     <LineIds Name="S02_LidInjecting.Delay">
       <LineId Id="38" Count="26" />
@@ -1480,7 +2017,6 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="1942" Count="0" />
       <LineId Id="1967" Count="0" />
       <LineId Id="1732" Count="0" />
-      <LineId Id="1570" Count="0" />
       <LineId Id="1373" Count="0" />
       <LineId Id="1952" Count="0" />
       <LineId Id="2272" Count="0" />
@@ -1488,6 +2024,12 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="3132" Count="0" />
       <LineId Id="3140" Count="4" />
       <LineId Id="3139" Count="0" />
+      <LineId Id="3377" Count="0" />
+      <LineId Id="3395" Count="0" />
+      <LineId Id="3388" Count="2" />
+      <LineId Id="3393" Count="1" />
+      <LineId Id="3397" Count="1" />
+      <LineId Id="3381" Count="0" />
       <LineId Id="1956" Count="1" />
       <LineId Id="2294" Count="0" />
       <LineId Id="1965" Count="0" />
@@ -1527,19 +2069,27 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="1645" Count="0" />
       <LineId Id="1649" Count="0" />
       <LineId Id="1646" Count="0" />
-      <LineId Id="2223" Count="1" />
+      <LineId Id="2223" Count="0" />
+      <LineId Id="3374" Count="1" />
+      <LineId Id="3368" Count="0" />
+      <LineId Id="2224" Count="0" />
       <LineId Id="2226" Count="0" />
       <LineId Id="2228" Count="1" />
       <LineId Id="2227" Count="0" />
       <LineId Id="1544" Count="0" />
       <LineId Id="1776" Count="0" />
       <LineId Id="1780" Count="0" />
-      <LineId Id="3260" Count="1" />
-      <LineId Id="3264" Count="1" />
-      <LineId Id="3268" Count="0" />
-      <LineId Id="3263" Count="0" />
-      <LineId Id="1782" Count="0" />
+      <LineId Id="3323" Count="0" />
+      <LineId Id="3356" Count="0" />
+      <LineId Id="3359" Count="0" />
+      <LineId Id="3358" Count="0" />
+      <LineId Id="3300" Count="0" />
       <LineId Id="1774" Count="0" />
+      <LineId Id="3361" Count="0" />
+      <LineId Id="3363" Count="0" />
+      <LineId Id="3365" Count="1" />
+      <LineId Id="3364" Count="0" />
+      <LineId Id="3362" Count="0" />
       <LineId Id="1650" Count="0" />
       <LineId Id="2277" Count="0" />
       <LineId Id="1799" Count="0" />
@@ -1855,9 +2405,10 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="3086" Count="0" />
       <LineId Id="3061" Count="3" />
       <LineId Id="3060" Count="0" />
-      <LineId Id="3066" Count="9" />
-      <LineId Id="3065" Count="0" />
-      <LineId Id="3038" Count="8" />
+      <LineId Id="3066" Count="0" />
+      <LineId Id="3310" Count="12" />
+      <LineId Id="3309" Count="0" />
+      <LineId Id="3042" Count="4" />
       <LineId Id="3077" Count="0" />
       <LineId Id="3047" Count="1" />
       <LineId Id="3078" Count="3" />
@@ -1890,24 +2441,24 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="437" Count="5" />
       <LineId Id="605" Count="0" />
       <LineId Id="443" Count="3" />
-      <LineId Id="601" Count="3" />
+      <LineId Id="601" Count="1" />
+      <LineId Id="665" Count="0" />
+      <LineId Id="603" Count="1" />
       <LineId Id="599" Count="1" />
       <LineId Id="598" Count="0" />
       <LineId Id="470" Count="0" />
       <LineId Id="592" Count="5" />
       <LineId Id="590" Count="0" />
+      <LineId Id="630" Count="0" />
+      <LineId Id="653" Count="11" />
+      <LineId Id="649" Count="0" />
+      <LineId Id="652" Count="0" />
+      <LineId Id="635" Count="13" />
+      <LineId Id="627" Count="2" />
       <LineId Id="586" Count="3" />
       <LineId Id="584" Count="0" />
       <LineId Id="472" Count="0" />
       <LineId Id="475" Count="3" />
-      <LineId Id="527" Count="0" />
-      <LineId Id="529" Count="1" />
-      <LineId Id="608" Count="1" />
-      <LineId Id="611" Count="1" />
-      <LineId Id="610" Count="0" />
-      <LineId Id="531" Count="0" />
-      <LineId Id="551" Count="1" />
-      <LineId Id="613" Count="12" />
       <LineId Id="574" Count="0" />
       <LineId Id="480" Count="0" />
       <LineId Id="498" Count="0" />
@@ -1929,217 +2480,143 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="436" Count="0" />
     </LineIds>
     <LineIds Name="S02_LidInjecting.General">
-      <LineId Id="403" Count="18" />
-      <LineId Id="423" Count="0" />
-      <LineId Id="473" Count="0" />
-      <LineId Id="433" Count="0" />
-      <LineId Id="586" Count="0" />
-      <LineId Id="438" Count="0" />
-      <LineId Id="443" Count="0" />
-      <LineId Id="448" Count="0" />
-      <LineId Id="532" Count="0" />
-      <LineId Id="531" Count="0" />
-      <LineId Id="533" Count="1" />
-      <LineId Id="537" Count="0" />
-      <LineId Id="585" Count="0" />
-      <LineId Id="541" Count="0" />
-      <LineId Id="555" Count="0" />
-      <LineId Id="542" Count="0" />
-      <LineId Id="546" Count="0" />
-      <LineId Id="535" Count="0" />
-      <LineId Id="474" Count="0" />
-      <LineId Id="515" Count="0" />
-      <LineId Id="561" Count="0" />
-      <LineId Id="517" Count="2" />
-      <LineId Id="556" Count="0" />
-      <LineId Id="475" Count="0" />
-      <LineId Id="560" Count="0" />
-      <LineId Id="486" Count="3" />
-      <LineId Id="484" Count="0" />
-      <LineId Id="494" Count="1" />
-      <LineId Id="559" Count="0" />
-      <LineId Id="498" Count="3" />
-      <LineId Id="548" Count="0" />
-      <LineId Id="502" Count="0" />
-      <LineId Id="558" Count="0" />
-      <LineId Id="503" Count="2" />
-      <LineId Id="496" Count="0" />
-      <LineId Id="549" Count="0" />
-      <LineId Id="476" Count="0" />
-      <LineId Id="508" Count="0" />
-      <LineId Id="565" Count="0" />
-      <LineId Id="512" Count="0" />
-      <LineId Id="567" Count="0" />
-      <LineId Id="507" Count="0" />
-      <LineId Id="557" Count="0" />
-      <LineId Id="490" Count="0" />
-      <LineId Id="550" Count="0" />
-      <LineId Id="521" Count="0" />
-      <LineId Id="523" Count="3" />
-      <LineId Id="528" Count="0" />
-      <LineId Id="522" Count="0" />
-      <LineId Id="551" Count="0" />
-      <LineId Id="491" Count="0" />
-      <LineId Id="562" Count="0" />
-      <LineId Id="530" Count="0" />
-      <LineId Id="478" Count="0" />
-      <LineId Id="441" Count="0" />
-      <LineId Id="625" Count="0" />
-      <LineId Id="918" Count="0" />
-      <LineId Id="923" Count="0" />
-      <LineId Id="978" Count="1" />
-      <LineId Id="981" Count="1" />
-      <LineId Id="946" Count="1" />
-      <LineId Id="922" Count="0" />
-      <LineId Id="844" Count="8" />
-      <LineId Id="837" Count="0" />
-      <LineId Id="613" Count="0" />
-      <LineId Id="643" Count="0" />
-      <LineId Id="650" Count="0" />
-      <LineId Id="680" Count="3" />
-      <LineId Id="873" Count="4" />
-      <LineId Id="879" Count="0" />
-      <LineId Id="830" Count="2" />
-      <LineId Id="651" Count="1" />
-      <LineId Id="675" Count="0" />
-      <LineId Id="853" Count="0" />
-      <LineId Id="659" Count="3" />
-      <LineId Id="948" Count="0" />
-      <LineId Id="648" Count="0" />
-      <LineId Id="750" Count="0" />
-      <LineId Id="854" Count="0" />
-      <LineId Id="755" Count="0" />
-      <LineId Id="753" Count="0" />
-      <LineId Id="756" Count="0" />
-      <LineId Id="855" Count="0" />
-      <LineId Id="871" Count="0" />
-      <LineId Id="965" Count="0" />
-      <LineId Id="759" Count="0" />
-      <LineId Id="676" Count="0" />
-      <LineId Id="856" Count="0" />
-      <LineId Id="778" Count="0" />
-      <LineId Id="689" Count="1" />
-      <LineId Id="743" Count="0" />
-      <LineId Id="684" Count="0" />
-      <LineId Id="779" Count="2" />
-      <LineId Id="678" Count="0" />
-      <LineId Id="696" Count="0" />
-      <LineId Id="881" Count="0" />
-      <LineId Id="809" Count="0" />
-      <LineId Id="880" Count="0" />
-      <LineId Id="882" Count="1" />
-      <LineId Id="697" Count="3" />
-      <LineId Id="810" Count="2" />
-      <LineId Id="701" Count="0" />
-      <LineId Id="858" Count="0" />
-      <LineId Id="702" Count="1" />
-      <LineId Id="997" Count="1" />
-      <LineId Id="996" Count="0" />
-      <LineId Id="695" Count="0" />
-      <LineId Id="686" Count="0" />
-      <LineId Id="859" Count="0" />
-      <LineId Id="691" Count="3" />
-      <LineId Id="645" Count="0" />
-      <LineId Id="860" Count="0" />
-      <LineId Id="709" Count="0" />
-      <LineId Id="705" Count="1" />
-      <LineId Id="704" Count="0" />
-      <LineId Id="646" Count="0" />
-      <LineId Id="708" Count="0" />
-      <LineId Id="707" Count="0" />
-      <LineId Id="710" Count="0" />
-      <LineId Id="712" Count="0" />
-      <LineId Id="711" Count="0" />
-      <LineId Id="647" Count="0" />
-      <LineId Id="861" Count="0" />
-      <LineId Id="715" Count="2" />
-      <LineId Id="713" Count="0" />
-      <LineId Id="719" Count="0" />
-      <LineId Id="862" Count="0" />
-      <LineId Id="720" Count="0" />
-      <LineId Id="952" Count="0" />
-      <LineId Id="961" Count="0" />
-      <LineId Id="959" Count="1" />
-      <LineId Id="962" Count="1" />
-      <LineId Id="956" Count="1" />
-      <LineId Id="784" Count="0" />
-      <LineId Id="722" Count="0" />
-      <LineId Id="786" Count="1" />
-      <LineId Id="884" Count="1" />
-      <LineId Id="788" Count="0" />
-      <LineId Id="721" Count="0" />
-      <LineId Id="958" Count="0" />
-      <LineId Id="983" Count="0" />
-      <LineId Id="992" Count="0" />
-      <LineId Id="995" Count="0" />
-      <LineId Id="718" Count="0" />
-      <LineId Id="724" Count="0" />
-      <LineId Id="863" Count="0" />
-      <LineId Id="789" Count="0" />
-      <LineId Id="725" Count="0" />
-      <LineId Id="790" Count="1" />
-      <LineId Id="886" Count="1" />
-      <LineId Id="792" Count="0" />
-      <LineId Id="726" Count="1" />
-      <LineId Id="864" Count="0" />
-      <LineId Id="793" Count="0" />
-      <LineId Id="735" Count="0" />
-      <LineId Id="730" Count="0" />
-      <LineId Id="738" Count="2" />
-      <LineId Id="794" Count="0" />
-      <LineId Id="799" Count="3" />
-      <LineId Id="795" Count="0" />
-      <LineId Id="893" Count="4" />
-      <LineId Id="796" Count="2" />
-      <LineId Id="741" Count="0" />
-      <LineId Id="865" Count="0" />
-      <LineId Id="803" Count="0" />
-      <LineId Id="744" Count="2" />
-      <LineId Id="742" Count="0" />
-      <LineId Id="898" Count="1" />
-      <LineId Id="826" Count="0" />
-      <LineId Id="804" Count="0" />
-      <LineId Id="807" Count="0" />
-      <LineId Id="968" Count="0" />
-      <LineId Id="970" Count="0" />
-      <LineId Id="808" Count="0" />
-      <LineId Id="900" Count="0" />
-      <LineId Id="902" Count="1" />
-      <LineId Id="818" Count="1" />
-      <LineId Id="904" Count="0" />
-      <LineId Id="912" Count="1" />
-      <LineId Id="973" Count="0" />
-      <LineId Id="828" Count="0" />
-      <LineId Id="815" Count="0" />
-      <LineId Id="805" Count="0" />
-      <LineId Id="905" Count="0" />
-      <LineId Id="907" Count="1" />
-      <LineId Id="910" Count="1" />
-      <LineId Id="909" Count="0" />
-      <LineId Id="806" Count="0" />
-      <LineId Id="927" Count="1" />
-      <LineId Id="940" Count="0" />
-      <LineId Id="949" Count="0" />
-      <LineId Id="929" Count="3" />
-      <LineId Id="944" Count="1" />
-      <LineId Id="941" Count="0" />
-      <LineId Id="933" Count="3" />
-      <LineId Id="974" Count="0" />
-      <LineId Id="937" Count="0" />
-      <LineId Id="825" Count="0" />
-      <LineId Id="926" Count="0" />
-      <LineId Id="761" Count="0" />
-      <LineId Id="866" Count="0" />
-      <LineId Id="762" Count="4" />
-      <LineId Id="867" Count="0" />
-      <LineId Id="767" Count="1" />
-      <LineId Id="748" Count="0" />
-      <LineId Id="769" Count="0" />
-      <LineId Id="775" Count="0" />
-      <LineId Id="822" Count="0" />
-      <LineId Id="644" Count="0" />
-      <LineId Id="598" Count="0" />
+      <LineId Id="1005" Count="29" />
+      <LineId Id="1040" Count="3" />
+      <LineId Id="1045" Count="1" />
+      <LineId Id="1584" Count="1" />
+      <LineId Id="1047" Count="24" />
+      <LineId Id="1624" Count="0" />
+      <LineId Id="1072" Count="3" />
+      <LineId Id="1396" Count="0" />
+      <LineId Id="1076" Count="2" />
+      <LineId Id="1587" Count="14" />
+      <LineId Id="1604" Count="15" />
+      <LineId Id="1622" Count="0" />
+      <LineId Id="1586" Count="0" />
+      <LineId Id="1091" Count="1" />
+      <LineId Id="1685" Count="0" />
+      <LineId Id="1093" Count="19" />
+      <LineId Id="1670" Count="4" />
+      <LineId Id="1669" Count="0" />
+      <LineId Id="1113" Count="24" />
+      <LineId Id="1660" Count="0" />
+      <LineId Id="1138" Count="3" />
+      <LineId Id="1143" Count="6" />
+      <LineId Id="1152" Count="2" />
+      <LineId Id="1158" Count="2" />
+      <LineId Id="1628" Count="0" />
+      <LineId Id="1630" Count="2" />
+      <LineId Id="1391" Count="0" />
+      <LineId Id="1166" Count="2" />
+      <LineId Id="1629" Count="0" />
+      <LineId Id="1172" Count="3" />
+      <LineId Id="1627" Count="0" />
+      <LineId Id="1177" Count="15" />
+      <LineId Id="1633" Count="0" />
+      <LineId Id="1647" Count="0" />
+      <LineId Id="1649" Count="0" />
+      <LineId Id="1641" Count="0" />
+      <LineId Id="1634" Count="0" />
+      <LineId Id="1642" Count="3" />
+      <LineId Id="1638" Count="0" />
+      <LineId Id="1635" Count="0" />
+      <LineId Id="1650" Count="0" />
+      <LineId Id="1197" Count="0" />
+      <LineId Id="1636" Count="0" />
+      <LineId Id="1198" Count="9" />
+      <LineId Id="1213" Count="3" />
+      <LineId Id="1426" Count="1" />
+      <LineId Id="1219" Count="43" />
+      <LineId Id="1653" Count="0" />
+      <LineId Id="1263" Count="3" />
+      <LineId Id="1656" Count="1" />
+      <LineId Id="1659" Count="0" />
+      <LineId Id="1267" Count="3" />
+      <LineId Id="1272" Count="1" />
+      <LineId Id="1337" Count="0" />
+      <LineId Id="1340" Count="0" />
+      <LineId Id="1339" Count="0" />
+      <LineId Id="1335" Count="0" />
+      <LineId Id="1663" Count="0" />
+      <LineId Id="1429" Count="2" />
+      <LineId Id="1428" Count="0" />
+      <LineId Id="1277" Count="1" />
+      <LineId Id="1668" Count="0" />
+      <LineId Id="1664" Count="0" />
+      <LineId Id="1625" Count="0" />
+      <LineId Id="1665" Count="2" />
+      <LineId Id="1280" Count="7" />
+      <LineId Id="1289" Count="8" />
+      <LineId Id="1299" Count="4" />
+      <LineId Id="1307" Count="22" />
+      <LineId Id="1364" Count="0" />
+      <LineId Id="1367" Count="1" />
+      <LineId Id="1370" Count="0" />
+      <LineId Id="1381" Count="0" />
+      <LineId Id="1371" Count="0" />
+      <LineId Id="1382" Count="0" />
+      <LineId Id="1330" Count="0" />
+      <LineId Id="1432" Count="0" />
+      <LineId Id="1331" Count="0" />
+      <LineId Id="1384" Count="0" />
       <LineId Id="588" Count="0" />
+      <LineId Id="1388" Count="0" />
+      <LineId Id="1386" Count="1" />
+      <LineId Id="1390" Count="0" />
+      <LineId Id="1689" Count="0" />
+      <LineId Id="1686" Count="2" />
+      <LineId Id="1433" Count="1" />
+      <LineId Id="1527" Count="0" />
+      <LineId Id="1443" Count="2" />
+      <LineId Id="1454" Count="0" />
+      <LineId Id="1446" Count="1" />
+      <LineId Id="1463" Count="1" />
+      <LineId Id="1462" Count="0" />
+      <LineId Id="1448" Count="0" />
+      <LineId Id="1465" Count="5" />
+      <LineId Id="1453" Count="0" />
+      <LineId Id="1455" Count="0" />
+      <LineId Id="1471" Count="0" />
+      <LineId Id="1524" Count="0" />
+      <LineId Id="1473" Count="0" />
+      <LineId Id="1475" Count="4" />
+      <LineId Id="1481" Count="0" />
+      <LineId Id="1483" Count="1" />
+      <LineId Id="1520" Count="0" />
+      <LineId Id="1485" Count="1" />
+      <LineId Id="1488" Count="0" />
+      <LineId Id="1499" Count="0" />
+      <LineId Id="1490" Count="1" />
+      <LineId Id="1489" Count="0" />
+      <LineId Id="1487" Count="0" />
+      <LineId Id="1482" Count="0" />
+      <LineId Id="1496" Count="0" />
+      <LineId Id="1500" Count="0" />
+      <LineId Id="1502" Count="0" />
+      <LineId Id="1504" Count="0" />
+      <LineId Id="1503" Count="0" />
+      <LineId Id="1506" Count="0" />
+      <LineId Id="1505" Count="0" />
+      <LineId Id="1509" Count="0" />
+      <LineId Id="1507" Count="0" />
+      <LineId Id="1512" Count="0" />
+      <LineId Id="1510" Count="0" />
+      <LineId Id="1514" Count="0" />
+      <LineId Id="1501" Count="0" />
+      <LineId Id="1497" Count="1" />
+      <LineId Id="1525" Count="0" />
+      <LineId Id="1519" Count="0" />
+      <LineId Id="1517" Count="0" />
+      <LineId Id="1521" Count="0" />
+      <LineId Id="1523" Count="0" />
+      <LineId Id="1439" Count="0" />
+      <LineId Id="1438" Count="0" />
+      <LineId Id="1440" Count="0" />
+      <LineId Id="1535" Count="0" />
+      <LineId Id="1532" Count="0" />
+      <LineId Id="1536" Count="2" />
+      <LineId Id="1441" Count="1" />
+      <LineId Id="1437" Count="0" />
     </LineIds>
     <LineIds Name="S02_LidInjecting.ILC">
       <LineId Id="234" Count="4" />
@@ -2148,6 +2625,9 @@ QxS02ROTCylHP	:=	fbROTCyl.xHP_Valve	;
       <LineId Id="290" Count="0" />
       <LineId Id="323" Count="23" />
       <LineId Id="274" Count="0" />
+      <LineId Id="377" Count="10" />
+      <LineId Id="372" Count="1" />
+      <LineId Id="365" Count="0" />
       <LineId Id="347" Count="2" />
       <LineId Id="362" Count="0" />
       <LineId Id="351" Count="6" />

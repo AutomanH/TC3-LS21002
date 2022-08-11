@@ -13,9 +13,9 @@ TYPE stOperType :
 	iFullSpeedPush:=5,
 	iFullSpeedPull:=6,
 	iFullSpeedStop:=7,
-	iCalibParaWrite:=8,
+	iCalibAction:=8,
 	iCalibInit:=9,
-	iCalibration:=10
+	iAdjust:=10
 )INT;
 END_TYPE
 ]]></Declaration>

@@ -9,6 +9,7 @@ STRUCT
  iCycleNumber		: INT;//重复次数
  iModuleAdress:INT;//显示单元
  iRunning:INT;//显示是否在运行
+ iBackAngle:INT;//显示回吸角度
 END_STRUCT
 END_TYPE
 ]]></Declaration>

@@ -360,7 +360,7 @@ QxS06PressCyl_2WP	:BOOL;//	切膜下压气缸2动点输出
 QxS06PressCyl_2HP	:BOOL;//	切膜下压气缸2原点输出
 QxS06VTCCylWP	:BOOL;//	垂直切膜气缸1动点输出
 QxS06VTCCylHP	:BOOL;//	垂直切膜气缸2原点输出
-QxShare86	:BOOL;//	备用
+QxS06BlowValve	:BOOL;//切膜工位铝膜吹气电磁阀
 QxShare87	:BOOL;//	备用
 QxShare88	:BOOL;//	备用
 QxShare89	:BOOL;//	备用

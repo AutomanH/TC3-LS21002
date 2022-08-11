@@ -172,7 +172,7 @@ CASE station.iStepAuto OF
 			
 			station.xCycleEnable:=FALSE;	
 		//	station.xDone:=TRUE;
-			station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
+		//	station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
 	ELSE
 		;	
 END_CASE

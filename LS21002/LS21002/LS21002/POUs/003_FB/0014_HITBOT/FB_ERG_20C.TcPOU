@@ -1,0 +1,1060 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <POU Name="FB_ERG_20C" Id="{57dae0ee-a580-49ba-acae-310696fcca36}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_ERG_20C EXTENDS FB_Modbus_Tcp
+(*
+********************************************************************************
+* Name: FB_ERG_20C
+*
+* Author:  Automanh
+* Version: 1.0.0
+*
+* Description:
+*  HITBOT's Z_ERG_20C AutoClamp of Rotate and Holding
+*  
+*
+* Remarks:
+*
+* Revisions:
+*   1.0.0 -AutomanH Rebuild
+*********************************************************************************)
+VAR_INPUT
+	xIReset:BOOL;
+	xIManualMode:BOOL;
+	xIAutoMode:BOOL;
+	xIDeviceRunning:BOOL;
+	xITryRun:BOOL;//空跑
+	LocalClient:stModbusPara;
+	stRunPara	:stSetPara;//运行参数	
+	stDeviceOpe	:stOper_Para;//操作按钮
+END_VAR
+VAR_OUTPUT
+	stDevice:stDeviceStatus;
+	stPara:stDeviceStatus;
+	stReadPara:stReadPara;
+	iQErrorID:INT;
+	strQErrorID:STRING;
+END_VAR
+VAR
+	// 按钮输入
+	OperR_TRIG: ARRAY[1..40] OF  R_TRIG;
+	//本地参数
+	stLocalPara:stHIBOTLocalPara;
+	//操作指令
+	iOperType:INT;
+	// 循环用
+	i: INT;
+	// //操作类型计数
+	iOperCounter: INT;
+	// 步骤
+	iRunStep,iOldRunStep: INT;
+	iParaStep,iOldParaStep:INT;
+	// 临时变量
+	arwSetData: ARRAY[1..2] OF WORD;
+	// 超时定时器
+	tTimeout: ARRAY[1..5] OF TON;
+	rTempData:REAL;//临时
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[MEMCPY(ADR(SUPER^.stModbusPara),ADR(LocalClient),SIZEOF(localClient));
+SUPER^.M_Modbus();
+ACT_Operation();
+ACT_Running();
+ACT_ERROR();
+ACT_Reset();
+
+
+
+]]></ST>
+    </Implementation>
+    <Action Name="ACT_ERROR" Id="{f617795f-e485-4822-9a65-0d9ee95bfd55}">
+      <Implementation>
+        <ST><![CDATA[tTimeout[1](IN:= iParaStep =iOldParaStep AND iParaStep<>0 , PT:= T#15S, Q=> , ET=> );
+tTimeout[2](IN:= iRunStep =iOldRunStep AND iRunStep<>0 , PT:= T#15S, Q=> , ET=> );
+IF		tTimeout[1].Q THEN
+	  	stPara.xQError:=TRUE;
+	  	stPara.xQBusy:=FALSE;
+			iQErrorID:=HITBOT_ERROR.FLT_CMD_TIMEOUT;
+	    iParaStep := 999;
+END_IF
+
+IF		tTimeout[2].Q THEN
+			stDevice.xQError:=TRUE;
+			stDevice.xQBusy:=FALSE;
+			iQErrorID:=HITBOT_ERROR.FLT_CMD_TIMEOUT;
+			iRunStep := 999;
+END_IF
+
+IF  iQErrorID<> HITBOT_ERROR.NO_ERROR  THEN
+		stDevice.xQError:=TRUE;
+END_IF
+//报错内容输出
+CASE iQErrorID OF 
+		 HITBOT_ERROR.No_ERROR:
+			 strQErrorID:='NO ERROR';
+		 HITBOT_ERROR.FLT_PARA:
+			 strQErrorID:='FLT_PARA';
+		 HITBOT_ERROR.FLT_READ_PARA:
+			 strQErrorID:='FLT_READ_PARA';
+		 HITBOT_ERROR.FLT_SET_PARA:
+			 strQErrorID:='FLT_SET_PARA';	
+		 HITBOT_ERROR.FLT_CMD_TIMEOUT:
+			 strQErrorID:='FLT_CMD_TIMEOUT';	
+		 HITBOT_ERROR.FLT_RUN_ERROR:
+			 strQErrorID:='FLT_RUN_ERROR';	
+		 HITBOT_ERROR.FLT_CONFIGURE_PARA:
+			 strQErrorID:='FLT_CONFIGURE_PARA';		
+		 HITBOT_ERROR.FLT_NEED_INIT:
+			 strQErrorID:='FLT_NEED_INIT';	
+		 HITBOT_ERROR.FLT_CLAMP_EMPTY:
+			strQErrorID:='FLT_CLAMP_EMPTY';		
+END_CASE]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Operation" Id="{0053f16b-4b2a-4ff8-8286-b86e61c05879}">
+      <Implementation>
+        <ST><![CDATA[FOR i:=1 TO 5 BY 1 DO
+		OperR_TRIG[i](CLK:= (xIManualMode AND  stDeviceOpe.aHMIClampButton[i]) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.aClampControl[i]) , Q=> );	//夹紧
+END_FOR
+FOR i:=6 TO 10 BY 1DO
+		OperR_TRIG[i](CLK:= (xIManualMode AND  stDeviceOpe.aHMIReleaseButton[i-5]) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.aReleaseControl[i-5]) , Q=> );	//松开
+END_FOR
+FOR i:=11 TO 15 BY 1 DO
+		OperR_TRIG[i](CLK:= (xIManualMode AND  stDeviceOpe.aHMIRotateClampButton[i-10]) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.aRotateClampControl[i-10]) , Q=> );	//旋转拧紧
+END_FOR
+
+FOR i:=16 TO 20 BY 1 DO
+		OperR_TRIG[i](CLK:= (xIManualMode AND  stDeviceOpe.aHMIRotateReleaseButton[i-15]) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.aRotateReleaseControl[i-15]) , Q=> );	//旋转松开
+END_FOR
+
+FOR i:=21 TO 25 BY 1 DO
+		OperR_TRIG[i](CLK:= (xIManualMode AND  stDeviceOpe.aHMIRotateClampRelButton[i-20]) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.aRotateClampRelControl[i-20]) , Q=> );	//旋转拧紧-相对
+END_FOR
+
+FOR i:=26 TO 30 BY 1 DO
+		OperR_TRIG[i](CLK:= (xIManualMode AND  stDeviceOpe.aHMIRotateReleaseRelButton[i-25]) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.aRotateReleaseRelControl[i-25]) , Q=> );	//旋转松开-相对
+END_FOR
+OperR_TRIG[31](CLK:= (xIManualMode AND  stDeviceOpe.xHMInitButton) OR((xIAutoMode OR  xIDeviceRunning) AND stDeviceOpe.xInitControl) , Q=> );	//初始化
+
+FOR  i:= 1 TO 40 BY 1 DO
+ 	IF   OperR_TRIG[i].Q THEN
+				iOperCounter:= i;
+				stDevice.xQStart:=TRUE;
+				EXIT;
+	END_IF
+END_FOR
+//夹紧
+FOR  i:=1 TO 5 BY 1 DO
+ 		IF   iOperCounter =i THEN
+		 		stLocalPara.stClampPara.rPositionSet:=stRunPara.aHMIClampPara[i].rPositionSet;
+				stLocalPara.stClampPara.rSpeedSet:=stRunPara.aHMIClampPara[i].rSpeedSet;
+				stLocalPara.stClampPara.rCurrentSet:=stRunPara.aHMIClampPara[i].rCurrentSet;
+				iOperType:=stCmdType.iClamp;
+		END_IF
+END_FOR
+//松开
+FOR  i:=6 TO 10 BY 1 DO
+		IF   iOperCounter =i THEN
+		 		stLocalPara.stClampPara.rPositionSet:=stRunPara.aHMIReleasePara[i-5].rPositionSet;
+				stLocalPara.stClampPara.rSpeedSet:=stRunPara.aHMIReleasePara[i-5].rSpeedSet;
+				stLocalPara.stClampPara.rCurrentSet:=stRunPara.aHMIReleasePara[i-5].rCurrentSet;
+				iOperType:=stCmdType.iRelease;
+		END_IF
+END_FOR 
+ //拧紧
+FOR  i:=11 TO 15 BY 1 DO
+ 		IF   iOperCounter =i THEN
+		 		stLocalPara.stRotateClampPara.rPositionSet:=stRunPara.aHMIRotateClampPara[i-10].rPositionSet;
+				stLocalPara.stRotateClampPara.rSpeedSet:=stRunPara.aHMIRotateClampPara[i-10].rSpeedSet;
+				stLocalPara.stRotateClampPara.rCurrentSet:=stRunPara.aHMIRotateClampPara[i-10].rCurrentSet;
+				iOperType:=stCmdType.iRotateClamp;
+		END_IF
+END_FOR
+//拧松
+FOR  i:=16 TO 20 BY 1 DO
+		IF   iOperCounter =i THEN
+		 		stLocalPara.stRotateClampPara.rPositionSet:=stRunPara.aHMIRotateReleasePara[i-15].rPositionSet;
+				stLocalPara.stRotateClampPara.rSpeedSet:=stRunPara.aHMIRotateReleasePara[i-15].rSpeedSet;
+				stLocalPara.stRotateClampPara.rCurrentSet:=stRunPara.aHMIRotateReleasePara[i-15].rCurrentSet;
+				iOperType:=stCmdType.iRotateRelease;
+		END_IF
+END_FOR 
+ //相对拧紧
+FOR  i:=21 TO 26 BY 1 DO
+ 		IF   iOperCounter =i THEN
+		 		stLocalPara.stRotateClampPara.rPositionSet:=stRunPara.aHMIRotateRelClampPara[i-20].rPositionSet;
+				stLocalPara.stRotateClampPara.rSpeedSet:=stRunPara.aHMIRotateRelClampPara[i-20].rSpeedSet;
+				stLocalPara.stRotateRelAngle:=stRunPara.aHMIRotateRelClampPara[i-20].rCurrentSet;
+				iOperType:=stCmdType.iRotateRelClamp;
+		END_IF
+END_FOR
+//相对拧松
+FOR  i:=26 TO 30 BY 1 DO
+		IF   iOperCounter =i THEN
+		 		stLocalPara.stRotateClampPara.rPositionSet:=stRunPara.aHMIRotateRelReleasePara[i-25].rPositionSet;
+				stLocalPara.stRotateClampPara.rSpeedSet:=stRunPara.aHMIRotateRelReleasePara[i-25].rSpeedSet;
+				stLocalPara.stRotateRelAngle:=stRunPara.aHMIRotateRelReleasePara[i-25].rCurrentSet;
+				iOperType:=stCmdType.iRotateRelRelease;
+		END_IF
+END_FOR 
+
+	IF   iOperCounter =31 THEN
+				iOperType:=stCmdType.iInit;
+	END_IF
+
+
+MEMSET(ADR(stDeviceOpe),0,SIZEOF(stDeviceOpe));
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Para_Clamp" Id="{4acbb33f-4952-4ca5-9715-c695e7c9cb97}">
+      <Implementation>
+        <ST><![CDATA[CASE iParaStep OF	
+	0://开始
+			IF   stPara.xQStart THEN
+			 		 stPara.xQStart:=FALSE;
+					 stPara.xQBusy:=TRUE;
+					 stPara.xQDone:=FALSE;
+					  iParaStep := iParaStep + 1;
+			 END_IF
+ 	1://查看夹爪电流，转速，转矩
+			iOldParaStep:=iParaStep;
+			IF 	(stLocalPara.stClampPara.rSpeedSet >=1  	AND 
+			 		stLocalPara.stClampPara.rSpeedSet <=1000  )	AND
+					(stLocalPara.stClampPara.rPositionSet >=0  AND 
+					 stLocalPara.stClampPara.rPositionSet <= 20  )AND 
+					(stLocalPara.stClampPara.rCurrentSet >=0.1  AND 
+					 stLocalPara.stClampPara.rCurrentSet <=0.5  ) THEN
+						iParaStep := iParaStep + 1;	
+			ELSE
+			 				iQErrorID :=HITBOT_ERROR.FLT_PARA;		
+							iParaStep := 999;
+			END_IF
+	2://读取夹持速度和夹持电流
+			iOldParaStep:=iParaStep;
+			wMBAddReadRegs:=16#0004;
+			wQuantityReadRegs:=4;
+			xReadRegs:=TRUE;
+			IF  fbReadRegs.bBusy THEN
+			 	xReadRegs:=FALSE;
+				iParaStep:=iParaStep+1;
+			END_IF
+	3://等待读取完成
+			 	iOldParaStep:=iParaStep;
+	  	  IF  NOT 	fbReadRegs.bBusy AND  NOT  	fbReadRegs.bError THEN
+				 				//夹持速度
+				
+								stReadPara.rClampSpeed:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[1]));
+								//夹持电流
+						
+								stReadPara.rClampCurrent:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[3]));
+	  		 				 iParaStep:=iParaStep+1;
+	  		 ELSIF   	fbReadRegs.bError THEN
+	  		 			iParaStep:=999;				
+	  		 			iQErrorID:=HITBOT_ERROR.FLT_READ_PARA;					
+	  		 END_IF	
+	4://夹持速度
+				iOldParaStep:=iParaStep;
+				IF stLocalPara.stClampPara.rSpeedSet <> stReadPara.rClampPosition THEN 
+					 iParaStep:=iParaStep + 1;	
+				ELSE
+					 iParaStep:=iParaStep +4;
+				END_IF
+	5://夹持速度赋值
+			iOldParaStep:=iParaStep;
+			MEMCPY(ADR(arwSetData[1]),ADR(stLocalPara.stClampPara.rSpeedSet),SIZEOF(stLocalPara.stClampPara.rSpeedSet) ); 
+			arwDataWriteRegs[1]:=arwSetData[2];
+			arwDataWriteRegs[2]:=arwSetData[1];
+			iParaStep:=iParaStep +1;
+	6://夹持速度写入
+			 iOldParaStep:=iParaStep;
+			 wQuantityWriteRegs:=2;
+			 wMBAddWriteRegs:=16#0004;
+			 xWriteRegs:=TRUE;
+			 IF  fbWriteRegs.bBusy THEN
+					 xWriteRegs:=FALSE;
+					 iParaStep:=iParaStep+1;
+			END_IF	
+	7://等待设定完成
+				iOldParaStep:=iParaStep;
+			 IF  NOT 	fbWriteRegs.bBusy AND  NOT fbWriteRegs.bError THEN
+							  iParaStep:=iParaStep +1;
+				ELSIF   	fbReadRegs.bError THEN
+						 iParaStep:=999;				
+						 iQErrorID:=HITBOT_ERROR.FLT_SET_PARA;					
+				END_IF	
+	8://夹持电流比较
+				iOldParaStep:=iParaStep;
+				IF stLocalPara.stClampPara.rCurrentSet <> stReadPara.rClampCurrent THEN 
+					 iParaStep:=iParaStep + 1;	
+				ELSE
+					 iParaStep:=iParaStep + 4;
+				END_IF
+	9://夹持电流赋值
+			iOldParaStep:=iParaStep;
+			MEMCPY(ADR(arwSetData[1]),ADR(stLocalPara.stClampPara.rCurrentSet),SIZEOF(stLocalPara.stClampPara.rCurrentSet) ); 
+			arwDataWriteRegs[1]:=arwSetData[2];
+			arwDataWriteRegs[2]:=arwSetData[1];
+			iParaStep:=iParaStep +1;
+	10://夹持电流写入
+			 iOldParaStep:=iParaStep;
+			 wQuantityWriteRegs:=2;
+			 wMBAddWriteRegs:=16#0006;
+			 xWriteRegs:=TRUE;
+			 IF  fbWriteRegs.bBusy THEN
+					 xWriteRegs:=FALSE;
+					 iParaStep:=iParaStep+1;
+			END_IF	
+	11://等待设定完成
+				iOldParaStep:=iParaStep;
+			 IF  NOT 	fbWriteRegs.bBusy AND  NOT fbWriteRegs.bError THEN
+							  iParaStep:=iParaStep +1;
+				ELSIF   	fbReadRegs.bError THEN
+						 iParaStep:=999;				
+						 iQErrorID:=HITBOT_ERROR.FLT_SET_PARA;					
+				END_IF	
+	12://写入电机使能
+			iOldParaStep:=iParaStep;
+			arwDataWriteRegs[1]:=1;
+			iParaStep:=iParaStep +1;
+	13://开始写入
+			 iOldParaStep:=iParaStep;
+			 wQuantityWriteRegs:=1;
+			 wMBAddWriteRegs:=16#0016;
+			 xWriteRegs:=TRUE;
+			 IF  fbWriteRegs.bBusy THEN
+					 xWriteRegs:=FALSE;
+					 iParaStep:=iParaStep+1;
+			END_IF	
+	14://等待设定完成
+				iOldParaStep:=iParaStep;
+			 IF  NOT 	fbWriteRegs.bBusy AND  NOT fbWriteRegs.bError THEN
+							  iParaStep:=100;
+				ELSIF   	fbReadRegs.bError THEN
+						 iParaStep:=999;				
+						 iQErrorID:=HITBOT_ERROR.FLT_SET_PARA;					
+				END_IF	
+	100://参数写入完成
+				iOldParaStep:=iParaStep;
+				iOperType:=stOperType.iWait;
+				stPara.xQBusy:=FALSE;
+				stPara.xQDone:=TRUE;
+				iParaStep:=0;		
+	ELSE
+		;	
+END_CASE
+]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Para_Rotate" Id="{5ddc8bdb-a9e3-43be-8229-199d6939c287}">
+      <Implementation>
+        <ST><![CDATA[CASE iParaStep OF	
+	0://开始
+			IF   stPara.xQStart THEN
+			 		 stPara.xQStart:=FALSE;
+					 stPara.xQBusy:=TRUE;
+					 stPara.xQDone:=FALSE;
+					  iParaStep := iParaStep + 1;
+			 END_IF
+ 	1://查看夹爪电流，转速，角度
+			iOldParaStep:=iParaStep;
+			IF 	(	stLocalPara.stRotateClampPara.rSpeedSet >=1 	AND 
+			 		stLocalPara.stRotateClampPara.rSpeedSet <=1080  )	AND
+					(stLocalPara.stRotateClampPara.rPositionSet >=-3600000 AND 
+					 stLocalPara.stRotateClampPara.rPositionSet <= 3600000 )AND 
+					(stLocalPara.stRotateClampPara.rCurrentSet >=0.2  AND 
+					 stLocalPara.stRotateClampPara.rCurrentSet <=1  ) THEN
+						iParaStep := iParaStep + 1;	
+			ELSE
+			 				iQErrorID :=HITBOT_ERROR.FLT_PARA;		
+							iParaStep := 999;
+			END_IF
+	2://读取旋转速度和旋转电流
+			iOldParaStep:=iParaStep;
+			wMBAddReadRegs:=16#000E;
+			wQuantityReadRegs:=4;
+			xReadRegs:=TRUE;
+			IF  fbReadRegs.bBusy THEN
+			 	xReadRegs:=FALSE;
+				iParaStep:=iParaStep+1;
+			END_IF
+	3://等待读取完成
+			 	iOldParaStep:=iParaStep;
+	  	  IF  NOT 	fbReadRegs.bBusy AND  NOT  	fbReadRegs.bError THEN
+								//旋转速度
+								stReadPara.rRotateSpeed:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[1]));
+								//旋转电流
+								stReadPara.rRotateCurrent:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[3]));
+	
+	  		 				 iParaStep:=iParaStep+1;
+	  		 ELSIF   	fbReadRegs.bError THEN
+	  		 			iParaStep:=999;				
+	  		 			iQErrorID:=HITBOT_ERROR.FLT_READ_PARA;					
+	  		 END_IF				
+ 	4://旋转速度比较
+				iOldParaStep:=iParaStep;
+				IF stLocalPara.stRotateClampPara.rSpeedSet <> stReadPara.rRotateSpeed THEN 
+					 iParaStep:=iParaStep + 1;	
+				ELSE
+					 iParaStep:=iParaStep + 4;
+				END_IF
+	5://旋转速度赋值
+			iOldParaStep:=iParaStep;
+			MEMCPY(ADR(arwSetData[1]),ADR(stLocalPara.stRotateClampPara.rSpeedSet),SIZEOF(stLocalPara.stRotateClampPara.rSpeedSet)); 
+			arwDataWriteRegs[1]:=arwSetData[2];
+			arwDataWriteRegs[2]:=arwSetData[1];
+			iParaStep:=iParaStep +1;
+	6://旋转角度写入
+			 iOldParaStep:=iParaStep;
+			 wQuantityWriteRegs:=2;
+			 wMBAddWriteRegs:=16#000E;
+			 xWriteRegs:=TRUE;
+			 IF  fbWriteRegs.bBusy THEN
+					 xWriteRegs:=FALSE;
+					 iParaStep:=iParaStep+1;
+			END_IF	
+	7://等待设定完成
+				iOldParaStep:=iParaStep;
+			 IF  NOT 	fbWriteRegs.bBusy AND  NOT fbWriteRegs.bError THEN
+							  iParaStep:=iParaStep +1;
+				ELSIF   	fbReadRegs.bError THEN
+						 iParaStep:=999;				
+						 iQErrorID:=HITBOT_ERROR.FLT_SET_PARA;					
+				END_IF	
+	8://旋转电流比较
+				iOldParaStep:=iParaStep;
+				IF stLocalPara.stRotateClampPara.rCurrentSet <> stReadPara.rRotateCurrent THEN 
+					 iParaStep:=iParaStep + 1;	
+				ELSE
+					 iParaStep:=iParaStep + 4;
+				END_IF
+	9://旋转电流赋值
+			iOldParaStep:=iParaStep;
+			MEMCPY(ADR(arwSetData[1]),ADR(stLocalPara.stRotateClampPara.rCurrentSet),SIZEOF(stLocalPara.stRotateClampPara.rCurrentSet)); 
+			arwDataWriteRegs[1]:=arwSetData[2];
+			arwDataWriteRegs[2]:=arwSetData[1];
+			iParaStep:=iParaStep +1;
+	10://旋转电流写入
+			 iOldParaStep:=iParaStep;
+			 wQuantityWriteRegs:=2;
+			 wMBAddWriteRegs:=16#0010;
+			 xWriteRegs:=TRUE;
+			 IF  fbWriteRegs.bBusy THEN
+					 xWriteRegs:=FALSE;
+					 iParaStep:=iParaStep+1;
+			END_IF	
+	11://等待设定完成
+				iOldParaStep:=iParaStep;
+			 IF  NOT 	fbWriteRegs.bBusy AND  NOT fbWriteRegs.bError THEN
+							  iParaStep:=iParaStep +1;
+				ELSIF   	fbReadRegs.bError THEN
+						 iParaStep:=999;				
+						 iQErrorID:=HITBOT_ERROR.FLT_SET_PARA;					
+				END_IF	
+	12://写入电机使能
+			iOldParaStep:=iParaStep;
+			arwDataWriteRegs[1]:=1;
+			iParaStep:=iParaStep +1;
+	13://开始写入
+			 iOldParaStep:=iParaStep;
+			 wQuantityWriteRegs:=1;
+			 wMBAddWriteRegs:=16#0016;
+			 xWriteRegs:=TRUE;
+			 IF  fbWriteRegs.bBusy THEN
+					 xWriteRegs:=FALSE;
+					 iParaStep:=iParaStep+1;
+			END_IF	
+	14://等待设定完成
+				iOldParaStep:=iParaStep;
+			 IF  NOT 	fbWriteRegs.bBusy AND  NOT fbWriteRegs.bError THEN
+							  iParaStep:=100;
+				ELSIF   	fbReadRegs.bError THEN
+						 iParaStep:=999;				
+						 iQErrorID:=HITBOT_ERROR.FLT_SET_PARA;					
+				END_IF	
+	100://参数写入完成
+				iOldParaStep:=iParaStep;
+				iOperType:=stOperType.iWait;
+				stPara.xQBusy:=FALSE;
+				stPara.xQDone:=TRUE;
+				iParaStep:=0;		
+	ELSE
+		;	
+END_CASE]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Reset" Id="{22823ef6-e011-4fae-9c0b-2e7df9592a4b}">
+      <Implementation>
+        <ST><![CDATA[IF   xIReset THEN
+ 
+ 	 iParaStep:=0;
+	 iRunStep:=0;
+	 iOldParaStep:=0;
+	 iOldRunStep:=0;
+	 
+	 stPara.xQStart:=FALSE;
+	 stPara.xQBusy:=FALSE;
+	 stPara.xQError:=FALSE;
+ 
+	 stDevice.xQStart:=FALSE;
+	 stDevice.xQBusy:=FALSE;
+	 stDevice.xQError:=FALSE;
+	 
+	 iQErrorID := HITBOT_ERROR.NO_ERROR;
+	 xIReset:=FALSE;
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <Action Name="ACT_Running" Id="{be639d6a-006c-4b41-8ef3-af318ef0e917}">
+      <Implementation>
+        <ST><![CDATA[IF  NOT  stDevice.xQBusy THEN
+ 		stDevice.xQRdyCmd:=TRUE;
+ELSE
+ 		stDevice.xQRdyCmd:=FALSE;	
+END_IF
+
+CASE  iRunStep OF 
+ 0://等待开始
+ 		IF  stDevice.xQStart THEN
+		 		stDevice.xQStart:=FALSE;
+				stDevice.xQBusy:=TRUE;
+				stDevice.xQDone:=FALSE;
+				iRunStep:=iRunStep +1;
+		END_IF
+ 1://参数传递
+ 		 iOldRunStep:=iRunStep;
+		 IF iOperType<>stCmdType.iInit THEN
+ 		 			stPara.xQStart:=TRUE;
+					iRunStep:=iRunStep +1;
+		 ELSE
+				 iRunStep:=iRunStep +2;
+		 END_IF
+ 2://等待参数传递完成
+ 		 	iOldRunStep:=iRunStep;
+ 		 IF  stPara.xQDone THEN
+				iRunStep:=iRunStep +1;
+		 END_IF
+ 3://开始执行
+ 		iOldRunStep:=iRunStep;
+	  IF 		iOperType=stCmdType.iClamp OR
+					iOperType=stCmdType.iRelease THEN
+    				iRunStep:=10;
+		ELSIF  iOperType=stCmdType.iRotateClamp  OR
+					 iOperType=stCmdType.iRotateRelease OR 
+					 iOperType=stCmdType.iRotateRelClamp OR 
+					 iOperType=stCmdType.iRotateRelRelease THEN
+		 				iRunStep:=20;
+		ELSIF  		iOperType=stCmdType.iInit  THEN
+		 				iRunStep:=30;
+		END_IF	
+ 10://先查询是否已经完成初始化
+				iOldRunStep:=iRunStep;
+				wMBAddReadRegs:=16#0040;
+				wQuantityReadRegs:=1;
+				xReadRegs:=TRUE;
+				IF  fbReadRegs.bBusy THEN
+					xReadRegs:=FALSE;
+					iRunStep:=iRunStep+1;
+				END_IF
+ 11://等待读取完成
+			 iOldRunStep:=iRunStep;
+	  	  IF  NOT 	fbReadRegs.bBusy AND  NOT  	fbReadRegs.bError THEN
+				 				//初始化状态反馈
+				 				stReadPara.iInitStatus:=arwDataReadRegs[1];
+								iRunStep:=iRunStep+1;
+	  		 ELSIF   	fbReadRegs.bError THEN
+	  		 			iRunStep:=999;				
+	  		 			iQErrorID:=HITBOT_ERROR.FLT_READ_PARA;					
+	  		 END_IF	
+	12://执行完成
+	    	iOldRunStep:=iRunStep;
+				IF   stReadPara.iInitStatus <>5 THEN
+				 			iQErrorID:=HITBOT_ERROR.FLT_NEED_INIT;
+							iRunStep:=999;
+				ELSE
+ 							iRunStep:=iRunStep+1;							 
+				END_IF
+	13://赋值夹持位置
+			iOldRunStep:=iRunStep;
+			MEMCPY(ADR(arwSetData[1]),ADR(stLocalPara.stClampPara.rPositionSet),SIZEOF(stLocalPara.stClampPara.rPositionSet)); 
+			arwDataWriteRegs[1]:=arwSetData[2];
+			arwDataWriteRegs[2]:=arwSetData[1];
+			iRunStep:=iRunStep +1;
+
+  14://写入夹持位置
+			iOldRunStep:=iRunStep;
+			wQuantityWriteRegs:=2;
+			wMBAddWriteRegs:=16#0002;
+			xWriteRegs:=TRUE;
+			IF  fbWriteRegs.bBusy THEN
+					xWriteRegs:=FALSE;
+					iRunStep:=iRunStep+1;
+		 END_IF
+  15://启动完成
+			iOldRunStep:=iRunStep;
+			IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError  THEN
+							iRunStep:=iRunStep +1;
+			 ELSIF   	fbReadRegs.bError THEN
+						iRunStep:=999;				
+					  iQErrorID:=HITBOT_ERROR.FLT_RUN_ERROR;					
+			 END_IF		
+ 	16://读取反馈
+			 iOldRunStep:=iRunStep;
+			 wMBAddReadRegs:=16#0041;
+			 wQuantityReadRegs:=8;
+			 xReadRegs:=TRUE;
+			 IF  fbReadRegs.bBusy THEN
+				 xReadRegs:=FALSE;
+				 iRunStep:=iRunStep+1;
+			 END_IF
+ 	17://等待读取完成
+			 iOldRunStep:=iRunStep;
+	  	 IF  NOT 	fbReadRegs.bBusy AND  NOT  	fbReadRegs.bError THEN
+				 				//夹持状态反馈
+				 				stReadPara.iClampStatus:=arwDataReadRegs[1];
+								//夹持位置反馈    
+							   
+								stReadPara.rFeedBack_ClampPos:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[2]));
+								//夹持速度反馈    
+							  
+								stReadPara.rFeedBack_ClampSpeed:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[4]));
+								
+								//夹持电流反馈
+							
+								stReadPara.rRotateAngle:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[6]));
+								
+								IF   stReadPara.iClampStatus =0 THEN
+								 //0-到位
+								 			iRunStep:=iRunStep+1;	
+								 ELSIF  stReadPara.iClampStatus =1 THEN
+									//1-运动中
+										  iRunStep:=iRunStep-1;						
+								ELSIF  stReadPara.iClampStatus =2 THEN	
+								 //2-夹持但未夹取到产品
+								 			iRunStep:=iRunStep+1;	
+								 			//IF xITryRun THEN//如果空跑状态下夹空不报警
+											//			 iRunStep:=iRunStep+1;	 
+											//ELSE
+											// 		  iRunStep:=999;
+											//		  iQErrorID:=HITBOT_ERROR.FLT_CLAMP_EMPTY;		
+											//END_IF
+								ELSIF   stReadPara.iClampStatus =3 THEN
+								 //3-掉落
+								 				  iRunStep:=999;
+													iQErrorID:=HITBOT_ERROR.FLT_CLAMP_EMPTY;		
+								END_IF
+	  		 ELSIF   	fbReadRegs.bError THEN
+	  		 			iRunStep:=999;				
+	  		 			iQErrorID:=HITBOT_ERROR.FLT_READ_PARA;					
+	  		 END_IF	
+	18://执行完成
+	    	iOldRunStep:=iRunStep;
+				iRunStep:=100;
+				
+				
+	20://先查询是否已经完成初始化
+				iOldRunStep:=iRunStep;
+				wMBAddReadRegs:=16#0040;
+				wQuantityReadRegs:=1;
+				xReadRegs:=TRUE;
+				IF  fbReadRegs.bBusy THEN
+					xReadRegs:=FALSE;
+					iRunStep:=iRunStep+1;
+				END_IF
+  21://等待读取完成
+			 	iOldRunStep:=iRunStep;
+	  	  IF  NOT 	fbReadRegs.bBusy AND  NOT  	fbReadRegs.bError THEN
+				 				//初始化状态反馈
+				 				stReadPara.iInitStatus:=arwDataReadRegs[1];
+								iRunStep:=iRunStep+1;
+	  		 ELSIF   	fbReadRegs.bError THEN
+	  		 			iRunStep:=999;				
+	  		 			iQErrorID:=HITBOT_ERROR.FLT_READ_PARA;					
+	  		 END_IF	
+	22://执行完成
+	    	iOldRunStep:=iRunStep;
+				IF   stReadPara.iInitStatus <>5 THEN
+				 			iQErrorID:=HITBOT_ERROR.FLT_NEED_INIT;
+							iRunStep:=999;
+				ELSE
+ 							iRunStep:=iRunStep+1;							 
+				END_IF
+	23://赋值旋转角度
+				iOldRunStep:=iRunStep;
+				IF  iOperType=stCmdType.iRotateClamp  OR
+					 iOperType=stCmdType.iRotateRelease THEN
+							MEMCPY(ADR(arwSetData[1]),ADR(stLocalPara.stRotateClampPara.rPositionSet),SIZEOF(stLocalPara.stRotateClampPara.rPositionSet)); 
+							arwDataWriteRegs[1]:=arwSetData[2];
+							arwDataWriteRegs[2]:=arwSetData[1];	
+							wMBAddWriteRegs:=16#000A;		
+						 iRunStep:=iRunStep+1;				
+					 
+				ELSIF  iOperType=stCmdType.iRotateRelClamp OR 
+					 iOperType=stCmdType.iRotateRelRelease THEN
+							MEMCPY(ADR(arwSetData[1]),ADR(stLocalPara.stRotateRelAngle),SIZEOF(stLocalPara.stRotateRelAngle)); 
+							arwDataWriteRegs[1]:=arwSetData[2];
+							arwDataWriteRegs[2]:=arwSetData[1];
+							wMBAddWriteRegs:=16#0014;	
+						 iRunStep:=iRunStep+1;				
+				END_IF  			
+	24://写入旋转角度
+				iOldRunStep:=iRunStep;
+				wQuantityWriteRegs:=2;
+				xWriteRegs:=TRUE;
+				IF  fbWriteRegs.bBusy THEN
+						xWriteRegs:=FALSE;
+						iRunStep:=iRunStep+1;
+			 END_IF
+ 	25://启动完成
+				iOldRunStep:=iRunStep;
+				IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError  THEN
+								iRunStep:=iRunStep +1;
+				 ELSIF   	fbReadRegs.bError THEN
+							iRunStep:=999;				
+						  iQErrorID:=HITBOT_ERROR.FLT_RUN_ERROR;					
+				 END_IF		
+  26://读取反馈
+				iOldRunStep:=iRunStep;
+				wMBAddReadRegs:=16#0048;
+				wQuantityReadRegs:=8;
+				xReadRegs:=TRUE;
+				IF  fbReadRegs.bBusy THEN
+					xReadRegs:=FALSE;
+					iRunStep:=iRunStep+1;
+				END_IF
+  27://等待读取完成
+			 	iOldRunStep:=iRunStep;
+	  	  IF  NOT 	fbReadRegs.bBusy AND  NOT  	fbReadRegs.bError THEN
+				 				//旋转状态反馈
+				 				stReadPara.iRotateStatus:=arwDataReadRegs[1];
+								
+								//旋转角度反馈         
+								stReadPara.rFeedBack_RotatePos:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[2]));;
+							//旋转速度反馈    
+						
+								stReadPara.rFeedBack_ClampSpeed:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[4]));;
+					  	//旋转电流反馈
+								
+							  	stReadPara.rFeedBack_RotateCurrent:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[6]));
+								IF    ABS(stReadPara.rFeedBack_RotatePos-stLocalPara.stRotateClampPara.rPositionSet)<2.0 AND 
+											 stReadPara.iRotateStatus =0  THEN
+								 					iRunStep:=iRunStep+1;	
+								END_IF
+								IF   stReadPara.iRotateStatus =0 THEN
+								 //0-到位
+								 			//iRunStep:=iRunStep+1;	
+								 ELSIF  stReadPara.iRotateStatus =1  THEN
+									//1-运动中
+										 // iRunStep:=iRunStep-1;						
+								ELSIF  stReadPara.iRotateStatus =2 THEN	
+								 //2-堵转
+								 
+								ELSIF    stReadPara.iRotateStatus =4 THEN
+								 //3/这不知道干啥的
+								 	// iRunStep:=iRunStep-1;	
+								END_IF
+	  		 ELSIF   	fbReadRegs.bError THEN
+	  		 			iRunStep:=999;				
+	  		 			iQErrorID:=HITBOT_ERROR.FLT_READ_PARA;					
+	  		 END_IF	
+	28://执行完成
+	    	iOldRunStep:=iRunStep;
+				iRunStep:=100;
+  30://初始化
+				iOldRunStep:=iRunStep;
+				arwDataWriteRegs[1]:=1;//启动
+				wQuantityWriteRegs:=1;
+				wMBAddWriteRegs:=16#0000;
+				xWriteRegs:=TRUE;
+				IF  fbWriteRegs.bBusy THEN
+						xWriteRegs:=FALSE;
+						iRunStep:=iRunStep+1;
+			 END_IF
+ 	31://启动完成
+				iOldRunStep:=iRunStep;
+				IF  NOT 	fbWriteRegs.bBusy AND  NOT  	fbWriteRegs.bError  THEN
+								iRunStep:=iRunStep +1;
+				 ELSIF   	fbReadRegs.bError THEN
+							iRunStep:=999;				
+						  iQErrorID:=HITBOT_ERROR.FLT_RUN_ERROR;					
+				 END_IF		
+  32://读取反馈
+				iOldRunStep:=iRunStep;
+				wMBAddReadRegs:=16#0040;
+				wQuantityReadRegs:=16;
+				xReadRegs:=TRUE;
+				IF  fbReadRegs.bBusy THEN
+					xReadRegs:=FALSE;
+					iRunStep:=iRunStep+1;
+				END_IF
+  33://等待读取完成
+			 	iOldRunStep:=iRunStep;
+	  	  IF  NOT 	fbReadRegs.bBusy AND  NOT  	fbReadRegs.bError THEN
+				 				//初始化反馈
+				 				stReadPara.iInitStatus:=arwDataReadRegs[1];
+							//夹持状态反馈         
+						  stReadPara.iClampStatus:=arwDataReadRegs[2];		
+							//夹持位置反馈       
+							stReadPara.rFeedBack_ClampPos:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[3]));;
+							//夹持速度反馈  
+							stReadPara.rFeedBack_ClampSpeed:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[5]));;
+							//夹持电流反馈
+							stReadPara.rRotateAngle:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[7]));;
+							//旋转状态反馈
+				 			stReadPara.iRotateStatus:=arwDataReadRegs[9];
+							//旋转角度反馈         
+							stReadPara.rFeedBack_RotatePos:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[10]));
+							//旋转速度反馈       
+							stReadPara.rFeedBack_ClampSpeed:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[12]));
+							//旋转电流反馈
+							stReadPara.rFeedBack_RotateCurrent:=M_Little_Endian(pInputData:=ADR(arwDataReadRegs[14]));
+								IF   stReadPara.iInitStatus =5 THEN
+								 //5-初始化完成
+								 			iRunStep:=iRunStep+1;	
+								 ELSIF  stReadPara.iInitStatus =0 THEN
+									//0-未初始化		
+								ELSE
+								 //其他-初始化中
+								 	iRunStep:=iRunStep -1;	
+								END_IF
+	  		 ELSIF   	fbReadRegs.bError THEN
+	  		 			iRunStep:=999;				
+	  		 			iQErrorID:=HITBOT_ERROR.FLT_READ_PARA;					
+	  		 END_IF	
+	34://执行完成
+	    	iOldRunStep:=iRunStep;
+				iRunStep:=100;
+ 100://运行结束
+					stDevice.xQBusy:=FALSE;
+					stDevice.xQDone:=TRUE;
+					iRunStep:=0;
+ END_CASE
+ 
+ 
+IF  	iOperType=stCmdType.iClamp OR
+ 			iOperType=stCmdType.iRelease THEN
+		ACT_Para_Clamp();
+ELSIF  	iOperType=stCmdType.iRotateClamp OR
+ 			iOperType=stCmdType.iRotateRelease OR
+ 			iOperType=stCmdType.iRotateRelRelease OR
+ 			iOperType=stCmdType.iRotateRelClamp THEN
+		ACT_Para_Rotate();	 
+END_IF]]></ST>
+      </Implementation>
+    </Action>
+    <LineIds Name="FB_ERG_20C">
+      <LineId Id="176" Count="0" />
+      <LineId Id="250" Count="0" />
+      <LineId Id="178" Count="1" />
+      <LineId Id="181" Count="1" />
+      <LineId Id="195" Count="0" />
+      <LineId Id="183" Count="1" />
+      <LineId Id="61" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20C.ACT_ERROR">
+      <LineId Id="2" Count="1" />
+      <LineId Id="5" Count="12" />
+      <LineId Id="25" Count="17" />
+      <LineId Id="47" Count="1" />
+      <LineId Id="60" Count="2" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="49" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20C.ACT_Operation">
+      <LineId Id="96" Count="0" />
+      <LineId Id="2" Count="0" />
+      <LineId Id="97" Count="0" />
+      <LineId Id="99" Count="0" />
+      <LineId Id="87" Count="0" />
+      <LineId Id="100" Count="0" />
+      <LineId Id="119" Count="6" />
+      <LineId Id="130" Count="0" />
+      <LineId Id="127" Count="2" />
+      <LineId Id="109" Count="0" />
+      <LineId Id="131" Count="1" />
+      <LineId Id="110" Count="0" />
+      <LineId Id="112" Count="0" />
+      <LineId Id="21" Count="13" />
+      <LineId Id="37" Count="4" />
+      <LineId Id="136" Count="4" />
+      <LineId Id="135" Count="0" />
+      <LineId Id="50" Count="0" />
+      <LineId Id="141" Count="16" />
+      <LineId Id="81" Count="0" />
+      <LineId Id="160" Count="16" />
+      <LineId Id="158" Count="0" />
+      <LineId Id="186" Count="1" />
+      <LineId Id="191" Count="0" />
+      <LineId Id="178" Count="0" />
+      <LineId Id="192" Count="2" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20C.ACT_Para_Clamp">
+      <LineId Id="1531" Count="20" />
+      <LineId Id="1553" Count="12" />
+      <LineId Id="2095" Count="0" />
+      <LineId Id="1567" Count="1" />
+      <LineId Id="2096" Count="0" />
+      <LineId Id="2092" Count="0" />
+      <LineId Id="1572" Count="4" />
+      <LineId Id="1792" Count="28" />
+      <LineId Id="1789" Count="0" />
+      <LineId Id="1859" Count="29" />
+      <LineId Id="2055" Count="1" />
+      <LineId Id="2058" Count="0" />
+      <LineId Id="2060" Count="16" />
+      <LineId Id="2054" Count="0" />
+      <LineId Id="1748" Count="0" />
+      <LineId Id="2093" Count="0" />
+      <LineId Id="1749" Count="6" />
+      <LineId Id="1248" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20C.ACT_Para_Rotate">
+      <LineId Id="2" Count="20" />
+      <LineId Id="45" Count="21" />
+      <LineId Id="127" Count="81" />
+      <LineId Id="215" Count="0" />
+      <LineId Id="209" Count="5" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20C.ACT_Reset">
+      <LineId Id="2" Count="3" />
+      <LineId Id="35" Count="1" />
+      <LineId Id="7" Count="7" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="32" Count="1" />
+      <LineId Id="1" Count="0" />
+    </LineIds>
+    <LineIds Name="FB_ERG_20C.ACT_Running">
+      <LineId Id="457" Count="3" />
+      <LineId Id="187" Count="0" />
+      <LineId Id="195" Count="0" />
+      <LineId Id="1" Count="0" />
+      <LineId Id="4" Count="0" />
+      <LineId Id="10" Count="1" />
+      <LineId Id="13" Count="2" />
+      <LineId Id="12" Count="0" />
+      <LineId Id="6" Count="0" />
+      <LineId Id="426" Count="0" />
+      <LineId Id="866" Count="0" />
+      <LineId Id="16" Count="0" />
+      <LineId Id="870" Count="0" />
+      <LineId Id="868" Count="1" />
+      <LineId Id="867" Count="0" />
+      <LineId Id="18" Count="0" />
+      <LineId Id="425" Count="0" />
+      <LineId Id="19" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="21" Count="0" />
+      <LineId Id="7" Count="0" />
+      <LineId Id="424" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="776" Count="0" />
+      <LineId Id="631" Count="0" />
+      <LineId Id="197" Count="0" />
+      <LineId Id="633" Count="0" />
+      <LineId Id="693" Count="1" />
+      <LineId Id="198" Count="0" />
+      <LineId Id="477" Count="1" />
+      <LineId Id="35" Count="0" />
+      <LineId Id="778" Count="0" />
+      <LineId Id="783" Count="12" />
+      <LineId Id="823" Count="0" />
+      <LineId Id="816" Count="5" />
+      <LineId Id="824" Count="0" />
+      <LineId Id="833" Count="0" />
+      <LineId Id="828" Count="0" />
+      <LineId Id="830" Count="0" />
+      <LineId Id="832" Count="0" />
+      <LineId Id="827" Count="0" />
+      <LineId Id="879" Count="0" />
+      <LineId Id="882" Count="3" />
+      <LineId Id="880" Count="0" />
+      <LineId Id="781" Count="0" />
+      <LineId Id="8" Count="0" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="71" Count="5" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="78" Count="6" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="583" Count="14" />
+      <LineId Id="930" Count="0" />
+      <LineId Id="599" Count="1" />
+      <LineId Id="931" Count="0" />
+      <LineId Id="602" Count="0" />
+      <LineId Id="934" Count="0" />
+      <LineId Id="603" Count="0" />
+      <LineId Id="932" Count="0" />
+      <LineId Id="605" Count="0" />
+      <LineId Id="936" Count="0" />
+      <LineId Id="607" Count="7" />
+      <LineId Id="917" Count="0" />
+      <LineId Id="871" Count="1" />
+      <LineId Id="874" Count="2" />
+      <LineId Id="873" Count="0" />
+      <LineId Id="624" Count="0" />
+      <LineId Id="615" Count="0" />
+      <LineId Id="877" Count="1" />
+      <LineId Id="617" Count="0" />
+      <LineId Id="619" Count="3" />
+      <LineId Id="626" Count="2" />
+      <LineId Id="886" Count="1" />
+      <LineId Id="840" Count="25" />
+      <LineId Id="834" Count="0" />
+      <LineId Id="888" Count="0" />
+      <LineId Id="914" Count="0" />
+      <LineId Id="889" Count="0" />
+      <LineId Id="893" Count="0" />
+      <LineId Id="897" Count="1" />
+      <LineId Id="894" Count="0" />
+      <LineId Id="901" Count="0" />
+      <LineId Id="916" Count="0" />
+      <LineId Id="895" Count="0" />
+      <LineId Id="891" Count="0" />
+      <LineId Id="896" Count="0" />
+      <LineId Id="899" Count="1" />
+      <LineId Id="892" Count="0" />
+      <LineId Id="902" Count="0" />
+      <LineId Id="915" Count="0" />
+      <LineId Id="890" Count="0" />
+      <LineId Id="635" Count="1" />
+      <LineId Id="638" Count="0" />
+      <LineId Id="640" Count="26" />
+      <LineId Id="922" Count="0" />
+      <LineId Id="667" Count="0" />
+      <LineId Id="669" Count="1" />
+      <LineId Id="924" Count="0" />
+      <LineId Id="672" Count="1" />
+      <LineId Id="925" Count="0" />
+      <LineId Id="675" Count="0" />
+      <LineId Id="938" Count="0" />
+      <LineId Id="941" Count="0" />
+      <LineId Id="939" Count="1" />
+      <LineId Id="676" Count="7" />
+      <LineId Id="918" Count="3" />
+      <LineId Id="686" Count="6" />
+      <LineId Id="629" Count="0" />
+      <LineId Id="695" Count="33" />
+      <LineId Id="753" Count="0" />
+      <LineId Id="755" Count="1" />
+      <LineId Id="758" Count="1" />
+      <LineId Id="735" Count="0" />
+      <LineId Id="762" Count="2" />
+      <LineId Id="766" Count="1" />
+      <LineId Id="769" Count="1" />
+      <LineId Id="761" Count="0" />
+      <LineId Id="736" Count="4" />
+      <LineId Id="742" Count="1" />
+      <LineId Id="773" Count="0" />
+      <LineId Id="744" Count="6" />
+      <LineId Id="486" Count="0" />
+      <LineId Id="177" Count="3" />
+      <LineId Id="3" Count="0" />
+      <LineId Id="913" Count="0" />
+      <LineId Id="912" Count="0" />
+      <LineId Id="903" Count="7" />
+      <LineId Id="46" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

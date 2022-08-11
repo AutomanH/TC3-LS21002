@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="HITBOT_ERROR" Id="{e9d4037d-c021-47db-8a4a-435ce16061b1}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+{attribute 'strict'}
+TYPE HITBOT_ERROR :
+(
+ 	NO_ERROR :=0,//无错误
+	FLT_PARA :=1,//参数错误
+	FLT_READ_PARA:=2,//读取参数错误
+	FLT_SET_PARA:=3,//参数设定错误
+	FLT_CMD_TIMEOUT:=4,//命令超时
+	FLT_RUN_ERROR:=5,//运行报错
+	FLT_CONFIGURE_PARA:=6,//配置错误
+	FLT_NEED_INIT:=7,//需要先初始化
+	FLT_CLAMP_EMPTY:=8//夹空
+)INT;
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>

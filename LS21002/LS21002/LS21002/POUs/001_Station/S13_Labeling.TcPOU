@@ -19,6 +19,8 @@ VAR
 	xQLabelStart: BOOL;			//	贴标机Start 
 	xQLabelRibwarn: BOOL; //	贴标机RIBWARN
 	xQLabelReset: BOOL;   //	贴标机RESET  
+	
+	xQLabelCompleted:BOOL;//贴标完成信号  给PC
 	// 贴标到位传感器
 	arSensorReached: ARRAY[1..2]of BOOL;
 	
@@ -158,7 +160,7 @@ CASE station.iStepAuto OF
 				
 				station.xCycleEnable:=FALSE;	
 				//station.xDone:=TRUE;
-				station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
+			//	station.xRunningOffProhibit := FALSE ;//运行中信号Off禁止
 	ELSE
 		;	
 END_CASE

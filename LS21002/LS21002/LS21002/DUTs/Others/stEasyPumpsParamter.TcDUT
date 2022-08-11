@@ -18,9 +18,11 @@ STRUCT
 		rSetVolume:REAL;
 		rRunTime :REAL;
 		iCycleNum:INT;
+		iBackAngle:INT;
 		rAverageRealVolume:REAL;
 		arrRealVolume:ARRAY[1..3] OF REAL;
-		arrTestRealVolume:ARRAY[1..10] OF REAL;
+		arrTestRealVolume:ARRAY[1..50] OF REAL;
+		arrRecordVolume:ARRAY[1..50] OF REAL;
 		iInjectCounter:INT;
 		iCalibCounter:INT;
 		iRecordCounter:INT;
@@ -32,7 +34,14 @@ STRUCT
 		xModulePushOK:BOOL;//注液OK
 		xCalibTestOK:BOOL;//校准测试OK
 		xRecordDataOK:BOOL;//记录数据OK
-		tStableDelay:TON;
+		tStableDelay: TON;
+		xInitCalibration:BOOL;//初始化校准系数
+		xGotoPosition:BOOL;//去校准位置
+		xNeedInjectAgain:BOOL;//需要重新注液
+		
+		//上下偏差
+		rESVolume: REAL;//上偏差
+		rEIVolume: REAL;//下偏差
 		
 END_STRUCT
 END_TYPE

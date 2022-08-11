@@ -23,6 +23,7 @@ VAR_INPUT
  xIMotorStopHMI:BOOL;
  xIAutoMode:BOOL;
  xIManualMode:BOOL;
+ xIEStop:BOOL;
  xIDeviceRunning:BOOL;
 END_VAR
 VAR_OUTPUT
@@ -33,12 +34,14 @@ END_VAR
 VAR
  	MotorStartR_TRIG:R_TRIG;
 	MotorStopR_TRIG:R_TRIG;
+	MotorEStopR_TRIG:R_TRIG;
 END_VAR
 ]]></Declaration>
     <Implementation>
       <ST><![CDATA[//变频器（2线 漏型）
 MotorStartR_TRIG(CLK:=( xIManualMode AND   xIMotorStartHMI ) OR ( (xIAutoMode OR xIDeviceRunning ) AND   xIMotorStart) , Q=> );
 MotorStopR_TRIG(CLK:= ( xIManualMode AND   xIMotorStopHMI ) OR ((xIAutoMode OR xIDeviceRunning ) AND xIMotorStop), Q=> );
+MotorEStopR_TRIG(CLK:=xIEStop, Q=> );
 IF  MotorStartR_TRIG.Q THEN
 			xQMotorStart	:=TRUE;//	热缩封膜出料线体¶电机正转/停止
 ELSIF	MotorStopR_TRIG.Q	 THEN
@@ -57,7 +60,9 @@ END_IF
 		xIMotorStart:=FALSE;]]></ST>
     </Implementation>
     <LineIds Name="FB_ATV12">
-      <LineId Id="29" Count="4" />
+      <LineId Id="29" Count="2" />
+      <LineId Id="118" Count="0" />
+      <LineId Id="32" Count="1" />
       <LineId Id="36" Count="2" />
       <LineId Id="40" Count="0" />
       <LineId Id="42" Count="0" />

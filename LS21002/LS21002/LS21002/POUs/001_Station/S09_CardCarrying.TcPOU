@@ -54,7 +54,8 @@ VAR
 	arxVacuumControlSensor: ARRAY[1..2] of BOOL;
 	arxBrokenVacuumSensor: ARRAY[1..2] of BOOL;
 	VacuumR_TRIG: ARRAY[1..2] of R_TRIG;
-	VacuumBrokenR_TRIG: ARRAY[1..2] of R_TRIG;
+	VacuumBrokenR_TRIG: ARRAY[1..2] OF R_TRIG;
+	arxAxisDone:ARRAY[1..2] OF BOOL;
 END_VAR
 ]]></Declaration>
     <Implementation>
@@ -458,23 +459,26 @@ CASE station.iStepInit OF
 									 fbZAxisStepMotor2.xJogBackwardsHmi:=TRUE;
 						ELSE		
 						 			fbZAxisStepMotor2.xJogBackwardsHmi:=FALSE;
-									station.iStepInit:=72;	
+									arxAxisDone[1]:=TRUE;	
 						END_IF
 						
 			ELSE
-					station.iStepInit:=72;	
+					arxAxisDone[1]:=TRUE;	
 			END_IF
-	 
-
-72:		 //卡片2步进
-			IF NOT  arxCardCheckSensor[1] THEN
-					 IF  NOT  arAxisSensorH[17] THEN
-									 fbZAxisStepMotor1.xJogBackwardsHmi:=TRUE;
-						ELSE		
-						 			fbZAxisStepMotor1.xJogBackwardsHmi:=FALSE;
-						END_IF
-						station.iStepInit:=999;	
-			ELSE
+	 	//卡片2步进
+			 IF NOT  arxCardCheckSensor[1] THEN
+						IF  NOT  arAxisSensorH[17] THEN
+										fbZAxisStepMotor1.xJogBackwardsHmi:=TRUE;
+						 ELSE		
+									 fbZAxisStepMotor1.xJogBackwardsHmi:=FALSE;
+									 	arxAxisDone[2]:=TRUE;	
+						 END_IF
+			 ELSE
+					  	arxAxisDone[2]:=TRUE;	
+			 END_IF
+		//判断是否完成
+			IF  arxAxisDone[1] AND 
+			 		arxAxisDone[2] THEN
 					station.iStepInit:=999;	
 			END_IF
 //80://回原点
@@ -827,12 +831,16 @@ QxS08VTCCyl_2HP	:=	fbVTCCyl_2.xHP_Valve	;]]></ST>
       <LineId Id="613" Count="0" />
       <LineId Id="619" Count="0" />
       <LineId Id="618" Count="0" />
+      <LineId Id="677" Count="5" />
+      <LineId Id="687" Count="0" />
+      <LineId Id="683" Count="0" />
+      <LineId Id="685" Count="1" />
       <LineId Id="620" Count="0" />
+      <LineId Id="691" Count="0" />
       <LineId Id="616" Count="0" />
-      <LineId Id="608" Count="0" />
-      <LineId Id="626" Count="0" />
-      <LineId Id="628" Count="7" />
-      <LineId Id="596" Count="0" />
+      <LineId Id="688" Count="0" />
+      <LineId Id="690" Count="0" />
+      <LineId Id="689" Count="0" />
       <LineId Id="521" Count="0" />
       <LineId Id="523" Count="1" />
       <LineId Id="522" Count="0" />

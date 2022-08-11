@@ -29,7 +29,7 @@ ControlMachine();
 CallStandard();
 CommWithPC();
 OutputLink();
-LightsTest.LightsTest();
+LightsTest();
 
 
 

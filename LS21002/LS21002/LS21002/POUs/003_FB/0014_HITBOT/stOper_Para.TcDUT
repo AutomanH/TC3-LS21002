@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.9">
+  <DUT Name="stOper_Para" Id="{49bd65c3-98c8-4323-81d6-e5f3d6704c7f}">
+    <Declaration><![CDATA[TYPE stOper_Para :
+STRUCT
+ 	xHMInitButton , xInitControl : BOOL;
+	aHMIClampButton , aHMIReleaseButton , aClampControl , aReleaseControl : ARRAY[1..5] OF BOOL;//夹紧和松开
+	aHMIRotateClampButton , aHMIRotateReleaseButton , aRotateClampControl , aRotateReleaseControl : ARRAY[1..5] OF BOOL;//绝对旋转拧紧和松开
+	aHMIRotateClampRelButton , aHMIRotateReleaseRelButton , aRotateClampRelControl , aRotateReleaseRelControl : ARRAY[1..5] OF BOOL;//相对旋转拧紧和松开
+END_STRUCT
+END_TYPE
+]]></Declaration>
+  </DUT>
+</TcPlcObject>
