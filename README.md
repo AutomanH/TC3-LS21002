@@ -71,7 +71,7 @@
 - 新增`FB_KF300`蠕动泵程序
 - 新增蠕动泵手动单泵头测试程序并记录数据
 
-[2022-08-11]()
+[2022-08-11](https://github.com/AutomanH/TC3-LS21002/commit/979ad533d9cc18261ee33ec37f671d7890c0d158)
 
 - 新增<u><font color =Orange>`FB_ERG_30C`</font></u>电动夹爪功能块
 - 完善蠕动泵稳定性测试程序
